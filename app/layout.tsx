@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Igreja Conectada',
+  title: 'Igreja Conectada | Landing Page para Gestao de Igrejas',
   description:
-    'Sistema web responsivo para gestao de igrejas, membros, financeiro, escalas e area mobile dos fieis.',
+    'Landing page moderna para sistema de gerenciamento de igrejas com carteirinha digital, mural com fotos e videos, agenda mensal e templates de WhatsApp.',
 };
 
 export default function RootLayout({

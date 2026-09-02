@@ -2,492 +2,481 @@
 
 import { useMemo, useState } from "react";
 
-type Role = "Pastor" | "Tesoureiro" | "Secretaria" | "Lider" | "Membro";
-type Section =
-  | "Visao geral"
-  | "Pessoas"
-  | "Financeiro"
-  | "Escalas"
-  | "Mural"
-  | "Biblia"
-  | "Devocional"
-  | "Patrimonio";
+type FeatureKey = "ID" | "Mural" | "Agenda" | "WhatsApp";
 
-const sections: Section[] = [
-  "Visao geral",
-  "Pessoas",
-  "Financeiro",
-  "Escalas",
-  "Mural",
-  "Biblia",
-  "Devocional",
-  "Patrimonio",
-];
-
-const permissions: Record<Role, string[]> = {
-  Pastor: ["Acesso total", "Aprovar devocionais", "Ver relatorios"],
-  Tesoureiro: ["Financeiro", "PIX", "Fluxo de caixa"],
-  Secretaria: ["Membros", "Frequencia", "Cartas"],
-  Lider: ["Equipe", "Escalas", "Avisos do ministerio"],
-  Membro: ["Carteirinha", "Mural", "Contribuicoes"],
-};
-
-const members = [
+const features = [
   {
-    name: "Ana Beatriz Souza",
-    role: "Diaconisa",
-    family: "Familia Souza",
-    status: "Membro",
-    baptism: "12/05/2019",
-    ministry: "Intercessao",
+    key: "ID" as const,
+    title: "Carteirinha digital",
+    copy: "Identificacao viva do membro com status, QR visual, grupos e ministerios.",
+    metric: "428",
+    label: "membros ativos",
   },
   {
-    name: "Carlos Henrique Lima",
-    role: "Musico",
-    family: "Familia Lima",
-    status: "Membro",
-    baptism: "23/09/2021",
-    ministry: "Louvor",
+    key: "Mural" as const,
+    title: "Mural social",
+    copy: "Avisos com foto, video e destaque para o que esta acontecendo na igreja.",
+    metric: "18k",
+    label: "alcance mensal",
   },
   {
-    name: "Marina Costa",
-    role: "Visitante",
-    family: "Sem familia vinculada",
-    status: "Visitante",
-    baptism: "-",
-    ministry: "Classe de novos",
+    key: "Agenda" as const,
+    title: "Agenda inteligente",
+    copy: "Cultos, ensaios, reunioes e escalas vistos por mes, grupo e responsavel.",
+    metric: "36",
+    label: "eventos no mes",
+  },
+  {
+    key: "WhatsApp" as const,
+    title: "WhatsApp viral",
+    copy: "Templates prontos para aniversariantes, grupos, convites e confirmacoes.",
+    metric: "1 click",
+    label: "para enviar",
   },
 ];
 
-const finances = [
-  { label: "Dizimos confirmados", value: "R$ 8.420,00", trend: "+12%" },
-  { label: "Ofertas do mes", value: "R$ 3.180,00", trend: "+8%" },
-  { label: "Contas a pagar", value: "R$ 2.760,00", trend: "4 abertas" },
-  { label: "Saldo em caixa", value: "R$ 18.940,00", trend: "Atualizado agora" },
+const feed = [
+  { title: "Santa ceia", kind: "Foto", color: "from-[#1be7ff] to-[#7357ff]" },
+  { title: "Noite jovem", kind: "Video", color: "from-[#ff4ecd] to-[#7c3cff]" },
+  { title: "Acao social", kind: "Live", color: "from-[#a6ff3d] to-[#12d8a0]" },
 ];
 
-const schedules = [
-  {
-    title: "Culto de domingo",
-    date: "30/08 - 19h",
-    team: "Louvor, som, recepcao",
-    confirmed: "11 de 14 confirmados",
-  },
-  {
-    title: "Ensaio do louvor",
-    date: "29/08 - 17h",
-    team: "Musicos e vocal",
-    confirmed: "7 de 8 confirmados",
-  },
-  {
-    title: "Classe de batismo",
-    date: "31/08 - 20h",
-    team: "Secretaria e ensino",
-    confirmed: "3 de 3 confirmados",
-  },
+const agenda = [
+  ["03", "Ensaio", "Louvor"],
+  ["06", "Culto", "Todos"],
+  ["10", "EBD", "Alunos"],
+  ["14", "Jovens", "Grupo"],
+  ["21", "Ceia", "Igreja"],
+  ["28", "Missoes", "Equipe"],
 ];
 
-const noticeBoard = [
-  {
-    title: "Conferencia da Familia",
-    kind: "Foto",
-    text: "Inscricoes abertas para sabado, com programacao para criancas.",
-    media: "bg-[linear-gradient(135deg,#87c5b5,#f4d35e)]",
-  },
-  {
-    title: "Chamada para voluntarios",
-    kind: "Video",
-    text: "Mensagem curta da lideranca para a equipe de recepcao.",
-    media: "bg-[linear-gradient(135deg,#36536b,#e07a5f)]",
-  },
+const messages = [
+  "Paz, Ana! Feliz aniversario. Que Deus abencoe sua vida hoje e sempre.",
+  "Equipe, ensaio sabado as 17h. Confirme presenca no grupo.",
+  "Domingo tem Culto da Familia as 19h. Convide alguem especial.",
 ];
 
-const bibleBooks = [
-  { book: "Joao", chapter: 3, verse: 16, text: "Porque Deus amou o mundo de tal maneira..." },
-  { book: "Salmos", chapter: 23, verse: 1, text: "O Senhor e o meu pastor; nada me faltara." },
-  { book: "Romanos", chapter: 8, verse: 28, text: "Todas as coisas cooperam para o bem..." },
-];
-
-const hymns = [
-  { number: 15, title: "Conversao", status: "Letra licenciada" },
-  { number: 77, title: "Guarda o contato", status: "Indice aprovado" },
-  { number: 577, title: "Em fervente oracao", status: "Letra em revisao" },
-];
-
-const prayers = [
-  "Familia em tratamento medico",
-  "Direcao para novo ministerio",
-  "Gratidao por emprego recebido",
-];
-
-function buildWhatsAppLink(message: string) {
+function whatsappLink(message: string) {
   return `https://wa.me/?text=${encodeURIComponent(message)}`;
 }
 
 export default function Home() {
-  const [activeSection, setActiveSection] = useState<Section>("Visao geral");
-  const [selectedRole, setSelectedRole] = useState<Role>("Pastor");
-  const [devotionalApproved, setDevotionalApproved] = useState(false);
-  const [scaleConfirmed, setScaleConfirmed] = useState(false);
-  const [search, setSearch] = useState("");
+  const [activeFeature, setActiveFeature] = useState<FeatureKey>("ID");
+  const [messageIndex, setMessageIndex] = useState(0);
 
-  const filteredVerses = useMemo(() => {
-    const normalized = search.trim().toLowerCase();
-    if (!normalized) return bibleBooks;
-    return bibleBooks.filter(
-      (verse) =>
-        verse.book.toLowerCase().includes(normalized) ||
-        verse.text.toLowerCase().includes(normalized),
-    );
-  }, [search]);
-
-  const whatsappMessage =
-    "Paz! Voce esta escalado para o Culto de domingo, 30/08 as 19h. Pode confirmar sua presenca?";
+  const selected = useMemo(
+    () => features.find((feature) => feature.key === activeFeature) ?? features[0],
+    [activeFeature],
+  );
 
   return (
-    <main className="min-h-screen bg-[#f7f5ef] text-[#1f2933]">
-      <header className="sticky top-0 z-20 border-b border-[#d8d3c6] bg-[#fffdf8]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-[#224c55] text-sm font-bold text-white">
-              IC
+    <main className="min-h-screen overflow-hidden bg-[#070a18] text-white">
+      <section className="relative min-h-screen px-4 py-5 sm:px-6 lg:px-8">
+        <div className="cyber-bg absolute inset-0" aria-hidden="true" />
+        <div className="mx-auto flex max-w-7xl flex-col gap-10">
+          <header className="relative z-10 flex items-center justify-between rounded-full border border-white/10 bg-white/[0.06] px-4 py-3 backdrop-blur-xl">
+            <a className="flex min-w-0 items-center gap-3" href="#topo">
+              <span className="logo-pulse grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1be7ff] text-sm font-black text-[#07111f]">
+                IC
+              </span>
+              <span className="min-w-0">
+                <span className="block text-xs font-black uppercase text-[#9fb4d8]">Igreja Conectada</span>
+                <span className="block truncate text-sm font-black sm:text-base">Sistema social para igrejas</span>
+              </span>
+            </a>
+            <nav className="hidden items-center gap-1 md:flex" aria-label="Navegacao principal">
+              {["Produto", "Mural", "Agenda", "WhatsApp"].map((item) => (
+                <a className="rounded-full px-4 py-2 text-sm font-bold text-[#c9d8ff] hover:bg-white/10" href={`#${item.toLowerCase()}`} key={item}>
+                  {item}
+                </a>
+              ))}
+            </nav>
+            <a
+              className="rounded-full bg-white px-5 py-3 text-sm font-black text-[#07111f] shadow-[0_0_35px_rgba(27,231,255,0.35)]"
+              href={whatsappLink("Ola! Quero uma demonstracao da Igreja Conectada.")}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Quero demo
+            </a>
+          </header>
+
+          <div className="relative z-10 grid items-center gap-10 lg:grid-cols-[0.86fr_1.14fr]">
+            <div className="pt-2 lg:pb-12 lg:pt-10">
+              <div className="inline-flex items-center gap-3 rounded-full border border-[#1be7ff]/30 bg-[#1be7ff]/10 px-4 py-2 text-sm font-black text-[#bdf8ff]">
+                <span className="h-2 w-2 rounded-full bg-[#a6ff3d] shadow-[0_0_18px_#a6ff3d]" />
+                Landing page pronta para viralizar
+              </div>
+              <h1 className="mt-6 max-w-4xl text-5xl font-black leading-[0.98] sm:text-6xl lg:text-7xl">
+                A igreja no bolso dos membros. A gestao na mao da lideranca.
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-[#b9c8e8]">
+                Uma experiencia digital com cara de app premium: carteirinha,
+                mural com midia, agenda mensal e mensagens de WhatsApp que
+                saem prontas para aniversariantes e grupos.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a className="cta-neon rounded-full px-6 py-4 text-sm font-black text-[#07111f]" href="#produto">
+                  Ver experiencia
+                </a>
+                <a className="rounded-full border border-white/15 bg-white/[0.06] px-6 py-4 text-sm font-black text-white backdrop-blur-xl hover:bg-white/12" href="#whatsapp">
+                  Templates WhatsApp
+                </a>
+              </div>
+              <div className="mt-10 grid max-w-2xl grid-cols-3 gap-3">
+                <HeroMetric value="4 modulos" label="para vender a ideia" />
+                <HeroMetric value="Mobile" label="primeiro impacto" />
+                <HeroMetric value="Social" label="mural com midia" />
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase text-[#6d766c]">Igreja Conectada</p>
-              <h1 className="truncate text-lg font-bold sm:text-xl">Gestao completa da igreja</h1>
-            </div>
+
+            <ExperienceMockup activeFeature={activeFeature} setActiveFeature={setActiveFeature} selected={selected} />
           </div>
-          <div className="hidden items-center gap-2 sm:flex">
-            {(["Pastor", "Tesoureiro", "Secretaria", "Lider", "Membro"] as Role[]).map((role) => (
+        </div>
+      </section>
+
+      <section className="relative bg-[#0b1024] px-4 py-16 sm:px-6 lg:px-8" id="produto">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr] lg:items-end">
+            <div>
+              <p className="text-sm font-black uppercase text-[#1be7ff]">Produto memoravel</p>
+              <h2 className="mt-3 text-4xl font-black leading-tight sm:text-5xl">
+                Cada recurso parece conteudo compartilhavel.
+              </h2>
+            </div>
+            <p className="text-lg leading-8 text-[#aebde0]">
+              A pagina deixa de parecer apenas administrativa e passa a parecer
+              uma plataforma de comunidade: visual de app, contraste forte,
+              cards com brilho, informacao rapida e chamada clara para acao.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {features.map((feature) => (
               <button
-                key={role}
-                onClick={() => setSelectedRole(role)}
-                className={`rounded-md border px-3 py-2 text-sm font-medium transition ${
-                  selectedRole === role
-                    ? "border-[#224c55] bg-[#224c55] text-white"
-                    : "border-[#d8d3c6] bg-white text-[#344054] hover:border-[#224c55]"
+                className={`feature-card min-h-64 rounded-[28px] border p-5 text-left transition ${
+                  activeFeature === feature.key
+                    ? "border-[#1be7ff]/70 bg-[#101a38] shadow-[0_0_45px_rgba(27,231,255,0.16)]"
+                    : "border-white/10 bg-white/[0.045] hover:border-[#ff4ecd]/45"
                 }`}
+                key={feature.key}
+                onClick={() => setActiveFeature(feature.key)}
+                type="button"
               >
-                {role}
+                <span className="text-sm font-black text-[#a6ff3d]">{feature.key}</span>
+                <h3 className="mt-7 text-2xl font-black">{feature.title}</h3>
+                <p className="mt-3 min-h-20 text-sm leading-6 text-[#aebde0]">{feature.copy}</p>
+                <div className="mt-6 rounded-2xl bg-white/[0.07] p-4">
+                  <p className="text-3xl font-black text-white">{feature.metric}</p>
+                  <p className="text-sm font-bold text-[#8da0c6]">{feature.label}</p>
+                </div>
               </button>
             ))}
           </div>
         </div>
-      </header>
+      </section>
 
-      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 lg:grid-cols-[230px_minmax(0,1fr)_360px] sm:px-6">
-        <aside className="rounded-lg border border-[#d8d3c6] bg-white p-3 lg:sticky lg:top-20 lg:h-[calc(100vh-104px)]">
-          <nav className="grid grid-cols-2 gap-2 lg:grid-cols-1" aria-label="Modulos do painel">
-            {sections.map((section) => (
-              <button
-                key={section}
-                onClick={() => setActiveSection(section)}
-                className={`rounded-md px-3 py-2 text-left text-sm font-semibold ${
-                  activeSection === section
-                    ? "bg-[#224c55] text-white"
-                    : "bg-[#f7f5ef] text-[#344054] hover:bg-[#ebe6d8]"
-                }`}
-              >
-                {section}
-              </button>
-            ))}
-          </nav>
-
-          <div className="mt-5 rounded-lg bg-[#edf7f4] p-4">
-            <p className="text-xs font-semibold uppercase text-[#4d7169]">Permissao atual</p>
-            <h2 className="mt-1 text-lg font-bold">{selectedRole}</h2>
-            <ul className="mt-3 space-y-2 text-sm">
-              {permissions[selectedRole].map((item) => (
-                <li key={item} className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[#2f8f83]" />
-                  {item}
-                </li>
+      <section className="grid lg:grid-cols-2" id="mural">
+        <div className="bg-[#f4f7fb] px-4 py-16 text-[#10182c] sm:px-6 lg:px-10">
+          <div className="mx-auto max-w-2xl lg:mr-0">
+            <p className="text-sm font-black uppercase text-[#7357ff]">Mural com foto e video</p>
+            <h2 className="mt-3 text-4xl font-black leading-tight">
+              Avisos com cara de feed, nao de quadro esquecido.
+            </h2>
+            <p className="mt-4 leading-8 text-[#596a84]">
+              Posts visuais ajudam a divulgar cultos, congressos, acoes sociais
+              e recados de lideranca com mais vontade de compartilhar.
+            </p>
+            <div className="mt-7 grid gap-3">
+              {feed.map((item) => (
+                <div className="flex items-center gap-4 rounded-3xl bg-white p-3 shadow-sm" key={item.title}>
+                  <div className={`h-20 w-24 rounded-2xl bg-gradient-to-br ${item.color}`} />
+                  <div>
+                    <p className="text-xs font-black uppercase text-[#7357ff]">{item.kind}</p>
+                    <h3 className="text-lg font-black">{item.title}</h3>
+                    <p className="text-sm text-[#596a84]">Publicado para membros e grupos.</p>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
-        </aside>
+        </div>
 
-        <section className="space-y-5">
-          <div className="rounded-lg border border-[#d8d3c6] bg-white p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-[#6d766c]">Painel administrativo</p>
-                <h2 className="text-2xl font-bold">{activeSection}</h2>
+        <div className="bg-[#10182c] px-4 py-16 sm:px-6 lg:px-10" id="agenda">
+          <div className="mx-auto max-w-2xl lg:ml-0">
+            <p className="text-sm font-black uppercase text-[#a6ff3d]">Agenda mensal</p>
+            <h2 className="mt-3 text-4xl font-black leading-tight">
+              Um calendario que parece painel de comando.
+            </h2>
+            <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {agenda.map(([day, event, group]) => (
+                <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur" key={`${day}-${event}`}>
+                  <p className="text-4xl font-black text-[#1be7ff]">{day}</p>
+                  <h3 className="mt-3 font-black">{event}</h3>
+                  <p className="text-sm font-bold text-[#8da0c6]">{group}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative bg-[#070a18] px-4 py-16 sm:px-6 lg:px-8" id="whatsapp">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_430px] lg:items-center">
+          <div>
+            <p className="text-sm font-black uppercase text-[#25f4a8]">WhatsApp pronto</p>
+            <h2 className="mt-3 max-w-3xl text-4xl font-black leading-tight sm:text-5xl">
+              Mensagens que a secretaria envia em segundos.
+            </h2>
+            <div className="mt-7 grid gap-3">
+              {messages.map((message, index) => (
+                <button
+                  className={`rounded-3xl border p-5 text-left transition ${
+                    messageIndex === index
+                      ? "border-[#25f4a8]/70 bg-[#25f4a8]/10"
+                      : "border-white/10 bg-white/[0.045] hover:border-[#1be7ff]/45"
+                  }`}
+                  key={message}
+                  onClick={() => setMessageIndex(index)}
+                  type="button"
+                >
+                  <p className="text-xs font-black uppercase text-[#1be7ff]">Template {index + 1}</p>
+                  <p className="mt-2 leading-7 text-[#dbe7ff]">{message}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="phone-frame mx-auto w-full max-w-[380px] rounded-[42px] border border-white/15 bg-[#10182c] p-4 shadow-[0_0_70px_rgba(37,244,168,0.18)]">
+            <div className="rounded-[32px] bg-[#eafff7] p-4 text-[#132338]">
+              <div className="flex items-center gap-3 border-b border-[#c9f3e2] pb-4">
+                <div className="grid h-11 w-11 place-items-center rounded-full bg-[#25f4a8] font-black">W</div>
+                <div>
+                  <p className="font-black">Secretaria</p>
+                  <p className="text-sm font-bold text-[#567062]">Mensagem pronta</p>
+                </div>
+              </div>
+              <div className="mt-5 rounded-[26px] bg-white p-4 shadow-sm">
+                <p className="leading-7 text-[#40515f]">{messages[messageIndex]}</p>
               </div>
               <a
-                className="inline-flex items-center justify-center rounded-md bg-[#2f8f83] px-4 py-2 text-sm font-bold text-white"
-                href={buildWhatsAppLink(whatsappMessage)}
-                target="_blank"
+                className="mt-5 inline-flex w-full justify-center rounded-full bg-[#25a277] px-5 py-4 text-sm font-black text-white"
+                href={whatsappLink(messages[messageIndex])}
                 rel="noreferrer"
+                target="_blank"
               >
-                Enviar WhatsApp
+                Abrir no WhatsApp
               </a>
             </div>
           </div>
+        </div>
+      </section>
 
-          <Dashboard section={activeSection} />
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border border-[#d8d3c6] bg-white p-5">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-[#6d766c]">Bíblia no app</p>
-                  <h3 className="text-xl font-bold">Busca e leitura</h3>
-                </div>
-                <span className="rounded-md bg-[#f1ead7] px-3 py-1 text-xs font-bold text-[#77622b]">
-                  Licenciado
-                </span>
-              </div>
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar livro ou trecho"
-                className="mb-3 w-full rounded-md border border-[#d8d3c6] px-3 py-2 text-sm outline-none focus:border-[#224c55]"
-              />
-              <div className="space-y-3">
-                {filteredVerses.map((verse) => (
-                  <article key={`${verse.book}-${verse.chapter}-${verse.verse}`} className="rounded-md bg-[#f7f5ef] p-3">
-                    <p className="text-sm font-bold">
-                      {verse.book} {verse.chapter}:{verse.verse}
-                    </p>
-                    <p className="mt-1 text-sm text-[#52606d]">{verse.text}</p>
-                  </article>
-                ))}
-              </div>
+      <section className="bg-[#f4f7fb] px-4 py-16 text-[#10182c] sm:px-6 lg:px-8">
+        <div className="mx-auto rounded-[38px] bg-[#111c3c] p-6 text-white shadow-2xl shadow-[#111c3c]/20 sm:p-10 lg:max-w-7xl">
+          <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-center">
+            <div>
+              <p className="text-sm font-black uppercase text-[#1be7ff]">Chamada final</p>
+              <h2 className="mt-3 text-4xl font-black leading-tight">
+                Uma landing mais tecnologica, mais desejavel e mais facil de vender.
+              </h2>
+              <p className="mt-4 max-w-3xl leading-8 text-[#b9c8e8]">
+                O foco agora e impacto visual: produto no centro, linguagem de
+                comunidade, interacao e CTAs que levam direto para demonstracao.
+              </p>
             </div>
-
-            <div className="rounded-lg border border-[#d8d3c6] bg-white p-5">
-              <p className="text-sm font-semibold text-[#6d766c]">Devocional diario</p>
-              <h3 className="text-xl font-bold">Rascunho para aprovacao</h3>
-              <div className="mt-4 rounded-md bg-[#f7f5ef] p-4">
-                <p className="text-xs font-bold uppercase text-[#96704d]">Tema de hoje</p>
-                <h4 className="mt-1 font-bold">Servir com alegria</h4>
-                <p className="mt-2 text-sm text-[#52606d]">
-                  Uma reflexao curta preparada para revisao pastoral antes de aparecer aos fieis.
-                </p>
-              </div>
-              <button
-                onClick={() => setDevotionalApproved(true)}
-                className="mt-4 w-full rounded-md bg-[#224c55] px-4 py-2 text-sm font-bold text-white"
-              >
-                {devotionalApproved ? "Devocional aprovado" : "Aprovar publicacao"}
-              </button>
-            </div>
+            <a
+              className="cta-neon inline-flex justify-center rounded-full px-6 py-4 text-sm font-black text-[#07111f]"
+              href={whatsappLink("Ola! Quero apresentar essa landing page para uma igreja.")}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Apresentar agora
+            </a>
           </div>
-        </section>
-
-        <aside className="space-y-5 lg:sticky lg:top-20 lg:h-[calc(100vh-104px)] lg:overflow-auto">
-          <div className="mx-auto max-w-[360px] rounded-[28px] border-8 border-[#1f2933] bg-[#fffdf8] shadow-xl">
-            <div className="border-b border-[#d8d3c6] px-5 py-4">
-              <p className="text-xs font-semibold uppercase text-[#6d766c]">Area do fiel</p>
-              <h2 className="text-lg font-bold">Maria Oliveira</h2>
-            </div>
-            <div className="space-y-4 p-4">
-              <div className="rounded-lg bg-[#224c55] p-4 text-white">
-                <p className="text-xs uppercase opacity-80">Carteirinha digital</p>
-                <h3 className="mt-3 text-xl font-bold">Membro ativo</h3>
-                <p className="mt-1 text-sm opacity-90">Igreja Central - Sao Paulo</p>
-                <div className="mt-4 grid h-16 place-items-center rounded-md bg-white/15 text-xs">
-                  QR de identificacao
-                </div>
-              </div>
-
-              <MobileCard title="Mural de avisos">
-                {noticeBoard.map((notice) => (
-                  <div key={notice.title} className="mb-3 overflow-hidden rounded-md border border-[#d8d3c6]">
-                    <div className={`h-24 ${notice.media}`} />
-                    <div className="p-3">
-                      <p className="text-xs font-bold text-[#2f8f83]">{notice.kind}</p>
-                      <h4 className="font-bold">{notice.title}</h4>
-                      <p className="text-sm text-[#52606d]">{notice.text}</p>
-                    </div>
-                  </div>
-                ))}
-              </MobileCard>
-
-              <MobileCard title="Escala">
-                <p className="text-sm text-[#52606d]">Culto de domingo - Louvor - 19h</p>
-                <button
-                  onClick={() => setScaleConfirmed(true)}
-                  className="mt-3 w-full rounded-md bg-[#2f8f83] px-3 py-2 text-sm font-bold text-white"
-                >
-                  {scaleConfirmed ? "Presenca confirmada" : "Confirmar presenca"}
-                </button>
-              </MobileCard>
-
-              <MobileCard title="Harpa Crista">
-                <div className="space-y-2">
-                  {hymns.map((hymn) => (
-                    <p key={hymn.number} className="text-sm">
-                      <strong>{hymn.number}</strong> - {hymn.title}
-                    </p>
-                  ))}
-                </div>
-              </MobileCard>
-
-              <MobileCard title="Pedido de oracao">
-                <textarea
-                  className="h-20 w-full resize-none rounded-md border border-[#d8d3c6] p-2 text-sm outline-none focus:border-[#224c55]"
-                  placeholder="Escreva seu pedido com seguranca"
-                />
-                <button className="mt-2 w-full rounded-md bg-[#224c55] px-3 py-2 text-sm font-bold text-white">
-                  Enviar a pastoral
-                </button>
-              </MobileCard>
-            </div>
-          </div>
-        </aside>
-      </div>
+        </div>
+      </section>
     </main>
   );
 }
 
-function Dashboard({ section }: { section: Section }) {
-  if (section === "Pessoas") {
-    return (
-      <div className="rounded-lg border border-[#d8d3c6] bg-white p-5">
-        <h3 className="text-xl font-bold">Cadastro de pessoas</h3>
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[680px] text-left text-sm">
-            <thead className="bg-[#f7f5ef] text-[#52606d]">
-              <tr>
-                <th className="p-3">Nome</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Familia</th>
-                <th className="p-3">Batismo</th>
-                <th className="p-3">Ministerio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((member) => (
-                <tr key={member.name} className="border-t border-[#ece6d8]">
-                  <td className="p-3 font-semibold">{member.name}</td>
-                  <td className="p-3">{member.status}</td>
-                  <td className="p-3">{member.family}</td>
-                  <td className="p-3">{member.baptism}</td>
-                  <td className="p-3">{member.ministry}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
-
-  if (section === "Financeiro") {
-    return (
-      <div className="grid gap-4 md:grid-cols-2">
-        {finances.map((item) => (
-          <Metric key={item.label} label={item.label} value={item.value} trend={item.trend} />
-        ))}
-      </div>
-    );
-  }
-
-  if (section === "Escalas") {
-    return (
-      <div className="grid gap-4">
-        {schedules.map((schedule) => (
-          <article key={schedule.title} className="rounded-lg border border-[#d8d3c6] bg-white p-5">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-lg font-bold">{schedule.title}</h3>
-                <p className="text-sm text-[#52606d]">{schedule.team}</p>
-              </div>
-              <div className="text-sm font-bold text-[#224c55]">{schedule.date}</div>
-            </div>
-            <p className="mt-3 rounded-md bg-[#edf7f4] px-3 py-2 text-sm font-semibold text-[#2f675f]">
-              {schedule.confirmed}
-            </p>
-          </article>
-        ))}
-      </div>
-    );
-  }
-
-  if (section === "Mural") {
-    return (
-      <div className="grid gap-4 md:grid-cols-2">
-        {noticeBoard.map((notice) => (
-          <article key={notice.title} className="overflow-hidden rounded-lg border border-[#d8d3c6] bg-white">
-            <div className={`h-44 ${notice.media}`} />
-            <div className="p-5">
-              <p className="text-xs font-bold uppercase text-[#2f8f83]">{notice.kind}</p>
-              <h3 className="mt-1 text-xl font-bold">{notice.title}</h3>
-              <p className="mt-2 text-sm text-[#52606d]">{notice.text}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-    );
-  }
-
-  if (section === "Biblia") {
-    return (
-      <div className="grid gap-4 md:grid-cols-2">
-        <Metric label="Versoes licenciadas" value="1" trend="Bloqueio ativo sem licenca" />
-        <Metric label="Favoritos dos fieis" value="248" trend="Sincronizado" />
-        <Metric label="Harpa Crista" value="640 hinos" trend="Letras por licenca" />
-        <Metric label="Planos de leitura" value="3 ativos" trend="Progresso salvo" />
-      </div>
-    );
-  }
-
-  if (section === "Devocional") {
-    return (
-      <div className="rounded-lg border border-[#d8d3c6] bg-white p-5">
-        <h3 className="text-xl font-bold">Fila de revisao pastoral</h3>
-        <div className="mt-4 grid gap-3">
-          {["Servir com alegria", "Perdao que restaura", "Fe em dias comuns"].map((title, index) => (
-            <div key={title} className="flex items-center justify-between gap-3 rounded-md bg-[#f7f5ef] p-3">
-              <div>
-                <p className="font-bold">{title}</p>
-                <p className="text-sm text-[#52606d]">{index === 0 ? "Rascunho de hoje" : "Programado"}</p>
-              </div>
-              <span className="rounded-md bg-white px-3 py-1 text-xs font-bold text-[#96704d]">Aguardando</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (section === "Patrimonio") {
-    return (
-      <div className="grid gap-4 md:grid-cols-3">
-        <Metric label="Instrumentos" value="18" trend="2 em manutencao" />
-        <Metric label="Som e midia" value="34" trend="Inventario OK" />
-        <Metric label="Imoveis" value="2" trend="Documentos anexados" />
-      </div>
-    );
-  }
-
+function ExperienceMockup({
+  activeFeature,
+  setActiveFeature,
+  selected,
+}: {
+  activeFeature: FeatureKey;
+  setActiveFeature: (feature: FeatureKey) => void;
+  selected: (typeof features)[number];
+}) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <Metric label="Membros ativos" value="428" trend="+9 este mes" />
-      <Metric label="Visitantes" value="36" trend="12 para contato" />
-      <Metric label="Contribuicoes PIX" value="R$ 4.650,00" trend="6 pendentes" />
-      <Metric label="Pedidos de oracao" value="24" trend="Canal pastoral" />
+    <div className="relative min-h-[620px]">
+      <div className="absolute left-2 top-12 hidden w-44 rotate-[-8deg] rounded-[30px] border border-white/10 bg-white/[0.08] p-3 shadow-2xl backdrop-blur-xl sm:block">
+        <div className="rounded-[24px] bg-[#07111f] p-4">
+          <p className="text-xs font-black text-[#1be7ff]">MEMBRO</p>
+          <h3 className="mt-3 text-xl font-black">Maria O.</h3>
+          <p className="mt-1 text-xs text-[#9fb4d8]">Louvor · EBD</p>
+          <div className="mt-4 grid h-24 grid-cols-5 gap-1 rounded-2xl bg-white p-2">
+            {Array.from({ length: 25 }).map((_, index) => (
+              <span className={index % 2 === 0 || index % 7 === 0 ? "bg-[#07111f]" : "bg-[#dfe8f7]"} key={index} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="relative ml-auto rounded-[38px] border border-white/10 bg-white/[0.08] p-3 shadow-[0_35px_100px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+        <div className="overflow-hidden rounded-[30px] bg-[#f7f9ff] text-[#10182c]">
+          <div className="grid lg:grid-cols-[178px_minmax(0,1fr)]">
+            <aside className="hidden bg-[#111c3c] p-5 text-white lg:block">
+              <div className="rounded-2xl bg-[#1be7ff] px-4 py-3 text-sm font-black text-[#07111f]">
+                Criar aviso
+              </div>
+              <nav className="mt-6 space-y-2" aria-label="Modulos">
+                {features.map((feature) => (
+                  <button
+                    className={`w-full rounded-2xl px-3 py-3 text-left text-sm font-black ${
+                      activeFeature === feature.key ? "bg-white text-[#111c3c]" : "text-[#aebde0] hover:bg-white/10"
+                    }`}
+                    key={feature.key}
+                    onClick={() => setActiveFeature(feature.key)}
+                    type="button"
+                  >
+                    {feature.title}
+                  </button>
+                ))}
+              </nav>
+              <div className="mt-8 rounded-3xl border border-white/10 p-4">
+                <p className="text-xs font-black text-[#a6ff3d]">ENGAJAMENTO</p>
+                <p className="mt-2 text-3xl font-black">92%</p>
+                <p className="text-xs text-[#8da0c6]">avisos vistos</p>
+              </div>
+            </aside>
+
+            <div className="min-w-0 p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase text-[#7a8aa2]">Command center</p>
+                  <h2 className="mt-1 text-2xl font-black sm:text-3xl">Igreja Central</h2>
+                </div>
+                <div className="hidden rounded-full bg-white px-4 py-3 text-sm font-bold text-[#8b98ad] shadow-sm sm:block">
+                  Buscar membro, grupo, aviso...
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-4">
+                {features.map((feature) => (
+                  <button
+                    className={`rounded-3xl p-4 text-left transition ${
+                      activeFeature === feature.key
+                        ? "bg-[#1769d4] text-white shadow-[0_18px_40px_rgba(23,105,212,0.28)]"
+                        : "bg-white text-[#10182c] shadow-sm"
+                    }`}
+                    key={feature.key}
+                    onClick={() => setActiveFeature(feature.key)}
+                    type="button"
+                  >
+                    <p className="text-xs font-black opacity-70">{feature.key}</p>
+                    <p className="mt-5 text-xl font-black">{feature.metric}</p>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_240px]">
+                <div className="rounded-[30px] bg-white p-5 shadow-sm">
+                  <p className="text-xs font-black uppercase text-[#1769d4]">{selected.title}</p>
+                  <h3 className="mt-2 text-3xl font-black">{selected.metric}</h3>
+                  <p className="mt-2 text-sm leading-6 text-[#596a84]">{selected.copy}</p>
+                  <Preview activeFeature={activeFeature} />
+                </div>
+                <div className="rounded-[30px] bg-[#111c3c] p-5 text-white">
+                  <p className="text-xs font-black text-[#1be7ff]">AO VIVO</p>
+                  <div className="mt-4 space-y-3">
+                    {["Aniversario enviado", "Video publicado", "Escala confirmada"].map((item) => (
+                      <div className="rounded-2xl bg-white/10 p-3" key={item}>
+                        <p className="text-sm font-black">{item}</p>
+                        <p className="text-xs text-[#8da0c6]">agora</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 overflow-hidden rounded-[28px] bg-white shadow-sm">
+                {["Culto domingo", "Aniversariantes", "Aviso juventude"].map((item, index) => (
+                  <div className="grid gap-2 border-b border-[#edf1f7] px-5 py-4 text-sm last:border-b-0 sm:grid-cols-[1fr_120px_90px]" key={item}>
+                    <span className="font-black">{item}</span>
+                    <span className="text-[#667891]">{index === 0 ? "Agenda" : index === 1 ? "WhatsApp" : "Mural"}</span>
+                    <span className="font-black text-[#1769d4]">Pronto</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function Metric({ label, value, trend }: { label: string; value: string; trend: string }) {
+function Preview({ activeFeature }: { activeFeature: FeatureKey }) {
+  if (activeFeature === "Mural") {
+    return (
+      <div className="mt-5 grid grid-cols-3 gap-3">
+        {feed.map((item) => (
+          <div className="overflow-hidden rounded-2xl bg-[#f4f7fb]" key={item.title}>
+            <div className={`h-20 bg-gradient-to-br ${item.color}`} />
+            <p className="p-3 text-xs font-black">{item.kind}</p>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (activeFeature === "Agenda") {
+    return (
+      <div className="mt-5 grid grid-cols-3 gap-3">
+        {agenda.slice(0, 6).map(([day, event]) => (
+          <div className="rounded-2xl bg-[#f4f7fb] p-3" key={day}>
+            <p className="text-2xl font-black text-[#1769d4]">{day}</p>
+            <p className="text-xs font-black text-[#596a84]">{event}</p>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (activeFeature === "WhatsApp") {
+    return (
+      <div className="mt-5 rounded-2xl bg-[#eafff7] p-4">
+        <p className="text-xs font-black text-[#25a277]">WHATSAPP</p>
+        <p className="mt-2 text-sm leading-6 text-[#40515f]">{messages[0]}</p>
+      </div>
+    );
+  }
+
   return (
-    <article className="rounded-lg border border-[#d8d3c6] bg-white p-5">
-      <p className="text-sm font-semibold text-[#6d766c]">{label}</p>
-      <h3 className="mt-2 text-2xl font-bold">{value}</h3>
-      <p className="mt-3 text-sm font-semibold text-[#2f8f83]">{trend}</p>
-    </article>
+    <div className="mt-5 rounded-2xl bg-[#eef5ff] p-4">
+      <p className="text-xs font-black text-[#1769d4]">CARTEIRINHA DIGITAL</p>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-lg font-black">Maria Oliveira</p>
+          <p className="text-sm text-[#596a84]">Membro ativo desde 2019</p>
+        </div>
+        <div className="grid h-16 w-16 grid-cols-4 gap-1 rounded-xl bg-white p-2">
+          {Array.from({ length: 16 }).map((_, index) => (
+            <span className={index % 2 === 0 || index % 5 === 0 ? "bg-[#10182c]" : "bg-[#cfe3ff]"} key={index} />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
-function MobileCard({ title, children }: { title: string; children: React.ReactNode }) {
+function HeroMetric({ value, label }: { value: string; label: string }) {
   return (
-    <section className="rounded-lg border border-[#d8d3c6] bg-white p-3">
-      <h3 className="mb-2 font-bold">{title}</h3>
-      {children}
-    </section>
+    <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-xl">
+      <p className="text-lg font-black text-white sm:text-2xl">{value}</p>
+      <p className="mt-1 text-xs font-bold text-[#9fb4d8] sm:text-sm">{label}</p>
+    </div>
   );
 }

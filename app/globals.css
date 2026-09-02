@@ -1,8 +1,8 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #f7f5ef;
-  --foreground: #1f2933;
+  --background: #070a18;
+  --foreground: #ffffff;
 }
 
 @theme inline {
@@ -16,6 +16,15 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  min-width: 320px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 button,
@@ -23,4 +32,84 @@ a,
 input,
 textarea {
   touch-action: manipulation;
+}
+
+.cyber-bg {
+  background:
+    linear-gradient(120deg, rgba(27, 231, 255, 0.16) 0 1px, transparent 1px 130px),
+    linear-gradient(60deg, rgba(166, 255, 61, 0.09) 0 1px, transparent 1px 170px),
+    radial-gradient(ellipse at 24% 18%, rgba(27, 231, 255, 0.28), transparent 32rem),
+    radial-gradient(ellipse at 88% 44%, rgba(255, 78, 205, 0.22), transparent 30rem),
+    linear-gradient(135deg, #070a18 0%, #0a1a3d 52%, #08121f 100%);
+}
+
+.cyber-bg::before,
+.cyber-bg::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.cyber-bg::before {
+  background:
+    linear-gradient(90deg, transparent, rgba(27, 231, 255, 0.28), transparent),
+    linear-gradient(90deg, transparent, rgba(255, 78, 205, 0.18), transparent);
+  height: 36rem;
+  left: -12rem;
+  top: 12rem;
+  transform: rotate(-14deg);
+  width: calc(100% + 24rem);
+}
+
+.cyber-bg::after {
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  height: 24rem;
+  right: 3rem;
+  top: -9rem;
+  transform: rotate(32deg);
+  width: 16rem;
+}
+
+.logo-pulse {
+  box-shadow: 0 0 0 8px rgba(27, 231, 255, 0.1), 0 0 34px rgba(27, 231, 255, 0.55);
+}
+
+.cta-neon {
+  background: linear-gradient(135deg, #1be7ff, #a6ff3d);
+  box-shadow: 0 0 40px rgba(27, 231, 255, 0.28), 0 16px 44px rgba(166, 255, 61, 0.18);
+}
+
+.feature-card {
+  position: relative;
+}
+
+.feature-card::before {
+  background: linear-gradient(120deg, rgba(27, 231, 255, 0.26), transparent 34%, rgba(255, 78, 205, 0.16));
+  border-radius: inherit;
+  content: "";
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+  transition: opacity 180ms ease;
+}
+
+.feature-card:hover::before {
+  opacity: 1;
+}
+
+.phone-frame,
+.dashboard-shell {
+  animation: lift-in 700ms ease both;
+}
+
+@keyframes lift-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
