@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Igreja Gestao | Painel Administrativo Local',
+  title: 'Igreja Conectada | Painel Administrativo Local',
   description:
     'Painel local para gerenciamento de igrejas com atendimento pastoral, notificacoes, mural, agenda e backup.',
 };

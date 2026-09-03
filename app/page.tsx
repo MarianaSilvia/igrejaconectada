@@ -711,7 +711,7 @@ function normalizeWhatsappPhone(value: string) {
 }
 
 function messageFor(text: string, recipientName: string) {
-  return text.replaceAll("{nome}", recipientName).replaceAll("{igreja}", "Igreja Gestao");
+  return text.replaceAll("{nome}", recipientName).replaceAll("{igreja}", "Igreja Conectada");
 }
 
 function whatsappUrl(phone: string, text: string, recipientName: string) {
@@ -1320,7 +1320,7 @@ export default function Home() {
   function memberCardData(member: MemberRecord): DigitalCardData {
     return {
       title: "Carteirinha digital",
-      church: "Igreja Gestao",
+      church: "Igreja Conectada",
       name: member.fullName,
       subtitle: `${member.memberType} - ${member.status}`,
       id: `ID ${member.id.slice(0, 12).toUpperCase()}`,
@@ -1335,7 +1335,7 @@ export default function Home() {
   function kidCardData(kid: KidRecord): DigitalCardData {
     return {
       title: "Carteirinha Kids",
-      church: "Igreja Gestao Kids",
+      church: "Igreja Conectada Kids",
       name: kid.childName,
       subtitle: `${kid.ageGroup} - ${kid.className || "Turma Kids"}`,
       id: `ID ${kid.id.slice(0, 12).toUpperCase()}`,
@@ -1432,7 +1432,7 @@ export default function Home() {
           <div className="brand-block">
             <div className="brand-mark">IG</div>
             <div>
-              <p className="brand-name">Igreja Gestao</p>
+              <p className="brand-name">Igreja Conectada</p>
               <p className="brand-caption">Painel administrativo</p>
             </div>
           </div>
@@ -2953,7 +2953,7 @@ function AccessScreen({
       <section className="access-intro" aria-label="Apresentacao do sistema">
         <div className="brand-block">
           <div className="brand-mark">IG</div>
-          <p className="brand-name">Igreja Gestao</p>
+          <p className="brand-name">Igreja Conectada</p>
         </div>
         <div>
           <p className="access-kicker">Cuidar - Servir - Conectar</p>
