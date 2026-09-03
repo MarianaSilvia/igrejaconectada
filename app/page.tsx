@@ -372,17 +372,6 @@ export default function Home() {
     setCareForm(blankCare);
   }
 
-  const stats = [
-    { label: "Membros ativos", value: "0", hint: "cadastros visiveis" },
-    { label: "Eventos proximos", value: data.events.length.toString(), hint: "na agenda" },
-    { label: "Ministerios", value: "4", hint: "em atividade" },
-    {
-      label: "Atendimentos",
-      value: data.careRequests.filter((request) => request.status !== "Concluido").length.toString(),
-      hint: "em acompanhamento",
-    },
-  ];
-
   const actionHighlights = [
     {
       label: "Atencao pastoral",
@@ -401,6 +390,12 @@ export default function Home() {
       value: data.notices.filter((notice) => notice.status === "Publicado").length.toString(),
       hint: "publicados",
       module: "notices" as ModuleKey,
+    },
+    {
+      label: "Atendimentos",
+      value: data.careRequests.filter((request) => request.status !== "Concluido").length.toString(),
+      hint: "em acompanhamento",
+      module: "pastoral" as ModuleKey,
     },
   ];
 
@@ -485,6 +480,40 @@ export default function Home() {
             </div>
           </div>
         </aside>
+
+        <nav className="mobile-tabbar" aria-label="Atalhos principais">
+          <button
+            className={activeModule === "overview" ? "active" : ""}
+            onClick={() => setActiveModule("overview")}
+            type="button"
+          >
+            Painel
+          </button>
+          <button
+            className={activeModule === "pastoral" ? "active" : ""}
+            onClick={() => setActiveModule("pastoral")}
+            type="button"
+          >
+            Pastoral
+          </button>
+          <button
+            className={activeModule === "members" ? "active" : ""}
+            onClick={() => setActiveModule("members")}
+            type="button"
+          >
+            Membros
+          </button>
+          <button
+            className={activeModule === "events" ? "active" : ""}
+            onClick={() => setActiveModule("events")}
+            type="button"
+          >
+            Agenda
+          </button>
+          <button className={notificationsOpen ? "active" : ""} onClick={() => setNotificationsOpen((open) => !open)} type="button">
+            Acoes
+          </button>
+        </nav>
 
         <section className="workspace">
           <header className="topbar">
@@ -574,17 +603,6 @@ export default function Home() {
                     <strong>{item.value}</strong>
                     <small>{item.hint}</small>
                   </button>
-                ))}
-              </div>
-
-              <div className="stats-grid">
-                {stats.map((stat) => (
-                  <article className="stat-card" key={stat.label}>
-                    <span className="signal-line" />
-                    <span>{stat.label}</span>
-                    <strong>{stat.value}</strong>
-                    <small>{stat.hint}</small>
-                  </article>
                 ))}
               </div>
 

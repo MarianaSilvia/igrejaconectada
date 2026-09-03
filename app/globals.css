@@ -415,6 +415,24 @@ button {
   padding: 14px;
 }
 
+.mobile-tabbar {
+  display: none;
+}
+
+.mobile-tabbar button {
+  background: transparent;
+  border: 0;
+  color: #9fb8d6;
+  font-size: 12px;
+  font-weight: 900;
+  min-height: 48px;
+  padding: 0 6px;
+}
+
+.mobile-tabbar button.active {
+  color: var(--accent-strong);
+}
+
 .connection-card strong,
 .connection-card span {
   display: block;
@@ -1152,26 +1170,79 @@ textarea:focus {
     min-height: 42px;
   }
 
-  .workspace,
+  .workspace {
+    padding: 18px 14px 92px;
+  }
+
   .sidebar {
+    display: none;
+  }
+
+  .mobile-tabbar {
+    align-items: center;
+    background: rgba(8, 16, 31, 0.96);
+    border: 1px solid rgba(72, 184, 255, 0.2);
+    border-radius: 8px 8px 0 0;
+    bottom: 0;
+    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.34);
+    display: grid;
+    gap: 2px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    left: 0;
     padding: 16px;
+    position: fixed;
+    right: 0;
+    z-index: 30;
   }
 
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+    gap: 14px;
+    margin-bottom: 18px;
   }
 
-  .topbar-actions,
-  .command-search,
-  .profile-pill,
-  .notification-button {
+  .topbar h1 {
+    font-size: 34px;
+  }
+
+  .topbar-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     width: 100%;
   }
 
-  .profile-pill,
   .notification-button {
-    justify-content: flex-start;
+    justify-content: center;
+    min-width: 96px;
+    width: auto;
+  }
+
+  .command-search {
+    min-width: 0;
+    width: auto;
+  }
+
+  .command-search input,
+  .notification-button {
+    min-height: 46px;
+  }
+
+  .profile-pill {
+    display: none;
+  }
+
+  .notifications-panel {
+    border-radius: 8px 8px 0 0;
+    bottom: 62px;
+    left: 0;
+    max-height: min(560px, calc(100vh - 96px));
+    max-width: none;
+    overflow: auto;
+    position: fixed;
+    right: 0;
+    top: auto;
+    width: 100%;
   }
 
   .module-list,
@@ -1184,7 +1255,25 @@ textarea:focus {
   }
 
   .hero-panel {
+    min-height: auto;
     padding: 22px;
+  }
+
+  .hero-panel h2 {
+    font-size: 36px;
+  }
+
+  .action-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .action-tile {
+    min-height: 108px;
+    padding: 14px;
+  }
+
+  .action-tile strong {
+    font-size: 32px;
   }
 
   .panel-heading {
