@@ -54,6 +54,11 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .access-page {
   background:
     linear-gradient(90deg, rgba(72, 184, 255, 0.07) 1px, transparent 1px),
@@ -938,6 +943,17 @@ textarea:focus {
 
 .primary-action {
   grid-column: 1 / -1;
+}
+
+.action-feedback {
+  background: rgba(20, 217, 196, 0.1);
+  border: 1px solid rgba(20, 217, 196, 0.28);
+  border-radius: 8px;
+  color: #9df8eb;
+  font-size: 13px;
+  font-weight: 850;
+  margin: 14px 0;
+  padding: 12px 14px;
 }
 
 .care-list-item {

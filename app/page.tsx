@@ -57,6 +57,23 @@ type MuralItem = {
   expiresAt: string;
 };
 
+type AccessUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: "Administrador" | "Lider" | "Membro";
+  status: "Ativo" | "Pendente" | "Bloqueado";
+};
+
+type MemberRecord = {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  status: "Membro ativo" | "Visitante" | "Novo convertido" | "Transferencia";
+  ministry: string;
+};
+
 type AuditItem = {
   id: string;
   action: string;
@@ -68,6 +85,8 @@ type AppData = {
   events: ChurchEvent[];
   notices: Notice[];
   mural: MuralItem[];
+  users: AccessUser[];
+  members: MemberRecord[];
   audit: AuditItem[];
   notificationReadIds: string[];
 };
@@ -184,6 +203,40 @@ const initialData: AppData = {
       expiresAt: "2026-09-30",
     },
   ],
+  users: [
+    {
+      id: "user-1",
+      name: "Mariana Silva",
+      email: "mariana@igreja.com",
+      role: "Administrador",
+      status: "Ativo",
+    },
+    {
+      id: "user-2",
+      name: "Pr. Marcos",
+      email: "marcos@igreja.com",
+      role: "Lider",
+      status: "Ativo",
+    },
+  ],
+  members: [
+    {
+      id: "member-1",
+      fullName: "Ana Ribeiro",
+      phone: "(11) 98888-1201",
+      email: "ana@igreja.com",
+      status: "Membro ativo",
+      ministry: "Familia",
+    },
+    {
+      id: "member-2",
+      fullName: "Carlos Lima",
+      phone: "(21) 97777-5402",
+      email: "carlos@igreja.com",
+      status: "Visitante",
+      ministry: "Recepcao",
+    },
+  ],
   audit: [
     { id: "audit-1", action: "Central de notificacoes criada", when: "2026-09-02T15:10:00.000Z" },
     { id: "audit-2", action: "Modulo de backup validado", when: "2026-09-02T14:42:00.000Z" },
@@ -201,6 +254,29 @@ const blankCare: Omit<CareRequest, "id" | "createdAt" | "updatedAt"> = {
   scheduleTime: "",
   summary: "",
   returnNote: "",
+};
+
+const blankUser: Omit<AccessUser, "id"> = {
+  name: "",
+  email: "",
+  role: "Lider",
+  status: "Pendente",
+};
+
+const blankMember: Omit<MemberRecord, "id"> = {
+  fullName: "",
+  phone: "",
+  email: "",
+  status: "Visitante",
+  ministry: "",
+};
+
+const blankMuralItem: Omit<MuralItem, "id"> = {
+  title: "",
+  category: "Secretaria",
+  published: true,
+  featured: false,
+  expiresAt: "",
 };
 
 const blankRegistration: RegistrationForm = {
@@ -251,6 +327,21 @@ function suggestedNextStep(request: CareRequest) {
   return "Arquivado no historico";
 }
 
+function normalizeAppData(value: Partial<AppData>): AppData {
+  return {
+    ...initialData,
+    ...value,
+    careRequests: value.careRequests ?? initialData.careRequests,
+    events: value.events ?? initialData.events,
+    notices: value.notices ?? initialData.notices,
+    mural: value.mural ?? initialData.mural,
+    users: value.users ?? initialData.users,
+    members: value.members ?? initialData.members,
+    audit: value.audit ?? initialData.audit,
+    notificationReadIds: value.notificationReadIds ?? initialData.notificationReadIds,
+  };
+}
+
 export default function Home() {
   const [hasSession, setHasSession] = useState(false);
   const [accessMode, setAccessMode] = useState<AccessMode>("login");
@@ -261,6 +352,9 @@ export default function Home() {
   const [activeModule, setActiveModule] = useState<ModuleKey>("overview");
   const [data, setData] = useState<AppData>(initialData);
   const [careForm, setCareForm] = useState(blankCare);
+  const [userForm, setUserForm] = useState(blankUser);
+  const [memberForm, setMemberForm] = useState(blankMember);
+  const [muralForm, setMuralForm] = useState(blankMuralItem);
   const [selectedRequestId, setSelectedRequestId] = useState("care-1");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -269,7 +363,7 @@ export default function Home() {
     if (!stored) return;
 
     try {
-      setData(JSON.parse(stored) as AppData);
+      setData(normalizeAppData(JSON.parse(stored) as Partial<AppData>));
     } catch {
       window.localStorage.removeItem(storageKey);
     }
@@ -311,6 +405,9 @@ export default function Home() {
   }, [data.careRequests, data.events, data.mural]);
 
   const unreadCount = notifications.filter((notice) => !data.notificationReadIds.includes(notice.id)).length;
+  const canCreateUser = Boolean(userForm.name.trim() && userForm.email.trim());
+  const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim());
+  const canCreateMuralItem = Boolean(muralForm.title.trim() && muralForm.expiresAt);
 
   function log(action: string) {
     setData((current) => ({
@@ -359,6 +456,48 @@ export default function Home() {
     }));
   }
 
+  function createUser() {
+    if (!userForm.name.trim() || !userForm.email.trim()) return;
+
+    const now = new Date().toISOString();
+    const user: AccessUser = { ...userForm, id: uid("user") };
+
+    setData((current) => ({
+      ...current,
+      users: [user, ...current.users],
+      audit: [{ id: uid("audit"), action: `Usuario criado para ${user.name}`, when: now }, ...current.audit].slice(0, 12),
+    }));
+    setUserForm(blankUser);
+  }
+
+  function createMember() {
+    if (!memberForm.fullName.trim() || !memberForm.phone.trim()) return;
+
+    const now = new Date().toISOString();
+    const member: MemberRecord = { ...memberForm, id: uid("member") };
+
+    setData((current) => ({
+      ...current,
+      members: [member, ...current.members],
+      audit: [{ id: uid("audit"), action: `Membro cadastrado: ${member.fullName}`, when: now }, ...current.audit].slice(0, 12),
+    }));
+    setMemberForm(blankMember);
+  }
+
+  function createMuralItem() {
+    if (!muralForm.title.trim() || !muralForm.expiresAt) return;
+
+    const now = new Date().toISOString();
+    const item: MuralItem = { ...muralForm, id: uid("mural") };
+
+    setData((current) => ({
+      ...current,
+      mural: [item, ...current.mural],
+      audit: [{ id: uid("audit"), action: `Item publicado no mural: ${item.title}`, when: now }, ...current.audit].slice(0, 12),
+    }));
+    setMuralForm(blankMuralItem);
+  }
+
   function markAllNotificationsRead() {
     setData((current) => ({
       ...current,
@@ -370,6 +509,9 @@ export default function Home() {
     setData(initialData);
     setSelectedRequestId("care-1");
     setCareForm(blankCare);
+    setUserForm(blankUser);
+    setMemberForm(blankMember);
+    setMuralForm(blankMuralItem);
   }
 
   const actionHighlights = [
@@ -398,6 +540,8 @@ export default function Home() {
       module: "pastoral" as ModuleKey,
     },
   ];
+
+  const memberRows = data.members.map((member) => `${member.fullName} - ${member.status} - ${member.phone}`);
 
   function switchAccessMode(mode: AccessMode) {
     setAccessMode(mode);
@@ -809,7 +953,59 @@ export default function Home() {
 
           {activeModule === "mural" && (
             <section className="content-grid">
-              <article className="surface wide">
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Novo item do mural</h2>
+                  <span>Publicacao</span>
+                </div>
+                <div className="form-grid">
+                  <label className="full">
+                    Titulo
+                    <input
+                      onChange={(event) => setMuralForm((form) => ({ ...form, title: event.target.value }))}
+                      placeholder="Ex.: Encontro de jovens"
+                      value={muralForm.title}
+                    />
+                  </label>
+                  <label>
+                    Categoria
+                    <input
+                      onChange={(event) => setMuralForm((form) => ({ ...form, category: event.target.value }))}
+                      placeholder="Ex.: Jovens"
+                      value={muralForm.category}
+                    />
+                  </label>
+                  <label>
+                    Expira em
+                    <input
+                      onChange={(event) => setMuralForm((form) => ({ ...form, expiresAt: event.target.value }))}
+                      type="date"
+                      value={muralForm.expiresAt}
+                    />
+                  </label>
+                  <label className="switch full">
+                    <input
+                      checked={muralForm.published}
+                      onChange={(event) => setMuralForm((form) => ({ ...form, published: event.target.checked }))}
+                      type="checkbox"
+                    />
+                    Publicar agora
+                  </label>
+                  <label className="switch full">
+                    <input
+                      checked={muralForm.featured}
+                      onChange={(event) => setMuralForm((form) => ({ ...form, featured: event.target.checked }))}
+                      type="checkbox"
+                    />
+                    Marcar como destaque
+                  </label>
+                  <button className="primary-action" disabled={!canCreateMuralItem} onClick={createMuralItem} type="button">
+                    Adicionar ao mural
+                  </button>
+                </div>
+              </article>
+
+              <article className="surface">
                 <div className="panel-heading">
                   <h2>Administrar mural</h2>
                   <span>{data.mural.filter((item) => item.published).length} publicados</span>
@@ -857,23 +1053,145 @@ export default function Home() {
           )}
 
           {activeModule === "users" && (
-            <SimpleModule
-              action={() => log("Permissoes revisadas")}
-              button="Registrar auditoria"
-              description="Separacao planejada: administrador, lider e membro. A proxima etapa tecnica e religar essas permissoes ao Auth/RLS."
-              rows={["Administrador - acesso completo", "Lider - ministerios e atendimentos atribuidos", "Membro - painel pessoal"]}
-              title="Usuarios e acessos"
-            />
+            <section className="content-grid">
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Novo usuario</h2>
+                  <span>Acesso interno</span>
+                </div>
+                <div className="form-grid">
+                  <label className="full">
+                    Nome
+                    <input
+                      onChange={(event) => setUserForm((form) => ({ ...form, name: event.target.value }))}
+                      placeholder="Ex.: Lider de jovens"
+                      value={userForm.name}
+                    />
+                  </label>
+                  <label className="full">
+                    E-mail
+                    <input
+                      onChange={(event) => setUserForm((form) => ({ ...form, email: event.target.value }))}
+                      placeholder="usuario@email.com"
+                      type="email"
+                      value={userForm.email}
+                    />
+                  </label>
+                  <label>
+                    Perfil
+                    <select onChange={(event) => setUserForm((form) => ({ ...form, role: event.target.value as AccessUser["role"] }))} value={userForm.role}>
+                      <option>Administrador</option>
+                      <option>Lider</option>
+                      <option>Membro</option>
+                    </select>
+                  </label>
+                  <label>
+                    Status
+                    <select onChange={(event) => setUserForm((form) => ({ ...form, status: event.target.value as AccessUser["status"] }))} value={userForm.status}>
+                      <option>Ativo</option>
+                      <option>Pendente</option>
+                      <option>Bloqueado</option>
+                    </select>
+                  </label>
+                  <button className="primary-action" disabled={!canCreateUser} onClick={createUser} type="button">
+                    Adicionar usuario
+                  </button>
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Usuarios cadastrados</h2>
+                  <span>{data.users.length} acessos</span>
+                </div>
+                <div className="row-list">
+                  {data.users.map((user) => (
+                    <div className="data-row" key={user.id}>
+                      <span className="bullet-mark" />
+                      <div>
+                        <strong>{user.name}</strong>
+                        <small>{user.role} - {user.status} - {user.email}</small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </section>
           )}
 
           {activeModule === "members" && (
-            <SimpleModule
-              action={() => log("Cadastro de membros revisado")}
-              button="Registrar revisao"
-              description="Modulo preparado para listagem, filtros, familia, status e historico espiritual."
-              rows={["0 membros visiveis no ambiente local", "Campos previstos: telefone, email, familia, batismo e status"]}
-              title="Membros"
-            />
+            <section className="content-grid">
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Novo membro</h2>
+                  <span>Cadastro rapido</span>
+                </div>
+                <div className="form-grid">
+                  <label className="full">
+                    Nome completo
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, fullName: event.target.value }))}
+                      placeholder="Ex.: Maria Oliveira"
+                      value={memberForm.fullName}
+                    />
+                  </label>
+                  <label>
+                    Telefone
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, phone: event.target.value }))}
+                      placeholder="(00) 00000-0000"
+                      value={memberForm.phone}
+                    />
+                  </label>
+                  <label>
+                    E-mail
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, email: event.target.value }))}
+                      placeholder="membro@email.com"
+                      type="email"
+                      value={memberForm.email}
+                    />
+                  </label>
+                  <label>
+                    Status
+                    <select onChange={(event) => setMemberForm((form) => ({ ...form, status: event.target.value as MemberRecord["status"] }))} value={memberForm.status}>
+                      <option>Membro ativo</option>
+                      <option>Visitante</option>
+                      <option>Novo convertido</option>
+                      <option>Transferencia</option>
+                    </select>
+                  </label>
+                  <label>
+                    Ministerio
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, ministry: event.target.value }))}
+                      placeholder="Ex.: Louvor"
+                      value={memberForm.ministry}
+                    />
+                  </label>
+                  <button className="primary-action" disabled={!canCreateMember} onClick={createMember} type="button">
+                    Adicionar membro
+                  </button>
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Membros cadastrados</h2>
+                  <span>{data.members.length} registros</span>
+                </div>
+                <div className="row-list">
+                  {memberRows.map((row) => (
+                    <div className="data-row" key={row}>
+                      <span className="bullet-mark" />
+                      <div>
+                        <strong>{row}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </section>
           )}
 
           {activeModule === "ministries" && (
@@ -903,6 +1221,8 @@ export default function Home() {
               description="Resumo local para acompanhar operacao antes da integracao final."
               rows={[
                 `${data.careRequests.length} atendimentos pastorais`,
+                `${data.members.length} membros cadastrados`,
+                `${data.users.length} usuarios com acesso`,
                 `${data.events.length} eventos cadastrados`,
                 `${unreadCount} notificacoes nao lidas`,
               ]}
@@ -925,7 +1245,9 @@ export default function Home() {
                   <strong>Cobertura do backup</strong>
                   <span>100%</span>
                   <small>
-                    {data.careRequests.length} atendimentos, {data.events.length} eventos, {data.notices.length} comunicados,
+                    {data.members.length} membros, {data.users.length} usuarios, {data.careRequests.length} atendimentos,
+                    {" "}
+                    {data.events.length} eventos, {data.notices.length} comunicados,
                     {" "}
                     {data.mural.length} itens de mural e {data.audit.length} auditorias.
                   </small>
@@ -1289,16 +1611,24 @@ function SimpleModule({
   rows: string[];
   title: string;
 }) {
+  const [feedback, setFeedback] = useState("");
+
+  function handleAction() {
+    action();
+    setFeedback(`${button} concluido agora.`);
+  }
+
   return (
     <section className="content-grid">
       <article className="surface wide">
         <div className="panel-heading">
           <h2>{title}</h2>
-          <button onClick={action} type="button">
+          <button onClick={handleAction} type="button">
             {button}
           </button>
         </div>
         <p className="body-copy">{description}</p>
+        {feedback && <div className="action-feedback">{feedback}</div>}
         <div className="row-list">
           {rows.map((row) => (
             <div className="data-row" key={row}>
