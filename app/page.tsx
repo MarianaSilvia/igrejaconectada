@@ -901,6 +901,14 @@ export default function Home() {
     setHasSession(true);
   }
 
+  function handleLogout() {
+    setHasSession(false);
+    setNotificationsOpen(false);
+    setActiveModule("overview");
+    setAccessMode("login");
+    setAccessMessage("Voce saiu do sistema com seguranca.");
+  }
+
   function handleRecover(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAccessMessage("Se o e-mail estiver cadastrado, a administracao recebera o pedido de recuperacao.");
@@ -1046,6 +1054,9 @@ export default function Home() {
           <button className={notificationsOpen ? "active" : ""} onClick={() => setNotificationsOpen((open) => !open)} type="button">
             Acoes
           </button>
+          <button className="logout-tab" onClick={handleLogout} type="button">
+            Sair
+          </button>
         </nav>
 
         <section className="workspace">
@@ -1086,6 +1097,9 @@ export default function Home() {
                   <small>Administrador</small>
                 </div>
               </div>
+              <button className="logout-button" onClick={handleLogout} type="button">
+                Sair
+              </button>
             </div>
 
             {notificationsOpen && (

@@ -526,6 +526,7 @@ button:disabled {
 }
 
 .notification-button,
+.logout-button,
 .profile-pill,
 .panel-heading button,
 .hero-actions button,
@@ -544,6 +545,16 @@ button:disabled {
   gap: 8px;
   min-height: 44px;
   padding: 0 12px;
+}
+
+.logout-button {
+  background: rgba(255, 92, 122, 0.12);
+  border: 1px solid rgba(255, 92, 122, 0.28);
+  color: #ffb3c0;
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 44px;
+  padding: 0 14px;
 }
 
 .notification-button strong {
@@ -1267,7 +1278,7 @@ textarea:focus {
     box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.34);
     display: grid;
     gap: 2px;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     left: 0;
     padding: 16px;
     position: fixed;
@@ -1302,6 +1313,10 @@ textarea:focus {
     justify-content: center;
     min-width: 96px;
     width: auto;
+  }
+
+  .logout-button {
+    display: none;
   }
 
   .command-search {
