@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Igreja Conectada | Landing Page para Gestao de Igrejas',
+  title: 'Igreja Gestao | Painel Administrativo Local',
   description:
-    'Landing page moderna para sistema de gerenciamento de igrejas com carteirinha digital, mural com fotos e videos, agenda mensal e templates de WhatsApp.',
+    'Painel local para gerenciamento de igrejas com atendimento pastoral, notificacoes, mural, agenda e backup.',
 };
 
 export default function RootLayout({

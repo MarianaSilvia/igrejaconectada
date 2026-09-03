@@ -1,482 +1,1261 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useState } from "react";
 
-type FeatureKey = "ID" | "Mural" | "Agenda" | "WhatsApp";
+type ModuleKey =
+  | "overview"
+  | "users"
+  | "members"
+  | "events"
+  | "ministries"
+  | "notices"
+  | "mural"
+  | "pastoral"
+  | "school"
+  | "reports"
+  | "settings";
 
-const features = [
-  {
-    key: "ID" as const,
-    title: "Carteirinha digital",
-    copy: "Identificacao viva do membro com status, QR visual, grupos e ministerios.",
-    metric: "428",
-    label: "membros ativos",
-  },
-  {
-    key: "Mural" as const,
-    title: "Mural social",
-    copy: "Avisos com foto, video e destaque para o que esta acontecendo na igreja.",
-    metric: "18k",
-    label: "alcance mensal",
-  },
-  {
-    key: "Agenda" as const,
-    title: "Agenda inteligente",
-    copy: "Cultos, ensaios, reunioes e escalas vistos por mes, grupo e responsavel.",
-    metric: "36",
-    label: "eventos no mes",
-  },
-  {
-    key: "WhatsApp" as const,
-    title: "WhatsApp viral",
-    copy: "Templates prontos para aniversariantes, grupos, convites e confirmacoes.",
-    metric: "1 click",
-    label: "para enviar",
-  },
+type AccessMode = "login" | "recover" | "register";
+
+type CareStatus = "Pendente" | "Em analise" | "Agendado" | "Concluido";
+
+type CareRequest = {
+  id: string;
+  member: string;
+  phone: string;
+  category: string;
+  status: CareStatus;
+  responsible: string;
+  scheduleDate: string;
+  scheduleTime: string;
+  summary: string;
+  returnNote: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type ChurchEvent = {
+  id: string;
+  title: string;
+  date: string;
+  ministry: string;
+};
+
+type Notice = {
+  id: string;
+  title: string;
+  body: string;
+  status: "Publicado" | "Rascunho";
+};
+
+type MuralItem = {
+  id: string;
+  title: string;
+  category: string;
+  published: boolean;
+  featured: boolean;
+  expiresAt: string;
+};
+
+type AuditItem = {
+  id: string;
+  action: string;
+  when: string;
+};
+
+type AppData = {
+  careRequests: CareRequest[];
+  events: ChurchEvent[];
+  notices: Notice[];
+  mural: MuralItem[];
+  audit: AuditItem[];
+  notificationReadIds: string[];
+};
+
+type RegistrationForm = {
+  fullName: string;
+  phone: string;
+  email: string;
+  birthDate: string;
+  maritalStatus: string;
+  address: string;
+  congregationInterest: string;
+  registrationType: string;
+  previousChurch: string;
+  password: string;
+  passwordConfirm: string;
+  waterBaptized: boolean;
+  holySpiritBaptized: boolean;
+  interestedMinistries: string;
+  notesOrPrayer: string;
+};
+
+const storageKey = "igreja-gestao-local-v1";
+
+const modules: { key: ModuleKey; label: string; short: string }[] = [
+  { key: "overview", label: "Visao geral", short: "Painel" },
+  { key: "users", label: "Usuarios e acessos", short: "Acessos" },
+  { key: "members", label: "Membros", short: "Membros" },
+  { key: "events", label: "Agenda", short: "Agenda" },
+  { key: "ministries", label: "Ministerios", short: "Ministerios" },
+  { key: "notices", label: "Comunicados", short: "Avisos" },
+  { key: "mural", label: "Mural", short: "Mural" },
+  { key: "pastoral", label: "Atendimento pastoral", short: "Pastoral" },
+  { key: "school", label: "Escola Biblica", short: "EBD" },
+  { key: "reports", label: "Relatorios", short: "Relatorios" },
+  { key: "settings", label: "Configuracoes", short: "Config" },
 ];
 
-const feed = [
-  { title: "Santa ceia", kind: "Foto", color: "from-[#1be7ff] to-[#7357ff]" },
-  { title: "Noite jovem", kind: "Video", color: "from-[#ff4ecd] to-[#7c3cff]" },
-  { title: "Acao social", kind: "Live", color: "from-[#a6ff3d] to-[#12d8a0]" },
-];
+const statusFlow: CareStatus[] = ["Pendente", "Em analise", "Agendado", "Concluido"];
 
-const agenda = [
-  ["03", "Ensaio", "Louvor"],
-  ["06", "Culto", "Todos"],
-  ["10", "EBD", "Alunos"],
-  ["14", "Jovens", "Grupo"],
-  ["21", "Ceia", "Igreja"],
-  ["28", "Missoes", "Equipe"],
-];
+const initialData: AppData = {
+  careRequests: [
+    {
+      id: "care-1",
+      member: "Ana Ribeiro",
+      phone: "(11) 98888-1201",
+      category: "Aconselhamento familiar",
+      status: "Agendado",
+      responsible: "Pr. Marcos",
+      scheduleDate: "2026-09-04",
+      scheduleTime: "19:30",
+      summary: "Solicitou conversa com a lideranca sobre acompanhamento familiar.",
+      returnNote: "Confirmar presenca um dia antes e registrar encaminhamento.",
+      createdAt: "2026-09-01T18:20:00.000Z",
+      updatedAt: "2026-09-02T12:10:00.000Z",
+    },
+    {
+      id: "care-2",
+      member: "Carlos Lima",
+      phone: "(21) 97777-5402",
+      category: "Pedido de visita",
+      status: "Pendente",
+      responsible: "",
+      scheduleDate: "",
+      scheduleTime: "",
+      summary: "Pediu visita pastoral para esta semana.",
+      returnNote: "",
+      createdAt: "2026-09-02T09:00:00.000Z",
+      updatedAt: "2026-09-02T09:00:00.000Z",
+    },
+  ],
+  events: [
+    { id: "event-1", title: "Culto da familia", date: "2026-09-06", ministry: "Todos" },
+    { id: "event-2", title: "Congresso de jovens", date: "2026-09-12", ministry: "Jovens" },
+    { id: "event-3", title: "Escola Biblica", date: "2026-09-13", ministry: "EBD" },
+  ],
+  notices: [
+    {
+      id: "notice-1",
+      title: "Escala de setembro disponivel",
+      body: "Lideres ja podem conferir e ajustar a escala mensal.",
+      status: "Publicado",
+    },
+    {
+      id: "notice-2",
+      title: "Cadastro de novos alunos EBD",
+      body: "Secretaria deve revisar as turmas antes de domingo.",
+      status: "Publicado",
+    },
+  ],
+  mural: [
+    {
+      id: "mural-1",
+      title: "Campanha de arrecadacao",
+      category: "Acao social",
+      published: true,
+      featured: true,
+      expiresAt: "2026-09-20",
+    },
+    {
+      id: "mural-2",
+      title: "Encontro de casais",
+      category: "Familia",
+      published: true,
+      featured: false,
+      expiresAt: "2026-09-18",
+    },
+    {
+      id: "mural-3",
+      title: "Inscricoes para batismo",
+      category: "Secretaria",
+      published: false,
+      featured: false,
+      expiresAt: "2026-09-30",
+    },
+  ],
+  audit: [
+    { id: "audit-1", action: "Central de notificacoes criada", when: "2026-09-02T15:10:00.000Z" },
+    { id: "audit-2", action: "Modulo de backup validado", when: "2026-09-02T14:42:00.000Z" },
+  ],
+  notificationReadIds: [],
+};
 
-const messages = [
-  "Paz, Ana! Feliz aniversario. Que Deus abencoe sua vida hoje e sempre.",
-  "Equipe, ensaio sabado as 17h. Confirme presenca no grupo.",
-  "Domingo tem Culto da Familia as 19h. Convide alguem especial.",
-];
+const blankCare: Omit<CareRequest, "id" | "createdAt" | "updatedAt"> = {
+  member: "",
+  phone: "",
+  category: "Aconselhamento",
+  status: "Pendente",
+  responsible: "",
+  scheduleDate: "",
+  scheduleTime: "",
+  summary: "",
+  returnNote: "",
+};
 
-function whatsappLink(message: string) {
-  return `https://wa.me/?text=${encodeURIComponent(message)}`;
+const blankRegistration: RegistrationForm = {
+  fullName: "",
+  phone: "",
+  email: "",
+  birthDate: "",
+  maritalStatus: "Solteiro(a)",
+  address: "",
+  congregationInterest: "",
+  registrationType: "Membro novo",
+  previousChurch: "",
+  password: "",
+  passwordConfirm: "",
+  waterBaptized: false,
+  holySpiritBaptized: false,
+  interestedMinistries: "",
+  notesOrPrayer: "",
+};
+
+function formatDate(value: string) {
+  if (!value) return "Sem data";
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(new Date(`${value}T12:00:00`));
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function uid(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function nextStatus(status: CareStatus): CareStatus {
+  const current = statusFlow.indexOf(status);
+  return statusFlow[Math.min(current + 1, statusFlow.length - 1)];
+}
+
+function suggestedNextStep(request: CareRequest) {
+  if (request.status === "Pendente") return "Definir responsavel";
+  if (request.status === "Em analise") return "Agendar atendimento";
+  if (request.status === "Agendado") return "Registrar retorno";
+  return "Arquivado no historico";
 }
 
 export default function Home() {
-  const [activeFeature, setActiveFeature] = useState<FeatureKey>("ID");
-  const [messageIndex, setMessageIndex] = useState(0);
+  const [hasSession, setHasSession] = useState(false);
+  const [accessMode, setAccessMode] = useState<AccessMode>("login");
+  const [accessMessage, setAccessMessage] = useState("");
+  const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
+  const [registerPasswordVisible, setRegisterPasswordVisible] = useState(false);
+  const [registrationForm, setRegistrationForm] = useState<RegistrationForm>(blankRegistration);
+  const [activeModule, setActiveModule] = useState<ModuleKey>("overview");
+  const [data, setData] = useState<AppData>(initialData);
+  const [careForm, setCareForm] = useState(blankCare);
+  const [selectedRequestId, setSelectedRequestId] = useState("care-1");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const selected = useMemo(
-    () => features.find((feature) => feature.key === activeFeature) ?? features[0],
-    [activeFeature],
-  );
+  useEffect(() => {
+    const stored = window.localStorage.getItem(storageKey);
+    if (!stored) return;
+
+    try {
+      setData(JSON.parse(stored) as AppData);
+    } catch {
+      window.localStorage.removeItem(storageKey);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(storageKey, JSON.stringify(data));
+  }, [data]);
+
+  const selectedRequest = data.careRequests.find((request) => request.id === selectedRequestId) ?? data.careRequests[0];
+
+  const notifications = useMemo(() => {
+    const pendingCare = data.careRequests
+      .filter((request) => request.status !== "Concluido")
+      .map((request) => ({
+        id: `care-${request.id}-${request.status}`,
+        title: `${request.member}: ${suggestedNextStep(request)}`,
+        body: request.category,
+        module: "pastoral" as ModuleKey,
+      }));
+
+    const upcomingEvents = data.events.slice(0, 3).map((event) => ({
+      id: `event-${event.id}`,
+      title: event.title,
+      body: `${formatDate(event.date)} - ${event.ministry}`,
+      module: "events" as ModuleKey,
+    }));
+
+    const publishedMural = data.mural
+      .filter((item) => item.published)
+      .map((item) => ({
+        id: `mural-${item.id}`,
+        title: item.title,
+        body: item.featured ? "Destaque no mural" : item.category,
+        module: "mural" as ModuleKey,
+      }));
+
+    return [...pendingCare, ...upcomingEvents, ...publishedMural];
+  }, [data.careRequests, data.events, data.mural]);
+
+  const unreadCount = notifications.filter((notice) => !data.notificationReadIds.includes(notice.id)).length;
+
+  function log(action: string) {
+    setData((current) => ({
+      ...current,
+      audit: [{ id: uid("audit"), action, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
+  }
+
+  function createCareRequest() {
+    if (!careForm.member.trim() || !careForm.summary.trim()) return;
+
+    const now = new Date().toISOString();
+    const request: CareRequest = {
+      ...careForm,
+      id: uid("care"),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setData((current) => ({
+      ...current,
+      careRequests: [request, ...current.careRequests],
+      audit: [{ id: uid("audit"), action: `Pedido pastoral criado para ${request.member}`, when: now }, ...current.audit],
+    }));
+    setSelectedRequestId(request.id);
+    setCareForm(blankCare);
+    setActiveModule("pastoral");
+  }
+
+  function updateCareRequest(id: string, patch: Partial<CareRequest>, action: string) {
+    const now = new Date().toISOString();
+    setData((current) => ({
+      ...current,
+      careRequests: current.careRequests.map((request) =>
+        request.id === id ? { ...request, ...patch, updatedAt: now } : request,
+      ),
+      audit: [{ id: uid("audit"), action, when: now }, ...current.audit].slice(0, 12),
+    }));
+  }
+
+  function toggleMural(id: string, field: "published" | "featured") {
+    setData((current) => ({
+      ...current,
+      mural: current.mural.map((item) => (item.id === id ? { ...item, [field]: !item[field] } : item)),
+      audit: [{ id: uid("audit"), action: "Mural atualizado", when: new Date().toISOString() }, ...current.audit],
+    }));
+  }
+
+  function markAllNotificationsRead() {
+    setData((current) => ({
+      ...current,
+      notificationReadIds: notifications.map((notice) => notice.id),
+    }));
+  }
+
+  function resetLocalData() {
+    setData(initialData);
+    setSelectedRequestId("care-1");
+    setCareForm(blankCare);
+  }
+
+  const stats = [
+    { label: "Membros ativos", value: "0", hint: "cadastros visiveis" },
+    { label: "Eventos proximos", value: data.events.length.toString(), hint: "na agenda" },
+    { label: "Ministerios", value: "4", hint: "em atividade" },
+    {
+      label: "Atendimentos",
+      value: data.careRequests.filter((request) => request.status !== "Concluido").length.toString(),
+      hint: "em acompanhamento",
+    },
+  ];
+
+  function switchAccessMode(mode: AccessMode) {
+    setAccessMode(mode);
+    setAccessMessage("");
+  }
+
+  function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAccessMessage("");
+    setHasSession(true);
+  }
+
+  function handleRecover(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAccessMessage("Se o e-mail estiver cadastrado, a administracao recebera o pedido de recuperacao.");
+  }
+
+  function handleRegistration(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (registrationForm.password !== registrationForm.passwordConfirm) {
+      setAccessMessage("As senhas precisam ser iguais antes de enviar.");
+      return;
+    }
+
+    setAccessMessage("Cadastro recebido para analise da administracao.");
+    setRegistrationForm(blankRegistration);
+  }
+
+  if (!hasSession) {
+    return (
+      <AccessScreen
+        accessMessage={accessMessage}
+        loginPasswordVisible={loginPasswordVisible}
+        mode={accessMode}
+        onLogin={handleLogin}
+        onRecover={handleRecover}
+        onRegister={handleRegistration}
+        onSwitchMode={switchAccessMode}
+        registrationForm={registrationForm}
+        registerPasswordVisible={registerPasswordVisible}
+        setLoginPasswordVisible={setLoginPasswordVisible}
+        setRegistrationForm={setRegistrationForm}
+        setRegisterPasswordVisible={setRegisterPasswordVisible}
+      />
+    );
+  }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#070a18] text-white">
-      <section className="relative min-h-screen px-4 py-5 sm:px-6 lg:px-8">
-        <div className="cyber-bg absolute inset-0" aria-hidden="true" />
-        <div className="mx-auto flex max-w-7xl flex-col gap-10">
-          <header className="relative z-10 flex items-center justify-between rounded-full border border-white/10 bg-white/[0.06] px-4 py-3 backdrop-blur-xl">
-            <a className="flex min-w-0 items-center gap-3" href="#topo">
-              <span className="logo-pulse grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1be7ff] text-sm font-black text-[#07111f]">
-                IC
-              </span>
-              <span className="min-w-0">
-                <span className="block text-xs font-black uppercase text-[#9fb4d8]">Igreja Conectada</span>
-                <span className="block truncate text-sm font-black sm:text-base">Sistema social para igrejas</span>
-              </span>
-            </a>
-            <nav className="hidden items-center gap-1 md:flex" aria-label="Navegacao principal">
-              {["Produto", "Mural", "Agenda", "WhatsApp"].map((item) => (
-                <a className="rounded-full px-4 py-2 text-sm font-bold text-[#c9d8ff] hover:bg-white/10" href={`#${item.toLowerCase()}`} key={item}>
-                  {item}
-                </a>
-              ))}
-            </nav>
-            <a
-              className="rounded-full bg-white px-5 py-3 text-sm font-black text-[#07111f] shadow-[0_0_35px_rgba(27,231,255,0.35)]"
-              href={whatsappLink("Ola! Quero uma demonstracao da Igreja Conectada.")}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Quero demo
-            </a>
-          </header>
-
-          <div className="relative z-10 grid items-center gap-10 lg:grid-cols-[0.86fr_1.14fr]">
-            <div className="pt-2 lg:pb-12 lg:pt-10">
-              <div className="inline-flex items-center gap-3 rounded-full border border-[#1be7ff]/30 bg-[#1be7ff]/10 px-4 py-2 text-sm font-black text-[#bdf8ff]">
-                <span className="h-2 w-2 rounded-full bg-[#a6ff3d] shadow-[0_0_18px_#a6ff3d]" />
-                Landing page pronta para viralizar
-              </div>
-              <h1 className="mt-6 max-w-4xl text-5xl font-black leading-[0.98] sm:text-6xl lg:text-7xl">
-                A igreja no bolso dos membros. A gestao na mao da lideranca.
-              </h1>
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-[#b9c8e8]">
-                Uma experiencia digital com cara de app premium: carteirinha,
-                mural com midia, agenda mensal e mensagens de WhatsApp que
-                saem prontas para aniversariantes e grupos.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <a className="cta-neon rounded-full px-6 py-4 text-sm font-black text-[#07111f]" href="#produto">
-                  Ver experiencia
-                </a>
-                <a className="rounded-full border border-white/15 bg-white/[0.06] px-6 py-4 text-sm font-black text-white backdrop-blur-xl hover:bg-white/12" href="#whatsapp">
-                  Templates WhatsApp
-                </a>
-              </div>
-              <div className="mt-10 grid max-w-2xl grid-cols-3 gap-3">
-                <HeroMetric value="4 modulos" label="para vender a ideia" />
-                <HeroMetric value="Mobile" label="primeiro impacto" />
-                <HeroMetric value="Social" label="mural com midia" />
-              </div>
-            </div>
-
-            <ExperienceMockup activeFeature={activeFeature} setActiveFeature={setActiveFeature} selected={selected} />
-          </div>
-        </div>
-      </section>
-
-      <section className="relative bg-[#0b1024] px-4 py-16 sm:px-6 lg:px-8" id="produto">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr] lg:items-end">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <div className="app-shell">
+        <aside className="sidebar" aria-label="Navegacao principal">
+          <div className="brand-block">
+            <div className="brand-mark">IG</div>
             <div>
-              <p className="text-sm font-black uppercase text-[#1be7ff]">Produto memoravel</p>
-              <h2 className="mt-3 text-4xl font-black leading-tight sm:text-5xl">
-                Cada recurso parece conteudo compartilhavel.
-              </h2>
+              <p className="brand-name">Igreja Gestao</p>
+              <p className="brand-caption">Painel administrativo</p>
             </div>
-            <p className="text-lg leading-8 text-[#aebde0]">
-              A pagina deixa de parecer apenas administrativa e passa a parecer
-              uma plataforma de comunidade: visual de app, contraste forte,
-              cards com brilho, informacao rapida e chamada clara para acao.
-            </p>
           </div>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {features.map((feature) => (
+          <nav className="module-list" aria-label="Modulos do sistema">
+            {modules.map((module) => (
               <button
-                className={`feature-card min-h-64 rounded-[28px] border p-5 text-left transition ${
-                  activeFeature === feature.key
-                    ? "border-[#1be7ff]/70 bg-[#101a38] shadow-[0_0_45px_rgba(27,231,255,0.16)]"
-                    : "border-white/10 bg-white/[0.045] hover:border-[#ff4ecd]/45"
-                }`}
-                key={feature.key}
-                onClick={() => setActiveFeature(feature.key)}
+                className={activeModule === module.key ? "module-button active" : "module-button"}
+                key={module.key}
+                onClick={() => setActiveModule(module.key)}
                 type="button"
               >
-                <span className="text-sm font-black text-[#a6ff3d]">{feature.key}</span>
-                <h3 className="mt-7 text-2xl font-black">{feature.title}</h3>
-                <p className="mt-3 min-h-20 text-sm leading-6 text-[#aebde0]">{feature.copy}</p>
-                <div className="mt-6 rounded-2xl bg-white/[0.07] p-4">
-                  <p className="text-3xl font-black text-white">{feature.metric}</p>
-                  <p className="text-sm font-bold text-[#8da0c6]">{feature.label}</p>
-                </div>
+                <span>{module.short}</span>
+                <strong>{module.label}</strong>
               </button>
             ))}
-          </div>
-        </div>
-      </section>
+          </nav>
 
-      <section className="grid lg:grid-cols-2" id="mural">
-        <div className="bg-[#f4f7fb] px-4 py-16 text-[#10182c] sm:px-6 lg:px-10">
-          <div className="mx-auto max-w-2xl lg:mr-0">
-            <p className="text-sm font-black uppercase text-[#7357ff]">Mural com foto e video</p>
-            <h2 className="mt-3 text-4xl font-black leading-tight">
-              Avisos com cara de feed, nao de quadro esquecido.
-            </h2>
-            <p className="mt-4 leading-8 text-[#596a84]">
-              Posts visuais ajudam a divulgar cultos, congressos, acoes sociais
-              e recados de lideranca com mais vontade de compartilhar.
-            </p>
-            <div className="mt-7 grid gap-3">
-              {feed.map((item) => (
-                <div className="flex items-center gap-4 rounded-3xl bg-white p-3 shadow-sm" key={item.title}>
-                  <div className={`h-20 w-24 rounded-2xl bg-gradient-to-br ${item.color}`} />
-                  <div>
-                    <p className="text-xs font-black uppercase text-[#7357ff]">{item.kind}</p>
-                    <h3 className="text-lg font-black">{item.title}</h3>
-                    <p className="text-sm text-[#596a84]">Publicado para membros e grupos.</p>
-                  </div>
-                </div>
-              ))}
+          <div className="connection-card">
+            <span className="status-dot" />
+            <div>
+              <strong>Modo local ativo</strong>
+              <span>Dados salvos neste computador</span>
             </div>
           </div>
-        </div>
+        </aside>
 
-        <div className="bg-[#10182c] px-4 py-16 sm:px-6 lg:px-10" id="agenda">
-          <div className="mx-auto max-w-2xl lg:ml-0">
-            <p className="text-sm font-black uppercase text-[#a6ff3d]">Agenda mensal</p>
-            <h2 className="mt-3 text-4xl font-black leading-tight">
-              Um calendario que parece painel de comando.
-            </h2>
-            <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {agenda.map(([day, event, group]) => (
-                <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur" key={`${day}-${event}`}>
-                  <p className="text-4xl font-black text-[#1be7ff]">{day}</p>
-                  <h3 className="mt-3 font-black">{event}</h3>
-                  <p className="text-sm font-bold text-[#8da0c6]">{group}</p>
-                </div>
-              ))}
+        <section className="workspace">
+          <header className="topbar">
+            <div>
+              <p className="eyebrow">Quarta-feira, 2 de setembro</p>
+              <h1>{modules.find((module) => module.key === activeModule)?.label}</h1>
             </div>
-          </div>
+
+            <div className="topbar-actions">
+              <button
+                aria-expanded={notificationsOpen}
+                className="notification-button"
+                onClick={() => setNotificationsOpen((open) => !open)}
+                type="button"
+              >
+                <span>Sino</span>
+                {unreadCount > 0 && <strong>{unreadCount}</strong>}
+              </button>
+              <div className="profile-pill">
+                <span>M</span>
+                <div>
+                  <strong>marianabsilva1987</strong>
+                  <small>Administrador</small>
+                </div>
+              </div>
+            </div>
+
+            {notificationsOpen && (
+              <div className="notifications-panel">
+                <div className="panel-heading">
+                  <h2>Central de notificacoes</h2>
+                  <button onClick={markAllNotificationsRead} type="button">
+                    Marcar tudo como lido
+                  </button>
+                </div>
+                <div className="notification-list">
+                  {notifications.map((notice) => (
+                    <button
+                      className={data.notificationReadIds.includes(notice.id) ? "notification-card read" : "notification-card"}
+                      key={notice.id}
+                      onClick={() => {
+                        setActiveModule(notice.module);
+                        setNotificationsOpen(false);
+                        setData((current) => ({
+                          ...current,
+                          notificationReadIds: Array.from(new Set([...current.notificationReadIds, notice.id])),
+                        }));
+                      }}
+                      type="button"
+                    >
+                      <strong>{notice.title}</strong>
+                      <span>{notice.body}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </header>
+
+          {activeModule === "overview" && (
+            <section className="content-grid">
+              <div className="hero-panel">
+                <p className="eyebrow">Administracao e cuidado em um so lugar</p>
+                <h2>O painel local esta pronto para continuar o sistema daqui.</h2>
+                <p>
+                  Use esta versao para validar fluxo pastoral, notificacoes, mural,
+                  backup e organizacao dos modulos antes de religar tudo ao banco.
+                </p>
+                <div className="hero-actions">
+                  <button onClick={() => setActiveModule("pastoral")} type="button">
+                    Testar atendimento pastoral
+                  </button>
+                  <button className="secondary" onClick={() => setActiveModule("settings")} type="button">
+                    Gerar backup local
+                  </button>
+                </div>
+              </div>
+
+              <div className="stats-grid">
+                {stats.map((stat) => (
+                  <article className="stat-card" key={stat.label}>
+                    <span>{stat.label}</span>
+                    <strong>{stat.value}</strong>
+                    <small>{stat.hint}</small>
+                  </article>
+                ))}
+              </div>
+
+              <article className="surface wide">
+                <div className="panel-heading">
+                  <h2>Proximos encontros</h2>
+                  <button onClick={() => setActiveModule("events")} type="button">
+                    Ver agenda
+                  </button>
+                </div>
+                <div className="row-list">
+                  {data.events.map((event) => (
+                    <div className="data-row" key={event.id}>
+                      <span className="date-box">{formatDate(event.date)}</span>
+                      <div>
+                        <strong>{event.title}</strong>
+                        <small>{event.ministry}</small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Mural da igreja</h2>
+                  <span>{data.mural.filter((item) => item.published).length} de 5 publicados</span>
+                </div>
+                <div className="mural-stack">
+                  {data.mural
+                    .filter((item) => item.published)
+                    .map((item) => (
+                      <div className={item.featured ? "mural-card featured" : "mural-card"} key={item.id}>
+                        <strong>{item.title}</strong>
+                        <small>{item.category}</small>
+                      </div>
+                    ))}
+                </div>
+              </article>
+            </section>
+          )}
+
+          {activeModule === "pastoral" && selectedRequest && (
+            <section className="pastoral-layout">
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Novo pedido pastoral</h2>
+                  <span>Fluxo real</span>
+                </div>
+                <div className="form-grid">
+                  <label>
+                    Nome do membro
+                    <input
+                      onChange={(event) => setCareForm((form) => ({ ...form, member: event.target.value }))}
+                      placeholder="Ex.: Maria Oliveira"
+                      value={careForm.member}
+                    />
+                  </label>
+                  <label>
+                    Telefone
+                    <input
+                      onChange={(event) => setCareForm((form) => ({ ...form, phone: event.target.value }))}
+                      placeholder="(00) 00000-0000"
+                      value={careForm.phone}
+                    />
+                  </label>
+                  <label>
+                    Categoria
+                    <select
+                      onChange={(event) => setCareForm((form) => ({ ...form, category: event.target.value }))}
+                      value={careForm.category}
+                    >
+                      <option>Aconselhamento</option>
+                      <option>Pedido de visita</option>
+                      <option>Oracao</option>
+                      <option>Familia</option>
+                      <option>Urgente</option>
+                    </select>
+                  </label>
+                  <label className="full">
+                    Descricao do pedido
+                    <textarea
+                      onChange={(event) => setCareForm((form) => ({ ...form, summary: event.target.value }))}
+                      placeholder="Escreva o motivo do atendimento"
+                      value={careForm.summary}
+                    />
+                  </label>
+                  <button className="primary-action" onClick={createCareRequest} type="button">
+                    Criar atendimento
+                  </button>
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Fila pastoral</h2>
+                  <span>{data.careRequests.length} registros</span>
+                </div>
+                <div className="care-list">
+                  {data.careRequests.map((request) => (
+                    <button
+                      className={request.id === selectedRequest.id ? "care-list-item selected" : "care-list-item"}
+                      key={request.id}
+                      onClick={() => setSelectedRequestId(request.id)}
+                      type="button"
+                    >
+                      <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>
+                        {request.status}
+                      </span>
+                      <strong>{request.member}</strong>
+                      <small>{suggestedNextStep(request)}</small>
+                    </button>
+                  ))}
+                </div>
+              </article>
+
+              <article className="surface care-detail">
+                <div className="panel-heading">
+                  <h2>{selectedRequest.member}</h2>
+                  <span>{selectedRequest.category}</span>
+                </div>
+                <p>{selectedRequest.summary}</p>
+
+                <div className="flow-line" aria-label="Etapas do atendimento">
+                  {statusFlow.map((status) => (
+                    <span
+                      className={statusFlow.indexOf(status) <= statusFlow.indexOf(selectedRequest.status) ? "flow-step done" : "flow-step"}
+                      key={status}
+                    >
+                      {status}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="detail-grid">
+                  <label>
+                    Responsavel
+                    <input
+                      onChange={(event) =>
+                        updateCareRequest(selectedRequest.id, { responsible: event.target.value }, "Responsavel pastoral atualizado")
+                      }
+                      placeholder="Nome do pastor ou lider"
+                      value={selectedRequest.responsible}
+                    />
+                  </label>
+                  <label>
+                    Data
+                    <input
+                      onChange={(event) =>
+                        updateCareRequest(selectedRequest.id, { scheduleDate: event.target.value }, "Data do atendimento atualizada")
+                      }
+                      type="date"
+                      value={selectedRequest.scheduleDate}
+                    />
+                  </label>
+                  <label>
+                    Horario
+                    <input
+                      onChange={(event) =>
+                        updateCareRequest(selectedRequest.id, { scheduleTime: event.target.value }, "Horario do atendimento atualizado")
+                      }
+                      type="time"
+                      value={selectedRequest.scheduleTime}
+                    />
+                  </label>
+                  <label className="full">
+                    Retorno e encaminhamento
+                    <textarea
+                      onChange={(event) =>
+                        updateCareRequest(selectedRequest.id, { returnNote: event.target.value }, "Retorno pastoral registrado")
+                      }
+                      placeholder="Registre conversa, retorno, decisao e proximo passo"
+                      value={selectedRequest.returnNote}
+                    />
+                  </label>
+                </div>
+
+                <div className="detail-actions">
+                  <button
+                    onClick={() =>
+                      updateCareRequest(
+                        selectedRequest.id,
+                        { status: nextStatus(selectedRequest.status) },
+                        `Status alterado para ${nextStatus(selectedRequest.status)}`,
+                      )
+                    }
+                    type="button"
+                  >
+                    Avancar etapa
+                  </button>
+                  <button
+                    className="secondary"
+                    onClick={() =>
+                      updateCareRequest(selectedRequest.id, { status: "Concluido" }, "Atendimento pastoral concluido")
+                    }
+                    type="button"
+                  >
+                    Concluir
+                  </button>
+                </div>
+              </article>
+            </section>
+          )}
+
+          {activeModule === "mural" && (
+            <section className="content-grid">
+              <article className="surface wide">
+                <div className="panel-heading">
+                  <h2>Administrar mural</h2>
+                  <span>{data.mural.filter((item) => item.published).length} publicados</span>
+                </div>
+                <div className="table-like">
+                  {data.mural.map((item) => (
+                    <div className="table-row" key={item.id}>
+                      <div>
+                        <strong>{item.title}</strong>
+                        <small>{item.category} - expira em {formatDate(item.expiresAt)}</small>
+                      </div>
+                      <label className="switch">
+                        Publicado
+                        <input checked={item.published} onChange={() => toggleMural(item.id, "published")} type="checkbox" />
+                      </label>
+                      <label className="switch">
+                        Destaque
+                        <input checked={item.featured} onChange={() => toggleMural(item.id, "featured")} type="checkbox" />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </section>
+          )}
+
+          {activeModule === "events" && (
+            <SimpleModule
+              action={() => log("Agenda revisada")}
+              button="Registrar revisao"
+              description="A agenda local mostra encontros proximos e sera a base para integrar escalas, confirmacoes e notificacoes."
+              rows={data.events.map((event) => `${formatDate(event.date)} - ${event.title} (${event.ministry})`)}
+              title="Agenda da igreja"
+            />
+          )}
+
+          {activeModule === "notices" && (
+            <SimpleModule
+              action={() => log("Comunicados revisados")}
+              button="Registrar revisao"
+              description="Comunicados publicados entram automaticamente na central de notificacoes."
+              rows={data.notices.map((notice) => `${notice.status} - ${notice.title}: ${notice.body}`)}
+              title="Comunicados"
+            />
+          )}
+
+          {activeModule === "users" && (
+            <SimpleModule
+              action={() => log("Permissoes revisadas")}
+              button="Registrar auditoria"
+              description="Separacao planejada: administrador, lider e membro. A proxima etapa tecnica e religar essas permissoes ao Auth/RLS."
+              rows={["Administrador - acesso completo", "Lider - ministerios e atendimentos atribuidos", "Membro - painel pessoal"]}
+              title="Usuarios e acessos"
+            />
+          )}
+
+          {activeModule === "members" && (
+            <SimpleModule
+              action={() => log("Cadastro de membros revisado")}
+              button="Registrar revisao"
+              description="Modulo preparado para listagem, filtros, familia, status e historico espiritual."
+              rows={["0 membros visiveis no ambiente local", "Campos previstos: telefone, email, familia, batismo e status"]}
+              title="Membros"
+            />
+          )}
+
+          {activeModule === "ministries" && (
+            <SimpleModule
+              action={() => log("Ministerios revisados")}
+              button="Registrar revisao"
+              description="Organize equipes, lideres e escalas por ministerio."
+              rows={["Louvor", "Jovens", "Intercessao", "EBD"]}
+              title="Ministerios"
+            />
+          )}
+
+          {activeModule === "school" && (
+            <SimpleModule
+              action={() => log("Escola Biblica revisada")}
+              button="Registrar revisao"
+              description="Base inicial para turmas, aulas, presenca e materiais."
+              rows={["Classe adultos", "Classe jovens", "Classe novos convertidos"]}
+              title="Escola Biblica"
+            />
+          )}
+
+          {activeModule === "reports" && (
+            <SimpleModule
+              action={() => log("Relatorio operacional gerado")}
+              button="Gerar registro"
+              description="Resumo local para acompanhar operacao antes da integracao final."
+              rows={[
+                `${data.careRequests.length} atendimentos pastorais`,
+                `${data.events.length} eventos cadastrados`,
+                `${unreadCount} notificacoes nao lidas`,
+              ]}
+              title="Relatorios"
+            />
+          )}
+
+          {activeModule === "settings" && (
+            <section className="content-grid">
+              <article className="surface wide">
+                <div className="panel-heading">
+                  <h2>Backup e recuperacao local</h2>
+                  <span>JSON validado</span>
+                </div>
+                <p className="body-copy">
+                  Esta copia roda neste computador. O backup abaixo representa os dados locais do navegador e ajuda a
+                  validar a estrutura antes de conectar novamente ao Supabase.
+                </p>
+                <div className="backup-box">
+                  <strong>Cobertura do backup</strong>
+                  <span>100%</span>
+                  <small>
+                    {data.careRequests.length} atendimentos, {data.events.length} eventos, {data.notices.length} comunicados,
+                    {" "}
+                    {data.mural.length} itens de mural e {data.audit.length} auditorias.
+                  </small>
+                </div>
+                <textarea className="backup-json" readOnly value={JSON.stringify(data, null, 2)} />
+                <div className="detail-actions">
+                  <button onClick={() => log("Backup local gerado")} type="button">
+                    Registrar backup
+                  </button>
+                  <button className="secondary" onClick={resetLocalData} type="button">
+                    Restaurar dados exemplo
+                  </button>
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Auditoria</h2>
+                  <span>{data.audit.length} eventos</span>
+                </div>
+                <div className="audit-list">
+                  {data.audit.map((item) => (
+                    <div className="audit-item" key={item.id}>
+                      <strong>{item.action}</strong>
+                      <small>{formatDateTime(item.when)}</small>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </section>
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function AccessScreen({
+  accessMessage,
+  loginPasswordVisible,
+  mode,
+  onLogin,
+  onRecover,
+  onRegister,
+  onSwitchMode,
+  registrationForm,
+  registerPasswordVisible,
+  setLoginPasswordVisible,
+  setRegistrationForm,
+  setRegisterPasswordVisible,
+}: {
+  accessMessage: string;
+  loginPasswordVisible: boolean;
+  mode: AccessMode;
+  onLogin: (event: FormEvent<HTMLFormElement>) => void;
+  onRecover: (event: FormEvent<HTMLFormElement>) => void;
+  onRegister: (event: FormEvent<HTMLFormElement>) => void;
+  onSwitchMode: (mode: AccessMode) => void;
+  registrationForm: RegistrationForm;
+  registerPasswordVisible: boolean;
+  setLoginPasswordVisible: Dispatch<SetStateAction<boolean>>;
+  setRegistrationForm: Dispatch<SetStateAction<RegistrationForm>>;
+  setRegisterPasswordVisible: Dispatch<SetStateAction<boolean>>;
+}) {
+  const isLogin = mode === "login";
+  const isRecover = mode === "recover";
+  const title = isLogin ? "Bem-vindo de volta" : isRecover ? "Recuperar acesso" : "Solicitar cadastro";
+  const eyebrow = isLogin || isRecover ? "Area segura" : "Cadastro online";
+  const description = isLogin
+    ? "Use seu e-mail e senha para acessar o painel correto."
+    : isRecover
+      ? "Informe seu e-mail para pedir a redefinicao da senha."
+      : "Preencha seus dados para a administracao analisar e liberar o acesso.";
+
+  return (
+    <main className="access-page">
+      <section className="access-intro" aria-label="Apresentacao do sistema">
+        <div className="brand-block">
+          <div className="brand-mark">IG</div>
+          <p className="brand-name">Igreja Gestao</p>
         </div>
+        <div>
+          <p className="access-kicker">Cuidar - Servir - Conectar</p>
+          <h1>Toda a igreja, mais perto.</h1>
+          <p>Uma plataforma segura para fortalecer o cuidado com pessoas, ministerios e a missao.</p>
+        </div>
+        <blockquote>
+          <p>"Sirvam uns aos outros, cada um conforme o dom que recebeu."</p>
+          <cite>1 Pedro 4:10</cite>
+        </blockquote>
       </section>
 
-      <section className="relative bg-[#070a18] px-4 py-16 sm:px-6 lg:px-8" id="whatsapp">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_430px] lg:items-center">
-          <div>
-            <p className="text-sm font-black uppercase text-[#25f4a8]">WhatsApp pronto</p>
-            <h2 className="mt-3 max-w-3xl text-4xl font-black leading-tight sm:text-5xl">
-              Mensagens que a secretaria envia em segundos.
-            </h2>
-            <div className="mt-7 grid gap-3">
-              {messages.map((message, index) => (
+      <section className="access-panel" aria-label={title}>
+        <div className="access-copy">
+          <p className="eyebrow">{eyebrow}</p>
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+
+        {accessMessage && (
+          <p className="form-message" role="status">
+            {accessMessage}
+          </p>
+        )}
+
+        {isLogin && (
+          <form className="access-form" method="post" onSubmit={onLogin}>
+            <label>
+              E-mail
+              <input autoComplete="email" name="email" placeholder="voce@email.com" required type="email" />
+            </label>
+            <label>
+              Senha
+              <span className="password-field">
+                <input
+                  autoComplete="current-password"
+                  name="password"
+                  placeholder="Sua senha"
+                  required
+                  type={loginPasswordVisible ? "text" : "password"}
+                />
                 <button
-                  className={`rounded-3xl border p-5 text-left transition ${
-                    messageIndex === index
-                      ? "border-[#25f4a8]/70 bg-[#25f4a8]/10"
-                      : "border-white/10 bg-white/[0.045] hover:border-[#1be7ff]/45"
-                  }`}
-                  key={message}
-                  onClick={() => setMessageIndex(index)}
+                  aria-label={loginPasswordVisible ? "Ocultar senha" : "Mostrar senha"}
+                  onClick={() => setLoginPasswordVisible((visible) => !visible)}
                   type="button"
                 >
-                  <p className="text-xs font-black uppercase text-[#1be7ff]">Template {index + 1}</p>
-                  <p className="mt-2 leading-7 text-[#dbe7ff]">{message}</p>
+                  {loginPasswordVisible ? "Ocultar" : "Mostrar"}
                 </button>
-              ))}
-            </div>
-          </div>
+              </span>
+            </label>
+            <button className="access-primary" type="submit">
+              Entrar no sistema
+            </button>
+          </form>
+        )}
 
-          <div className="phone-frame mx-auto w-full max-w-[380px] rounded-[42px] border border-white/15 bg-[#10182c] p-4 shadow-[0_0_70px_rgba(37,244,168,0.18)]">
-            <div className="rounded-[32px] bg-[#eafff7] p-4 text-[#132338]">
-              <div className="flex items-center gap-3 border-b border-[#c9f3e2] pb-4">
-                <div className="grid h-11 w-11 place-items-center rounded-full bg-[#25f4a8] font-black">W</div>
-                <div>
-                  <p className="font-black">Secretaria</p>
-                  <p className="text-sm font-bold text-[#567062]">Mensagem pronta</p>
-                </div>
-              </div>
-              <div className="mt-5 rounded-[26px] bg-white p-4 shadow-sm">
-                <p className="leading-7 text-[#40515f]">{messages[messageIndex]}</p>
-              </div>
-              <a
-                className="mt-5 inline-flex w-full justify-center rounded-full bg-[#25a277] px-5 py-4 text-sm font-black text-white"
-                href={whatsappLink(messages[messageIndex])}
-                rel="noreferrer"
-                target="_blank"
+        {isRecover && (
+          <form className="access-form" method="post" onSubmit={onRecover}>
+            <label>
+              E-mail
+              <input autoComplete="email" name="recovery_email" placeholder="voce@email.com" required type="email" />
+            </label>
+            <button className="access-primary" type="submit">
+              Enviar instrucoes
+            </button>
+          </form>
+        )}
+
+        {mode === "register" && (
+          <form className="access-form registration-form" method="post" onSubmit={onRegister}>
+            <label className="full">
+              Nome completo
+              <input
+                autoComplete="name"
+                minLength={3}
+                name="full_name"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, fullName: event.target.value }))}
+                required
+                value={registrationForm.fullName}
+              />
+            </label>
+            <label>
+              Telefone
+              <input
+                autoComplete="tel"
+                minLength={8}
+                name="phone"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, phone: event.target.value }))}
+                required
+                value={registrationForm.phone}
+              />
+            </label>
+            <label>
+              E-mail
+              <input
+                autoComplete="email"
+                name="email"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, email: event.target.value }))}
+                required
+                type="email"
+                value={registrationForm.email}
+              />
+            </label>
+            <label>
+              Nascimento
+              <input
+                autoComplete="bday"
+                name="birth_date"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, birthDate: event.target.value }))}
+                required
+                type="date"
+                value={registrationForm.birthDate}
+              />
+            </label>
+            <label>
+              Estado civil
+              <select
+                name="marital_status"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, maritalStatus: event.target.value }))}
+                value={registrationForm.maritalStatus}
               >
-                Abrir no WhatsApp
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
+                <option>Solteiro(a)</option>
+                <option>Casado(a)</option>
+                <option>Viuvo(a)</option>
+                <option>Divorciado(a)</option>
+              </select>
+            </label>
+            <label className="full">
+              Endereco
+              <input
+                autoComplete="street-address"
+                name="address"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, address: event.target.value }))}
+                value={registrationForm.address}
+              />
+            </label>
+            <label>
+              Congregacao de interesse
+              <input
+                name="congregation_interest"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, congregationInterest: event.target.value }))}
+                placeholder="Ex.: Maringa"
+                value={registrationForm.congregationInterest}
+              />
+            </label>
+            <label>
+              Tipo de cadastro
+              <select
+                name="registration_type"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, registrationType: event.target.value }))}
+                value={registrationForm.registrationType}
+              >
+                <option>Membro novo</option>
+                <option>Novo convertido</option>
+                <option>Visitante frequente</option>
+                <option>Transferencia</option>
+              </select>
+            </label>
+            <label className="full">
+              Igreja anterior
+              <input
+                name="previous_church"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, previousChurch: event.target.value }))}
+                value={registrationForm.previousChurch}
+              />
+            </label>
+            <label>
+              Criar senha de acesso
+              <span className="password-field">
+                <input
+                  autoComplete="new-password"
+                  minLength={10}
+                  name="login_password"
+                  onChange={(event) => setRegistrationForm((form) => ({ ...form, password: event.target.value }))}
+                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}"
+                  required
+                  title="Use pelo menos 10 caracteres, com maiuscula, minuscula, numero e simbolo."
+                  type={registerPasswordVisible ? "text" : "password"}
+                  value={registrationForm.password}
+                />
+                <button
+                  aria-label={registerPasswordVisible ? "Ocultar senha" : "Mostrar senha"}
+                  onClick={() => setRegisterPasswordVisible((visible) => !visible)}
+                  type="button"
+                >
+                  {registerPasswordVisible ? "Ocultar" : "Mostrar"}
+                </button>
+              </span>
+              <small>Essa senha sera usada no login depois da aprovacao.</small>
+            </label>
+            <label>
+              Confirmar senha
+              <input
+                autoComplete="new-password"
+                minLength={10}
+                name="login_password_confirm"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, passwordConfirm: event.target.value }))}
+                required
+                type={registerPasswordVisible ? "text" : "password"}
+                value={registrationForm.passwordConfirm}
+              />
+            </label>
+            <label className="check-card">
+              <input
+                checked={registrationForm.waterBaptized}
+                name="is_water_baptized"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, waterBaptized: event.target.checked }))}
+                type="checkbox"
+              />
+              Batizado em aguas
+            </label>
+            <label className="check-card">
+              <input
+                checked={registrationForm.holySpiritBaptized}
+                name="is_holy_spirit_baptized"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, holySpiritBaptized: event.target.checked }))}
+                type="checkbox"
+              />
+              Batizado no Espirito Santo
+            </label>
+            <label className="full">
+              Ministerios de interesse
+              <input
+                name="interested_ministries"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, interestedMinistries: event.target.value }))}
+                placeholder="Louvor, jovens, acao social"
+                value={registrationForm.interestedMinistries}
+              />
+            </label>
+            <label className="full">
+              Observacao ou pedido de oracao
+              <textarea
+                name="notes_or_prayer"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, notesOrPrayer: event.target.value }))}
+                value={registrationForm.notesOrPrayer}
+              />
+            </label>
+            <button className="access-primary full" type="submit">
+              Enviar cadastro
+            </button>
+          </form>
+        )}
 
-      <section className="bg-[#f4f7fb] px-4 py-16 text-[#10182c] sm:px-6 lg:px-8">
-        <div className="mx-auto rounded-[38px] bg-[#111c3c] p-6 text-white shadow-2xl shadow-[#111c3c]/20 sm:p-10 lg:max-w-7xl">
-          <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-center">
-            <div>
-              <p className="text-sm font-black uppercase text-[#1be7ff]">Chamada final</p>
-              <h2 className="mt-3 text-4xl font-black leading-tight">
-                Uma landing mais tecnologica, mais desejavel e mais facil de vender.
-              </h2>
-              <p className="mt-4 max-w-3xl leading-8 text-[#b9c8e8]">
-                O foco agora e impacto visual: produto no centro, linguagem de
-                comunidade, interacao e CTAs que levam direto para demonstracao.
-              </p>
-            </div>
-            <a
-              className="cta-neon inline-flex justify-center rounded-full px-6 py-4 text-sm font-black text-[#07111f]"
-              href={whatsappLink("Ola! Quero apresentar essa landing page para uma igreja.")}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Apresentar agora
-            </a>
-          </div>
+        <div className="access-links">
+          {!isRecover && (
+            <button onClick={() => onSwitchMode("recover")} type="button">
+              Esqueci minha senha
+            </button>
+          )}
+          {mode !== "register" && (
+            <button onClick={() => onSwitchMode("register")} type="button">
+              Fazer cadastro online
+            </button>
+          )}
+          {!isLogin && (
+            <button onClick={() => onSwitchMode("login")} type="button">
+              Voltar ao login
+            </button>
+          )}
+        </div>
+
+        <div className="access-profile-note">
+          <strong>Acesso por perfil</strong>
+          <span>O sistema identifica membros, lideres e administradores.</span>
         </div>
       </section>
     </main>
   );
 }
 
-function ExperienceMockup({
-  activeFeature,
-  setActiveFeature,
-  selected,
+function SimpleModule({
+  action,
+  button,
+  description,
+  rows,
+  title,
 }: {
-  activeFeature: FeatureKey;
-  setActiveFeature: (feature: FeatureKey) => void;
-  selected: (typeof features)[number];
+  action: () => void;
+  button: string;
+  description: string;
+  rows: string[];
+  title: string;
 }) {
   return (
-    <div className="relative min-h-[620px]">
-      <div className="absolute left-2 top-12 hidden w-44 rotate-[-8deg] rounded-[30px] border border-white/10 bg-white/[0.08] p-3 shadow-2xl backdrop-blur-xl sm:block">
-        <div className="rounded-[24px] bg-[#07111f] p-4">
-          <p className="text-xs font-black text-[#1be7ff]">MEMBRO</p>
-          <h3 className="mt-3 text-xl font-black">Maria O.</h3>
-          <p className="mt-1 text-xs text-[#9fb4d8]">Louvor · EBD</p>
-          <div className="mt-4 grid h-24 grid-cols-5 gap-1 rounded-2xl bg-white p-2">
-            {Array.from({ length: 25 }).map((_, index) => (
-              <span className={index % 2 === 0 || index % 7 === 0 ? "bg-[#07111f]" : "bg-[#dfe8f7]"} key={index} />
-            ))}
-          </div>
+    <section className="content-grid">
+      <article className="surface wide">
+        <div className="panel-heading">
+          <h2>{title}</h2>
+          <button onClick={action} type="button">
+            {button}
+          </button>
         </div>
-      </div>
-
-      <div className="relative ml-auto rounded-[38px] border border-white/10 bg-white/[0.08] p-3 shadow-[0_35px_100px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
-        <div className="overflow-hidden rounded-[30px] bg-[#f7f9ff] text-[#10182c]">
-          <div className="grid lg:grid-cols-[178px_minmax(0,1fr)]">
-            <aside className="hidden bg-[#111c3c] p-5 text-white lg:block">
-              <div className="rounded-2xl bg-[#1be7ff] px-4 py-3 text-sm font-black text-[#07111f]">
-                Criar aviso
-              </div>
-              <nav className="mt-6 space-y-2" aria-label="Modulos">
-                {features.map((feature) => (
-                  <button
-                    className={`w-full rounded-2xl px-3 py-3 text-left text-sm font-black ${
-                      activeFeature === feature.key ? "bg-white text-[#111c3c]" : "text-[#aebde0] hover:bg-white/10"
-                    }`}
-                    key={feature.key}
-                    onClick={() => setActiveFeature(feature.key)}
-                    type="button"
-                  >
-                    {feature.title}
-                  </button>
-                ))}
-              </nav>
-              <div className="mt-8 rounded-3xl border border-white/10 p-4">
-                <p className="text-xs font-black text-[#a6ff3d]">ENGAJAMENTO</p>
-                <p className="mt-2 text-3xl font-black">92%</p>
-                <p className="text-xs text-[#8da0c6]">avisos vistos</p>
-              </div>
-            </aside>
-
-            <div className="min-w-0 p-4 sm:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase text-[#7a8aa2]">Command center</p>
-                  <h2 className="mt-1 text-2xl font-black sm:text-3xl">Igreja Central</h2>
-                </div>
-                <div className="hidden rounded-full bg-white px-4 py-3 text-sm font-bold text-[#8b98ad] shadow-sm sm:block">
-                  Buscar membro, grupo, aviso...
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-4">
-                {features.map((feature) => (
-                  <button
-                    className={`rounded-3xl p-4 text-left transition ${
-                      activeFeature === feature.key
-                        ? "bg-[#1769d4] text-white shadow-[0_18px_40px_rgba(23,105,212,0.28)]"
-                        : "bg-white text-[#10182c] shadow-sm"
-                    }`}
-                    key={feature.key}
-                    onClick={() => setActiveFeature(feature.key)}
-                    type="button"
-                  >
-                    <p className="text-xs font-black opacity-70">{feature.key}</p>
-                    <p className="mt-5 text-xl font-black">{feature.metric}</p>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_240px]">
-                <div className="rounded-[30px] bg-white p-5 shadow-sm">
-                  <p className="text-xs font-black uppercase text-[#1769d4]">{selected.title}</p>
-                  <h3 className="mt-2 text-3xl font-black">{selected.metric}</h3>
-                  <p className="mt-2 text-sm leading-6 text-[#596a84]">{selected.copy}</p>
-                  <Preview activeFeature={activeFeature} />
-                </div>
-                <div className="rounded-[30px] bg-[#111c3c] p-5 text-white">
-                  <p className="text-xs font-black text-[#1be7ff]">AO VIVO</p>
-                  <div className="mt-4 space-y-3">
-                    {["Aniversario enviado", "Video publicado", "Escala confirmada"].map((item) => (
-                      <div className="rounded-2xl bg-white/10 p-3" key={item}>
-                        <p className="text-sm font-black">{item}</p>
-                        <p className="text-xs text-[#8da0c6]">agora</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-5 overflow-hidden rounded-[28px] bg-white shadow-sm">
-                {["Culto domingo", "Aniversariantes", "Aviso juventude"].map((item, index) => (
-                  <div className="grid gap-2 border-b border-[#edf1f7] px-5 py-4 text-sm last:border-b-0 sm:grid-cols-[1fr_120px_90px]" key={item}>
-                    <span className="font-black">{item}</span>
-                    <span className="text-[#667891]">{index === 0 ? "Agenda" : index === 1 ? "WhatsApp" : "Mural"}</span>
-                    <span className="font-black text-[#1769d4]">Pronto</span>
-                  </div>
-                ))}
+        <p className="body-copy">{description}</p>
+        <div className="row-list">
+          {rows.map((row) => (
+            <div className="data-row" key={row}>
+              <span className="bullet-mark" />
+              <div>
+                <strong>{row}</strong>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Preview({ activeFeature }: { activeFeature: FeatureKey }) {
-  if (activeFeature === "Mural") {
-    return (
-      <div className="mt-5 grid grid-cols-3 gap-3">
-        {feed.map((item) => (
-          <div className="overflow-hidden rounded-2xl bg-[#f4f7fb]" key={item.title}>
-            <div className={`h-20 bg-gradient-to-br ${item.color}`} />
-            <p className="p-3 text-xs font-black">{item.kind}</p>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (activeFeature === "Agenda") {
-    return (
-      <div className="mt-5 grid grid-cols-3 gap-3">
-        {agenda.slice(0, 6).map(([day, event]) => (
-          <div className="rounded-2xl bg-[#f4f7fb] p-3" key={day}>
-            <p className="text-2xl font-black text-[#1769d4]">{day}</p>
-            <p className="text-xs font-black text-[#596a84]">{event}</p>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (activeFeature === "WhatsApp") {
-    return (
-      <div className="mt-5 rounded-2xl bg-[#eafff7] p-4">
-        <p className="text-xs font-black text-[#25a277]">WHATSAPP</p>
-        <p className="mt-2 text-sm leading-6 text-[#40515f]">{messages[0]}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-5 rounded-2xl bg-[#eef5ff] p-4">
-      <p className="text-xs font-black text-[#1769d4]">CARTEIRINHA DIGITAL</p>
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-lg font-black">Maria Oliveira</p>
-          <p className="text-sm text-[#596a84]">Membro ativo desde 2019</p>
-        </div>
-        <div className="grid h-16 w-16 grid-cols-4 gap-1 rounded-xl bg-white p-2">
-          {Array.from({ length: 16 }).map((_, index) => (
-            <span className={index % 2 === 0 || index % 5 === 0 ? "bg-[#10182c]" : "bg-[#cfe3ff]"} key={index} />
           ))}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function HeroMetric({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-xl">
-      <p className="text-lg font-black text-white sm:text-2xl">{value}</p>
-      <p className="mt-1 text-xs font-bold text-[#9fb4d8] sm:text-sm">{label}</p>
-    </div>
+      </article>
+    </section>
   );
 }
