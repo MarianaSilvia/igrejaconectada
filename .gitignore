@@ -38,3 +38,5 @@ tsconfig.tsbuildinfo
 /.wrangler/
 /outputs/
 /work/
+/package-stage/
+/site-package.tgz

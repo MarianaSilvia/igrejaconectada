@@ -842,6 +842,7 @@ function normalizeMember(member: Partial<MemberRecord>): MemberRecord {
   return {
     ...blankMember,
     ...member,
+    id: member.id ?? uid("member"),
     status,
     memberType,
   };
