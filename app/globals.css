@@ -1,18 +1,20 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #f4f7fb;
-  --foreground: #172033;
-  --muted: #607089;
-  --line: #dce3ee;
-  --panel: #ffffff;
-  --panel-soft: #eef4fb;
-  --nav: #14213d;
-  --nav-soft: #203457;
-  --accent: #0f766e;
-  --accent-strong: #0b5f59;
-  --gold: #c9972f;
-  --danger: #b42318;
+  --background: #07111f;
+  --foreground: #eef7ff;
+  --muted: #8ea8c6;
+  --line: rgba(130, 198, 255, 0.18);
+  --panel: rgba(13, 28, 49, 0.88);
+  --panel-soft: rgba(18, 45, 76, 0.78);
+  --nav: #08101f;
+  --nav-soft: #101f36;
+  --accent: #14d9c4;
+  --accent-strong: #55f2df;
+  --gold: #f1c75b;
+  --danger: #ff5d70;
+  --cyan: #48b8ff;
+  --violet: #8f7cff;
 }
 
 @theme inline {
@@ -31,7 +33,11 @@ html {
 }
 
 body {
-  background: var(--background);
+  background:
+    linear-gradient(90deg, rgba(72, 184, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(72, 184, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(135deg, #07111f 0%, #0a1728 45%, #08101f 100%);
+  background-size: 44px 44px, 44px 44px, auto;
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   min-width: 320px;
@@ -49,7 +55,11 @@ button {
 }
 
 .access-page {
-  background: var(--background);
+  background:
+    linear-gradient(90deg, rgba(72, 184, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(20, 217, 196, 0.06) 1px, transparent 1px),
+    linear-gradient(135deg, #07111f 0%, #10203a 100%);
+  background-size: 42px 42px, 42px 42px, auto;
   display: grid;
   grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.1fr);
   min-height: 100vh;
@@ -57,9 +67,8 @@ button {
 
 .access-intro {
   background:
-    radial-gradient(circle at 88% 42%, rgba(255, 255, 255, 0.12), transparent 27rem),
-    radial-gradient(circle at 90% 58%, rgba(255, 255, 255, 0.08), transparent 19rem),
-    linear-gradient(135deg, #1769d4, #1457b2);
+    linear-gradient(115deg, rgba(20, 217, 196, 0.18), transparent 38%),
+    linear-gradient(135deg, #07111f, #10375d 58%, #0a1a2f);
   color: #fff;
   display: grid;
   grid-template-rows: auto 1fr auto;
@@ -76,7 +85,7 @@ button {
 }
 
 .access-kicker {
-  color: #d6e7ff;
+  color: var(--accent-strong);
   font-size: 13px;
   font-weight: 900;
   letter-spacing: 0;
@@ -94,7 +103,7 @@ button {
 }
 
 .access-intro > div:nth-child(2) p:last-child {
-  color: #e8f2ff;
+  color: #bcd4ee;
   font-size: 18px;
   line-height: 1.7;
   margin: 24px 0 0;
@@ -114,16 +123,22 @@ button {
 }
 
 .access-intro cite {
-  color: #bad6ff;
+  color: #81e8dc;
   font-size: 13px;
   font-style: normal;
 }
 
 .access-panel {
   align-self: center;
+  background: rgba(7, 17, 31, 0.64);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  color: var(--foreground);
   justify-self: center;
-  padding: 42px clamp(20px, 7vw, 96px);
-  width: min(620px, 100%);
+  margin: 24px;
+  padding: 38px clamp(20px, 5vw, 72px);
+  width: min(650px, calc(100% - 48px));
 }
 
 .access-copy h2 {
@@ -179,7 +194,7 @@ button {
 
 .password-field button {
   align-self: stretch;
-  background: #fbfdff;
+  background: rgba(18, 45, 76, 0.92);
   border: 1px solid var(--line);
   border-radius: 0 8px 8px 0;
   color: var(--accent-strong);
@@ -190,7 +205,7 @@ button {
 }
 
 .access-primary {
-  background: #1769d4;
+  background: linear-gradient(135deg, #12c8b4, #2386ff);
   border: 0;
   border-radius: 8px;
   color: #fff;
@@ -200,7 +215,7 @@ button {
 }
 
 .access-primary:hover {
-  background: #1457b2;
+  filter: brightness(1.08);
 }
 
 .access-links {
@@ -214,14 +229,14 @@ button {
 .access-links button {
   background: transparent;
   border: 0;
-  color: #1769d4;
+  color: var(--accent-strong);
   font-weight: 900;
   min-height: 38px;
 }
 
 .form-message {
-  background: #ecf7f4;
-  border: 1px solid #c8e6de;
+  background: rgba(20, 217, 196, 0.1);
+  border: 1px solid rgba(20, 217, 196, 0.28);
   border-radius: 8px;
   color: var(--accent-strong);
   font-weight: 800;
@@ -232,7 +247,7 @@ button {
 
 .check-card {
   align-items: center;
-  background: #fbfdff;
+  background: rgba(13, 28, 49, 0.62);
   border: 1px solid var(--line);
   border-radius: 8px;
   display: flex;
@@ -259,10 +274,10 @@ button {
 
 .access-profile-note::before {
   align-items: center;
-  border: 2px solid #1769d4;
+  border: 2px solid var(--accent);
   border-radius: 8px;
-  color: #1769d4;
-  content: "✓";
+  color: var(--accent);
+  content: "";
   display: flex;
   font-weight: 900;
   height: 28px;
@@ -271,6 +286,16 @@ button {
   position: absolute;
   top: 1px;
   width: 28px;
+}
+
+.access-profile-note::after {
+  background: var(--accent);
+  content: "";
+  height: 12px;
+  left: 8px;
+  position: absolute;
+  top: 9px;
+  width: 12px;
 }
 
 .access-profile-note strong {
@@ -285,12 +310,15 @@ button {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: 292px minmax(0, 1fr);
   min-height: 100vh;
 }
 
 .sidebar {
-  background: linear-gradient(180deg, var(--nav), #0f172a);
+  background:
+    linear-gradient(180deg, rgba(72, 184, 255, 0.09), transparent 22%),
+    linear-gradient(180deg, var(--nav), #050b15);
+  border-right: 1px solid var(--line);
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -309,9 +337,9 @@ button {
 
 .brand-mark {
   align-items: center;
-  background: #d7f7ef;
+  background: linear-gradient(135deg, rgba(20, 217, 196, 0.96), rgba(72, 184, 255, 0.92));
   border-radius: 8px;
-  color: #0c4a44;
+  color: #06101e;
   display: flex;
   font-weight: 900;
   height: 46px;
@@ -332,7 +360,7 @@ button {
 }
 
 .brand-caption {
-  color: #aab8d0;
+  color: #83a1c4;
   font-size: 12px;
   font-weight: 700;
   margin-top: 2px;
@@ -345,10 +373,10 @@ button {
 
 .module-button {
   align-items: center;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid transparent;
   border-radius: 8px;
-  color: #cad6e8;
+  color: #c6d8ef;
   display: grid;
   gap: 2px;
   min-height: 54px;
@@ -357,7 +385,7 @@ button {
 }
 
 .module-button span {
-  color: #8ea3c1;
+  color: #72bde8;
   font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
@@ -370,14 +398,16 @@ button {
 
 .module-button:hover,
 .module-button.active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(20, 217, 196, 0.13), rgba(72, 184, 255, 0.1));
+  border-color: rgba(20, 217, 196, 0.32);
+  box-shadow: inset 3px 0 0 var(--accent), 0 12px 28px rgba(0, 0, 0, 0.18);
   color: #fff;
 }
 
 .connection-card {
   align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(20, 217, 196, 0.06);
+  border: 1px solid rgba(20, 217, 196, 0.22);
   border-radius: 8px;
   display: flex;
   gap: 10px;
@@ -395,13 +425,13 @@ button {
 }
 
 .connection-card span {
-  color: #aab8d0;
+  color: #9cc0e6;
   font-size: 12px;
   margin-top: 2px;
 }
 
 .status-dot {
-  background: #2fd17c;
+  background: var(--accent);
   border-radius: 999px;
   box-shadow: 0 0 0 5px rgba(47, 209, 124, 0.12);
   height: 10px;
@@ -424,7 +454,7 @@ button {
 }
 
 .eyebrow {
-  color: var(--accent);
+  color: var(--accent-strong);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0;
@@ -445,6 +475,29 @@ button {
   gap: 12px;
 }
 
+.command-search {
+  min-width: min(340px, 32vw);
+  text-transform: none;
+}
+
+.command-search span {
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
+.command-search input {
+  background: rgba(13, 28, 49, 0.82);
+  border-color: rgba(72, 184, 255, 0.24);
+  color: var(--foreground);
+  min-height: 50px;
+}
+
+.command-search input::placeholder {
+  color: #6f8dac;
+}
+
 .notification-button,
 .profile-pill,
 .panel-heading button,
@@ -456,8 +509,8 @@ button {
 
 .notification-button {
   align-items: center;
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: rgba(13, 28, 49, 0.86);
+  border: 1px solid rgba(72, 184, 255, 0.24);
   color: var(--foreground);
   display: flex;
   font-weight: 850;
@@ -467,7 +520,7 @@ button {
 }
 
 .notification-button strong {
-  background: var(--danger);
+  background: linear-gradient(135deg, var(--danger), #ff9c5d);
   border-radius: 999px;
   color: #fff;
   font-size: 12px;
@@ -477,8 +530,8 @@ button {
 
 .profile-pill {
   align-items: center;
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: rgba(13, 28, 49, 0.86);
+  border: 1px solid rgba(72, 184, 255, 0.24);
   display: flex;
   gap: 10px;
   min-height: 50px;
@@ -487,9 +540,9 @@ button {
 
 .profile-pill span {
   align-items: center;
-  background: #e1f4ef;
+  background: linear-gradient(135deg, rgba(20, 217, 196, 0.92), rgba(72, 184, 255, 0.86));
   border-radius: 8px;
-  color: var(--accent-strong);
+  color: #06101e;
   display: flex;
   font-weight: 900;
   height: 36px;
@@ -514,10 +567,10 @@ button {
 }
 
 .notifications-panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: rgba(8, 16, 31, 0.96);
+  border: 1px solid rgba(72, 184, 255, 0.26);
   border-radius: 8px;
-  box-shadow: 0 24px 80px rgba(23, 32, 51, 0.18);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.42), 0 0 50px rgba(20, 217, 196, 0.08);
   max-width: 420px;
   padding: 14px;
   position: absolute;
@@ -534,8 +587,8 @@ button {
 }
 
 .notification-card {
-  background: #f7fbff;
-  border: 1px solid #cfe4dc;
+  background: rgba(18, 45, 76, 0.72);
+  border: 1px solid rgba(72, 184, 255, 0.2);
   border-radius: 8px;
   display: grid;
   gap: 4px;
@@ -575,13 +628,14 @@ button {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(17, 34, 64, 0.06);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .hero-panel {
   background:
-    linear-gradient(135deg, rgba(15, 118, 110, 0.92), rgba(20, 33, 61, 0.96)),
-    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12));
+    linear-gradient(90deg, rgba(20, 217, 196, 0.14) 0 1px, transparent 1px 70px),
+    linear-gradient(135deg, rgba(11, 62, 99, 0.98), rgba(7, 17, 31, 0.98) 58%, rgba(15, 35, 64, 0.98));
+  border-color: rgba(20, 217, 196, 0.28);
   color: #fff;
   grid-column: 1 / -1;
   min-height: 270px;
@@ -589,7 +643,7 @@ button {
 }
 
 .hero-panel .eyebrow {
-  color: #c9f7ee;
+  color: var(--accent-strong);
 }
 
 .hero-panel h2 {
@@ -601,7 +655,7 @@ button {
 }
 
 .hero-panel p {
-  color: #deebe9;
+  color: #bcd4ee;
   font-size: 17px;
   line-height: 1.75;
   margin: 0;
@@ -619,7 +673,7 @@ button {
 .primary-action,
 .detail-actions button,
 .panel-heading button {
-  background: var(--accent);
+  background: linear-gradient(135deg, #12c8b4, #2386ff);
   border: 0;
   color: #fff;
   font-weight: 900;
@@ -629,8 +683,45 @@ button {
 
 .hero-actions button.secondary,
 .detail-actions button.secondary {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(72, 184, 255, 0.1);
+  border: 1px solid rgba(72, 184, 255, 0.28);
+}
+
+.action-strip {
+  display: grid;
+  gap: 16px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.action-tile {
+  background: linear-gradient(135deg, rgba(13, 28, 49, 0.94), rgba(18, 45, 76, 0.82));
+  border: 1px solid rgba(72, 184, 255, 0.22);
+  border-radius: 8px;
+  color: var(--foreground);
+  display: grid;
+  gap: 4px;
+  min-height: 118px;
+  padding: 18px;
+  text-align: left;
+}
+
+.action-tile:hover {
+  border-color: rgba(20, 217, 196, 0.46);
+  transform: translateY(-2px);
+}
+
+.action-tile span,
+.action-tile small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.action-tile strong {
+  color: var(--accent-strong);
+  font-size: 38px;
+  font-weight: 950;
+  line-height: 1;
 }
 
 .stats-grid {
@@ -645,6 +736,17 @@ button {
   gap: 5px;
   min-height: 138px;
   padding: 18px;
+  position: relative;
+  overflow: hidden;
+}
+
+.signal-line {
+  background: linear-gradient(90deg, var(--accent), var(--cyan));
+  height: 3px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
 }
 
 .stat-card span,
@@ -691,7 +793,7 @@ button {
 }
 
 .panel-heading button {
-  background: #e7f2ef;
+  background: rgba(20, 217, 196, 0.12);
   color: var(--accent-strong);
 }
 
@@ -715,7 +817,7 @@ button {
 
 .data-row {
   align-items: center;
-  background: #fbfdff;
+  background: rgba(18, 45, 76, 0.62);
   display: flex;
   gap: 12px;
   min-height: 70px;
@@ -742,7 +844,8 @@ button {
 .date-box,
 .bullet-mark {
   align-items: center;
-  background: #e6f4f1;
+  background: rgba(20, 217, 196, 0.12);
+  border: 1px solid rgba(20, 217, 196, 0.24);
   border-radius: 8px;
   color: var(--accent-strong);
   display: flex;
@@ -761,12 +864,12 @@ button {
 }
 
 .mural-card {
-  background: #fbfdff;
+  background: rgba(18, 45, 76, 0.62);
   padding: 14px;
 }
 
 .mural-card.featured {
-  border-color: #d9b456;
+  border-color: rgba(241, 199, 91, 0.56);
   box-shadow: inset 4px 0 0 var(--gold);
 }
 
@@ -793,7 +896,7 @@ label.full {
 input,
 select,
 textarea {
-  background: #fbfdff;
+  background: rgba(7, 17, 31, 0.62);
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--foreground);
@@ -812,7 +915,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.13);
+  box-shadow: 0 0 0 3px rgba(20, 217, 196, 0.14);
 }
 
 .primary-action {
@@ -820,7 +923,7 @@ textarea:focus {
 }
 
 .care-list-item {
-  background: #fbfdff;
+  background: rgba(18, 45, 76, 0.62);
   color: var(--foreground);
   display: grid;
   gap: 5px;
@@ -830,7 +933,7 @@ textarea:focus {
 
 .care-list-item.selected {
   border-color: var(--accent);
-  box-shadow: inset 4px 0 0 var(--accent);
+  box-shadow: inset 4px 0 0 var(--accent), 0 0 28px rgba(20, 217, 196, 0.1);
 }
 
 .care-list-item small {
@@ -846,23 +949,23 @@ textarea:focus {
 }
 
 .status-chip.pendente {
-  background: #fff4df;
-  color: #946200;
+  background: rgba(241, 199, 91, 0.16);
+  color: #ffe49b;
 }
 
 .status-chip.em-analise {
-  background: #e8f0ff;
-  color: #2856a3;
+  background: rgba(72, 184, 255, 0.16);
+  color: #9bd7ff;
 }
 
 .status-chip.agendado {
-  background: #e6f4f1;
+  background: rgba(20, 217, 196, 0.14);
   color: var(--accent-strong);
 }
 
 .status-chip.concluido {
-  background: #edf0f5;
-  color: #58667a;
+  background: rgba(142, 168, 198, 0.16);
+  color: #c8d8eb;
 }
 
 .care-detail {
@@ -884,9 +987,10 @@ textarea:focus {
 }
 
 .flow-step {
-  background: #edf0f5;
+  background: rgba(142, 168, 198, 0.12);
+  border: 1px solid rgba(142, 168, 198, 0.18);
   border-radius: 8px;
-  color: #667085;
+  color: #aebfd3;
   font-size: 12px;
   font-weight: 900;
   min-height: 38px;
@@ -895,7 +999,8 @@ textarea:focus {
 }
 
 .flow-step.done {
-  background: #dff4ef;
+  background: rgba(20, 217, 196, 0.16);
+  border-color: rgba(20, 217, 196, 0.32);
   color: var(--accent-strong);
 }
 
@@ -907,12 +1012,13 @@ textarea:focus {
 }
 
 .detail-actions button.secondary {
-  background: var(--nav);
+  background: rgba(143, 124, 255, 0.18);
+  border-color: rgba(143, 124, 255, 0.32);
 }
 
 .table-row {
   align-items: center;
-  background: #fbfdff;
+  background: rgba(18, 45, 76, 0.62);
   display: grid;
   gap: 12px;
   grid-template-columns: minmax(0, 1fr) 150px 130px;
@@ -946,8 +1052,8 @@ textarea:focus {
 }
 
 .backup-box {
-  background: #ecf7f4;
-  border: 1px solid #c8e6de;
+  background: rgba(20, 217, 196, 0.1);
+  border: 1px solid rgba(20, 217, 196, 0.24);
   border-radius: 8px;
   display: grid;
   gap: 5px;
@@ -978,7 +1084,7 @@ textarea:focus {
 }
 
 .audit-item {
-  background: #fbfdff;
+  background: rgba(18, 45, 76, 0.62);
   padding: 12px;
 }
 
@@ -1017,6 +1123,10 @@ textarea:focus {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .action-strip {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -1053,6 +1163,7 @@ textarea:focus {
   }
 
   .topbar-actions,
+  .command-search,
   .profile-pill,
   .notification-button {
     width: 100%;

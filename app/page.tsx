@@ -383,6 +383,27 @@ export default function Home() {
     },
   ];
 
+  const actionHighlights = [
+    {
+      label: "Atencao pastoral",
+      value: data.careRequests.filter((request) => !request.responsible && request.status !== "Concluido").length.toString(),
+      hint: "sem responsavel",
+      module: "pastoral" as ModuleKey,
+    },
+    {
+      label: "Agenda da semana",
+      value: data.events.length.toString(),
+      hint: "encontros programados",
+      module: "events" as ModuleKey,
+    },
+    {
+      label: "Comunicados ativos",
+      value: data.notices.filter((notice) => notice.status === "Publicado").length.toString(),
+      hint: "publicados",
+      module: "notices" as ModuleKey,
+    },
+  ];
+
   function switchAccessMode(mode: AccessMode) {
     setAccessMode(mode);
     setAccessMessage("");
@@ -473,13 +494,17 @@ export default function Home() {
             </div>
 
             <div className="topbar-actions">
+              <label className="command-search">
+                <span>Busca global</span>
+                <input placeholder="Buscar membro, evento ou pedido" type="search" />
+              </label>
               <button
                 aria-expanded={notificationsOpen}
                 className="notification-button"
                 onClick={() => setNotificationsOpen((open) => !open)}
                 type="button"
               >
-                <span>Sino</span>
+                <span>Acoes</span>
                 {unreadCount > 0 && <strong>{unreadCount}</strong>}
               </button>
               <div className="profile-pill">
@@ -494,7 +519,7 @@ export default function Home() {
             {notificationsOpen && (
               <div className="notifications-panel">
                 <div className="panel-heading">
-                  <h2>Central de notificacoes</h2>
+                  <h2>Central de acoes</h2>
                   <button onClick={markAllNotificationsRead} type="button">
                     Marcar tudo como lido
                   </button>
@@ -526,25 +551,36 @@ export default function Home() {
           {activeModule === "overview" && (
             <section className="content-grid">
               <div className="hero-panel">
-                <p className="eyebrow">Administracao e cuidado em um so lugar</p>
-                <h2>O painel local esta pronto para continuar o sistema daqui.</h2>
+                <p className="eyebrow">Painel inteligente da igreja</p>
+                <h2>Prioridades, pessoas e ministerios em tempo real.</h2>
                 <p>
-                  Use esta versao para validar fluxo pastoral, notificacoes, mural,
-                  backup e organizacao dos modulos antes de religar tudo ao banco.
+                  Acompanhe pedidos pastorais, eventos, comunicados e a rotina da igreja em uma central viva,
+                  pronta para crescer com dados reais.
                 </p>
                 <div className="hero-actions">
                   <button onClick={() => setActiveModule("pastoral")} type="button">
-                    Testar atendimento pastoral
+                    Abrir fila pastoral
                   </button>
-                  <button className="secondary" onClick={() => setActiveModule("settings")} type="button">
-                    Gerar backup local
+                  <button className="secondary" onClick={() => setNotificationsOpen(true)} type="button">
+                    Ver acoes de hoje
                   </button>
                 </div>
+              </div>
+
+              <div className="action-strip">
+                {actionHighlights.map((item) => (
+                  <button className="action-tile" key={item.label} onClick={() => setActiveModule(item.module)} type="button">
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                    <small>{item.hint}</small>
+                  </button>
+                ))}
               </div>
 
               <div className="stats-grid">
                 {stats.map((stat) => (
                   <article className="stat-card" key={stat.label}>
+                    <span className="signal-line" />
                     <span>{stat.label}</span>
                     <strong>{stat.value}</strong>
                     <small>{stat.hint}</small>
