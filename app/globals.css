@@ -997,10 +997,128 @@ textarea:focus {
   align-items: flex-start;
 }
 
+.member-record {
+  display: grid;
+  gap: 10px;
+}
+
 .member-avatar {
   flex-shrink: 0;
   height: 54px;
   width: 54px;
+}
+
+.birthday-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.birthday-card,
+.digital-card {
+  background:
+    linear-gradient(135deg, rgba(20, 217, 196, 0.1), transparent 48%),
+    rgba(18, 45, 76, 0.58);
+  border: 1px solid rgba(72, 184, 255, 0.22);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.birthday-card strong,
+.birthday-card span,
+.birthday-card small {
+  display: block;
+}
+
+.birthday-card span {
+  color: var(--accent-strong);
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+  margin: 8px 0;
+}
+
+.birthday-card small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.digital-card {
+  overflow: hidden;
+  padding: 0;
+}
+
+.digital-card-top,
+.digital-card-footer {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.digital-card-top {
+  background: linear-gradient(135deg, rgba(20, 217, 196, 0.18), rgba(72, 184, 255, 0.14));
+}
+
+.digital-card-top span,
+.digital-card-footer span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.digital-card-top strong {
+  color: var(--accent-strong);
+  font-size: 13px;
+}
+
+.digital-card-body {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+}
+
+.digital-card-body strong,
+.digital-card-body small {
+  display: block;
+}
+
+.digital-card-body small {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.kids-preview,
+.kids-avatar {
+  background: linear-gradient(135deg, rgba(255, 197, 61, 0.2), rgba(20, 217, 196, 0.18));
+  border-color: rgba(255, 197, 61, 0.32);
+  color: #ffd778;
+}
+
+.kids-record {
+  border-left: 3px solid rgba(255, 197, 61, 0.68);
+  padding-left: 10px;
+}
+
+.kids-card,
+.kids-birthday {
+  background:
+    linear-gradient(135deg, rgba(255, 197, 61, 0.16), transparent 48%),
+    rgba(18, 45, 76, 0.62);
+  border-color: rgba(255, 197, 61, 0.28);
+}
+
+.kids-card .digital-card-top {
+  background: linear-gradient(135deg, rgba(255, 197, 61, 0.2), rgba(20, 217, 196, 0.12));
+}
+
+.kids-card .digital-card-top strong {
+  color: #ffd778;
 }
 
 .notice-stack {
@@ -1118,6 +1236,41 @@ textarea:focus {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 14px;
+}
+
+.share-card {
+  align-self: start;
+}
+
+.share-link {
+  background: rgba(7, 17, 31, 0.7);
+  border: 1px solid rgba(72, 184, 255, 0.22);
+  border-radius: 8px;
+  color: var(--accent-strong);
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  padding: 12px;
+}
+
+.whatsapp-link {
+  align-items: center;
+  background: rgba(20, 217, 196, 0.12);
+  border: 1px solid rgba(20, 217, 196, 0.28);
+  border-radius: 8px;
+  color: var(--accent-strong);
+  display: flex;
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 0 14px;
+  text-decoration: none;
+}
+
+.whatsapp-link.disabled {
+  opacity: 0.48;
+  pointer-events: none;
 }
 
 .detail-actions button.secondary {
@@ -1348,6 +1501,7 @@ textarea:focus {
 
   .module-list,
   .stats-grid,
+  .birthday-grid,
   .form-grid,
   .detail-grid,
   .flow-line,

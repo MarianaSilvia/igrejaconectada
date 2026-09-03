@@ -6,6 +6,7 @@ type ModuleKey =
   | "overview"
   | "users"
   | "members"
+  | "kids"
   | "events"
   | "ministries"
   | "notices"
@@ -92,6 +93,24 @@ type MemberRecord = {
   notes: string;
 };
 
+type KidRecord = {
+  id: string;
+  childName: string;
+  birthDate: string;
+  ageGroup: "Bercario" | "Maternal" | "Kids" | "Juniores";
+  className: string;
+  photoDataUrl: string;
+  allergies: string;
+  notes: string;
+  guardianName: string;
+  guardianPhone: string;
+  guardianEmail: string;
+  relationship: string;
+  authorizedPickup: string;
+  consentImage: boolean;
+  joinedAt: string;
+};
+
 type SchoolClass = {
   id: string;
   name: string;
@@ -125,6 +144,7 @@ type AppData = {
   mural: MuralItem[];
   users: AccessUser[];
   members: MemberRecord[];
+  kids: KidRecord[];
   schoolClasses: SchoolClass[];
   ministries: MinistryRecord[];
   audit: AuditItem[];
@@ -157,6 +177,7 @@ const modules: { key: ModuleKey; label: string; short: string }[] = [
   { key: "overview", label: "Visao geral", short: "Painel" },
   { key: "users", label: "Usuarios e acessos", short: "Acessos" },
   { key: "members", label: "Membros", short: "Membros" },
+  { key: "kids", label: "Area Kids", short: "Kids" },
   { key: "events", label: "Agenda", short: "Agenda" },
   { key: "ministries", label: "Ministerios", short: "Ministerios" },
   { key: "notices", label: "Comunicados", short: "Avisos" },
@@ -334,6 +355,42 @@ const initialData: AppData = {
       notes: "Solicitou visita pastoral para conhecer melhor a igreja.",
     },
   ],
+  kids: [
+    {
+      id: "kid-1",
+      childName: "Livia Ribeiro",
+      birthDate: "2018-09-07",
+      ageGroup: "Kids",
+      className: "Kids 6 a 8",
+      photoDataUrl: "",
+      allergies: "Sem alergias informadas",
+      notes: "Autorizada para atividades em sala e apresentacoes.",
+      guardianName: "Ana Ribeiro",
+      guardianPhone: "(11) 98888-1201",
+      guardianEmail: "ana@igreja.com",
+      relationship: "Mae",
+      authorizedPickup: "Ana Ribeiro e Paulo Ribeiro",
+      consentImage: true,
+      joinedAt: "2026-02-10",
+    },
+    {
+      id: "kid-2",
+      childName: "Miguel Lima",
+      birthDate: "2020-09-21",
+      ageGroup: "Maternal",
+      className: "Maternal",
+      photoDataUrl: "",
+      allergies: "Alergia a amendoim",
+      notes: "Avisar responsavel antes de lanche coletivo.",
+      guardianName: "Carlos Lima",
+      guardianPhone: "(21) 97777-5402",
+      guardianEmail: "carlos@igreja.com",
+      relationship: "Pai",
+      authorizedPickup: "Carlos Lima",
+      consentImage: false,
+      joinedAt: "2026-08-22",
+    },
+  ],
   schoolClasses: [
     {
       id: "class-adults",
@@ -475,6 +532,23 @@ const blankMember: Omit<MemberRecord, "id"> = {
   notes: "",
 };
 
+const blankKid: Omit<KidRecord, "id"> = {
+  childName: "",
+  birthDate: "",
+  ageGroup: "Kids",
+  className: "",
+  photoDataUrl: "",
+  allergies: "",
+  notes: "",
+  guardianName: "",
+  guardianPhone: "",
+  guardianEmail: "",
+  relationship: "Responsavel",
+  authorizedPickup: "",
+  consentImage: false,
+  joinedAt: "",
+};
+
 const blankMuralItem: Omit<MuralItem, "id"> = {
   title: "",
   category: "Secretaria",
@@ -523,6 +597,44 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function birthdayDateThisYear(value: string) {
+  if (!value) return null;
+  const [, month, day] = value.split("-").map(Number);
+  if (!month || !day) return null;
+
+  const today = new Date();
+  return new Date(today.getFullYear(), month - 1, day);
+}
+
+function birthdayLabel(value: string) {
+  if (!value) return "Sem aniversario";
+  const date = birthdayDateThisYear(value);
+  if (!date) return "Sem aniversario";
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long" }).format(date);
+}
+
+function isBirthdayThisMonth(value: string) {
+  const date = birthdayDateThisYear(value);
+  if (!date) return false;
+  return date.getMonth() === new Date().getMonth();
+}
+
+function isBirthdayThisWeek(value: string) {
+  const date = birthdayDateThisYear(value);
+  if (!date) return false;
+
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(today.getDate() - today.getDay());
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  return date >= start && date <= end;
+}
+
 function uid(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -549,6 +661,14 @@ function normalizeMember(member: Partial<MemberRecord>): MemberRecord {
     ...member,
     status,
     memberType,
+  };
+}
+
+function normalizeKid(kid: Partial<KidRecord>): KidRecord {
+  return {
+    ...blankKid,
+    ...kid,
+    id: kid.id ?? uid("kid"),
   };
 }
 
@@ -586,6 +706,7 @@ function normalizeAppData(value: Partial<AppData>): AppData {
     mural: value.mural ?? initialData.mural,
     users: value.users ?? initialData.users,
     members: (value.members ?? initialData.members).map((member) => normalizeMember(member)),
+    kids: (value.kids ?? initialData.kids).map((kid) => normalizeKid(kid)),
     schoolClasses: value.schoolClasses ?? initialData.schoolClasses,
     ministries: (value.ministries ?? initialData.ministries).map((ministry) => normalizeMinistry(ministry)),
     audit: value.audit ?? initialData.audit,
@@ -608,10 +729,13 @@ export default function Home() {
   const [ministryForm, setMinistryForm] = useState(blankMinistry);
   const [userForm, setUserForm] = useState(blankUser);
   const [memberForm, setMemberForm] = useState(blankMember);
+  const [kidForm, setKidForm] = useState(blankKid);
   const [muralForm, setMuralForm] = useState(blankMuralItem);
   const [schoolNoticeForm, setSchoolNoticeForm] = useState(blankSchoolNotice);
   const [selectedRequestId, setSelectedRequestId] = useState("care-1");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [registrationLink, setRegistrationLink] = useState("");
+  const [shareFeedback, setShareFeedback] = useState("");
 
   useEffect(() => {
     const stored = window.localStorage.getItem(storageKey);
@@ -622,6 +746,15 @@ export default function Home() {
     } catch {
       window.localStorage.removeItem(storageKey);
     }
+  }, []);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("cadastro") === "novo") {
+      setAccessMode("register");
+      setHasSession(false);
+    }
+    setRegistrationLink(`${url.origin}${url.pathname}?cadastro=novo`);
   }, []);
 
   useEffect(() => {
@@ -660,13 +793,19 @@ export default function Home() {
   }, [data.careRequests, data.events, data.mural]);
 
   const unreadCount = notifications.filter((notice) => !data.notificationReadIds.includes(notice.id)).length;
+  const monthlyBirthdays = data.members.filter((member) => isBirthdayThisMonth(member.birthDate));
+  const weeklyBirthdays = monthlyBirthdays.filter((member) => isBirthdayThisWeek(member.birthDate));
+  const monthlyKidsBirthdays = data.kids.filter((kid) => isBirthdayThisMonth(kid.birthDate));
   const canCreateUser = Boolean(userForm.name.trim() && userForm.email.trim());
   const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim());
+  const canCreateKid = Boolean(kidForm.childName.trim() && kidForm.guardianName.trim() && kidForm.guardianPhone.trim());
   const canCreateMuralItem = Boolean(muralForm.title.trim() && muralForm.expiresAt);
   const canCreateSchoolNotice = Boolean(schoolNoticeForm.classId && schoolNoticeForm.title.trim() && schoolNoticeForm.body.trim());
   const canCreateEvent = Boolean(eventForm.title.trim() && eventForm.date);
   const canCreateNotice = Boolean(noticeForm.title.trim() && noticeForm.body.trim());
   const canCreateMinistry = Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
+  const whatsappText = `Ola! Faca seu cadastro na igreja por este link: ${registrationLink}`;
+  const whatsappShareLink = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
 
   function readPhoto(event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) {
     const file = event.target.files?.[0];
@@ -752,6 +891,20 @@ export default function Home() {
       audit: [{ id: uid("audit"), action: `Membro cadastrado: ${member.fullName}`, when: now }, ...current.audit].slice(0, 12),
     }));
     setMemberForm(blankMember);
+  }
+
+  function createKid() {
+    if (!canCreateKid) return;
+
+    const now = new Date().toISOString();
+    const kid: KidRecord = { ...kidForm, id: uid("kid") };
+
+    setData((current) => ({
+      ...current,
+      kids: [kid, ...current.kids],
+      audit: [{ id: uid("audit"), action: `Crianca cadastrada no Kids: ${kid.childName}`, when: now }, ...current.audit].slice(0, 12),
+    }));
+    setKidForm(blankKid);
   }
 
   function createMuralItem() {
@@ -859,6 +1012,7 @@ export default function Home() {
     setMinistryForm(blankMinistry);
     setUserForm(blankUser);
     setMemberForm(blankMember);
+    setKidForm(blankKid);
     setMuralForm(blankMuralItem);
     setSchoolNoticeForm(blankSchoolNotice);
   }
@@ -881,6 +1035,12 @@ export default function Home() {
       value: data.notices.filter((notice) => notice.status === "Publicado").length.toString(),
       hint: "publicados",
       module: "notices" as ModuleKey,
+    },
+    {
+      label: "Area Kids",
+      value: data.kids.length.toString(),
+      hint: "criancas cadastradas",
+      module: "kids" as ModuleKey,
     },
     {
       label: "Atendimentos",
@@ -907,6 +1067,17 @@ export default function Home() {
     setActiveModule("overview");
     setAccessMode("login");
     setAccessMessage("Voce saiu do sistema com seguranca.");
+  }
+
+  async function copyRegistrationLink() {
+    if (!registrationLink) return;
+
+    try {
+      await navigator.clipboard.writeText(registrationLink);
+      setShareFeedback("Link de cadastro copiado.");
+    } catch {
+      setShareFeedback("Copie o link exibido acima para enviar.");
+    }
   }
 
   function handleRecover(event: FormEvent<HTMLFormElement>) {
@@ -1162,6 +1333,24 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+
+              <article className="surface share-card">
+                <div className="panel-heading">
+                  <h2>Link de cadastro</h2>
+                  <span>WhatsApp</span>
+                </div>
+                <p className="body-copy">Envie este link para membros, visitantes e novos convertidos preencherem a ficha online.</p>
+                <div className="share-link">{registrationLink || "Preparando link..."}</div>
+                {shareFeedback && <div className="action-feedback">{shareFeedback}</div>}
+                <div className="detail-actions">
+                  <button disabled={!registrationLink} onClick={copyRegistrationLink} type="button">
+                    Copiar link
+                  </button>
+                  <a className={registrationLink ? "whatsapp-link" : "whatsapp-link disabled"} href={whatsappShareLink} rel="noreferrer" target="_blank">
+                    Enviar no WhatsApp
+                  </a>
+                </div>
+              </article>
 
               <article className="surface wide">
                 <div className="panel-heading">
@@ -1837,18 +2026,258 @@ export default function Home() {
                   <h2>Membros cadastrados</h2>
                   <span>{data.members.length} registros</span>
                 </div>
+                <div className="birthday-grid">
+                  <div className="birthday-card">
+                    <strong>Aniversariantes da semana</strong>
+                    <span>{weeklyBirthdays.length}</span>
+                    <small>
+                      {weeklyBirthdays.length
+                        ? weeklyBirthdays.map((member) => `${member.fullName} (${birthdayLabel(member.birthDate)})`).join(", ")
+                        : "Nenhum aniversario nesta semana."}
+                    </small>
+                  </div>
+                  <div className="birthday-card">
+                    <strong>Aniversariantes do mes</strong>
+                    <span>{monthlyBirthdays.length}</span>
+                    <small>
+                      {monthlyBirthdays.length
+                        ? monthlyBirthdays.map((member) => `${member.fullName} (${birthdayLabel(member.birthDate)})`).join(", ")
+                        : "Nenhum aniversario neste mes."}
+                    </small>
+                  </div>
+                </div>
                 <div className="row-list">
                   {data.members.map((member) => (
-                    <div className="data-row member-row" key={member.id}>
-                      <div className="member-avatar">
-                        {member.photoDataUrl ? <img alt="" src={member.photoDataUrl} /> : member.fullName.slice(0, 1)}
+                    <div className="member-record" key={member.id}>
+                      <div className="data-row member-row">
+                        <div className="member-avatar">
+                          {member.photoDataUrl ? <img alt="" src={member.photoDataUrl} /> : member.fullName.slice(0, 1)}
+                        </div>
+                        <div>
+                          <strong>{member.fullName}</strong>
+                          <small>
+                            {member.memberType} - {member.status} - {member.role || "Sem funcao"} - {member.phone}
+                          </small>
+                          <small>
+                            {member.ministry || "Sem ministerio"} - {member.congregation || "Congregacao nao informada"} - Aniv. {birthdayLabel(member.birthDate)}
+                          </small>
+                        </div>
                       </div>
-                      <div>
-                        <strong>{member.fullName}</strong>
-                        <small>
-                          {member.memberType} - {member.status} - {member.role || "Sem funcao"} - {member.phone}
-                        </small>
-                        <small>{member.ministry || "Sem ministerio"} - {member.congregation || "Congregacao nao informada"}</small>
+                      <div className="digital-card">
+                        <div className="digital-card-top">
+                          <span>Carteirinha digital</span>
+                          <strong>Igreja Gestao</strong>
+                        </div>
+                        <div className="digital-card-body">
+                          <div className="member-avatar">
+                            {member.photoDataUrl ? <img alt="" src={member.photoDataUrl} /> : member.fullName.slice(0, 1)}
+                          </div>
+                          <div>
+                            <strong>{member.fullName}</strong>
+                            <small>ID {member.id.slice(0, 12).toUpperCase()}</small>
+                            <small>{member.memberType} - {member.status}</small>
+                            <small>{member.role || "Funcao nao informada"}</small>
+                          </div>
+                        </div>
+                        <div className="digital-card-footer">
+                          <span>{member.congregation || "Congregacao"}</span>
+                          <span>{member.joinedAt ? `Desde ${formatDate(member.joinedAt)}` : "Cadastro local"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </section>
+          )}
+
+          {activeModule === "kids" && (
+            <section className="content-grid">
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Cadastro Kids</h2>
+                  <span>Crianca e responsavel</span>
+                </div>
+                <div className="form-grid">
+                  <div className="photo-uploader full">
+                    <div className="photo-preview kids-preview">
+                      {kidForm.photoDataUrl ? <img alt="" src={kidForm.photoDataUrl} /> : <span>Kids</span>}
+                    </div>
+                    <label>
+                      Foto da crianca
+                      <input accept="image/*" onChange={(event) => readPhoto(event, (photoDataUrl) => setKidForm((form) => ({ ...form, photoDataUrl })))} type="file" />
+                    </label>
+                  </div>
+                  <label className="full">
+                    Nome da crianca
+                    <input
+                      onChange={(event) => setKidForm((form) => ({ ...form, childName: event.target.value }))}
+                      placeholder="Ex.: Julia Santos"
+                      value={kidForm.childName}
+                    />
+                  </label>
+                  <label>
+                    Nascimento
+                    <input
+                      onChange={(event) => setKidForm((form) => ({ ...form, birthDate: event.target.value }))}
+                      type="date"
+                      value={kidForm.birthDate}
+                    />
+                  </label>
+                  <label>
+                    Faixa
+                    <select onChange={(event) => setKidForm((form) => ({ ...form, ageGroup: event.target.value as KidRecord["ageGroup"] }))} value={kidForm.ageGroup}>
+                      <option>Bercario</option>
+                      <option>Maternal</option>
+                      <option>Kids</option>
+                      <option>Juniores</option>
+                    </select>
+                  </label>
+                  <label>
+                    Turma
+                    <input
+                      onChange={(event) => setKidForm((form) => ({ ...form, className: event.target.value }))}
+                      placeholder="Ex.: Kids 6 a 8"
+                      value={kidForm.className}
+                    />
+                  </label>
+                  <label>
+                    Desde
+                    <input
+                      onChange={(event) => setKidForm((form) => ({ ...form, joinedAt: event.target.value }))}
+                      type="date"
+                      value={kidForm.joinedAt}
+                    />
+                  </label>
+                  <label className="full">
+                    Alergias ou cuidados
+                    <input
+                      onChange={(event) => setKidForm((form) => ({ ...form, allergies: event.target.value }))}
+                      placeholder="Ex.: alergia alimentar, medicamento, observacao medica"
+                      value={kidForm.allergies}
+                    />
+                  </label>
+                  <label>
+                    Responsavel
+                    <input
+                      onChange={(event) => setKidForm((form) => ({ ...form, guardianName: event.target.value }))}
+                      placeholder="Nome do responsavel"
+                      value={kidForm.guardianName}
+                    />
+                  </label>
+                  <label>
+                    Parentesco
+                    <input
+                      onChange={(event) => setKidForm((form) => ({ ...form, relationship: event.target.value }))}
+                      placeholder="Mae, pai, avo, tutor"
+                      value={kidForm.relationship}
+                    />
+                  </label>
+                  <label>
+                    Telefone do responsavel
+                    <input
+                      onChange={(event) => setKidForm((form) => ({ ...form, guardianPhone: event.target.value }))}
+                      placeholder="(00) 00000-0000"
+                      value={kidForm.guardianPhone}
+                    />
+                  </label>
+                  <label>
+                    E-mail do responsavel
+                    <input
+                      onChange={(event) => setKidForm((form) => ({ ...form, guardianEmail: event.target.value }))}
+                      placeholder="responsavel@email.com"
+                      type="email"
+                      value={kidForm.guardianEmail}
+                    />
+                  </label>
+                  <label className="full">
+                    Pessoas autorizadas a buscar
+                    <input
+                      onChange={(event) => setKidForm((form) => ({ ...form, authorizedPickup: event.target.value }))}
+                      placeholder="Informe quem pode retirar a crianca"
+                      value={kidForm.authorizedPickup}
+                    />
+                  </label>
+                  <label className="check-card full">
+                    <input
+                      checked={kidForm.consentImage}
+                      onChange={(event) => setKidForm((form) => ({ ...form, consentImage: event.target.checked }))}
+                      type="checkbox"
+                    />
+                    Responsavel autorizou uso de imagem
+                  </label>
+                  <label className="full">
+                    Observacoes
+                    <textarea
+                      onChange={(event) => setKidForm((form) => ({ ...form, notes: event.target.value }))}
+                      placeholder="Rotina, restricoes, acompanhamento ou informacoes para professores"
+                      value={kidForm.notes}
+                    />
+                  </label>
+                  <button className="primary-action" disabled={!canCreateKid} onClick={createKid} type="button">
+                    Salvar Kids
+                  </button>
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Kids cadastrados</h2>
+                  <span>{data.kids.length} criancas</span>
+                </div>
+                <div className="birthday-grid">
+                  <div className="birthday-card kids-birthday">
+                    <strong>Aniversariantes Kids do mes</strong>
+                    <span>{monthlyKidsBirthdays.length}</span>
+                    <small>
+                      {monthlyKidsBirthdays.length
+                        ? monthlyKidsBirthdays.map((kid) => `${kid.childName} (${birthdayLabel(kid.birthDate)})`).join(", ")
+                        : "Nenhum aniversario Kids neste mes."}
+                    </small>
+                  </div>
+                  <div className="birthday-card kids-birthday">
+                    <strong>Responsaveis</strong>
+                    <span>{new Set(data.kids.map((kid) => kid.guardianPhone)).size}</span>
+                    <small>Contatos para check-in, retirada e avisos do departamento.</small>
+                  </div>
+                </div>
+                <div className="row-list">
+                  {data.kids.map((kid) => (
+                    <div className="member-record kids-record" key={kid.id}>
+                      <div className="data-row member-row">
+                        <div className="member-avatar kids-avatar">
+                          {kid.photoDataUrl ? <img alt="" src={kid.photoDataUrl} /> : kid.childName.slice(0, 1)}
+                        </div>
+                        <div>
+                          <strong>{kid.childName}</strong>
+                          <small>
+                            {kid.ageGroup} - {kid.className || "Turma nao informada"} - Aniv. {birthdayLabel(kid.birthDate)}
+                          </small>
+                          <small>
+                            Resp. {kid.guardianName} - {kid.guardianPhone} - Retirada: {kid.authorizedPickup || "nao informada"}
+                          </small>
+                        </div>
+                      </div>
+                      <div className="digital-card kids-card">
+                        <div className="digital-card-top">
+                          <span>Carteirinha Kids</span>
+                          <strong>Igreja Gestao Kids</strong>
+                        </div>
+                        <div className="digital-card-body">
+                          <div className="member-avatar kids-avatar">
+                            {kid.photoDataUrl ? <img alt="" src={kid.photoDataUrl} /> : kid.childName.slice(0, 1)}
+                          </div>
+                          <div>
+                            <strong>{kid.childName}</strong>
+                            <small>ID {kid.id.slice(0, 12).toUpperCase()}</small>
+                            <small>{kid.ageGroup} - {kid.className || "Turma Kids"}</small>
+                            <small>Responsavel: {kid.guardianName}</small>
+                          </div>
+                        </div>
+                        <div className="digital-card-footer">
+                          <span>{kid.allergies || "Sem cuidados especiais"}</span>
+                          <span>{kid.consentImage ? "Imagem autorizada" : "Sem autorizacao de imagem"}</span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -2037,6 +2466,9 @@ export default function Home() {
               rows={[
                 `${data.careRequests.length} atendimentos pastorais`,
                 `${data.members.length} membros cadastrados`,
+                `${monthlyBirthdays.length} aniversariantes no mes`,
+                `${data.kids.length} criancas no Kids`,
+                `${monthlyKidsBirthdays.length} aniversariantes Kids no mes`,
                 `${data.users.length} usuarios com acesso`,
                 `${data.schoolClasses.length} classes EBD`,
                 `${data.events.length} eventos cadastrados`,
@@ -2061,7 +2493,11 @@ export default function Home() {
                   <strong>Cobertura do backup</strong>
                   <span>100%</span>
                   <small>
-                    {data.members.length} membros, {data.users.length} usuarios, {data.careRequests.length} atendimentos,
+                    {data.members.length} membros, {monthlyBirthdays.length} aniversariantes no mes, {data.kids.length} criancas no Kids,
+                    {" "}
+                    {monthlyKidsBirthdays.length} aniversariantes Kids no mes, {data.users.length} usuarios,
+                    {" "}
+                    {data.careRequests.length} atendimentos,
                     {" "}
                     {data.events.length} eventos, {data.schoolClasses.length} classes EBD, {data.notices.length} comunicados,
                     {" "}
