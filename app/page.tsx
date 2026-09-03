@@ -1,6 +1,6 @@
 "use client";
 
-import { Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useState } from "react";
 
 type ModuleKey =
   | "overview"
@@ -71,7 +71,28 @@ type MemberRecord = {
   phone: string;
   email: string;
   status: "Membro ativo" | "Visitante" | "Novo convertido" | "Transferencia";
+  memberType: "Membro" | "Visitante" | "Congregado" | "Lideranca";
+  role: string;
   ministry: string;
+  photoDataUrl: string;
+  birthDate: string;
+  maritalStatus: string;
+  address: string;
+  congregation: string;
+  previousChurch: string;
+  waterBaptized: boolean;
+  holySpiritBaptized: boolean;
+  joinedAt: string;
+  notes: string;
+};
+
+type SchoolClass = {
+  id: string;
+  name: string;
+  teacher: string;
+  students: number;
+  nextLesson: string;
+  notices: Notice[];
 };
 
 type AuditItem = {
@@ -87,6 +108,7 @@ type AppData = {
   mural: MuralItem[];
   users: AccessUser[];
   members: MemberRecord[];
+  schoolClasses: SchoolClass[];
   audit: AuditItem[];
   notificationReadIds: string[];
 };
@@ -100,7 +122,9 @@ type RegistrationForm = {
   address: string;
   congregationInterest: string;
   registrationType: string;
+  ministryRole: string;
   previousChurch: string;
+  photoDataUrl: string;
   password: string;
   passwordConfirm: string;
   waterBaptized: boolean;
@@ -226,7 +250,19 @@ const initialData: AppData = {
       phone: "(11) 98888-1201",
       email: "ana@igreja.com",
       status: "Membro ativo",
+      memberType: "Membro",
+      role: "Lider de familia",
       ministry: "Familia",
+      photoDataUrl: "",
+      birthDate: "1991-04-12",
+      maritalStatus: "Casado(a)",
+      address: "Rua das Flores, 120",
+      congregation: "Sede",
+      previousChurch: "",
+      waterBaptized: true,
+      holySpiritBaptized: true,
+      joinedAt: "2021-03-14",
+      notes: "Acompanha novos casais e participa da recepcao.",
     },
     {
       id: "member-2",
@@ -234,7 +270,52 @@ const initialData: AppData = {
       phone: "(21) 97777-5402",
       email: "carlos@igreja.com",
       status: "Visitante",
+      memberType: "Visitante",
+      role: "Sem funcao definida",
       ministry: "Recepcao",
+      photoDataUrl: "",
+      birthDate: "1988-10-08",
+      maritalStatus: "Solteiro(a)",
+      address: "Av. Central, 900",
+      congregation: "Sede",
+      previousChurch: "",
+      waterBaptized: false,
+      holySpiritBaptized: false,
+      joinedAt: "2026-08-22",
+      notes: "Solicitou visita pastoral para conhecer melhor a igreja.",
+    },
+  ],
+  schoolClasses: [
+    {
+      id: "class-adults",
+      name: "Classe adultos",
+      teacher: "Pr. Marcos",
+      students: 34,
+      nextLesson: "Familia, discipulado e servico",
+      notices: [
+        {
+          id: "school-notice-1",
+          title: "Levar Biblia e caderno",
+          body: "A proxima aula tera leitura dirigida em grupos.",
+          status: "Publicado",
+        },
+      ],
+    },
+    {
+      id: "class-youth",
+      name: "Classe jovens",
+      teacher: "Lider Ana",
+      students: 22,
+      nextLesson: "Identidade crista",
+      notices: [],
+    },
+    {
+      id: "class-new",
+      name: "Classe novos convertidos",
+      teacher: "Diac. Paulo",
+      students: 12,
+      nextLesson: "Primeiros passos da fe",
+      notices: [],
     },
   ],
   audit: [
@@ -268,7 +349,19 @@ const blankMember: Omit<MemberRecord, "id"> = {
   phone: "",
   email: "",
   status: "Visitante",
+  memberType: "Visitante",
+  role: "",
   ministry: "",
+  photoDataUrl: "",
+  birthDate: "",
+  maritalStatus: "Solteiro(a)",
+  address: "",
+  congregation: "",
+  previousChurch: "",
+  waterBaptized: false,
+  holySpiritBaptized: false,
+  joinedAt: "",
+  notes: "",
 };
 
 const blankMuralItem: Omit<MuralItem, "id"> = {
@@ -277,6 +370,12 @@ const blankMuralItem: Omit<MuralItem, "id"> = {
   published: true,
   featured: false,
   expiresAt: "",
+};
+
+const blankSchoolNotice = {
+  classId: "class-adults",
+  title: "",
+  body: "",
 };
 
 const blankRegistration: RegistrationForm = {
@@ -288,7 +387,9 @@ const blankRegistration: RegistrationForm = {
   address: "",
   congregationInterest: "",
   registrationType: "Membro novo",
+  ministryRole: "",
   previousChurch: "",
+  photoDataUrl: "",
   password: "",
   passwordConfirm: "",
   waterBaptized: false,
@@ -327,6 +428,19 @@ function suggestedNextStep(request: CareRequest) {
   return "Arquivado no historico";
 }
 
+function normalizeMember(member: Partial<MemberRecord>): MemberRecord {
+  const status = member.status ?? "Visitante";
+  const memberType =
+    member.memberType ?? (status === "Visitante" ? "Visitante" : status === "Membro ativo" ? "Membro" : "Congregado");
+
+  return {
+    ...blankMember,
+    ...member,
+    status,
+    memberType,
+  };
+}
+
 function normalizeAppData(value: Partial<AppData>): AppData {
   return {
     ...initialData,
@@ -336,7 +450,8 @@ function normalizeAppData(value: Partial<AppData>): AppData {
     notices: value.notices ?? initialData.notices,
     mural: value.mural ?? initialData.mural,
     users: value.users ?? initialData.users,
-    members: value.members ?? initialData.members,
+    members: (value.members ?? initialData.members).map((member) => normalizeMember(member)),
+    schoolClasses: value.schoolClasses ?? initialData.schoolClasses,
     audit: value.audit ?? initialData.audit,
     notificationReadIds: value.notificationReadIds ?? initialData.notificationReadIds,
   };
@@ -355,6 +470,7 @@ export default function Home() {
   const [userForm, setUserForm] = useState(blankUser);
   const [memberForm, setMemberForm] = useState(blankMember);
   const [muralForm, setMuralForm] = useState(blankMuralItem);
+  const [schoolNoticeForm, setSchoolNoticeForm] = useState(blankSchoolNotice);
   const [selectedRequestId, setSelectedRequestId] = useState("care-1");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -408,6 +524,18 @@ export default function Home() {
   const canCreateUser = Boolean(userForm.name.trim() && userForm.email.trim());
   const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim());
   const canCreateMuralItem = Boolean(muralForm.title.trim() && muralForm.expiresAt);
+  const canCreateSchoolNotice = Boolean(schoolNoticeForm.classId && schoolNoticeForm.title.trim() && schoolNoticeForm.body.trim());
+
+  function readPhoto(event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") onReady(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
 
   function log(action: string) {
     setData((current) => ({
@@ -498,6 +626,37 @@ export default function Home() {
     setMuralForm(blankMuralItem);
   }
 
+  function createSchoolNotice() {
+    if (!canCreateSchoolNotice) return;
+
+    const now = new Date().toISOString();
+    const notice: Notice = {
+      id: uid("school-notice"),
+      title: schoolNoticeForm.title,
+      body: schoolNoticeForm.body,
+      status: "Publicado",
+    };
+    const targetClass = data.schoolClasses.find((schoolClass) => schoolClass.id === schoolNoticeForm.classId);
+
+    setData((current) => ({
+      ...current,
+      schoolClasses: current.schoolClasses.map((schoolClass) =>
+        schoolClass.id === schoolNoticeForm.classId
+          ? { ...schoolClass, notices: [notice, ...schoolClass.notices] }
+          : schoolClass,
+      ),
+      audit: [
+        {
+          id: uid("audit"),
+          action: `Aviso enviado para ${targetClass?.name ?? "classe EBD"}: ${notice.title}`,
+          when: now,
+        },
+        ...current.audit,
+      ].slice(0, 12),
+    }));
+    setSchoolNoticeForm((form) => ({ ...blankSchoolNotice, classId: form.classId }));
+  }
+
   function markAllNotificationsRead() {
     setData((current) => ({
       ...current,
@@ -512,6 +671,7 @@ export default function Home() {
     setUserForm(blankUser);
     setMemberForm(blankMember);
     setMuralForm(blankMuralItem);
+    setSchoolNoticeForm(blankSchoolNotice);
   }
 
   const actionHighlights = [
@@ -541,8 +701,6 @@ export default function Home() {
     },
   ];
 
-  const memberRows = data.members.map((member) => `${member.fullName} - ${member.status} - ${member.phone}`);
-
   function switchAccessMode(mode: AccessMode) {
     setAccessMode(mode);
     setAccessMessage("");
@@ -567,6 +725,47 @@ export default function Home() {
       return;
     }
 
+    const now = new Date().toISOString();
+    const status: MemberRecord["status"] =
+      registrationForm.registrationType === "Visitante frequente"
+        ? "Visitante"
+        : registrationForm.registrationType === "Novo convertido"
+          ? "Novo convertido"
+          : registrationForm.registrationType === "Transferencia"
+            ? "Transferencia"
+            : "Membro ativo";
+    const memberType: MemberRecord["memberType"] =
+      registrationForm.registrationType === "Visitante frequente"
+        ? "Visitante"
+        : registrationForm.ministryRole.toLowerCase().includes("lider")
+          ? "Lideranca"
+          : "Membro";
+    const member: MemberRecord = {
+      id: uid("member"),
+      fullName: registrationForm.fullName,
+      phone: registrationForm.phone,
+      email: registrationForm.email,
+      status,
+      memberType,
+      role: registrationForm.ministryRole,
+      ministry: registrationForm.interestedMinistries,
+      photoDataUrl: registrationForm.photoDataUrl,
+      birthDate: registrationForm.birthDate,
+      maritalStatus: registrationForm.maritalStatus,
+      address: registrationForm.address,
+      congregation: registrationForm.congregationInterest,
+      previousChurch: registrationForm.previousChurch,
+      waterBaptized: registrationForm.waterBaptized,
+      holySpiritBaptized: registrationForm.holySpiritBaptized,
+      joinedAt: now.slice(0, 10),
+      notes: registrationForm.notesOrPrayer,
+    };
+
+    setData((current) => ({
+      ...current,
+      members: [member, ...current.members],
+      audit: [{ id: uid("audit"), action: `Cadastro online recebido: ${member.fullName}`, when: now }, ...current.audit].slice(0, 12),
+    }));
     setAccessMessage("Cadastro recebido para analise da administracao.");
     setRegistrationForm(blankRegistration);
   }
@@ -580,6 +779,7 @@ export default function Home() {
         onLogin={handleLogin}
         onRecover={handleRecover}
         onRegister={handleRegistration}
+        onPhotoUpload={readPhoto}
         onSwitchMode={switchAccessMode}
         registrationForm={registrationForm}
         registerPasswordVisible={registerPasswordVisible}
@@ -664,6 +864,16 @@ export default function Home() {
             <div>
               <p className="eyebrow">Quarta-feira, 2 de setembro</p>
               <h1>{modules.find((module) => module.key === activeModule)?.label}</h1>
+              <label className="mobile-module-picker">
+                Ir para modulo
+                <select onChange={(event) => setActiveModule(event.target.value as ModuleKey)} value={activeModule}>
+                  {modules.map((module) => (
+                    <option key={module.key} value={module.key}>
+                      {module.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             <div className="topbar-actions">
@@ -1123,10 +1333,19 @@ export default function Home() {
             <section className="content-grid">
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>Novo membro</h2>
-                  <span>Cadastro rapido</span>
+                  <h2>Ficha completa</h2>
+                  <span>Membro ou visitante</span>
                 </div>
                 <div className="form-grid">
+                  <div className="photo-uploader full">
+                    <div className="photo-preview">
+                      {memberForm.photoDataUrl ? <img alt="" src={memberForm.photoDataUrl} /> : <span>Foto</span>}
+                    </div>
+                    <label>
+                      Enviar foto
+                      <input accept="image/*" onChange={(event) => readPhoto(event, (photoDataUrl) => setMemberForm((form) => ({ ...form, photoDataUrl })))} type="file" />
+                    </label>
+                  </div>
                   <label className="full">
                     Nome completo
                     <input
@@ -1153,6 +1372,18 @@ export default function Home() {
                     />
                   </label>
                   <label>
+                    Tipo de pessoa
+                    <select
+                      onChange={(event) => setMemberForm((form) => ({ ...form, memberType: event.target.value as MemberRecord["memberType"] }))}
+                      value={memberForm.memberType}
+                    >
+                      <option>Membro</option>
+                      <option>Visitante</option>
+                      <option>Congregado</option>
+                      <option>Lideranca</option>
+                    </select>
+                  </label>
+                  <label>
                     Status
                     <select onChange={(event) => setMemberForm((form) => ({ ...form, status: event.target.value as MemberRecord["status"] }))} value={memberForm.status}>
                       <option>Membro ativo</option>
@@ -1162,6 +1393,14 @@ export default function Home() {
                     </select>
                   </label>
                   <label>
+                    Funcao na igreja
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, role: event.target.value }))}
+                      placeholder="Ex.: Professor EBD, obreiro, lider"
+                      value={memberForm.role}
+                    />
+                  </label>
+                  <label>
                     Ministerio
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, ministry: event.target.value }))}
@@ -1169,8 +1408,81 @@ export default function Home() {
                       value={memberForm.ministry}
                     />
                   </label>
+                  <label>
+                    Nascimento
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, birthDate: event.target.value }))}
+                      type="date"
+                      value={memberForm.birthDate}
+                    />
+                  </label>
+                  <label>
+                    Estado civil
+                    <select onChange={(event) => setMemberForm((form) => ({ ...form, maritalStatus: event.target.value }))} value={memberForm.maritalStatus}>
+                      <option>Solteiro(a)</option>
+                      <option>Casado(a)</option>
+                      <option>Viuvo(a)</option>
+                      <option>Divorciado(a)</option>
+                    </select>
+                  </label>
+                  <label>
+                    Congregacao
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, congregation: event.target.value }))}
+                      placeholder="Ex.: Sede"
+                      value={memberForm.congregation}
+                    />
+                  </label>
+                  <label>
+                    Desde
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, joinedAt: event.target.value }))}
+                      type="date"
+                      value={memberForm.joinedAt}
+                    />
+                  </label>
+                  <label className="full">
+                    Endereco
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, address: event.target.value }))}
+                      placeholder="Rua, numero, bairro e cidade"
+                      value={memberForm.address}
+                    />
+                  </label>
+                  <label className="full">
+                    Igreja anterior
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, previousChurch: event.target.value }))}
+                      placeholder="Opcional"
+                      value={memberForm.previousChurch}
+                    />
+                  </label>
+                  <label className="check-card">
+                    <input
+                      checked={memberForm.waterBaptized}
+                      onChange={(event) => setMemberForm((form) => ({ ...form, waterBaptized: event.target.checked }))}
+                      type="checkbox"
+                    />
+                    Batizado em aguas
+                  </label>
+                  <label className="check-card">
+                    <input
+                      checked={memberForm.holySpiritBaptized}
+                      onChange={(event) => setMemberForm((form) => ({ ...form, holySpiritBaptized: event.target.checked }))}
+                      type="checkbox"
+                    />
+                    Batizado no Espirito Santo
+                  </label>
+                  <label className="full">
+                    Observacoes
+                    <textarea
+                      onChange={(event) => setMemberForm((form) => ({ ...form, notes: event.target.value }))}
+                      placeholder="Historico, acompanhamento, restricoes ou observacoes pastorais"
+                      value={memberForm.notes}
+                    />
+                  </label>
                   <button className="primary-action" disabled={!canCreateMember} onClick={createMember} type="button">
-                    Adicionar membro
+                    Salvar ficha
                   </button>
                 </div>
               </article>
@@ -1181,11 +1493,17 @@ export default function Home() {
                   <span>{data.members.length} registros</span>
                 </div>
                 <div className="row-list">
-                  {memberRows.map((row) => (
-                    <div className="data-row" key={row}>
-                      <span className="bullet-mark" />
+                  {data.members.map((member) => (
+                    <div className="data-row member-row" key={member.id}>
+                      <div className="member-avatar">
+                        {member.photoDataUrl ? <img alt="" src={member.photoDataUrl} /> : member.fullName.slice(0, 1)}
+                      </div>
                       <div>
-                        <strong>{row}</strong>
+                        <strong>{member.fullName}</strong>
+                        <small>
+                          {member.memberType} - {member.status} - {member.role || "Sem funcao"} - {member.phone}
+                        </small>
+                        <small>{member.ministry || "Sem ministerio"} - {member.congregation || "Congregacao nao informada"}</small>
                       </div>
                     </div>
                   ))}
@@ -1205,13 +1523,77 @@ export default function Home() {
           )}
 
           {activeModule === "school" && (
-            <SimpleModule
-              action={() => log("Escola Biblica revisada")}
-              button="Registrar revisao"
-              description="Base inicial para turmas, aulas, presenca e materiais."
-              rows={["Classe adultos", "Classe jovens", "Classe novos convertidos"]}
-              title="Escola Biblica"
-            />
+            <section className="content-grid">
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Novo aviso da EBD</h2>
+                  <span>Por classe</span>
+                </div>
+                <div className="form-grid">
+                  <label className="full">
+                    Classe
+                    <select
+                      onChange={(event) => setSchoolNoticeForm((form) => ({ ...form, classId: event.target.value }))}
+                      value={schoolNoticeForm.classId}
+                    >
+                      {data.schoolClasses.map((schoolClass) => (
+                        <option key={schoolClass.id} value={schoolClass.id}>
+                          {schoolClass.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="full">
+                    Titulo do aviso
+                    <input
+                      onChange={(event) => setSchoolNoticeForm((form) => ({ ...form, title: event.target.value }))}
+                      placeholder="Ex.: Material da proxima aula"
+                      value={schoolNoticeForm.title}
+                    />
+                  </label>
+                  <label className="full">
+                    Mensagem
+                    <textarea
+                      onChange={(event) => setSchoolNoticeForm((form) => ({ ...form, body: event.target.value }))}
+                      placeholder="Escreva o aviso para a classe selecionada"
+                      value={schoolNoticeForm.body}
+                    />
+                  </label>
+                  <button className="primary-action" disabled={!canCreateSchoolNotice} onClick={createSchoolNotice} type="button">
+                    Gerar aviso para classe
+                  </button>
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Classes da EBD</h2>
+                  <span>{data.schoolClasses.length} classes</span>
+                </div>
+                <div className="row-list">
+                  {data.schoolClasses.map((schoolClass) => (
+                    <div className="data-row class-row" key={schoolClass.id}>
+                      <span className="date-box">{schoolClass.students}</span>
+                      <div>
+                        <strong>{schoolClass.name}</strong>
+                        <small>Professor: {schoolClass.teacher} - Proxima aula: {schoolClass.nextLesson}</small>
+                        <div className="notice-stack">
+                          {schoolClass.notices.length === 0 ? (
+                            <small>Nenhum aviso enviado para esta classe.</small>
+                          ) : (
+                            schoolClass.notices.map((notice) => (
+                              <span className="notice-pill" key={notice.id}>
+                                {notice.title}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </section>
           )}
 
           {activeModule === "reports" && (
@@ -1223,6 +1605,7 @@ export default function Home() {
                 `${data.careRequests.length} atendimentos pastorais`,
                 `${data.members.length} membros cadastrados`,
                 `${data.users.length} usuarios com acesso`,
+                `${data.schoolClasses.length} classes EBD`,
                 `${data.events.length} eventos cadastrados`,
                 `${unreadCount} notificacoes nao lidas`,
               ]}
@@ -1247,7 +1630,7 @@ export default function Home() {
                   <small>
                     {data.members.length} membros, {data.users.length} usuarios, {data.careRequests.length} atendimentos,
                     {" "}
-                    {data.events.length} eventos, {data.notices.length} comunicados,
+                    {data.events.length} eventos, {data.schoolClasses.length} classes EBD, {data.notices.length} comunicados,
                     {" "}
                     {data.mural.length} itens de mural e {data.audit.length} auditorias.
                   </small>
@@ -1290,6 +1673,7 @@ function AccessScreen({
   loginPasswordVisible,
   mode,
   onLogin,
+  onPhotoUpload,
   onRecover,
   onRegister,
   onSwitchMode,
@@ -1303,6 +1687,7 @@ function AccessScreen({
   loginPasswordVisible: boolean;
   mode: AccessMode;
   onLogin: (event: FormEvent<HTMLFormElement>) => void;
+  onPhotoUpload: (event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) => void;
   onRecover: (event: FormEvent<HTMLFormElement>) => void;
   onRegister: (event: FormEvent<HTMLFormElement>) => void;
   onSwitchMode: (mode: AccessMode) => void;
@@ -1398,6 +1783,19 @@ function AccessScreen({
 
         {mode === "register" && (
           <form className="access-form registration-form" method="post" onSubmit={onRegister}>
+            <div className="photo-uploader full">
+              <div className="photo-preview">
+                {registrationForm.photoDataUrl ? <img alt="" src={registrationForm.photoDataUrl} /> : <span>Foto</span>}
+              </div>
+              <label>
+                Enviar foto
+                <input
+                  accept="image/*"
+                  onChange={(event) => onPhotoUpload(event, (photoDataUrl) => setRegistrationForm((form) => ({ ...form, photoDataUrl })))}
+                  type="file"
+                />
+              </label>
+            </div>
             <label className="full">
               Nome completo
               <input
@@ -1485,6 +1883,15 @@ function AccessScreen({
                 <option>Visitante frequente</option>
                 <option>Transferencia</option>
               </select>
+            </label>
+            <label>
+              Funcao ou interesse
+              <input
+                name="ministry_role"
+                onChange={(event) => setRegistrationForm((form) => ({ ...form, ministryRole: event.target.value }))}
+                placeholder="Ex.: aluno EBD, obreiro, louvor"
+                value={registrationForm.ministryRole}
+              />
             </label>
             <label className="full">
               Igreja anterior
