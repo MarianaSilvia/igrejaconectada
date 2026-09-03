@@ -10,6 +10,7 @@ type ModuleKey =
   | "events"
   | "ministries"
   | "notices"
+  | "messages"
   | "mural"
   | "pastoral"
   | "school"
@@ -111,6 +112,28 @@ type KidRecord = {
   joinedAt: string;
 };
 
+type MessageAudience = "Todos os membros" | "Aniversariantes da semana" | "Aniversariantes do mes" | "EBD" | "Ministerios" | "Responsaveis Kids";
+
+type MessageRecipient = {
+  id: string;
+  name: string;
+  phone: string;
+  group: string;
+};
+
+type DigitalCardData = {
+  title: string;
+  church: string;
+  name: string;
+  subtitle: string;
+  id: string;
+  detail: string;
+  footerLeft: string;
+  footerRight: string;
+  photoDataUrl: string;
+  accent: string;
+};
+
 type SchoolClass = {
   id: string;
   name: string;
@@ -181,6 +204,7 @@ const modules: { key: ModuleKey; label: string; short: string }[] = [
   { key: "events", label: "Agenda", short: "Agenda" },
   { key: "ministries", label: "Ministerios", short: "Ministerios" },
   { key: "notices", label: "Comunicados", short: "Avisos" },
+  { key: "messages", label: "Comunicacao", short: "Mensagens" },
   { key: "mural", label: "Mural", short: "Mural" },
   { key: "pastoral", label: "Atendimento pastoral", short: "Pastoral" },
   { key: "school", label: "Escola Biblica", short: "EBD" },
@@ -563,6 +587,50 @@ const blankSchoolNotice = {
   body: "",
 };
 
+const messageAudiences: MessageAudience[] = [
+  "Todos os membros",
+  "Aniversariantes da semana",
+  "Aniversariantes do mes",
+  "EBD",
+  "Ministerios",
+  "Responsaveis Kids",
+];
+
+const messageTemplates = [
+  {
+    id: "birthday-blessing",
+    label: "Aniversario - bencao biblica",
+    text:
+      "Feliz aniversario, {nome}! Que o Senhor te abencoe e te guarde; que Ele faca resplandecer o rosto sobre voce e te conceda paz. Com carinho, {igreja}.",
+  },
+  {
+    id: "birthday-purpose",
+    label: "Aniversario - proposito",
+    text:
+      "Parabens, {nome}! Hoje celebramos sua vida e oramos para que este novo ciclo seja cheio da presenca de Deus, sabedoria e novos testemunhos. {igreja}.",
+  },
+  {
+    id: "ebd-reminder",
+    label: "EBD - lembrete de aula",
+    text: "Paz, {nome}! Passando para lembrar da nossa EBD. Sua presenca fortalece a classe e ajuda a igreja crescer na Palavra. {igreja}.",
+  },
+  {
+    id: "ministry-call",
+    label: "Ministerio - comunicado",
+    text: "Paz, {nome}! Temos um comunicado importante para o ministerio. Por favor, confirme leitura e disponibilidade. {igreja}.",
+  },
+  {
+    id: "general-invite",
+    label: "Geral - convite",
+    text: "Paz, {nome}! Voce e nossa familia estao convidados para participar da programacao da igreja. Sera uma alegria receber voces. {igreja}.",
+  },
+  {
+    id: "kids-note",
+    label: "Kids - responsaveis",
+    text: "Paz, {nome}! Temos um comunicado da Area Kids. Confira as orientacoes e, se precisar, fale com a coordenacao. {igreja}.",
+  },
+];
+
 const blankRegistration: RegistrationForm = {
   fullName: "",
   phone: "",
@@ -633,6 +701,121 @@ function isBirthdayThisWeek(value: string) {
   end.setHours(23, 59, 59, 999);
 
   return date >= start && date <= end;
+}
+
+function normalizeWhatsappPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("55")) return digits;
+  return `55${digits}`;
+}
+
+function messageFor(text: string, recipientName: string) {
+  return text.replaceAll("{nome}", recipientName).replaceAll("{igreja}", "Igreja Gestao");
+}
+
+function whatsappUrl(phone: string, text: string, recipientName: string) {
+  const number = normalizeWhatsappPhone(phone);
+  if (!number) return "#";
+  return `https://wa.me/${number}?text=${encodeURIComponent(messageFor(text, recipientName))}`;
+}
+
+function escapeText(value: string) {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+
+function cardMarkup(card: DigitalCardData) {
+  const initial = card.name.slice(0, 1).toUpperCase();
+  const photo = card.photoDataUrl
+    ? `<img src="${card.photoDataUrl}" alt="" />`
+    : `<div class="avatar-fallback">${escapeText(initial)}</div>`;
+
+  return `
+    <article class="printable-card" style="--accent:${card.accent}">
+      <div class="card-top">
+        <span>${escapeText(card.title)}</span>
+        <strong>${escapeText(card.church)}</strong>
+      </div>
+      <div class="card-body">
+        <div class="card-photo">${photo}</div>
+        <div>
+          <h1>${escapeText(card.name)}</h1>
+          <p>${escapeText(card.id)}</p>
+          <p>${escapeText(card.subtitle)}</p>
+          <p>${escapeText(card.detail)}</p>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span>${escapeText(card.footerLeft)}</span>
+        <span>${escapeText(card.footerRight)}</span>
+      </div>
+    </article>
+  `;
+}
+
+function printDigitalCard(card: DigitalCardData) {
+  const popup = window.open("", "_blank", "width=720,height=520");
+  if (!popup) return;
+
+  popup.document.write(`
+    <!doctype html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeText(card.name)} - carteirinha</title>
+        <style>
+          @page { size: A4; margin: 18mm; }
+          * { box-sizing: border-box; }
+          body { align-items: center; background: #eef3f8; display: flex; font-family: Arial, sans-serif; justify-content: center; margin: 0; min-height: 100vh; }
+          .printable-card { background: linear-gradient(135deg, #07111f, #122d4c); border: 2px solid var(--accent); border-radius: 14px; color: white; overflow: hidden; width: 420px; }
+          .card-top, .card-footer { align-items: center; background: color-mix(in srgb, var(--accent) 22%, transparent); display: flex; gap: 12px; justify-content: space-between; padding: 14px 16px; }
+          .card-top span, .card-footer span { color: #cce0f4; font-size: 12px; font-weight: 800; }
+          .card-top strong { color: var(--accent); font-size: 14px; }
+          .card-body { align-items: center; display: flex; gap: 16px; padding: 18px; }
+          .card-photo { align-items: center; border: 1px solid var(--accent); border-radius: 12px; display: flex; height: 92px; justify-content: center; overflow: hidden; width: 92px; }
+          .card-photo img { height: 100%; object-fit: cover; width: 100%; }
+          .avatar-fallback { color: var(--accent); font-size: 44px; font-weight: 900; }
+          h1 { font-size: 22px; line-height: 1.1; margin: 0 0 8px; }
+          p { color: #cce0f4; font-size: 13px; font-weight: 700; margin: 4px 0; }
+        </style>
+      </head>
+      <body>${cardMarkup(card)}<script>window.onload = () => { window.print(); };</script></body>
+    </html>
+  `);
+  popup.document.close();
+}
+
+function downloadDigitalCardImage(card: DigitalCardData) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="840" height="520" viewBox="0 0 840 520">
+      <defs>
+        <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+          <stop stop-color="#07111f"/>
+          <stop offset="1" stop-color="#122d4c"/>
+        </linearGradient>
+      </defs>
+      <rect width="820" height="500" x="10" y="10" rx="28" fill="url(#bg)" stroke="${card.accent}" stroke-width="4"/>
+      <rect width="820" height="86" x="10" y="10" rx="28" fill="${card.accent}" opacity="0.2"/>
+      <text x="42" y="64" fill="#cce0f4" font-family="Arial" font-size="24" font-weight="700">${escapeText(card.title)}</text>
+      <text x="560" y="64" fill="${card.accent}" font-family="Arial" font-size="24" font-weight="900">${escapeText(card.church)}</text>
+      <rect x="46" y="148" width="150" height="150" rx="22" fill="#0d1c31" stroke="${card.accent}" stroke-width="2"/>
+      <text x="104" y="246" fill="${card.accent}" font-family="Arial" font-size="76" font-weight="900">${escapeText(card.name.slice(0, 1).toUpperCase())}</text>
+      <text x="230" y="174" fill="#ffffff" font-family="Arial" font-size="42" font-weight="900">${escapeText(card.name)}</text>
+      <text x="230" y="222" fill="#cce0f4" font-family="Arial" font-size="24" font-weight="700">${escapeText(card.id)}</text>
+      <text x="230" y="264" fill="#cce0f4" font-family="Arial" font-size="24" font-weight="700">${escapeText(card.subtitle)}</text>
+      <text x="230" y="306" fill="#cce0f4" font-family="Arial" font-size="24" font-weight="700">${escapeText(card.detail)}</text>
+      <rect width="820" height="78" x="10" y="432" rx="28" fill="${card.accent}" opacity="0.16"/>
+      <text x="42" y="480" fill="#cce0f4" font-family="Arial" font-size="22" font-weight="700">${escapeText(card.footerLeft)}</text>
+      <text x="560" y="480" fill="#cce0f4" font-family="Arial" font-size="22" font-weight="700">${escapeText(card.footerRight)}</text>
+    </svg>
+  `;
+  const blob = new Blob([svg], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${card.name.toLowerCase().replace(/\s+/g, "-")}-carteirinha.svg`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function uid(prefix: string) {
@@ -736,6 +919,9 @@ export default function Home() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [registrationLink, setRegistrationLink] = useState("");
   const [shareFeedback, setShareFeedback] = useState("");
+  const [messageAudience, setMessageAudience] = useState<MessageAudience>("Todos os membros");
+  const [messageTemplateId, setMessageTemplateId] = useState("general-invite");
+  const [messageText, setMessageText] = useState(messageTemplates[4].text);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(storageKey);
@@ -806,6 +992,42 @@ export default function Home() {
   const canCreateMinistry = Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
   const whatsappText = `Ola! Faca seu cadastro na igreja por este link: ${registrationLink}`;
   const whatsappShareLink = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
+  const messageRecipients = useMemo<MessageRecipient[]>(() => {
+    const memberRecipients = data.members
+      .filter((member) => normalizeWhatsappPhone(member.phone))
+      .map((member) => ({
+        id: member.id,
+        name: member.fullName,
+        phone: member.phone,
+        group: member.ministry || member.memberType,
+      }));
+
+    if (messageAudience === "Todos os membros") return memberRecipients;
+    if (messageAudience === "Aniversariantes da semana") {
+      return weeklyBirthdays
+        .filter((member) => normalizeWhatsappPhone(member.phone))
+        .map((member) => ({ id: member.id, name: member.fullName, phone: member.phone, group: birthdayLabel(member.birthDate) }));
+    }
+    if (messageAudience === "Aniversariantes do mes") {
+      return monthlyBirthdays
+        .filter((member) => normalizeWhatsappPhone(member.phone))
+        .map((member) => ({ id: member.id, name: member.fullName, phone: member.phone, group: birthdayLabel(member.birthDate) }));
+    }
+    if (messageAudience === "EBD") {
+      return memberRecipients.filter((recipient) => /ebd|biblica|professor/i.test(recipient.group));
+    }
+    if (messageAudience === "Ministerios") {
+      return memberRecipients.filter((recipient) => Boolean(recipient.group && recipient.group !== "Visitante"));
+    }
+    return data.kids
+      .filter((kid) => normalizeWhatsappPhone(kid.guardianPhone))
+      .map((kid) => ({
+        id: kid.id,
+        name: kid.guardianName,
+        phone: kid.guardianPhone,
+        group: kid.childName,
+      }));
+  }, [data.kids, data.members, messageAudience, monthlyBirthdays, weeklyBirthdays]);
 
   function readPhoto(event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) {
     const file = event.target.files?.[0];
@@ -1078,6 +1300,51 @@ export default function Home() {
     } catch {
       setShareFeedback("Copie o link exibido acima para enviar.");
     }
+  }
+
+  function selectMessageTemplate(templateId: string) {
+    const template = messageTemplates.find((item) => item.id === templateId);
+    setMessageTemplateId(templateId);
+    if (template) setMessageText(template.text);
+  }
+
+  function openBulkWhatsapp() {
+    messageRecipients.slice(0, 12).forEach((recipient, index) => {
+      window.setTimeout(() => {
+        window.open(whatsappUrl(recipient.phone, messageText, recipient.name), "_blank", "noopener,noreferrer");
+      }, index * 450);
+    });
+    log(`Mensagens preparadas para ${Math.min(messageRecipients.length, 12)} contatos`);
+  }
+
+  function memberCardData(member: MemberRecord): DigitalCardData {
+    return {
+      title: "Carteirinha digital",
+      church: "Igreja Gestao",
+      name: member.fullName,
+      subtitle: `${member.memberType} - ${member.status}`,
+      id: `ID ${member.id.slice(0, 12).toUpperCase()}`,
+      detail: member.role || "Funcao nao informada",
+      footerLeft: member.congregation || "Congregacao",
+      footerRight: member.joinedAt ? `Desde ${formatDate(member.joinedAt)}` : "Cadastro local",
+      photoDataUrl: member.photoDataUrl,
+      accent: "#14d9c4",
+    };
+  }
+
+  function kidCardData(kid: KidRecord): DigitalCardData {
+    return {
+      title: "Carteirinha Kids",
+      church: "Igreja Gestao Kids",
+      name: kid.childName,
+      subtitle: `${kid.ageGroup} - ${kid.className || "Turma Kids"}`,
+      id: `ID ${kid.id.slice(0, 12).toUpperCase()}`,
+      detail: `Responsavel: ${kid.guardianName}`,
+      footerLeft: kid.allergies || "Sem cuidados especiais",
+      footerRight: kid.consentImage ? "Imagem autorizada" : "Sem autorizacao de imagem",
+      photoDataUrl: kid.photoDataUrl,
+      accent: "#ffd778",
+    };
   }
 
   function handleRecover(event: FormEvent<HTMLFormElement>) {
@@ -2047,7 +2314,10 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="row-list">
-                  {data.members.map((member) => (
+                  {data.members.map((member) => {
+                    const card = memberCardData(member);
+
+                    return (
                     <div className="member-record" key={member.id}>
                       <div className="data-row member-row">
                         <div className="member-avatar">
@@ -2065,27 +2335,36 @@ export default function Home() {
                       </div>
                       <div className="digital-card">
                         <div className="digital-card-top">
-                          <span>Carteirinha digital</span>
-                          <strong>Igreja Gestao</strong>
+                          <span>{card.title}</span>
+                          <strong>{card.church}</strong>
                         </div>
                         <div className="digital-card-body">
                           <div className="member-avatar">
                             {member.photoDataUrl ? <img alt="" src={member.photoDataUrl} /> : member.fullName.slice(0, 1)}
                           </div>
                           <div>
-                            <strong>{member.fullName}</strong>
-                            <small>ID {member.id.slice(0, 12).toUpperCase()}</small>
-                            <small>{member.memberType} - {member.status}</small>
-                            <small>{member.role || "Funcao nao informada"}</small>
+                            <strong>{card.name}</strong>
+                            <small>{card.id}</small>
+                            <small>{card.subtitle}</small>
+                            <small>{card.detail}</small>
                           </div>
                         </div>
                         <div className="digital-card-footer">
-                          <span>{member.congregation || "Congregacao"}</span>
-                          <span>{member.joinedAt ? `Desde ${formatDate(member.joinedAt)}` : "Cadastro local"}</span>
+                          <span>{card.footerLeft}</span>
+                          <span>{card.footerRight}</span>
+                        </div>
+                        <div className="card-actions">
+                          <button onClick={() => printDigitalCard(card)} type="button">
+                            Imprimir/PDF
+                          </button>
+                          <button className="secondary" onClick={() => downloadDigitalCardImage(card)} type="button">
+                            Baixar imagem
+                          </button>
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </article>
             </section>
@@ -2242,7 +2521,10 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="row-list">
-                  {data.kids.map((kid) => (
+                  {data.kids.map((kid) => {
+                    const card = kidCardData(kid);
+
+                    return (
                     <div className="member-record kids-record" key={kid.id}>
                       <div className="data-row member-row">
                         <div className="member-avatar kids-avatar">
@@ -2260,27 +2542,36 @@ export default function Home() {
                       </div>
                       <div className="digital-card kids-card">
                         <div className="digital-card-top">
-                          <span>Carteirinha Kids</span>
-                          <strong>Igreja Gestao Kids</strong>
+                          <span>{card.title}</span>
+                          <strong>{card.church}</strong>
                         </div>
                         <div className="digital-card-body">
                           <div className="member-avatar kids-avatar">
                             {kid.photoDataUrl ? <img alt="" src={kid.photoDataUrl} /> : kid.childName.slice(0, 1)}
                           </div>
                           <div>
-                            <strong>{kid.childName}</strong>
-                            <small>ID {kid.id.slice(0, 12).toUpperCase()}</small>
-                            <small>{kid.ageGroup} - {kid.className || "Turma Kids"}</small>
-                            <small>Responsavel: {kid.guardianName}</small>
+                            <strong>{card.name}</strong>
+                            <small>{card.id}</small>
+                            <small>{card.subtitle}</small>
+                            <small>{card.detail}</small>
                           </div>
                         </div>
                         <div className="digital-card-footer">
-                          <span>{kid.allergies || "Sem cuidados especiais"}</span>
-                          <span>{kid.consentImage ? "Imagem autorizada" : "Sem autorizacao de imagem"}</span>
+                          <span>{card.footerLeft}</span>
+                          <span>{card.footerRight}</span>
+                        </div>
+                        <div className="card-actions">
+                          <button onClick={() => printDigitalCard(card)} type="button">
+                            Imprimir/PDF
+                          </button>
+                          <button className="secondary" onClick={() => downloadDigitalCardImage(card)} type="button">
+                            Baixar imagem
+                          </button>
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </article>
             </section>
@@ -2458,6 +2749,86 @@ export default function Home() {
             </section>
           )}
 
+          {activeModule === "messages" && (
+            <section className="content-grid">
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Comunicacao por WhatsApp</h2>
+                  <span>{messageRecipients.length} contatos</span>
+                </div>
+                <div className="form-grid">
+                  <label>
+                    Publico
+                    <select onChange={(event) => setMessageAudience(event.target.value as MessageAudience)} value={messageAudience}>
+                      {messageAudiences.map((audience) => (
+                        <option key={audience}>{audience}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Modelo pronto
+                    <select onChange={(event) => selectMessageTemplate(event.target.value)} value={messageTemplateId}>
+                      {messageTemplates.map((template) => (
+                        <option key={template.id} value={template.id}>
+                          {template.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="full">
+                    Mensagem
+                    <textarea
+                      onChange={(event) => setMessageText(event.target.value)}
+                      placeholder="Use {nome} para personalizar com o nome de cada pessoa."
+                      value={messageText}
+                    />
+                  </label>
+                  <div className="message-preview full">
+                    <strong>Previa</strong>
+                    <span>{messageRecipients[0] ? messageFor(messageText, messageRecipients[0].name) : "Nenhum contato encontrado para este publico."}</span>
+                  </div>
+                  <button className="primary-action" disabled={!messageRecipients.length || !messageText.trim()} onClick={openBulkWhatsapp} type="button">
+                    Abrir envio em massa
+                  </button>
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Lista de envio</h2>
+                  <span>WhatsApp</span>
+                </div>
+                <p className="body-copy">
+                  O WhatsApp pode bloquear muitas abas ao mesmo tempo. Se necessario, envie pela lista individual abaixo.
+                </p>
+                <div className="row-list">
+                  {messageRecipients.length === 0 ? (
+                    <div className="data-row">
+                      <span className="bullet-mark" />
+                      <div>
+                        <strong>Nenhum contato encontrado</strong>
+                        <small>Cadastre telefone nos membros, professores, ministerios ou responsaveis Kids.</small>
+                      </div>
+                    </div>
+                  ) : (
+                    messageRecipients.map((recipient) => (
+                      <div className="data-row message-row" key={`${recipient.id}-${recipient.phone}`}>
+                        <span className="bullet-mark" />
+                        <div>
+                          <strong>{recipient.name}</strong>
+                          <small>{recipient.group} - {recipient.phone}</small>
+                        </div>
+                        <a className="whatsapp-link" href={whatsappUrl(recipient.phone, messageText, recipient.name)} rel="noreferrer" target="_blank">
+                          Enviar
+                        </a>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </article>
+            </section>
+          )}
+
           {activeModule === "reports" && (
             <SimpleModule
               action={() => log("Relatorio operacional gerado")}
@@ -2471,6 +2842,7 @@ export default function Home() {
                 `${monthlyKidsBirthdays.length} aniversariantes Kids no mes`,
                 `${data.users.length} usuarios com acesso`,
                 `${data.schoolClasses.length} classes EBD`,
+                `${messageRecipients.length} contatos no envio atual`,
                 `${data.events.length} eventos cadastrados`,
                 `${unreadCount} notificacoes nao lidas`,
               ]}

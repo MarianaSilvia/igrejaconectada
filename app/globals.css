@@ -1093,6 +1093,30 @@ textarea:focus {
   margin-top: 3px;
 }
 
+.card-actions {
+  border-top: 1px solid rgba(72, 184, 255, 0.18);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 12px;
+}
+
+.card-actions button {
+  background: rgba(20, 217, 196, 0.12);
+  border: 1px solid rgba(20, 217, 196, 0.28);
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 40px;
+  padding: 0 10px;
+}
+
+.card-actions button.secondary {
+  background: rgba(72, 184, 255, 0.1);
+  border-color: rgba(72, 184, 255, 0.28);
+  color: #9bd7ff;
+}
+
 .kids-preview,
 .kids-avatar {
   background: linear-gradient(135deg, rgba(255, 197, 61, 0.2), rgba(20, 217, 196, 0.18));
@@ -1271,6 +1295,28 @@ textarea:focus {
 .whatsapp-link.disabled {
   opacity: 0.48;
   pointer-events: none;
+}
+
+.message-preview {
+  background: rgba(20, 217, 196, 0.1);
+  border: 1px solid rgba(20, 217, 196, 0.24);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.message-preview strong {
+  color: var(--accent-strong);
+}
+
+.message-preview span {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.message-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
 .detail-actions button.secondary {
@@ -1502,11 +1548,21 @@ textarea:focus {
   .module-list,
   .stats-grid,
   .birthday-grid,
+  .card-actions,
   .form-grid,
   .detail-grid,
   .flow-line,
   .table-row {
     grid-template-columns: 1fr;
+  }
+
+  .message-row {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .message-row .whatsapp-link {
+    justify-content: center;
   }
 
   .photo-uploader {
