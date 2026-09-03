@@ -38,7 +38,11 @@ type ChurchEvent = {
   id: string;
   title: string;
   date: string;
+  time: string;
   ministry: string;
+  location: string;
+  responsible: string;
+  status: "Programado" | "Confirmado" | "Concluido";
 };
 
 type Notice = {
@@ -46,6 +50,8 @@ type Notice = {
   title: string;
   body: string;
   status: "Publicado" | "Rascunho";
+  audience: string;
+  channel: "App" | "WhatsApp" | "Mural" | "Todos";
 };
 
 type MuralItem = {
@@ -95,6 +101,17 @@ type SchoolClass = {
   notices: Notice[];
 };
 
+type MinistryRecord = {
+  id: string;
+  name: string;
+  leader: string;
+  assistant: string;
+  meetingDay: string;
+  volunteers: number;
+  status: "Ativo" | "Em formacao" | "Pausado";
+  notes: string;
+};
+
 type AuditItem = {
   id: string;
   action: string;
@@ -109,6 +126,7 @@ type AppData = {
   users: AccessUser[];
   members: MemberRecord[];
   schoolClasses: SchoolClass[];
+  ministries: MinistryRecord[];
   audit: AuditItem[];
   notificationReadIds: string[];
 };
@@ -183,9 +201,36 @@ const initialData: AppData = {
     },
   ],
   events: [
-    { id: "event-1", title: "Culto da familia", date: "2026-09-06", ministry: "Todos" },
-    { id: "event-2", title: "Congresso de jovens", date: "2026-09-12", ministry: "Jovens" },
-    { id: "event-3", title: "Escola Biblica", date: "2026-09-13", ministry: "EBD" },
+    {
+      id: "event-1",
+      title: "Culto da familia",
+      date: "2026-09-06",
+      time: "19:00",
+      ministry: "Todos",
+      location: "Templo principal",
+      responsible: "Pr. Marcos",
+      status: "Confirmado",
+    },
+    {
+      id: "event-2",
+      title: "Congresso de jovens",
+      date: "2026-09-12",
+      time: "18:30",
+      ministry: "Jovens",
+      location: "Auditorio",
+      responsible: "Lider Ana",
+      status: "Programado",
+    },
+    {
+      id: "event-3",
+      title: "Escola Biblica",
+      date: "2026-09-13",
+      time: "09:00",
+      ministry: "EBD",
+      location: "Salas de ensino",
+      responsible: "Coord. EBD",
+      status: "Programado",
+    },
   ],
   notices: [
     {
@@ -193,12 +238,16 @@ const initialData: AppData = {
       title: "Escala de setembro disponivel",
       body: "Lideres ja podem conferir e ajustar a escala mensal.",
       status: "Publicado",
+      audience: "Lideres",
+      channel: "App",
     },
     {
       id: "notice-2",
       title: "Cadastro de novos alunos EBD",
       body: "Secretaria deve revisar as turmas antes de domingo.",
       status: "Publicado",
+      audience: "Secretaria e EBD",
+      channel: "Todos",
     },
   ],
   mural: [
@@ -298,6 +347,8 @@ const initialData: AppData = {
           title: "Levar Biblia e caderno",
           body: "A proxima aula tera leitura dirigida em grupos.",
           status: "Publicado",
+          audience: "Classe adultos",
+          channel: "App",
         },
       ],
     },
@@ -318,6 +369,38 @@ const initialData: AppData = {
       notices: [],
     },
   ],
+  ministries: [
+    {
+      id: "ministry-1",
+      name: "Louvor",
+      leader: "Ana Ribeiro",
+      assistant: "Bruno Alves",
+      meetingDay: "Quinta-feira",
+      volunteers: 14,
+      status: "Ativo",
+      notes: "Revisar escala mensal e ensaio geral.",
+    },
+    {
+      id: "ministry-2",
+      name: "Jovens",
+      leader: "Lider Ana",
+      assistant: "Rafael Costa",
+      meetingDay: "Sabado",
+      volunteers: 22,
+      status: "Ativo",
+      notes: "Planejar encontro mensal e discipulado.",
+    },
+    {
+      id: "ministry-3",
+      name: "Intercessao",
+      leader: "Marta Souza",
+      assistant: "",
+      meetingDay: "Terca-feira",
+      volunteers: 9,
+      status: "Em formacao",
+      notes: "Abrir novos horarios de oracao.",
+    },
+  ],
   audit: [
     { id: "audit-1", action: "Central de notificacoes criada", when: "2026-09-02T15:10:00.000Z" },
     { id: "audit-2", action: "Modulo de backup validado", when: "2026-09-02T14:42:00.000Z" },
@@ -335,6 +418,34 @@ const blankCare: Omit<CareRequest, "id" | "createdAt" | "updatedAt"> = {
   scheduleTime: "",
   summary: "",
   returnNote: "",
+};
+
+const blankEvent: Omit<ChurchEvent, "id"> = {
+  title: "",
+  date: "",
+  time: "",
+  ministry: "Todos",
+  location: "",
+  responsible: "",
+  status: "Programado",
+};
+
+const blankNotice: Omit<Notice, "id"> = {
+  title: "",
+  body: "",
+  status: "Publicado",
+  audience: "Toda igreja",
+  channel: "Todos",
+};
+
+const blankMinistry: Omit<MinistryRecord, "id"> = {
+  name: "",
+  leader: "",
+  assistant: "",
+  meetingDay: "",
+  volunteers: 0,
+  status: "Ativo",
+  notes: "",
 };
 
 const blankUser: Omit<AccessUser, "id"> = {
@@ -441,17 +552,42 @@ function normalizeMember(member: Partial<MemberRecord>): MemberRecord {
   };
 }
 
+function normalizeEvent(event: Partial<ChurchEvent>): ChurchEvent {
+  return {
+    ...blankEvent,
+    ...event,
+    id: event.id ?? uid("event"),
+  };
+}
+
+function normalizeNotice(notice: Partial<Notice>): Notice {
+  return {
+    ...blankNotice,
+    ...notice,
+    id: notice.id ?? uid("notice"),
+  };
+}
+
+function normalizeMinistry(ministry: Partial<MinistryRecord>): MinistryRecord {
+  return {
+    ...blankMinistry,
+    ...ministry,
+    id: ministry.id ?? uid("ministry"),
+  };
+}
+
 function normalizeAppData(value: Partial<AppData>): AppData {
   return {
     ...initialData,
     ...value,
     careRequests: value.careRequests ?? initialData.careRequests,
-    events: value.events ?? initialData.events,
-    notices: value.notices ?? initialData.notices,
+    events: (value.events ?? initialData.events).map((event) => normalizeEvent(event)),
+    notices: (value.notices ?? initialData.notices).map((notice) => normalizeNotice(notice)),
     mural: value.mural ?? initialData.mural,
     users: value.users ?? initialData.users,
     members: (value.members ?? initialData.members).map((member) => normalizeMember(member)),
     schoolClasses: value.schoolClasses ?? initialData.schoolClasses,
+    ministries: (value.ministries ?? initialData.ministries).map((ministry) => normalizeMinistry(ministry)),
     audit: value.audit ?? initialData.audit,
     notificationReadIds: value.notificationReadIds ?? initialData.notificationReadIds,
   };
@@ -467,6 +603,9 @@ export default function Home() {
   const [activeModule, setActiveModule] = useState<ModuleKey>("overview");
   const [data, setData] = useState<AppData>(initialData);
   const [careForm, setCareForm] = useState(blankCare);
+  const [eventForm, setEventForm] = useState(blankEvent);
+  const [noticeForm, setNoticeForm] = useState(blankNotice);
+  const [ministryForm, setMinistryForm] = useState(blankMinistry);
   const [userForm, setUserForm] = useState(blankUser);
   const [memberForm, setMemberForm] = useState(blankMember);
   const [muralForm, setMuralForm] = useState(blankMuralItem);
@@ -525,6 +664,9 @@ export default function Home() {
   const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim());
   const canCreateMuralItem = Boolean(muralForm.title.trim() && muralForm.expiresAt);
   const canCreateSchoolNotice = Boolean(schoolNoticeForm.classId && schoolNoticeForm.title.trim() && schoolNoticeForm.body.trim());
+  const canCreateEvent = Boolean(eventForm.title.trim() && eventForm.date);
+  const canCreateNotice = Boolean(noticeForm.title.trim() && noticeForm.body.trim());
+  const canCreateMinistry = Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
 
   function readPhoto(event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) {
     const file = event.target.files?.[0];
@@ -626,17 +768,61 @@ export default function Home() {
     setMuralForm(blankMuralItem);
   }
 
+  function createEvent() {
+    if (!canCreateEvent) return;
+
+    const now = new Date().toISOString();
+    const event: ChurchEvent = { ...eventForm, id: uid("event") };
+
+    setData((current) => ({
+      ...current,
+      events: [event, ...current.events],
+      audit: [{ id: uid("audit"), action: `Evento adicionado na agenda: ${event.title}`, when: now }, ...current.audit].slice(0, 12),
+    }));
+    setEventForm(blankEvent);
+  }
+
+  function createNotice() {
+    if (!canCreateNotice) return;
+
+    const now = new Date().toISOString();
+    const notice: Notice = { ...noticeForm, id: uid("notice") };
+
+    setData((current) => ({
+      ...current,
+      notices: [notice, ...current.notices],
+      audit: [{ id: uid("audit"), action: `Comunicado criado: ${notice.title}`, when: now }, ...current.audit].slice(0, 12),
+    }));
+    setNoticeForm(blankNotice);
+  }
+
+  function createMinistry() {
+    if (!canCreateMinistry) return;
+
+    const now = new Date().toISOString();
+    const ministry: MinistryRecord = { ...ministryForm, id: uid("ministry") };
+
+    setData((current) => ({
+      ...current,
+      ministries: [ministry, ...current.ministries],
+      audit: [{ id: uid("audit"), action: `Ministerio cadastrado: ${ministry.name}`, when: now }, ...current.audit].slice(0, 12),
+    }));
+    setMinistryForm(blankMinistry);
+  }
+
   function createSchoolNotice() {
     if (!canCreateSchoolNotice) return;
 
     const now = new Date().toISOString();
+    const targetClass = data.schoolClasses.find((schoolClass) => schoolClass.id === schoolNoticeForm.classId);
     const notice: Notice = {
       id: uid("school-notice"),
       title: schoolNoticeForm.title,
       body: schoolNoticeForm.body,
       status: "Publicado",
+      audience: targetClass?.name ?? "Classe EBD",
+      channel: "App",
     };
-    const targetClass = data.schoolClasses.find((schoolClass) => schoolClass.id === schoolNoticeForm.classId);
 
     setData((current) => ({
       ...current,
@@ -668,6 +854,9 @@ export default function Home() {
     setData(initialData);
     setSelectedRequestId("care-1");
     setCareForm(blankCare);
+    setEventForm(blankEvent);
+    setNoticeForm(blankNotice);
+    setMinistryForm(blankMinistry);
     setUserForm(blankUser);
     setMemberForm(blankMember);
     setMuralForm(blankMuralItem);
@@ -1243,23 +1432,165 @@ export default function Home() {
           )}
 
           {activeModule === "events" && (
-            <SimpleModule
-              action={() => log("Agenda revisada")}
-              button="Registrar revisao"
-              description="A agenda local mostra encontros proximos e sera a base para integrar escalas, confirmacoes e notificacoes."
-              rows={data.events.map((event) => `${formatDate(event.date)} - ${event.title} (${event.ministry})`)}
-              title="Agenda da igreja"
-            />
+            <section className="content-grid">
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Novo evento</h2>
+                  <span>Agenda</span>
+                </div>
+                <div className="form-grid">
+                  <label className="full">
+                    Titulo
+                    <input
+                      onChange={(event) => setEventForm((form) => ({ ...form, title: event.target.value }))}
+                      placeholder="Ex.: Culto de ensino"
+                      value={eventForm.title}
+                    />
+                  </label>
+                  <label>
+                    Data
+                    <input onChange={(event) => setEventForm((form) => ({ ...form, date: event.target.value }))} type="date" value={eventForm.date} />
+                  </label>
+                  <label>
+                    Horario
+                    <input onChange={(event) => setEventForm((form) => ({ ...form, time: event.target.value }))} type="time" value={eventForm.time} />
+                  </label>
+                  <label>
+                    Ministerio
+                    <input
+                      onChange={(event) => setEventForm((form) => ({ ...form, ministry: event.target.value }))}
+                      placeholder="Ex.: Jovens"
+                      value={eventForm.ministry}
+                    />
+                  </label>
+                  <label>
+                    Status
+                    <select onChange={(event) => setEventForm((form) => ({ ...form, status: event.target.value as ChurchEvent["status"] }))} value={eventForm.status}>
+                      <option>Programado</option>
+                      <option>Confirmado</option>
+                      <option>Concluido</option>
+                    </select>
+                  </label>
+                  <label>
+                    Local
+                    <input
+                      onChange={(event) => setEventForm((form) => ({ ...form, location: event.target.value }))}
+                      placeholder="Ex.: Templo principal"
+                      value={eventForm.location}
+                    />
+                  </label>
+                  <label>
+                    Responsavel
+                    <input
+                      onChange={(event) => setEventForm((form) => ({ ...form, responsible: event.target.value }))}
+                      placeholder="Ex.: Pr. Marcos"
+                      value={eventForm.responsible}
+                    />
+                  </label>
+                  <button className="primary-action" disabled={!canCreateEvent} onClick={createEvent} type="button">
+                    Adicionar evento
+                  </button>
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Agenda da igreja</h2>
+                  <span>{data.events.length} eventos</span>
+                </div>
+                <div className="row-list">
+                  {data.events.map((event) => (
+                    <div className="data-row" key={event.id}>
+                      <span className="date-box">{formatDate(event.date)}</span>
+                      <div>
+                        <strong>{event.title}</strong>
+                        <small>
+                          {event.time || "Sem horario"} - {event.ministry} - {event.status}
+                        </small>
+                        <small>{event.location || "Local nao informado"} - {event.responsible || "Sem responsavel"}</small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </section>
           )}
 
           {activeModule === "notices" && (
-            <SimpleModule
-              action={() => log("Comunicados revisados")}
-              button="Registrar revisao"
-              description="Comunicados publicados entram automaticamente na central de notificacoes."
-              rows={data.notices.map((notice) => `${notice.status} - ${notice.title}: ${notice.body}`)}
-              title="Comunicados"
-            />
+            <section className="content-grid">
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Novo comunicado</h2>
+                  <span>Avisos</span>
+                </div>
+                <div className="form-grid">
+                  <label className="full">
+                    Titulo
+                    <input
+                      onChange={(event) => setNoticeForm((form) => ({ ...form, title: event.target.value }))}
+                      placeholder="Ex.: Reuniao de lideres"
+                      value={noticeForm.title}
+                    />
+                  </label>
+                  <label>
+                    Publico
+                    <input
+                      onChange={(event) => setNoticeForm((form) => ({ ...form, audience: event.target.value }))}
+                      placeholder="Ex.: Toda igreja"
+                      value={noticeForm.audience}
+                    />
+                  </label>
+                  <label>
+                    Canal
+                    <select onChange={(event) => setNoticeForm((form) => ({ ...form, channel: event.target.value as Notice["channel"] }))} value={noticeForm.channel}>
+                      <option>Todos</option>
+                      <option>App</option>
+                      <option>WhatsApp</option>
+                      <option>Mural</option>
+                    </select>
+                  </label>
+                  <label>
+                    Status
+                    <select onChange={(event) => setNoticeForm((form) => ({ ...form, status: event.target.value as Notice["status"] }))} value={noticeForm.status}>
+                      <option>Publicado</option>
+                      <option>Rascunho</option>
+                    </select>
+                  </label>
+                  <label className="full">
+                    Mensagem
+                    <textarea
+                      onChange={(event) => setNoticeForm((form) => ({ ...form, body: event.target.value }))}
+                      placeholder="Escreva o comunicado"
+                      value={noticeForm.body}
+                    />
+                  </label>
+                  <button className="primary-action" disabled={!canCreateNotice} onClick={createNotice} type="button">
+                    Criar comunicado
+                  </button>
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Comunicados</h2>
+                  <span>{data.notices.length} avisos</span>
+                </div>
+                <div className="row-list">
+                  {data.notices.map((notice) => (
+                    <div className="data-row" key={notice.id}>
+                      <span className="bullet-mark" />
+                      <div>
+                        <strong>{notice.title}</strong>
+                        <small>
+                          {notice.status} - {notice.audience} - {notice.channel}
+                        </small>
+                        <small>{notice.body}</small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </section>
           )}
 
           {activeModule === "users" && (
@@ -1513,13 +1844,101 @@ export default function Home() {
           )}
 
           {activeModule === "ministries" && (
-            <SimpleModule
-              action={() => log("Ministerios revisados")}
-              button="Registrar revisao"
-              description="Organize equipes, lideres e escalas por ministerio."
-              rows={["Louvor", "Jovens", "Intercessao", "EBD"]}
-              title="Ministerios"
-            />
+            <section className="content-grid">
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Novo ministerio</h2>
+                  <span>Equipe</span>
+                </div>
+                <div className="form-grid">
+                  <label className="full">
+                    Nome do ministerio
+                    <input
+                      onChange={(event) => setMinistryForm((form) => ({ ...form, name: event.target.value }))}
+                      placeholder="Ex.: Recepcao"
+                      value={ministryForm.name}
+                    />
+                  </label>
+                  <label>
+                    Lider
+                    <input
+                      onChange={(event) => setMinistryForm((form) => ({ ...form, leader: event.target.value }))}
+                      placeholder="Nome do lider"
+                      value={ministryForm.leader}
+                    />
+                  </label>
+                  <label>
+                    Auxiliar
+                    <input
+                      onChange={(event) => setMinistryForm((form) => ({ ...form, assistant: event.target.value }))}
+                      placeholder="Opcional"
+                      value={ministryForm.assistant}
+                    />
+                  </label>
+                  <label>
+                    Dia de reuniao
+                    <input
+                      onChange={(event) => setMinistryForm((form) => ({ ...form, meetingDay: event.target.value }))}
+                      placeholder="Ex.: Quinta-feira"
+                      value={ministryForm.meetingDay}
+                    />
+                  </label>
+                  <label>
+                    Voluntarios
+                    <input
+                      min={0}
+                      onChange={(event) => setMinistryForm((form) => ({ ...form, volunteers: Number(event.target.value) }))}
+                      type="number"
+                      value={ministryForm.volunteers}
+                    />
+                  </label>
+                  <label>
+                    Status
+                    <select
+                      onChange={(event) => setMinistryForm((form) => ({ ...form, status: event.target.value as MinistryRecord["status"] }))}
+                      value={ministryForm.status}
+                    >
+                      <option>Ativo</option>
+                      <option>Em formacao</option>
+                      <option>Pausado</option>
+                    </select>
+                  </label>
+                  <label className="full">
+                    Observacoes
+                    <textarea
+                      onChange={(event) => setMinistryForm((form) => ({ ...form, notes: event.target.value }))}
+                      placeholder="Escalas, necessidades ou observacoes"
+                      value={ministryForm.notes}
+                    />
+                  </label>
+                  <button className="primary-action" disabled={!canCreateMinistry} onClick={createMinistry} type="button">
+                    Adicionar ministerio
+                  </button>
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Ministerios</h2>
+                  <span>{data.ministries.length} equipes</span>
+                </div>
+                <div className="row-list">
+                  {data.ministries.map((ministry) => (
+                    <div className="data-row" key={ministry.id}>
+                      <span className="date-box">{ministry.volunteers}</span>
+                      <div>
+                        <strong>{ministry.name}</strong>
+                        <small>
+                          {ministry.status} - Lider: {ministry.leader}
+                          {ministry.assistant ? ` - Auxiliar: ${ministry.assistant}` : ""}
+                        </small>
+                        <small>{ministry.meetingDay || "Reuniao nao definida"} - {ministry.notes || "Sem observacoes"}</small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </section>
           )}
 
           {activeModule === "school" && (
