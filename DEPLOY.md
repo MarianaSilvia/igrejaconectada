@@ -28,7 +28,14 @@ Se o remoto `origin` ja estiver apontando para outro lugar, use o nome `github` 
 
 ## Variaveis de ambiente
 
-Esta versao nao exige variaveis obrigatorias para subir no Vercel.
+Para conectar ao Supabase em producao, configure no Vercel:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://bssrgotlvvexvrutshqz.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_publica_do_supabase
+```
+
+Essas variaveis podem ser cadastradas em `Project Settings > Environment Variables`.
 
 ## Depois do primeiro deploy
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useState } from "react";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
 
 type ModuleKey =
   | "overview"
@@ -121,7 +122,17 @@ type MessageRecipient = {
   group: string;
 };
 
+type MessageTemplateItem = {
+  id: string;
+  label: string;
+  text: string;
+  audience?: string;
+  isBirthday?: boolean;
+};
+
 type DigitalCardData = {
+  ownerType: "member" | "kid";
+  ownerId: string;
   title: string;
   church: string;
   name: string;
@@ -596,7 +607,7 @@ const messageAudiences: MessageAudience[] = [
   "Responsaveis Kids",
 ];
 
-const messageTemplates = [
+const messageTemplates: MessageTemplateItem[] = [
   {
     id: "birthday-blessing",
     label: "Aniversario - bencao biblica",
@@ -923,6 +934,8 @@ export default function Home() {
   const [messageAudience, setMessageAudience] = useState<MessageAudience>("Todos os membros");
   const [messageTemplateId, setMessageTemplateId] = useState("general-invite");
   const [messageText, setMessageText] = useState(messageTemplates[4].text);
+  const [remoteMessageTemplates, setRemoteMessageTemplates] = useState<MessageTemplateItem[]>([]);
+  const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Modo local: configure o Supabase no Vercel.");
 
   useEffect(() => {
     const stored = window.localStorage.getItem(storageKey);
@@ -947,6 +960,37 @@ export default function Home() {
   useEffect(() => {
     window.localStorage.setItem(storageKey, JSON.stringify(data));
   }, [data]);
+
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    supabase
+      .from("message_templates")
+      .select("id,label,body,audience,is_birthday")
+      .then(({ data: templates, error }) => {
+        if (error) {
+          setSyncStatus("Supabase conectado, aguardando login para sincronizar dados.");
+          return;
+        }
+
+        if (templates?.length) {
+          const mappedTemplates = templates.map((template) => ({
+              id: template.id,
+              label: template.label,
+              text: template.body,
+              audience: template.audience,
+              isBirthday: template.is_birthday,
+            }));
+          const defaultTemplate = mappedTemplates.find((template) => template.id === "general_invite") ?? mappedTemplates[0];
+
+          setRemoteMessageTemplates(mappedTemplates);
+          setMessageTemplateId(defaultTemplate.id);
+          setMessageText(defaultTemplate.text);
+          setSyncStatus("Modelos de mensagem carregados do Supabase.");
+        }
+      });
+  }, []);
 
   const selectedRequest = data.careRequests.find((request) => request.id === selectedRequestId) ?? data.careRequests[0];
 
@@ -993,6 +1037,7 @@ export default function Home() {
   const canCreateMinistry = Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
   const whatsappText = `Ola! Faca seu cadastro na igreja por este link: ${registrationLink}`;
   const whatsappShareLink = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
+  const availableMessageTemplates = remoteMessageTemplates.length ? remoteMessageTemplates : messageTemplates;
   const messageRecipients = useMemo<MessageRecipient[]>(() => {
     const memberRecipients = data.members
       .filter((member) => normalizeWhatsappPhone(member.phone))
@@ -1127,6 +1172,7 @@ export default function Home() {
       kids: [kid, ...current.kids],
       audit: [{ id: uid("audit"), action: `Crianca cadastrada no Kids: ${kid.childName}`, when: now }, ...current.audit].slice(0, 12),
     }));
+    void saveKidToSupabase(kid);
     setKidForm(blankKid);
   }
 
@@ -1278,13 +1324,29 @@ export default function Home() {
     setAccessMessage("");
   }
 
-  function handleLogin(event: FormEvent<HTMLFormElement>) {
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAccessMessage("");
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "");
+    const password = String(form.get("password") ?? "");
+    const supabase = getSupabaseClient();
+
+    if (supabase) {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setAccessMessage("Nao foi possivel entrar pelo Supabase. Verifique e-mail, senha e usuario cadastrado.");
+        return;
+      }
+      setSyncStatus("Sessao Supabase ativa. Novos dados serao sincronizados.");
+    }
+
     setHasSession(true);
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    const supabase = getSupabaseClient();
+    if (supabase) await supabase.auth.signOut();
     setHasSession(false);
     setNotificationsOpen(false);
     setActiveModule("overview");
@@ -1304,7 +1366,7 @@ export default function Home() {
   }
 
   function selectMessageTemplate(templateId: string) {
-    const template = messageTemplates.find((item) => item.id === templateId);
+    const template = availableMessageTemplates.find((item) => item.id === templateId);
     setMessageTemplateId(templateId);
     if (template) setMessageText(template.text);
   }
@@ -1315,11 +1377,14 @@ export default function Home() {
         window.open(whatsappUrl(recipient.phone, messageText, recipient.name), "_blank", "noopener,noreferrer");
       }, index * 450);
     });
+    void saveMessageCampaignToSupabase();
     log(`Mensagens preparadas para ${Math.min(messageRecipients.length, 12)} contatos`);
   }
 
   function memberCardData(member: MemberRecord): DigitalCardData {
     return {
+      ownerType: "member",
+      ownerId: member.id,
       title: "Carteirinha digital",
       church: "Igreja Conectada",
       name: member.fullName,
@@ -1335,6 +1400,8 @@ export default function Home() {
 
   function kidCardData(kid: KidRecord): DigitalCardData {
     return {
+      ownerType: "kid",
+      ownerId: kid.id,
       title: "Carteirinha Kids",
       church: "Igreja Conectada Kids",
       name: kid.childName,
@@ -1348,12 +1415,104 @@ export default function Home() {
     };
   }
 
+  async function saveKidToSupabase(kid: KidRecord) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    const { error } = await supabase.from("kids_profiles").insert({
+      id: kid.id,
+      child_name: kid.childName,
+      birth_date: kid.birthDate || null,
+      age_group: kid.ageGroup,
+      class_name: kid.className || null,
+      photo_url: null,
+      allergies: kid.allergies || null,
+      notes: kid.notes || null,
+      guardian_name: kid.guardianName,
+      guardian_phone: kid.guardianPhone,
+      guardian_email: kid.guardianEmail || null,
+      relationship: kid.relationship || null,
+      authorized_pickup: kid.authorizedPickup || null,
+      consent_image: kid.consentImage,
+      whatsapp_opt_in: true,
+    });
+
+    setSyncStatus(error ? "Kids salvo localmente; faca login Supabase para sincronizar." : "Cadastro Kids sincronizado com Supabase.");
+  }
+
+  async function saveCardExportToSupabase(card: DigitalCardData, format: "print_pdf" | "image_svg") {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setSyncStatus("Carteirinha gerada localmente; faca login Supabase para registrar historico.");
+      return;
+    }
+
+    const { error } = await supabase.from("digital_card_exports").insert({
+      owner_type: card.ownerType,
+      owner_id: card.ownerId,
+      card_title: card.title,
+      export_format: format,
+      exported_by: user.id,
+    });
+
+    setSyncStatus(error ? "Carteirinha gerada; historico nao foi salvo no Supabase." : "Historico da carteirinha salvo no Supabase.");
+  }
+
+  async function saveMessageCampaignToSupabase() {
+    const supabase = getSupabaseClient();
+    if (!supabase || !messageRecipients.length) return;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setSyncStatus("Mensagens abertas localmente; faca login Supabase para registrar campanha.");
+      return;
+    }
+
+    const campaignId = uid("campaign");
+    const { error: campaignError } = await supabase.from("message_campaigns").insert({
+      id: campaignId,
+      title: `Envio ${messageAudience}`,
+      audience: messageAudience,
+      body: messageText,
+      channel: "whatsapp_manual",
+      status: "prepared",
+      recipient_count: messageRecipients.length,
+      created_by: user.id,
+    });
+
+    if (campaignError) {
+      setSyncStatus("Mensagens abertas; campanha nao foi salva no Supabase.");
+      return;
+    }
+
+    const { error: recipientsError } = await supabase.from("message_recipients").insert(
+      messageRecipients.map((recipient) => ({
+        campaign_id: campaignId,
+        recipient_type: messageAudience === "Responsaveis Kids" ? "kid_guardian" : "member",
+        recipient_id: recipient.id,
+        recipient_name: recipient.name,
+        phone: recipient.phone,
+        whatsapp_url: whatsappUrl(recipient.phone, messageText, recipient.name),
+        send_status: "opened",
+      })),
+    );
+
+    setSyncStatus(recipientsError ? "Campanha salva, mas alguns destinatarios nao foram registrados." : "Campanha registrada no Supabase.");
+  }
+
   function handleRecover(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAccessMessage("Se o e-mail estiver cadastrado, a administracao recebera o pedido de recuperacao.");
   }
 
-  function handleRegistration(event: FormEvent<HTMLFormElement>) {
+  async function handleRegistration(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (registrationForm.password !== registrationForm.passwordConfirm) {
@@ -1402,6 +1561,36 @@ export default function Home() {
       members: [member, ...current.members],
       audit: [{ id: uid("audit"), action: `Cadastro online recebido: ${member.fullName}`, when: now }, ...current.audit].slice(0, 12),
     }));
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      const { error } = await supabase.from("online_registrations").insert({
+        id: uid("registration"),
+        full_name: registrationForm.fullName,
+        photo_url: null,
+        phone: registrationForm.phone,
+        email: registrationForm.email,
+        birth_date: registrationForm.birthDate,
+        marital_status: registrationForm.maritalStatus,
+        address: registrationForm.address,
+        congregation_interest: registrationForm.congregationInterest,
+        registration_type: registrationForm.registrationType,
+        previous_church: registrationForm.previousChurch || null,
+        is_water_baptized: registrationForm.waterBaptized,
+        water_baptism_date: null,
+        is_holy_spirit_baptized: registrationForm.holySpiritBaptized,
+        interested_ministries: registrationForm.interestedMinistries
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        ministry_role: registrationForm.ministryRole || null,
+        notes_or_prayer: registrationForm.notesOrPrayer || null,
+        submitted_at: now,
+        status: "pendente",
+        whatsapp_opt_in: true,
+      });
+
+      setSyncStatus(error ? "Cadastro salvo localmente; Supabase nao aceitou o envio agora." : "Cadastro online enviado ao Supabase.");
+    }
     setAccessMessage("Cadastro recebido para analise da administracao.");
     setRegistrationForm(blankRegistration);
   }
@@ -1455,8 +1644,8 @@ export default function Home() {
           <div className="connection-card">
             <span className="status-dot" />
             <div>
-              <strong>Modo local ativo</strong>
-              <span>Dados salvos neste computador</span>
+              <strong>{isSupabaseConfigured() ? "Supabase preparado" : "Modo local ativo"}</strong>
+              <span>{syncStatus}</span>
             </div>
           </div>
         </aside>
@@ -2355,10 +2544,10 @@ export default function Home() {
                           <span>{card.footerRight}</span>
                         </div>
                         <div className="card-actions">
-                          <button onClick={() => printDigitalCard(card)} type="button">
+                          <button onClick={() => { void saveCardExportToSupabase(card, "print_pdf"); printDigitalCard(card); }} type="button">
                             Imprimir/PDF
                           </button>
-                          <button className="secondary" onClick={() => downloadDigitalCardImage(card)} type="button">
+                          <button className="secondary" onClick={() => { void saveCardExportToSupabase(card, "image_svg"); downloadDigitalCardImage(card); }} type="button">
                             Baixar imagem
                           </button>
                         </div>
@@ -2562,10 +2751,10 @@ export default function Home() {
                           <span>{card.footerRight}</span>
                         </div>
                         <div className="card-actions">
-                          <button onClick={() => printDigitalCard(card)} type="button">
+                          <button onClick={() => { void saveCardExportToSupabase(card, "print_pdf"); printDigitalCard(card); }} type="button">
                             Imprimir/PDF
                           </button>
-                          <button className="secondary" onClick={() => downloadDigitalCardImage(card)} type="button">
+                          <button className="secondary" onClick={() => { void saveCardExportToSupabase(card, "image_svg"); downloadDigitalCardImage(card); }} type="button">
                             Baixar imagem
                           </button>
                         </div>
@@ -2769,7 +2958,7 @@ export default function Home() {
                   <label>
                     Modelo pronto
                     <select onChange={(event) => selectMessageTemplate(event.target.value)} value={messageTemplateId}>
-                      {messageTemplates.map((template) => (
+                      {availableMessageTemplates.map((template) => (
                         <option key={template.id} value={template.id}>
                           {template.label}
                         </option>
@@ -2928,10 +3117,10 @@ function AccessScreen({
   accessMessage: string;
   loginPasswordVisible: boolean;
   mode: AccessMode;
-  onLogin: (event: FormEvent<HTMLFormElement>) => void;
+  onLogin: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
   onPhotoUpload: (event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) => void;
   onRecover: (event: FormEvent<HTMLFormElement>) => void;
-  onRegister: (event: FormEvent<HTMLFormElement>) => void;
+  onRegister: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
   onSwitchMode: (mode: AccessMode) => void;
   registrationForm: RegistrationForm;
   registerPasswordVisible: boolean;

@@ -29,6 +29,17 @@ Abra `http://localhost:3000`.
 pnpm run build
 ```
 
+## Configurar Supabase
+
+Crie estas variaveis no Vercel antes de usar o banco em producao:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://bssrgotlvvexvrutshqz.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_publica_do_supabase
+```
+
+Sem essas variaveis, o sistema continua funcionando em modo local no navegador.
+
 ## Deploy via GitHub e Vercel
 
 1. Crie um repositorio no GitHub.
