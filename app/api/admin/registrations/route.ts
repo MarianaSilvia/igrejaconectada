@@ -59,6 +59,12 @@ async function requireSession(request: Request) {
   return { ...clients, user: data.user };
 }
 
+function canReviewRegistrations(appMetadata: Record<string, any>) {
+  const access = appMetadata.church_gp_access ?? appMetadata.status;
+  const role = appMetadata.church_gp_role ?? appMetadata.role;
+  return (access === "approved" || access === "Ativo") && ["ADMIN", "LEADER", "Administrador", "Lider"].includes(role);
+}
+
 function mapMemberStatus(type: string) {
   if (type === "VISITANTE_FREQUENTE") return "Visitante";
   if (type === "NOVO_CONVERTIDO") return "Novo convertido";
@@ -94,6 +100,9 @@ function registrationUpdate(registration: RegistrationPayload) {
 export async function GET(request: Request) {
   const session = await requireSession(request);
   if ("error" in session) return session.error;
+  if (!canReviewRegistrations(session.user.app_metadata)) {
+    return NextResponse.json({ error: "Apenas administradores ou lideres aprovados podem revisar cadastros." }, { status: 403 });
+  }
 
   const { data, error } = await session.adminClient
     .from("online_registrations")
@@ -108,6 +117,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const session = await requireSession(request);
   if ("error" in session) return session.error;
+  if (!canReviewRegistrations(session.user.app_metadata)) {
+    return NextResponse.json({ error: "Apenas administradores ou lideres aprovados podem revisar cadastros." }, { status: 403 });
+  }
 
   const payload = (await request.json()) as ReviewPayload;
   const registration = payload.registration;
@@ -161,6 +173,8 @@ export async function POST(request: Request) {
       app_metadata: {
         role: "Membro",
         status: "Ativo",
+        church_gp_role: "MEMBER",
+        church_gp_access: "approved",
         created_from: "online_registration",
       },
     });

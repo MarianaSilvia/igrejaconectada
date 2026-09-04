@@ -1011,7 +1011,7 @@ export default function Home() {
   const [memberForm, setMemberForm] = useState(blankMember);
   const [selectedRegistrationId, setSelectedRegistrationId] = useState("");
   const [registrationAccessPassword, setRegistrationAccessPassword] = useState("");
-  const [createAccessOnApproval, setCreateAccessOnApproval] = useState(true);
+  const [createAccessOnApproval, setCreateAccessOnApproval] = useState(false);
   const [kidForm, setKidForm] = useState(blankKid);
   const [muralForm, setMuralForm] = useState(blankMuralItem);
   const [schoolNoticeForm, setSchoolNoticeForm] = useState(blankSchoolNotice);
@@ -1646,8 +1646,8 @@ export default function Home() {
         setAccessMessage("Nao foi possivel entrar pelo Supabase. Verifique e-mail, senha e usuario cadastrado.");
         return;
       }
-      const status = authData.user?.app_metadata?.status ?? authData.user?.user_metadata?.status;
-      if (status && status !== "Ativo") {
+      const accessStatus = authData.user?.app_metadata?.church_gp_access ?? authData.user?.app_metadata?.status ?? authData.user?.user_metadata?.status;
+      if (accessStatus && accessStatus !== "approved" && accessStatus !== "Ativo") {
         await supabase.auth.signOut();
         setAccessMessage("Seu acesso ainda nao esta ativo. Fale com a administracao.");
         return;

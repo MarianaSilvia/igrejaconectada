@@ -13,6 +13,16 @@ type AccessUserPayload = {
   status?: string;
 };
 
+function toChurchRole(role?: string) {
+  if (role === "Administrador") return "ADMIN";
+  if (role === "Lider") return "LEADER";
+  return "MEMBER";
+}
+
+function toChurchAccess(status?: string) {
+  return status === "Ativo" ? "approved" : "pending";
+}
+
 export async function POST(request: Request) {
   if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
     return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
@@ -55,6 +65,8 @@ export async function POST(request: Request) {
     app_metadata: {
       role: payload.role ?? "Lider",
       status: payload.status ?? "Ativo",
+      church_gp_role: toChurchRole(payload.role),
+      church_gp_access: toChurchAccess(payload.status),
       created_by: sessionData.user.id,
     },
   });
