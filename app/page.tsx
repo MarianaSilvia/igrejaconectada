@@ -80,6 +80,7 @@ type AccessUserForm = Omit<AccessUser, "id"> & {
 
 type MemberRecord = {
   id: string;
+  authUserId?: string;
   fullName: string;
   phone: string;
   email: string;
@@ -533,6 +534,7 @@ const blankUser: AccessUserForm = {
 };
 
 const blankMember: Omit<MemberRecord, "id"> = {
+  authUserId: "",
   fullName: "",
   phone: "",
   email: "",
@@ -550,6 +552,12 @@ const blankMember: Omit<MemberRecord, "id"> = {
   holySpiritBaptized: false,
   joinedAt: "",
   notes: "",
+};
+
+const blankMemberCredential = {
+  memberId: "",
+  email: "",
+  password: "",
 };
 
 const blankKid: Omit<KidRecord, "id"> = {
@@ -880,13 +888,27 @@ export default function Home() {
   const [accessMessage, setAccessMessage] = useState("");
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
   const [activeModule, setActiveModule] = useState<ModuleKey>("overview");
-  const [data, setData] = useState<AppData>(initialData);
+  const [data, setData] = useState<AppData>(() => {
+    if (typeof window === "undefined") return initialData;
+
+    const stored = window.localStorage.getItem(storageKey);
+    if (!stored) return initialData;
+
+    try {
+      return normalizeAppData(JSON.parse(stored) as Partial<AppData>);
+    } catch {
+      window.localStorage.removeItem(storageKey);
+      return initialData;
+    }
+  });
   const [careForm, setCareForm] = useState(blankCare);
   const [eventForm, setEventForm] = useState(blankEvent);
   const [noticeForm, setNoticeForm] = useState(blankNotice);
   const [ministryForm, setMinistryForm] = useState(blankMinistry);
   const [userForm, setUserForm] = useState(blankUser);
   const [memberForm, setMemberForm] = useState(blankMember);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [memberCredentialForm, setMemberCredentialForm] = useState(blankMemberCredential);
   const [kidForm, setKidForm] = useState(blankKid);
   const [muralForm, setMuralForm] = useState(blankMuralItem);
   const [schoolNoticeForm, setSchoolNoticeForm] = useState(blankSchoolNotice);
@@ -897,17 +919,6 @@ export default function Home() {
   const [messageText, setMessageText] = useState(messageTemplates[4].text);
   const [remoteMessageTemplates, setRemoteMessageTemplates] = useState<MessageTemplateItem[]>([]);
   const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Modo local: configure o Supabase no Vercel.");
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(storageKey);
-    if (!stored) return;
-
-    try {
-      setData(normalizeAppData(JSON.parse(stored) as Partial<AppData>));
-    } catch {
-      window.localStorage.removeItem(storageKey);
-    }
-  }, []);
 
   useEffect(() => {
     if (window.location.search.includes("cadastro=novo")) {
@@ -987,6 +998,11 @@ export default function Home() {
   const monthlyKidsBirthdays = data.kids.filter((kid) => isBirthdayThisMonth(kid.birthDate));
   const canCreateUser = Boolean(userForm.name.trim() && userForm.email.trim() && userForm.password.trim().length >= 6);
   const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim());
+  const canSaveMemberAccess = Boolean(
+    memberCredentialForm.memberId &&
+      memberCredentialForm.email.trim() &&
+      (!memberCredentialForm.password.trim() || memberCredentialForm.password.trim().length >= 6),
+  );
   const canCreateKid = Boolean(kidForm.childName.trim() && kidForm.guardianName.trim() && kidForm.guardianPhone.trim());
   const canCreateMuralItem = Boolean(muralForm.title.trim() && muralForm.expiresAt);
   const canCreateSchoolNotice = Boolean(schoolNoticeForm.classId && schoolNoticeForm.title.trim() && schoolNoticeForm.body.trim());
@@ -1093,8 +1109,13 @@ export default function Home() {
     if (!userForm.name.trim() || !userForm.email.trim()) return;
 
     const now = new Date().toISOString();
-    const { password, ...accessUser } = userForm;
-    const user: AccessUser = { ...accessUser, id: uid("user") };
+    const user: AccessUser = {
+      id: uid("user"),
+      name: userForm.name,
+      email: userForm.email,
+      role: userForm.role,
+      status: userForm.status,
+    };
 
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
@@ -1137,14 +1158,143 @@ export default function Home() {
     if (!memberForm.fullName.trim() || !memberForm.phone.trim()) return;
 
     const now = new Date().toISOString();
-    const member: MemberRecord = { ...memberForm, id: uid("member") };
+    const member: MemberRecord = { ...memberForm, id: editingMemberId ?? uid("member") };
 
     setData((current) => ({
       ...current,
-      members: [member, ...current.members],
-      audit: [{ id: uid("audit"), action: `Membro cadastrado: ${member.fullName}`, when: now }, ...current.audit].slice(0, 12),
+      members: editingMemberId
+        ? current.members.map((item) => (item.id === editingMemberId ? member : item))
+        : [member, ...current.members],
+      audit: [
+        {
+          id: uid("audit"),
+          action: editingMemberId ? `Ficha atualizada: ${member.fullName}` : `Membro cadastrado: ${member.fullName}`,
+          when: now,
+        },
+        ...current.audit,
+      ].slice(0, 12),
     }));
     setMemberForm(blankMember);
+    setEditingMemberId(null);
+  }
+
+  function editMember(member: MemberRecord) {
+    const { id, ...form } = member;
+    setMemberForm(form);
+    setEditingMemberId(id);
+  }
+
+  function cancelMemberEdit() {
+    setMemberForm(blankMember);
+    setEditingMemberId(null);
+  }
+
+  function deleteMember(member: MemberRecord) {
+    if (!window.confirm(`Excluir a ficha de ${member.fullName}?`)) return;
+
+    setData((current) => ({
+      ...current,
+      members: current.members.filter((item) => item.id !== member.id),
+      audit: [{ id: uid("audit"), action: `Ficha excluida: ${member.fullName}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
+
+    if (editingMemberId === member.id) {
+      cancelMemberEdit();
+    }
+
+    if (memberCredentialForm.memberId === member.id) {
+      setMemberCredentialForm(blankMemberCredential);
+    }
+  }
+
+  function toggleMemberCredentials(member: MemberRecord) {
+    setMemberCredentialForm((form) =>
+      form.memberId === member.id
+        ? blankMemberCredential
+        : {
+            memberId: member.id,
+            email: member.email,
+            password: "",
+          },
+    );
+  }
+
+  function memberAccessMessage(member: MemberRecord) {
+    return [
+      "Ola, {nome}! Seu acesso ao Igreja Conectada foi preparado.",
+      `Login: ${memberCredentialForm.email.trim() || member.email}`,
+      `Senha: ${memberCredentialForm.password.trim() || "senha ja cadastrada"}`,
+      "Acesse o sistema e altere sua senha se solicitado pela secretaria.",
+    ].join("\n");
+  }
+
+  async function saveMemberAccess(member: MemberRecord) {
+    if (!canSaveMemberAccess) return;
+
+    const email = memberCredentialForm.email.trim().toLowerCase();
+    const password = memberCredentialForm.password.trim();
+    const now = new Date().toISOString();
+    let authUserId = member.authUserId;
+
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        setSyncStatus("Entre com uma conta Supabase antes de alterar login e senha.");
+        return;
+      }
+
+      const response = await fetch("/api/admin/access-users", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: member.authUserId,
+          currentEmail: member.email,
+          name: member.fullName,
+          email,
+          password: password || undefined,
+          role: "Membro",
+          status: "Ativo",
+        }),
+      });
+      const result = (await response.json()) as { id?: string; email?: string; error?: string; created?: boolean };
+
+      if (!response.ok) {
+        setSyncStatus(result.error ?? "Nao foi possivel salvar o acesso do membro.");
+        return;
+      }
+
+      authUserId = result.id ?? authUserId;
+      setSyncStatus(result.created ? `Login criado para ${member.fullName}.` : `Login atualizado para ${member.fullName}.`);
+    }
+
+    setData((current) => {
+      const userId = authUserId ?? member.authUserId ?? uid("user");
+      const accessUser: AccessUser = {
+        id: userId,
+        name: member.fullName,
+        email,
+        role: "Membro",
+        status: "Ativo",
+      };
+      const hasUser = current.users.some((user) => user.id === userId || user.email.toLowerCase() === member.email.toLowerCase());
+
+      return {
+        ...current,
+        members: current.members.map((item) => (item.id === member.id ? { ...item, email, authUserId } : item)),
+        users: hasUser
+          ? current.users.map((user) => (user.id === userId || user.email.toLowerCase() === member.email.toLowerCase() ? accessUser : user))
+          : [accessUser, ...current.users],
+        audit: [{ id: uid("audit"), action: `Login atualizado para ${member.fullName}`, when: now }, ...current.audit].slice(0, 12),
+      };
+    });
+
+    setMemberCredentialForm((form) => ({ ...form, password: "" }));
   }
 
   function createKid() {
@@ -1267,6 +1417,8 @@ export default function Home() {
     setMinistryForm(blankMinistry);
     setUserForm(blankUser);
     setMemberForm(blankMember);
+    setEditingMemberId(null);
+    setMemberCredentialForm(blankMemberCredential);
     setKidForm(blankKid);
     setMuralForm(blankMuralItem);
     setSchoolNoticeForm(blankSchoolNotice);
@@ -2209,8 +2361,8 @@ export default function Home() {
             <section className="content-grid">
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>Ficha completa</h2>
-                  <span>Membro ou visitante</span>
+                  <h2>{editingMemberId ? "Editar ficha" : "Ficha completa"}</h2>
+                  <span>{editingMemberId ? "Atualizando cadastro" : "Membro ou visitante"}</span>
                 </div>
                 <div className="form-grid">
                   <div className="photo-uploader full">
@@ -2357,9 +2509,16 @@ export default function Home() {
                       value={memberForm.notes}
                     />
                   </label>
-                  <button className="primary-action" disabled={!canCreateMember} onClick={createMember} type="button">
-                    Salvar ficha
-                  </button>
+                  <div className="form-actions full">
+                    <button className="primary-action" disabled={!canCreateMember} onClick={createMember} type="button">
+                      {editingMemberId ? "Atualizar ficha" : "Salvar ficha"}
+                    </button>
+                    {editingMemberId && (
+                      <button className="secondary" onClick={cancelMemberEdit} type="button">
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
                 </div>
               </article>
 
@@ -2435,8 +2594,57 @@ export default function Home() {
                           <button className="secondary" onClick={() => { void saveCardExportToSupabase(card, "image_svg"); downloadDigitalCardImage(card); }} type="button">
                             Baixar imagem
                           </button>
+                          <button className="secondary" onClick={() => editMember(member)} type="button">
+                            Editar ficha
+                          </button>
+                          <button className="secondary" onClick={() => toggleMemberCredentials(member)} type="button">
+                            Login e senha
+                          </button>
+                          <button className="danger-action" onClick={() => deleteMember(member)} type="button">
+                            Excluir ficha
+                          </button>
                         </div>
                       </div>
+                      {memberCredentialForm.memberId === member.id && (
+                        <div className="credential-panel">
+                          <div className="panel-heading compact-heading">
+                            <h2>Acesso do membro</h2>
+                            <span>{member.authUserId ? "Login vinculado" : "Novo login"}</span>
+                          </div>
+                          <div className="form-grid">
+                            <label>
+                              Login / e-mail
+                              <input
+                                onChange={(event) => setMemberCredentialForm((form) => ({ ...form, email: event.target.value }))}
+                                placeholder="membro@email.com"
+                                type="email"
+                                value={memberCredentialForm.email}
+                              />
+                            </label>
+                            <label>
+                              Senha
+                              <input
+                                onChange={(event) => setMemberCredentialForm((form) => ({ ...form, password: event.target.value }))}
+                                placeholder="Minimo 6 caracteres"
+                                type="password"
+                                value={memberCredentialForm.password}
+                              />
+                            </label>
+                            <button className="primary-action" disabled={!canSaveMemberAccess} onClick={() => { void saveMemberAccess(member); }} type="button">
+                              Criar ou atualizar login
+                            </button>
+                            <a
+                              aria-disabled={!normalizeWhatsappPhone(member.phone) || !memberCredentialForm.email.trim()}
+                              className={!normalizeWhatsappPhone(member.phone) || !memberCredentialForm.email.trim() ? "whatsapp-link full disabled" : "whatsapp-link full"}
+                              href={whatsappUrl(member.phone, memberAccessMessage(member), member.fullName)}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              Enviar login pelo WhatsApp
+                            </a>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     );
                   })}
@@ -3021,7 +3229,7 @@ function AccessScreen({
           <p>Uma plataforma segura para fortalecer o cuidado com pessoas, ministerios e a missao.</p>
         </div>
         <blockquote>
-          <p>"Sirvam uns aos outros, cada um conforme o dom que recebeu."</p>
+          <p>&quot;Sirvam uns aos outros, cada um conforme o dom que recebeu.&quot;</p>
           <cite>1 Pedro 4:10</cite>
         </blockquote>
       </section>

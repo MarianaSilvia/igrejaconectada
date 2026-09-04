@@ -966,6 +966,32 @@ textarea:focus {
   grid-column: 1 / -1;
 }
 
+.form-actions {
+  display: grid;
+  gap: 10px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-actions .primary-action {
+  grid-column: auto;
+}
+
+.form-actions button.secondary,
+.danger-action {
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 0 14px;
+}
+
+.form-actions button.secondary {
+  background: rgba(72, 184, 255, 0.1);
+  border: 1px solid rgba(72, 184, 255, 0.28);
+  color: #9bd7ff;
+}
+
 .photo-uploader {
   align-items: center;
   background: rgba(18, 45, 76, 0.5);
@@ -1006,6 +1032,21 @@ textarea:focus {
 .member-record {
   display: grid;
   gap: 10px;
+}
+
+.credential-panel {
+  background: rgba(8, 16, 31, 0.68);
+  border: 1px solid rgba(72, 184, 255, 0.22);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.compact-heading {
+  margin-bottom: 12px;
+}
+
+.compact-heading h2 {
+  font-size: 15px;
 }
 
 .member-avatar {
@@ -1103,7 +1144,7 @@ textarea:focus {
   border-top: 1px solid rgba(72, 184, 255, 0.18);
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 12px;
 }
 
@@ -1121,6 +1162,17 @@ textarea:focus {
   background: rgba(72, 184, 255, 0.1);
   border-color: rgba(72, 184, 255, 0.28);
   color: #9bd7ff;
+}
+
+.danger-action {
+  background: rgba(255, 93, 112, 0.12);
+  border: 1px solid rgba(255, 93, 112, 0.32);
+  color: #ff9baa;
+}
+
+.whatsapp-link.full {
+  grid-column: 1 / -1;
+  justify-content: center;
 }
 
 .kids-preview,
