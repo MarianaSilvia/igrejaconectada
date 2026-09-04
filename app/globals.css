@@ -169,16 +169,6 @@ button:disabled {
   margin-top: 28px;
 }
 
-.registration-form {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  max-height: none;
-  overflow: visible;
-}
-
-.registration-form .full {
-  grid-column: 1 / -1;
-}
-
 .access-form small {
   color: var(--muted);
   font-size: 12px;
@@ -1278,22 +1268,6 @@ textarea:focus {
   margin-top: 14px;
 }
 
-.share-card {
-  align-self: start;
-}
-
-.share-link {
-  background: rgba(7, 17, 31, 0.7);
-  border: 1px solid rgba(72, 184, 255, 0.22);
-  border-radius: 8px;
-  color: var(--accent-strong);
-  font-family: var(--font-app-mono);
-  font-size: 13px;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-  padding: 12px;
-}
-
 .whatsapp-link {
   align-items: center;
   background: rgba(20, 217, 196, 0.12);
@@ -1456,10 +1430,6 @@ textarea:focus {
 @media (max-width: 720px) {
   .access-copy h2 {
     font-size: 34px;
-  }
-
-  .registration-form {
-    grid-template-columns: 1fr;
   }
 
   .password-field {

@@ -6,7 +6,6 @@ Sistema administrativo para igreja com painel local, cadastro de membros e visit
 
 - Painel administrativo com prioridades e atalhos.
 - Cadastro completo de membros, visitantes e novos convertidos.
-- Link de cadastro online para envio pelo WhatsApp.
 - Area Kids com cadastro da crianca, responsavel, autorizacoes e carteirinha Kids.
 - Carteirinhas digitais com opcao de imprimir/salvar em PDF e baixar imagem.
 - Modulos de agenda, ministerios, comunicados, mural e atendimento pastoral.

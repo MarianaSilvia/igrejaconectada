@@ -6,7 +6,6 @@ import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
 type ModuleKey =
   | "overview"
   | "users"
-  | "registrations"
   | "members"
   | "kids"
   | "events"
@@ -19,7 +18,7 @@ type ModuleKey =
   | "reports"
   | "settings";
 
-type AccessMode = "login" | "recover" | "register";
+type AccessMode = "login" | "recover";
 
 type CareStatus = "Pendente" | "Em analise" | "Agendado" | "Concluido";
 
@@ -98,12 +97,6 @@ type MemberRecord = {
   holySpiritBaptized: boolean;
   joinedAt: string;
   notes: string;
-};
-
-type PendingRegistration = RegistrationForm & {
-  id: string;
-  submittedAt: string;
-  reviewStatus: "PENDENTE" | "APROVADO" | "REJEITADO";
 };
 
 type KidRecord = {
@@ -188,7 +181,6 @@ type AppData = {
   notices: Notice[];
   mural: MuralItem[];
   users: AccessUser[];
-  pendingRegistrations: PendingRegistration[];
   members: MemberRecord[];
   kids: KidRecord[];
   schoolClasses: SchoolClass[];
@@ -197,32 +189,11 @@ type AppData = {
   notificationReadIds: string[];
 };
 
-type RegistrationForm = {
-  fullName: string;
-  phone: string;
-  email: string;
-  birthDate: string;
-  maritalStatus: string;
-  address: string;
-  congregationInterest: string;
-  registrationType: string;
-  ministryRole: string;
-  previousChurch: string;
-  photoDataUrl: string;
-  password: string;
-  passwordConfirm: string;
-  waterBaptized: boolean;
-  holySpiritBaptized: boolean;
-  interestedMinistries: string;
-  notesOrPrayer: string;
-};
-
 const storageKey = "igreja-gestao-local-v1";
 
 const modules: { key: ModuleKey; label: string; short: string }[] = [
   { key: "overview", label: "Visao geral", short: "Painel" },
   { key: "users", label: "Usuarios e acessos", short: "Acessos" },
-  { key: "registrations", label: "Cadastros online", short: "Cadastros" },
   { key: "members", label: "Membros", short: "Membros" },
   { key: "kids", label: "Area Kids", short: "Kids" },
   { key: "events", label: "Agenda", short: "Agenda" },
@@ -361,7 +332,6 @@ const initialData: AppData = {
       status: "Ativo",
     },
   ],
-  pendingRegistrations: [],
   members: [
     {
       id: "member-1",
@@ -657,26 +627,6 @@ const messageTemplates: MessageTemplateItem[] = [
   },
 ];
 
-const blankRegistration: RegistrationForm = {
-  fullName: "",
-  phone: "",
-  email: "",
-  birthDate: "",
-  maritalStatus: "Solteiro(a)",
-  address: "",
-  congregationInterest: "",
-  registrationType: "Membro novo",
-  ministryRole: "",
-  previousChurch: "",
-  photoDataUrl: "",
-  password: "",
-  passwordConfirm: "",
-  waterBaptized: false,
-  holySpiritBaptized: false,
-  interestedMinistries: "",
-  notesOrPrayer: "",
-};
-
 function formatDate(value: string) {
   if (!value) return "Sem data";
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(new Date(`${value}T12:00:00`));
@@ -906,74 +856,6 @@ function normalizeMinistry(ministry: Partial<MinistryRecord>): MinistryRecord {
   };
 }
 
-function normalizePendingRegistration(registration: Partial<PendingRegistration>): PendingRegistration {
-  return {
-    ...blankRegistration,
-    ...registration,
-    id: registration.id ?? uid("registration"),
-    submittedAt: registration.submittedAt ?? new Date().toISOString(),
-    reviewStatus: registration.reviewStatus ?? "PENDENTE",
-  };
-}
-
-function getMemberStatusFromRegistration(type: string): MemberRecord["status"] {
-  if (type === "Visitante frequente") return "Visitante";
-  if (type === "Novo convertido") return "Novo convertido";
-  if (type === "Transferencia") return "Transferencia";
-  return "Membro ativo";
-}
-
-function getMemberTypeFromRegistration(type: string, ministryRole: string): MemberRecord["memberType"] {
-  if (type === "Visitante frequente") return "Visitante";
-  if (ministryRole.toLowerCase().includes("lider")) return "Lideranca";
-  return "Membro";
-}
-
-function toSupabaseRegistrationType(type: string) {
-  if (type === "Visitante frequente") return "VISITANTE_FREQUENTE";
-  if (type === "Novo convertido") return "NOVO_CONVERTIDO";
-  if (type === "Transferencia") return "TRANSFERENCIA";
-  return "MEMBRO_NOVO";
-}
-
-function fromSupabaseRegistrationType(type: string) {
-  if (type === "VISITANTE_FREQUENTE") return "Visitante frequente";
-  if (type === "NOVO_CONVERTIDO") return "Novo convertido";
-  if (type === "TRANSFERENCIA") return "Transferencia";
-  return "Membro novo";
-}
-
-function toSupabaseMaritalStatus(status: string) {
-  return status === "Viuvo(a)" ? "Viúvo(a)" : status;
-}
-
-function fromSupabaseMaritalStatus(status: string) {
-  return status === "Viúvo(a)" ? "Viuvo(a)" : status;
-}
-
-function registrationToMember(registration: PendingRegistration): MemberRecord {
-  return {
-    id: uid("member"),
-    fullName: registration.fullName,
-    phone: registration.phone,
-    email: registration.email,
-    status: getMemberStatusFromRegistration(registration.registrationType),
-    memberType: getMemberTypeFromRegistration(registration.registrationType, registration.ministryRole),
-    role: registration.ministryRole,
-    ministry: registration.interestedMinistries,
-    photoDataUrl: registration.photoDataUrl,
-    birthDate: registration.birthDate,
-    maritalStatus: registration.maritalStatus,
-    address: registration.address,
-    congregation: registration.congregationInterest,
-    previousChurch: registration.previousChurch,
-    waterBaptized: registration.waterBaptized,
-    holySpiritBaptized: registration.holySpiritBaptized,
-    joinedAt: new Date().toISOString().slice(0, 10),
-    notes: registration.notesOrPrayer,
-  };
-}
-
 function normalizeAppData(value: Partial<AppData>): AppData {
   return {
     ...initialData,
@@ -983,9 +865,6 @@ function normalizeAppData(value: Partial<AppData>): AppData {
     notices: (value.notices ?? initialData.notices).map((notice) => normalizeNotice(notice)),
     mural: value.mural ?? initialData.mural,
     users: value.users ?? initialData.users,
-    pendingRegistrations: (value.pendingRegistrations ?? initialData.pendingRegistrations).map((registration) =>
-      normalizePendingRegistration(registration),
-    ),
     members: (value.members ?? initialData.members).map((member) => normalizeMember(member)),
     kids: (value.kids ?? initialData.kids).map((kid) => normalizeKid(kid)),
     schoolClasses: value.schoolClasses ?? initialData.schoolClasses,
@@ -1000,7 +879,6 @@ export default function Home() {
   const [accessMode, setAccessMode] = useState<AccessMode>("login");
   const [accessMessage, setAccessMessage] = useState("");
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
-  const [registrationForm, setRegistrationForm] = useState<RegistrationForm>(blankRegistration);
   const [activeModule, setActiveModule] = useState<ModuleKey>("overview");
   const [data, setData] = useState<AppData>(initialData);
   const [careForm, setCareForm] = useState(blankCare);
@@ -1009,16 +887,11 @@ export default function Home() {
   const [ministryForm, setMinistryForm] = useState(blankMinistry);
   const [userForm, setUserForm] = useState(blankUser);
   const [memberForm, setMemberForm] = useState(blankMember);
-  const [selectedRegistrationId, setSelectedRegistrationId] = useState("");
-  const [registrationAccessPassword, setRegistrationAccessPassword] = useState("");
-  const [createAccessOnApproval, setCreateAccessOnApproval] = useState(false);
   const [kidForm, setKidForm] = useState(blankKid);
   const [muralForm, setMuralForm] = useState(blankMuralItem);
   const [schoolNoticeForm, setSchoolNoticeForm] = useState(blankSchoolNotice);
   const [selectedRequestId, setSelectedRequestId] = useState("care-1");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [registrationLink, setRegistrationLink] = useState("");
-  const [shareFeedback, setShareFeedback] = useState("");
   const [messageAudience, setMessageAudience] = useState<MessageAudience>("Todos os membros");
   const [messageTemplateId, setMessageTemplateId] = useState("general-invite");
   const [messageText, setMessageText] = useState(messageTemplates[4].text);
@@ -1037,27 +910,14 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const url = new URL(window.location.href);
-    if (url.searchParams.get("cadastro") === "novo") {
-      setAccessMode("register");
-      setHasSession(false);
+    if (window.location.search.includes("cadastro=novo")) {
+      window.history.replaceState({}, "", window.location.pathname);
     }
-    setRegistrationLink(`${url.origin}${url.pathname}?cadastro=novo`);
   }, []);
 
   useEffect(() => {
     window.localStorage.setItem(storageKey, JSON.stringify(data));
   }, [data]);
-
-  useEffect(() => {
-    if (selectedRegistrationId || !data.pendingRegistrations.length) return;
-    setSelectedRegistrationId(data.pendingRegistrations[0].id);
-  }, [data.pendingRegistrations, selectedRegistrationId]);
-
-  useEffect(() => {
-    if (!hasSession || !isSupabaseConfigured()) return;
-    void loadOnlineRegistrations();
-  }, [hasSession]);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -1091,8 +951,6 @@ export default function Home() {
   }, []);
 
   const selectedRequest = data.careRequests.find((request) => request.id === selectedRequestId) ?? data.careRequests[0];
-  const selectedRegistration =
-    data.pendingRegistrations.find((registration) => registration.id === selectedRegistrationId) ?? data.pendingRegistrations[0];
 
   const notifications = useMemo(() => {
     const pendingCare = data.careRequests
@@ -1120,23 +978,13 @@ export default function Home() {
         module: "mural" as ModuleKey,
       }));
 
-    const pendingRegistrations = data.pendingRegistrations
-      .filter((registration) => registration.reviewStatus === "PENDENTE")
-      .map((registration) => ({
-        id: `registration-${registration.id}`,
-        title: `Novo cadastro: ${registration.fullName}`,
-        body: `${registration.registrationType} - ${registration.phone}`,
-        module: "registrations" as ModuleKey,
-      }));
-
-    return [...pendingRegistrations, ...pendingCare, ...upcomingEvents, ...publishedMural];
-  }, [data.careRequests, data.events, data.mural, data.pendingRegistrations]);
+    return [...pendingCare, ...upcomingEvents, ...publishedMural];
+  }, [data.careRequests, data.events, data.mural]);
 
   const unreadCount = notifications.filter((notice) => !data.notificationReadIds.includes(notice.id)).length;
   const monthlyBirthdays = data.members.filter((member) => isBirthdayThisMonth(member.birthDate));
   const weeklyBirthdays = monthlyBirthdays.filter((member) => isBirthdayThisWeek(member.birthDate));
   const monthlyKidsBirthdays = data.kids.filter((kid) => isBirthdayThisMonth(kid.birthDate));
-  const pendingRegistrationsCount = data.pendingRegistrations.filter((registration) => registration.reviewStatus === "PENDENTE").length;
   const canCreateUser = Boolean(userForm.name.trim() && userForm.email.trim() && userForm.password.trim().length >= 6);
   const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim());
   const canCreateKid = Boolean(kidForm.childName.trim() && kidForm.guardianName.trim() && kidForm.guardianPhone.trim());
@@ -1145,8 +993,6 @@ export default function Home() {
   const canCreateEvent = Boolean(eventForm.title.trim() && eventForm.date);
   const canCreateNotice = Boolean(noticeForm.title.trim() && noticeForm.body.trim());
   const canCreateMinistry = Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
-  const whatsappText = `Ola! Faca seu cadastro na igreja por este link: ${registrationLink}`;
-  const whatsappShareLink = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
   const availableMessageTemplates = remoteMessageTemplates.length ? remoteMessageTemplates : messageTemplates;
   const messageRecipients = useMemo<MessageRecipient[]>(() => {
     const memberRecipients = data.members
@@ -1424,8 +1270,6 @@ export default function Home() {
     setKidForm(blankKid);
     setMuralForm(blankMuralItem);
     setSchoolNoticeForm(blankSchoolNotice);
-    setSelectedRegistrationId("");
-    setRegistrationAccessPassword("");
   }
 
   const actionHighlights = [
@@ -1448,12 +1292,6 @@ export default function Home() {
       module: "notices" as ModuleKey,
     },
     {
-      label: "Cadastros online",
-      value: pendingRegistrationsCount.toString(),
-      hint: "aguardando revisao",
-      module: "registrations" as ModuleKey,
-    },
-    {
       label: "Area Kids",
       value: data.kids.length.toString(),
       hint: "criancas cadastradas",
@@ -1470,166 +1308,6 @@ export default function Home() {
   function switchAccessMode(mode: AccessMode) {
     setAccessMode(mode);
     setAccessMessage("");
-  }
-
-  async function getSupabaseAccessToken() {
-    const supabase = getSupabaseClient();
-    if (!supabase) return null;
-    const { data: sessionData } = await supabase.auth.getSession();
-    return sessionData.session?.access_token ?? null;
-  }
-
-  function mapRemoteRegistration(row: Record<string, any>): PendingRegistration {
-    return normalizePendingRegistration({
-      id: String(row.id),
-      fullName: row.full_name ?? "",
-      phone: row.phone ?? "",
-      email: row.email ?? "",
-      birthDate: row.birth_date ?? "",
-      maritalStatus: fromSupabaseMaritalStatus(row.marital_status ?? "Solteiro(a)"),
-      address: row.address ?? "",
-      congregationInterest: row.congregation_interest ?? "",
-      registrationType: fromSupabaseRegistrationType(row.registration_type ?? "MEMBRO_NOVO"),
-      ministryRole: row.ministry_role ?? "",
-      previousChurch: row.previous_church ?? "",
-      photoDataUrl: "",
-      password: "",
-      passwordConfirm: "",
-      waterBaptized: Boolean(row.is_water_baptized),
-      holySpiritBaptized: Boolean(row.is_holy_spirit_baptized),
-      interestedMinistries: Array.isArray(row.interested_ministries) ? row.interested_ministries.join(", ") : "",
-      notesOrPrayer: row.notes_or_prayer ?? "",
-      submittedAt: row.submitted_at ?? new Date().toISOString(),
-      reviewStatus: row.status ?? "PENDENTE",
-    });
-  }
-
-  function toRemoteRegistration(registration: PendingRegistration) {
-    return {
-      id: registration.id,
-      full_name: registration.fullName,
-      phone: registration.phone,
-      email: registration.email,
-      birth_date: registration.birthDate,
-      marital_status: toSupabaseMaritalStatus(registration.maritalStatus),
-      address: registration.address,
-      congregation_interest: registration.congregationInterest,
-      registration_type: toSupabaseRegistrationType(registration.registrationType),
-      previous_church: registration.previousChurch || null,
-      is_water_baptized: registration.waterBaptized,
-      is_holy_spirit_baptized: registration.holySpiritBaptized,
-      interested_ministries: registration.interestedMinistries
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      ministry_role: registration.ministryRole || null,
-      notes_or_prayer: registration.notesOrPrayer || null,
-      submitted_at: registration.submittedAt,
-      status: registration.reviewStatus,
-    };
-  }
-
-  async function loadOnlineRegistrations() {
-    const token = await getSupabaseAccessToken();
-    if (!token) return;
-
-    const response = await fetch("/api/admin/registrations", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const result = (await response.json()) as { registrations?: Record<string, any>[]; error?: string };
-
-    if (!response.ok) {
-      setSyncStatus(result.error ?? "Nao foi possivel carregar cadastros online.");
-      return;
-    }
-
-    const registrations = (result.registrations ?? []).map((row) => mapRemoteRegistration(row));
-    setData((current) => ({ ...current, pendingRegistrations: registrations }));
-    if (registrations[0]) setSelectedRegistrationId(registrations[0].id);
-    setSyncStatus(`${registrations.filter((registration) => registration.reviewStatus === "PENDENTE").length} cadastros online aguardando revisao.`);
-  }
-
-  function updateSelectedRegistration(patch: Partial<PendingRegistration>) {
-    if (!selectedRegistration) return;
-    setData((current) => ({
-      ...current,
-      pendingRegistrations: current.pendingRegistrations.map((registration) =>
-        registration.id === selectedRegistration.id ? { ...registration, ...patch } : registration,
-      ),
-    }));
-  }
-
-  async function submitRegistrationReview(action: "update" | "approve" | "reject") {
-    if (!selectedRegistration) return;
-
-    const now = new Date().toISOString();
-    const member = registrationToMember(selectedRegistration);
-
-    if (isSupabaseConfigured()) {
-      const token = await getSupabaseAccessToken();
-      if (!token) {
-        setSyncStatus("Entre com uma conta Supabase antes de revisar cadastros.");
-        return;
-      }
-
-      const response = await fetch("/api/admin/registrations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          action,
-          registration: toRemoteRegistration(selectedRegistration),
-          createAccess: createAccessOnApproval,
-          password: registrationAccessPassword,
-        }),
-      });
-      const result = (await response.json()) as { member?: Record<string, any>; accessUser?: AccessUser | null; error?: string };
-
-      if (!response.ok) {
-        setSyncStatus(result.error ?? "Nao foi possivel revisar o cadastro.");
-        return;
-      }
-    }
-
-    if (action === "update") {
-      setSyncStatus(`Cadastro de ${selectedRegistration.fullName} atualizado para revisao.`);
-      return;
-    }
-
-    setData((current) => ({
-      ...current,
-      members: action === "approve" ? [member, ...current.members] : current.members,
-      users:
-        action === "approve" && createAccessOnApproval && selectedRegistration.email
-          ? [
-              {
-                id: uid("user"),
-                name: selectedRegistration.fullName,
-                email: selectedRegistration.email,
-                role: "Membro",
-                status: "Ativo",
-              },
-              ...current.users,
-            ]
-          : current.users,
-      pendingRegistrations: current.pendingRegistrations.map((registration) =>
-        registration.id === selectedRegistration.id
-          ? { ...registration, reviewStatus: action === "approve" ? "APROVADO" : "REJEITADO" }
-          : registration,
-      ),
-      audit: [
-        {
-          id: uid("audit"),
-          action: action === "approve" ? `Cadastro aprovado: ${selectedRegistration.fullName}` : `Cadastro recusado: ${selectedRegistration.fullName}`,
-          when: now,
-        },
-        ...current.audit,
-      ].slice(0, 12),
-    }));
-    setRegistrationAccessPassword("");
-    setSyncStatus(action === "approve" ? "Cadastro aprovado e convertido em membro." : "Cadastro recusado e registrado no historico.");
   }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -1666,17 +1344,6 @@ export default function Home() {
     setActiveModule("overview");
     setAccessMode("login");
     setAccessMessage("Voce saiu do sistema com seguranca.");
-  }
-
-  async function copyRegistrationLink() {
-    if (!registrationLink) return;
-
-    try {
-      await navigator.clipboard.writeText(registrationLink);
-      setShareFeedback("Link de cadastro copiado.");
-    } catch {
-      setShareFeedback("Copie o link exibido acima para enviar.");
-    }
   }
 
   function selectMessageTemplate(templateId: string) {
@@ -1826,56 +1493,6 @@ export default function Home() {
     setAccessMessage("Se o e-mail estiver cadastrado, a administracao recebera o pedido de recuperacao.");
   }
 
-  async function handleRegistration(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const now = new Date().toISOString();
-    const pendingRegistration: PendingRegistration = {
-      ...registrationForm,
-      id: uid("registration"),
-      submittedAt: now,
-      reviewStatus: "PENDENTE",
-    };
-
-    setData((current) => ({
-      ...current,
-      pendingRegistrations: [pendingRegistration, ...current.pendingRegistrations],
-      audit: [{ id: uid("audit"), action: `Cadastro online recebido: ${pendingRegistration.fullName}`, when: now }, ...current.audit].slice(0, 12),
-    }));
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      const { error } = await supabase.from("online_registrations").insert({
-        id: pendingRegistration.id,
-        full_name: registrationForm.fullName,
-        photo_url: null,
-        phone: registrationForm.phone,
-        email: registrationForm.email,
-        birth_date: registrationForm.birthDate,
-        marital_status: toSupabaseMaritalStatus(registrationForm.maritalStatus),
-        address: registrationForm.address,
-        congregation_interest: registrationForm.congregationInterest,
-        registration_type: toSupabaseRegistrationType(registrationForm.registrationType),
-        previous_church: registrationForm.previousChurch || null,
-        is_water_baptized: registrationForm.waterBaptized,
-        water_baptism_date: null,
-        is_holy_spirit_baptized: registrationForm.holySpiritBaptized,
-        interested_ministries: registrationForm.interestedMinistries
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-        ministry_role: registrationForm.ministryRole || null,
-        notes_or_prayer: registrationForm.notesOrPrayer || null,
-        submitted_at: pendingRegistration.submittedAt,
-        status: "PENDENTE",
-        whatsapp_opt_in: true,
-      });
-
-      setSyncStatus(error ? "Cadastro salvo localmente; Supabase nao aceitou o envio agora." : "Cadastro online enviado ao Supabase.");
-    }
-    setAccessMessage("Cadastro recebido para analise da administracao.");
-    setRegistrationForm(blankRegistration);
-  }
-
   if (!hasSession) {
     return (
       <AccessScreen
@@ -1884,12 +1501,8 @@ export default function Home() {
         mode={accessMode}
         onLogin={handleLogin}
         onRecover={handleRecover}
-        onRegister={handleRegistration}
-        onPhotoUpload={readPhoto}
         onSwitchMode={switchAccessMode}
-        registrationForm={registrationForm}
         setLoginPasswordVisible={setLoginPasswordVisible}
-        setRegistrationForm={setRegistrationForm}
       />
     );
   }
@@ -2069,24 +1682,6 @@ export default function Home() {
                   </button>
                 ))}
               </div>
-
-              <article className="surface share-card">
-                <div className="panel-heading">
-                  <h2>Link de cadastro</h2>
-                  <span>WhatsApp</span>
-                </div>
-                <p className="body-copy">Envie este link para membros, visitantes e novos convertidos preencherem a ficha online.</p>
-                <div className="share-link">{registrationLink || "Preparando link..."}</div>
-                {shareFeedback && <div className="action-feedback">{shareFeedback}</div>}
-                <div className="detail-actions">
-                  <button disabled={!registrationLink} onClick={copyRegistrationLink} type="button">
-                    Copiar link
-                  </button>
-                  <a className={registrationLink ? "whatsapp-link" : "whatsapp-link disabled"} href={whatsappShareLink} rel="noreferrer" target="_blank">
-                    Enviar no WhatsApp
-                  </a>
-                </div>
-              </article>
 
               <article className="surface wide">
                 <div className="panel-heading">
@@ -2606,208 +2201,6 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-              </article>
-            </section>
-          )}
-
-          {activeModule === "registrations" && (
-            <section className="content-grid">
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Cadastros recebidos</h2>
-                  <button onClick={() => { void loadOnlineRegistrations(); }} type="button">
-                    Atualizar
-                  </button>
-                </div>
-                <p className="body-copy">
-                  Revise cada solicitacao antes de transformar em membro e liberar acesso ao sistema.
-                </p>
-                <div className="row-list">
-                  {data.pendingRegistrations.length ? (
-                    data.pendingRegistrations.map((registration) => (
-                      <button
-                        className={registration.id === selectedRegistration?.id ? "data-row selectable active" : "data-row selectable"}
-                        key={registration.id}
-                        onClick={() => setSelectedRegistrationId(registration.id)}
-                        type="button"
-                      >
-                        <span className="bullet-mark" />
-                        <div>
-                          <strong>{registration.fullName}</strong>
-                          <small>{registration.registrationType} - {registration.phone}</small>
-                          <small>{formatDate(registration.submittedAt)} - {registration.reviewStatus}</small>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="data-row">
-                      <span className="bullet-mark" />
-                      <div>
-                        <strong>Nenhum cadastro aguardando</strong>
-                        <small>Os novos envios pelo link aparecerao aqui.</small>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </article>
-
-              <article className="surface wide">
-                <div className="panel-heading">
-                  <h2>Revisao do cadastro</h2>
-                  <span>{selectedRegistration ? selectedRegistration.reviewStatus : "Sem selecao"}</span>
-                </div>
-                {selectedRegistration ? (
-                  <div className="form-grid">
-                    <label className="full">
-                      Nome completo
-                      <input
-                        onChange={(event) => updateSelectedRegistration({ fullName: event.target.value })}
-                        value={selectedRegistration.fullName}
-                      />
-                    </label>
-                    <label>
-                      WhatsApp
-                      <input
-                        onChange={(event) => updateSelectedRegistration({ phone: event.target.value })}
-                        value={selectedRegistration.phone}
-                      />
-                    </label>
-                    <label>
-                      E-mail
-                      <input
-                        onChange={(event) => updateSelectedRegistration({ email: event.target.value })}
-                        type="email"
-                        value={selectedRegistration.email}
-                      />
-                    </label>
-                    <label>
-                      Nascimento
-                      <input
-                        onChange={(event) => updateSelectedRegistration({ birthDate: event.target.value })}
-                        type="date"
-                        value={selectedRegistration.birthDate}
-                      />
-                    </label>
-                    <label>
-                      Estado civil
-                      <select
-                        onChange={(event) => updateSelectedRegistration({ maritalStatus: event.target.value })}
-                        value={selectedRegistration.maritalStatus}
-                      >
-                        <option>Solteiro(a)</option>
-                        <option>Casado(a)</option>
-                        <option>Viuvo(a)</option>
-                        <option>Divorciado(a)</option>
-                      </select>
-                    </label>
-                    <label>
-                      Tipo
-                      <select
-                        onChange={(event) => updateSelectedRegistration({ registrationType: event.target.value })}
-                        value={selectedRegistration.registrationType}
-                      >
-                        <option>Membro novo</option>
-                        <option>Visitante frequente</option>
-                        <option>Novo convertido</option>
-                        <option>Transferencia</option>
-                      </select>
-                    </label>
-                    <label>
-                      Congregacao
-                      <input
-                        onChange={(event) => updateSelectedRegistration({ congregationInterest: event.target.value })}
-                        value={selectedRegistration.congregationInterest}
-                      />
-                    </label>
-                    <label className="full">
-                      Endereco
-                      <input
-                        onChange={(event) => updateSelectedRegistration({ address: event.target.value })}
-                        value={selectedRegistration.address}
-                      />
-                    </label>
-                    <label>
-                      Funcao desejada
-                      <input
-                        onChange={(event) => updateSelectedRegistration({ ministryRole: event.target.value })}
-                        value={selectedRegistration.ministryRole}
-                      />
-                    </label>
-                    <label>
-                      Ministerios de interesse
-                      <input
-                        onChange={(event) => updateSelectedRegistration({ interestedMinistries: event.target.value })}
-                        value={selectedRegistration.interestedMinistries}
-                      />
-                    </label>
-                    <label className="full">
-                      Igreja anterior
-                      <input
-                        onChange={(event) => updateSelectedRegistration({ previousChurch: event.target.value })}
-                        value={selectedRegistration.previousChurch}
-                      />
-                    </label>
-                    <label className="checkbox-line">
-                      <input
-                        checked={selectedRegistration.waterBaptized}
-                        onChange={(event) => updateSelectedRegistration({ waterBaptized: event.target.checked })}
-                        type="checkbox"
-                      />
-                      Batizado nas aguas
-                    </label>
-                    <label className="checkbox-line">
-                      <input
-                        checked={selectedRegistration.holySpiritBaptized}
-                        onChange={(event) => updateSelectedRegistration({ holySpiritBaptized: event.target.checked })}
-                        type="checkbox"
-                      />
-                      Batizado no Espirito Santo
-                    </label>
-                    <label className="full">
-                      Observacoes da revisao
-                      <textarea
-                        onChange={(event) => updateSelectedRegistration({ notesOrPrayer: event.target.value })}
-                        value={selectedRegistration.notesOrPrayer}
-                      />
-                    </label>
-                    <label className="checkbox-line full">
-                      <input
-                        checked={createAccessOnApproval}
-                        onChange={(event) => setCreateAccessOnApproval(event.target.checked)}
-                        type="checkbox"
-                      />
-                      Criar tambem acesso de login ao aprovar
-                    </label>
-                    {createAccessOnApproval && (
-                      <label className="full">
-                        Senha inicial do acesso
-                        <input
-                          minLength={6}
-                          onChange={(event) => setRegistrationAccessPassword(event.target.value)}
-                          placeholder="Minimo de 6 caracteres"
-                          type="password"
-                          value={registrationAccessPassword}
-                        />
-                      </label>
-                    )}
-                    <button className="secondary" onClick={() => { void submitRegistrationReview("update"); }} type="button">
-                      Salvar ajustes
-                    </button>
-                    <button
-                      className="primary-action"
-                      disabled={createAccessOnApproval && registrationAccessPassword.trim().length < 6}
-                      onClick={() => { void submitRegistrationReview("approve"); }}
-                      type="button"
-                    >
-                      Aprovar cadastro
-                    </button>
-                    <button className="secondary" onClick={() => { void submitRegistrationReview("reject"); }} type="button">
-                      Recusar
-                    </button>
-                  </div>
-                ) : (
-                  <p className="body-copy">Selecione um cadastro recebido para revisar os dados.</p>
-                )}
               </article>
             </section>
           )}
@@ -3596,35 +2989,24 @@ function AccessScreen({
   loginPasswordVisible,
   mode,
   onLogin,
-  onPhotoUpload,
   onRecover,
-  onRegister,
   onSwitchMode,
-  registrationForm,
   setLoginPasswordVisible,
-  setRegistrationForm,
 }: {
   accessMessage: string;
   loginPasswordVisible: boolean;
   mode: AccessMode;
   onLogin: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
-  onPhotoUpload: (event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) => void;
   onRecover: (event: FormEvent<HTMLFormElement>) => void;
-  onRegister: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
   onSwitchMode: (mode: AccessMode) => void;
-  registrationForm: RegistrationForm;
   setLoginPasswordVisible: Dispatch<SetStateAction<boolean>>;
-  setRegistrationForm: Dispatch<SetStateAction<RegistrationForm>>;
 }) {
   const isLogin = mode === "login";
   const isRecover = mode === "recover";
-  const title = isLogin ? "Bem-vindo de volta" : isRecover ? "Recuperar acesso" : "Solicitar cadastro";
-  const eyebrow = isLogin || isRecover ? "Area segura" : "Cadastro online";
+  const title = isRecover ? "Recuperar acesso" : "Bem-vindo de volta";
   const description = isLogin
     ? "Use seu e-mail e senha para acessar o painel correto."
-    : isRecover
-      ? "Informe seu e-mail para pedir a redefinicao da senha."
-      : "Preencha seus dados para a administracao analisar e liberar o acesso.";
+    : "Informe seu e-mail para pedir a redefinicao da senha.";
 
   return (
     <main className="access-page">
@@ -3646,7 +3028,7 @@ function AccessScreen({
 
       <section className="access-panel" aria-label={title}>
         <div className="access-copy">
-          <p className="eyebrow">{eyebrow}</p>
+          <p className="eyebrow">Area segura</p>
           <h2>{title}</h2>
           <p>{description}</p>
         </div>
@@ -3700,179 +3082,10 @@ function AccessScreen({
           </form>
         )}
 
-        {mode === "register" && (
-          <form className="access-form registration-form" method="post" onSubmit={onRegister}>
-            <div className="photo-uploader full">
-              <div className="photo-preview">
-                {registrationForm.photoDataUrl ? <img alt="" src={registrationForm.photoDataUrl} /> : <span>Foto</span>}
-              </div>
-              <label>
-                Enviar foto
-                <input
-                  accept="image/*"
-                  onChange={(event) => onPhotoUpload(event, (photoDataUrl) => setRegistrationForm((form) => ({ ...form, photoDataUrl })))}
-                  type="file"
-                />
-              </label>
-            </div>
-            <label className="full">
-              Nome completo
-              <input
-                autoComplete="name"
-                minLength={3}
-                name="full_name"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, fullName: event.target.value }))}
-                required
-                value={registrationForm.fullName}
-              />
-            </label>
-            <label>
-              Telefone
-              <input
-                autoComplete="tel"
-                minLength={8}
-                name="phone"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, phone: event.target.value }))}
-                required
-                value={registrationForm.phone}
-              />
-            </label>
-            <label>
-              E-mail
-              <input
-                autoComplete="email"
-                name="email"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, email: event.target.value }))}
-                required
-                type="email"
-                value={registrationForm.email}
-              />
-            </label>
-            <label>
-              Nascimento
-              <input
-                autoComplete="bday"
-                name="birth_date"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, birthDate: event.target.value }))}
-                required
-                type="date"
-                value={registrationForm.birthDate}
-              />
-            </label>
-            <label>
-              Estado civil
-              <select
-                name="marital_status"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, maritalStatus: event.target.value }))}
-                value={registrationForm.maritalStatus}
-              >
-                <option>Solteiro(a)</option>
-                <option>Casado(a)</option>
-                <option>Viuvo(a)</option>
-                <option>Divorciado(a)</option>
-              </select>
-            </label>
-            <label className="full">
-              Endereco
-              <input
-                autoComplete="street-address"
-                name="address"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, address: event.target.value }))}
-                value={registrationForm.address}
-              />
-            </label>
-            <label>
-              Congregacao de interesse
-              <input
-                name="congregation_interest"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, congregationInterest: event.target.value }))}
-                placeholder="Ex.: Maringa"
-                value={registrationForm.congregationInterest}
-              />
-            </label>
-            <label>
-              Tipo de cadastro
-              <select
-                name="registration_type"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, registrationType: event.target.value }))}
-                value={registrationForm.registrationType}
-              >
-                <option>Membro novo</option>
-                <option>Novo convertido</option>
-                <option>Visitante frequente</option>
-                <option>Transferencia</option>
-              </select>
-            </label>
-            <label>
-              Funcao ou interesse
-              <input
-                name="ministry_role"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, ministryRole: event.target.value }))}
-                placeholder="Ex.: aluno EBD, obreiro, louvor"
-                value={registrationForm.ministryRole}
-              />
-            </label>
-            <label className="full">
-              Igreja anterior
-              <input
-                name="previous_church"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, previousChurch: event.target.value }))}
-                value={registrationForm.previousChurch}
-              />
-            </label>
-            <div className="check-card">
-              A administracao definira a senha inicial se este cadastro for aprovado para acesso ao sistema.
-            </div>
-            <label className="check-card">
-              <input
-                checked={registrationForm.waterBaptized}
-                name="is_water_baptized"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, waterBaptized: event.target.checked }))}
-                type="checkbox"
-              />
-              Batizado em aguas
-            </label>
-            <label className="check-card">
-              <input
-                checked={registrationForm.holySpiritBaptized}
-                name="is_holy_spirit_baptized"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, holySpiritBaptized: event.target.checked }))}
-                type="checkbox"
-              />
-              Batizado no Espirito Santo
-            </label>
-            <label className="full">
-              Ministerios de interesse
-              <input
-                name="interested_ministries"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, interestedMinistries: event.target.value }))}
-                placeholder="Louvor, jovens, acao social"
-                value={registrationForm.interestedMinistries}
-              />
-            </label>
-            <label className="full">
-              Observacao ou pedido de oracao
-              <textarea
-                name="notes_or_prayer"
-                onChange={(event) => setRegistrationForm((form) => ({ ...form, notesOrPrayer: event.target.value }))}
-                value={registrationForm.notesOrPrayer}
-              />
-            </label>
-            <button className="access-primary full" type="submit">
-              Enviar cadastro
-            </button>
-          </form>
-        )}
-
         <div className="access-links">
           {!isRecover && (
             <button onClick={() => onSwitchMode("recover")} type="button">
               Esqueci minha senha
-            </button>
-          )}
-          {mode !== "register" && (
-            <button onClick={() => onSwitchMode("register")} type="button">
-              Fazer cadastro online
             </button>
           )}
           {!isLogin && (
