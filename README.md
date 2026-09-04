@@ -36,9 +36,10 @@ Crie estas variaveis no Vercel antes de usar o banco em producao:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://bssrgotlvvexvrutshqz.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_publica_do_supabase
+SUPABASE_SERVICE_ROLE_KEY=sua_chave_service_role_privada
 ```
 
-Sem essas variaveis, o sistema continua funcionando em modo local no navegador.
+Sem as variaveis publicas, o sistema continua funcionando em modo local no navegador. A `SUPABASE_SERVICE_ROLE_KEY` e privada e deve ficar apenas no servidor/Vercel; ela permite criar usuarios reais no Supabase Auth pelo painel administrativo.
 
 ## Deploy via GitHub e Vercel
 

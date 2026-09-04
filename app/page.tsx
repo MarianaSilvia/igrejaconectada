@@ -74,6 +74,10 @@ type AccessUser = {
   status: "Ativo" | "Pendente" | "Bloqueado";
 };
 
+type AccessUserForm = Omit<AccessUser, "id"> & {
+  password: string;
+};
+
 type MemberRecord = {
   id: string;
   fullName: string;
@@ -540,9 +544,10 @@ const blankMinistry: Omit<MinistryRecord, "id"> = {
   notes: "",
 };
 
-const blankUser: Omit<AccessUser, "id"> = {
+const blankUser: AccessUserForm = {
   name: "",
   email: "",
+  password: "",
   role: "Lider",
   status: "Pendente",
 };
@@ -1027,7 +1032,7 @@ export default function Home() {
   const monthlyBirthdays = data.members.filter((member) => isBirthdayThisMonth(member.birthDate));
   const weeklyBirthdays = monthlyBirthdays.filter((member) => isBirthdayThisWeek(member.birthDate));
   const monthlyKidsBirthdays = data.kids.filter((kid) => isBirthdayThisMonth(kid.birthDate));
-  const canCreateUser = Boolean(userForm.name.trim() && userForm.email.trim());
+  const canCreateUser = Boolean(userForm.name.trim() && userForm.email.trim() && userForm.password.trim().length >= 6);
   const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim());
   const canCreateKid = Boolean(kidForm.childName.trim() && kidForm.guardianName.trim() && kidForm.guardianPhone.trim());
   const canCreateMuralItem = Boolean(muralForm.title.trim() && muralForm.expiresAt);
@@ -1133,11 +1138,41 @@ export default function Home() {
     }));
   }
 
-  function createUser() {
+  async function createUser() {
     if (!userForm.name.trim() || !userForm.email.trim()) return;
 
     const now = new Date().toISOString();
-    const user: AccessUser = { ...userForm, id: uid("user") };
+    const { password, ...accessUser } = userForm;
+    const user: AccessUser = { ...accessUser, id: uid("user") };
+
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        setSyncStatus("Entre com uma conta Supabase antes de criar novos acessos.");
+        return;
+      }
+
+      const response = await fetch("/api/admin/access-users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(userForm),
+      });
+      const result = (await response.json()) as { id?: string; error?: string };
+
+      if (!response.ok) {
+        setSyncStatus(result.error ?? "Nao foi possivel criar o acesso no Supabase.");
+        return;
+      }
+
+      user.id = result.id ?? user.id;
+      setSyncStatus(`Acesso Supabase criado para ${user.name}.`);
+    }
 
     setData((current) => ({
       ...current,
@@ -1333,9 +1368,15 @@ export default function Home() {
     const supabase = getSupabaseClient();
 
     if (supabase) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setAccessMessage("Nao foi possivel entrar pelo Supabase. Verifique e-mail, senha e usuario cadastrado.");
+        return;
+      }
+      const status = authData.user?.user_metadata?.status;
+      if (status && status !== "Ativo") {
+        await supabase.auth.signOut();
+        setAccessMessage("Seu acesso ainda nao esta ativo. Fale com a administracao.");
         return;
       }
       setSyncStatus("Sessao Supabase ativa. Novos dados serao sincronizados.");
@@ -2276,6 +2317,17 @@ export default function Home() {
                       placeholder="usuario@email.com"
                       type="email"
                       value={userForm.email}
+                    />
+                  </label>
+                  <label className="full">
+                    Senha inicial
+                    <input
+                      autoComplete="new-password"
+                      minLength={6}
+                      onChange={(event) => setUserForm((form) => ({ ...form, password: event.target.value }))}
+                      placeholder="Minimo de 6 caracteres"
+                      type="password"
+                      value={userForm.password}
                     />
                   </label>
                   <label>
