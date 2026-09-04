@@ -797,6 +797,11 @@ button:disabled {
   padding: 18px;
 }
 
+.editing-surface {
+  border-color: rgba(20, 217, 196, 0.58);
+  box-shadow: 0 0 0 1px rgba(20, 217, 196, 0.18), 0 18px 56px rgba(20, 217, 196, 0.1);
+}
+
 .surface.wide {
   grid-column: span 1;
 }

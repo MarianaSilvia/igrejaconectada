@@ -1158,6 +1158,7 @@ export default function Home() {
     if (!memberForm.fullName.trim() || !memberForm.phone.trim()) return;
 
     const now = new Date().toISOString();
+    const isEditing = Boolean(editingMemberId);
     const member: MemberRecord = { ...memberForm, id: editingMemberId ?? uid("member") };
 
     setData((current) => ({
@@ -1168,7 +1169,7 @@ export default function Home() {
       audit: [
         {
           id: uid("audit"),
-          action: editingMemberId ? `Ficha atualizada: ${member.fullName}` : `Membro cadastrado: ${member.fullName}`,
+          action: isEditing ? `Ficha atualizada: ${member.fullName}` : `Membro cadastrado: ${member.fullName}`,
           when: now,
         },
         ...current.audit,
@@ -1176,12 +1177,18 @@ export default function Home() {
     }));
     setMemberForm(blankMember);
     setEditingMemberId(null);
+    setSyncStatus(isEditing ? `Ficha de ${member.fullName} atualizada.` : `Ficha de ${member.fullName} cadastrada.`);
   }
 
   function editMember(member: MemberRecord) {
     const { id, ...form } = member;
     setMemberForm(form);
     setEditingMemberId(id);
+    setSyncStatus(`Editando ficha de ${member.fullName}.`);
+    window.setTimeout(() => {
+      document.getElementById("member-form-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("member-full-name")?.focus();
+    }, 0);
   }
 
   function cancelMemberEdit() {
@@ -2359,7 +2366,7 @@ export default function Home() {
 
           {activeModule === "members" && (
             <section className="content-grid">
-              <article className="surface">
+              <article className={editingMemberId ? "surface editing-surface" : "surface"} id="member-form-panel">
                 <div className="panel-heading">
                   <h2>{editingMemberId ? "Editar ficha" : "Ficha completa"}</h2>
                   <span>{editingMemberId ? "Atualizando cadastro" : "Membro ou visitante"}</span>
@@ -2377,6 +2384,7 @@ export default function Home() {
                   <label className="full">
                     Nome completo
                     <input
+                      id="member-full-name"
                       onChange={(event) => setMemberForm((form) => ({ ...form, fullName: event.target.value }))}
                       placeholder="Ex.: Maria Oliveira"
                       value={memberForm.fullName}
