@@ -51,8 +51,8 @@ export async function POST(request: Request) {
     email,
     password,
     email_confirm: true,
-    user_metadata: {
-      name,
+    user_metadata: { name },
+    app_metadata: {
       role: payload.role ?? "Lider",
       status: payload.status ?? "Ativo",
       created_by: sessionData.user.id,

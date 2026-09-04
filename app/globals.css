@@ -864,6 +864,20 @@ button:disabled {
   padding: 12px;
 }
 
+button.data-row {
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+button.data-row:hover,
+button.data-row.active {
+  border-color: rgba(53, 214, 255, 0.72);
+  box-shadow: 0 0 0 1px rgba(53, 214, 255, 0.18);
+}
+
 .data-row strong,
 .data-row small,
 .mural-card strong,
