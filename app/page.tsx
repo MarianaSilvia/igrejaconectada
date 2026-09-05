@@ -85,6 +85,8 @@ type AccessUser = {
   status: "Ativo" | "Pendente" | "Bloqueado";
 };
 
+type AccessRole = AccessUser["role"];
+
 type AccessUserForm = Omit<AccessUser, "id"> & {
   password: string;
 };
@@ -233,6 +235,18 @@ const modules: { key: ModuleKey; label: string; short: string }[] = [
   { key: "discipleship", label: "Discipulado", short: "Discipulado" },
   { key: "reports", label: "Relatorios", short: "Relatorios" },
   { key: "settings", label: "Configuracoes", short: "Config" },
+];
+
+const memberVisibleModuleKeys: ModuleKey[] = [
+  "overview",
+  "members",
+  "kids",
+  "events",
+  "notices",
+  "mural",
+  "pastoral",
+  "school",
+  "discipleship",
 ];
 
 const statusFlow: CareStatus[] = ["Pendente", "Em analise", "Agendado", "Concluido"];
@@ -803,6 +817,24 @@ function normalizeWhatsappPhone(value: string) {
   return `55${digits}`;
 }
 
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function comparablePhone(value: string) {
+  return value.replace(/\D/g, "").replace(/^55/, "");
+}
+
+function accessRoleFromMetadata(value: unknown): AccessRole {
+  if (value === "Administrador" || value === "ADMIN" || value === "admin") return "Administrador";
+  if (value === "Lider" || value === "LEADER" || value === "leader") return "Lider";
+  return "Membro";
+}
+
+function isAdministrativeRole(role: AccessRole) {
+  return role === "Administrador" || role === "Lider";
+}
+
 function messageFor(text: string, recipientName: string) {
   return text.replaceAll("{nome}", recipientName).replaceAll("{igreja}", "Igreja Conectada");
 }
@@ -1106,6 +1138,9 @@ export default function Home() {
   const saveTimerRef = useRef<number | null>(null);
   const lastSavedPayloadRef = useRef("");
   const [hasSession, setHasSession] = useState(false);
+  const [sessionUserId, setSessionUserId] = useState("");
+  const [sessionEmail, setSessionEmail] = useState("");
+  const [sessionRole, setSessionRole] = useState<AccessRole>("Administrador");
   const [accessMode, setAccessMode] = useState<AccessMode>("login");
   const [accessMessage, setAccessMessage] = useState("");
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
@@ -1307,10 +1342,59 @@ export default function Home() {
       });
   }, []);
 
-  const selectedRequest = data.careRequests.find((request) => request.id === selectedRequestId) ?? data.careRequests[0];
+  const normalizedSessionEmail = normalizeEmail(sessionEmail);
+  const currentAccessUser = useMemo(
+    () => data.users.find((user) => normalizeEmail(user.email) === normalizedSessionEmail),
+    [data.users, normalizedSessionEmail],
+  );
+  const currentAccessRole = currentAccessUser?.role ?? sessionRole;
+  const isAdminView = isAdministrativeRole(currentAccessRole);
+  const currentMember = useMemo(
+    () =>
+      data.members.find(
+        (member) =>
+          (sessionUserId && member.authUserId === sessionUserId) ||
+          (normalizedSessionEmail && normalizeEmail(member.email) === normalizedSessionEmail),
+      ),
+    [data.members, normalizedSessionEmail, sessionUserId],
+  );
+  const currentMemberPhone = comparablePhone(currentMember?.phone ?? "");
+  const visibleModules = useMemo(
+    () => (isAdminView ? modules : modules.filter((module) => memberVisibleModuleKeys.includes(module.key))),
+    [isAdminView],
+  );
+  const visibleMembers = useMemo(
+    () => (isAdminView ? data.members : currentMember ? [currentMember] : []),
+    [currentMember, data.members, isAdminView],
+  );
+  const visibleKids = useMemo(
+    () =>
+      isAdminView
+        ? data.kids
+        : data.kids.filter((kid) => {
+            const guardianEmailMatches = normalizedSessionEmail && normalizeEmail(kid.guardianEmail) === normalizedSessionEmail;
+            const guardianPhoneMatches = currentMemberPhone && comparablePhone(kid.guardianPhone) === currentMemberPhone;
+            return guardianEmailMatches || guardianPhoneMatches;
+          }),
+    [currentMemberPhone, data.kids, isAdminView, normalizedSessionEmail],
+  );
+  const visibleCareRequests = useMemo(
+    () =>
+      isAdminView
+        ? data.careRequests
+        : data.careRequests.filter((request) => {
+            const requestPhoneMatches = currentMemberPhone && comparablePhone(request.phone) === currentMemberPhone;
+            const requestMemberMatches = currentMember && normalizeSearchText(request.member) === normalizeSearchText(currentMember.fullName);
+            return requestPhoneMatches || requestMemberMatches;
+          }),
+    [currentMember, currentMemberPhone, data.careRequests, isAdminView],
+  );
+  const selectedRequest = visibleCareRequests.find((request) => request.id === selectedRequestId) ?? visibleCareRequests[0];
+  const profileName = currentMember?.fullName ?? currentAccessUser?.name ?? (sessionEmail ? sessionEmail.split("@")[0] : "Usuario");
+  const profileInitial = profileName.slice(0, 1).toUpperCase() || "U";
 
   const notifications = useMemo(() => {
-    const pendingCare = data.careRequests
+    const pendingCare = visibleCareRequests
       .filter((request) => request.status !== "Concluido")
       .map((request) => ({
         id: `care-${request.id}-${request.status}`,
@@ -1336,29 +1420,30 @@ export default function Home() {
       }));
 
     return [...pendingCare, ...upcomingEvents, ...publishedMural];
-  }, [data.careRequests, data.events, data.mural]);
+  }, [data.events, data.mural, visibleCareRequests]);
 
   const unreadCount = notifications.filter((notice) => !data.notificationReadIds.includes(notice.id)).length;
   const activeNotices = data.notices.filter((notice) => !isExpiredDate(notice.expiresAt));
   const monthlyBirthdays = data.members.filter((member) => isBirthdayThisMonth(member.birthDate));
   const weeklyBirthdays = monthlyBirthdays.filter((member) => isBirthdayThisWeek(member.birthDate));
   const monthlyKidsBirthdays = data.kids.filter((kid) => isBirthdayThisMonth(kid.birthDate));
-  const canCreateUser = Boolean(userForm.name.trim() && userForm.email.trim() && userForm.password.trim().length >= 6);
-  const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim());
+  const canCreateUser = isAdminView && Boolean(userForm.name.trim() && userForm.email.trim() && userForm.password.trim().length >= 6);
+  const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim()) && (isAdminView || editingMemberId === currentMember?.id);
   const canSaveMemberAccess = Boolean(
-    memberCredentialForm.memberId &&
+    isAdminView &&
+      memberCredentialForm.memberId &&
       memberCredentialForm.email.trim() &&
       (!memberCredentialForm.password.trim() || memberCredentialForm.password.trim().length >= 6),
   );
-  const canCreateKid = Boolean(kidForm.childName.trim() && kidForm.guardianName.trim() && kidForm.guardianPhone.trim());
-  const canCreateMuralItem = Boolean(muralForm.title.trim() && muralForm.expiresAt);
-  const canCreateSchoolNotice = Boolean(schoolNoticeForm.classId && schoolNoticeForm.title.trim() && schoolNoticeForm.body.trim());
+  const canCreateKid = isAdminView && Boolean(kidForm.childName.trim() && kidForm.guardianName.trim() && kidForm.guardianPhone.trim());
+  const canCreateMuralItem = isAdminView && Boolean(muralForm.title.trim() && muralForm.expiresAt);
+  const canCreateSchoolNotice = isAdminView && Boolean(schoolNoticeForm.classId && schoolNoticeForm.title.trim() && schoolNoticeForm.body.trim());
   const canCreateDiscipleshipNotice = Boolean(
-    discipleshipNoticeForm.classId && discipleshipNoticeForm.title.trim() && discipleshipNoticeForm.body.trim(),
+    isAdminView && discipleshipNoticeForm.classId && discipleshipNoticeForm.title.trim() && discipleshipNoticeForm.body.trim(),
   );
-  const canCreateEvent = Boolean(eventForm.title.trim() && eventForm.date);
-  const canCreateNotice = Boolean(noticeForm.title.trim() && noticeForm.body.trim());
-  const canCreateMinistry = Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
+  const canCreateEvent = isAdminView && Boolean(eventForm.title.trim() && eventForm.date);
+  const canCreateNotice = isAdminView && Boolean(noticeForm.title.trim() && noticeForm.body.trim());
+  const canCreateMinistry = isAdminView && Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
   const availableMessageTemplates = remoteMessageTemplates.length ? remoteMessageTemplates : messageTemplates;
   const messageRecipients = useMemo<MessageRecipient[]>(() => {
     const memberRecipients = data.members
@@ -1429,6 +1514,8 @@ export default function Home() {
   }
 
   function openClassWhatsapp(classRecord: SchoolClass, title: string, body: string, area: "EBD" | "Discipulado") {
+    if (!requireAdministrativeAccess(`enviar WhatsApp da ${area}`)) return;
+
     const recipients = classWhatsappRecipients(classRecord, area);
     const className = classRecord.name;
     const text = classNoticeWhatsappText(className, title, body);
@@ -1484,12 +1571,22 @@ export default function Home() {
     }));
   }
 
+  function requireAdministrativeAccess(action: string) {
+    if (isAdminView) return true;
+    setSyncStatus(`Acesso de membro: ${action} esta disponivel apenas para administradores e lideres.`);
+    return false;
+  }
+
   function createCareRequest() {
-    if (!careForm.member.trim() || !careForm.summary.trim()) return;
+    const memberName = isAdminView ? careForm.member.trim() : currentMember?.fullName ?? profileName;
+    const memberPhone = isAdminView ? careForm.phone.trim() : currentMember?.phone ?? careForm.phone.trim();
+    if (!memberName || !careForm.summary.trim()) return;
 
     const now = new Date().toISOString();
     const request: CareRequest = {
       ...careForm,
+      member: memberName,
+      phone: memberPhone,
       id: uid("care"),
       createdAt: now,
       updatedAt: now,
@@ -1501,11 +1598,13 @@ export default function Home() {
       audit: [{ id: uid("audit"), action: `Pedido pastoral criado para ${request.member}`, when: now }, ...current.audit],
     }));
     setSelectedRequestId(request.id);
-    setCareForm(blankCare);
+    setCareForm(isAdminView ? blankCare : { ...blankCare, member: memberName, phone: memberPhone });
     setActiveModule("pastoral");
   }
 
   function updateCareRequest(id: string, patch: Partial<CareRequest>, action: string) {
+    if (!requireAdministrativeAccess(action)) return;
+
     const now = new Date().toISOString();
     setData((current) => ({
       ...current,
@@ -1517,6 +1616,8 @@ export default function Home() {
   }
 
   function toggleMural(id: string, field: "published" | "featured") {
+    if (!requireAdministrativeAccess("alterar mural")) return;
+
     setData((current) => ({
       ...current,
       mural: current.mural.map((item) => (item.id === id ? { ...item, [field]: !item[field] } : item)),
@@ -1525,6 +1626,7 @@ export default function Home() {
   }
 
   async function createUser() {
+    if (!requireAdministrativeAccess("criar usuarios")) return;
     if (!userForm.name.trim() || !userForm.email.trim()) return;
 
     const now = new Date().toISOString();
@@ -1574,6 +1676,7 @@ export default function Home() {
   }
 
   async function updateAccessUserStatus(user: AccessUser, status: AccessUser["status"]) {
+    if (!requireAdministrativeAccess("alterar acessos")) return;
     const now = new Date().toISOString();
 
     if (isSupabaseConfigured()) {
@@ -1618,6 +1721,7 @@ export default function Home() {
   }
 
   async function deleteAccessUser(user: AccessUser) {
+    if (!requireAdministrativeAccess("excluir acessos")) return;
     if (!window.confirm(`Excluir definitivamente o acesso de ${user.name}?`)) return;
 
     const now = new Date().toISOString();
@@ -1666,6 +1770,10 @@ export default function Home() {
 
   function createMember() {
     if (!memberForm.fullName.trim() || !memberForm.phone.trim()) return;
+    if (!isAdminView && editingMemberId !== currentMember?.id) {
+      setSyncStatus("Acesso de membro: voce pode atualizar apenas o seu proprio cadastro.");
+      return;
+    }
 
     const now = new Date().toISOString();
     const isEditing = Boolean(editingMemberId);
@@ -1691,6 +1799,11 @@ export default function Home() {
   }
 
   function editMember(member: MemberRecord) {
+    if (!isAdminView && member.id !== currentMember?.id) {
+      setSyncStatus("Acesso de membro: somente o proprio cadastro pode ser editado.");
+      return;
+    }
+
     const { id, ...form } = member;
     setMemberForm(form);
     setEditingMemberId(id);
@@ -1707,6 +1820,7 @@ export default function Home() {
   }
 
   function deleteMember(member: MemberRecord) {
+    if (!requireAdministrativeAccess("excluir fichas de membros")) return;
     if (!window.confirm(`Excluir a ficha de ${member.fullName}?`)) return;
 
     setData((current) => ({
@@ -1725,6 +1839,7 @@ export default function Home() {
   }
 
   function toggleMemberCredentials(member: MemberRecord) {
+    if (!requireAdministrativeAccess("alterar login e senha de membros")) return;
     setMemberCredentialForm((form) =>
       form.memberId === member.id
         ? blankMemberCredential
@@ -1747,6 +1862,7 @@ export default function Home() {
   }
 
   async function saveMemberAccess(member: MemberRecord) {
+    if (!requireAdministrativeAccess("criar ou alterar login de membros")) return;
     if (!canSaveMemberAccess) return;
 
     const email = memberCredentialForm.email.trim().toLowerCase();
@@ -1816,6 +1932,7 @@ export default function Home() {
   }
 
   function createKid() {
+    if (!requireAdministrativeAccess("cadastrar Kids")) return;
     if (!canCreateKid) return;
 
     const now = new Date().toISOString();
@@ -1831,6 +1948,7 @@ export default function Home() {
   }
 
   function deleteKid(kid: KidRecord) {
+    if (!requireAdministrativeAccess("excluir cadastro Kids")) return;
     if (!window.confirm(`Excluir o cadastro Kids de ${kid.childName}?`)) return;
 
     setData((current) => ({
@@ -1842,6 +1960,7 @@ export default function Home() {
   }
 
   function createMuralItem() {
+    if (!requireAdministrativeAccess("criar itens do mural")) return;
     if (!muralForm.title.trim() || !muralForm.expiresAt) return;
 
     const now = new Date().toISOString();
@@ -1857,6 +1976,7 @@ export default function Home() {
   }
 
   function deleteMuralItem(item: MuralItem) {
+    if (!requireAdministrativeAccess("excluir itens do mural")) return;
     if (!window.confirm(`Excluir o item do mural "${item.title}"?`)) return;
 
     setData((current) => ({
@@ -1867,6 +1987,7 @@ export default function Home() {
   }
 
   function createEvent() {
+    if (!requireAdministrativeAccess("adicionar eventos")) return;
     if (!canCreateEvent) return;
 
     const now = new Date().toISOString();
@@ -1881,6 +2002,7 @@ export default function Home() {
   }
 
   function updateEventStatus(event: ChurchEvent, status: ChurchEvent["status"]) {
+    if (!requireAdministrativeAccess("alterar eventos")) return;
     setData((current) => ({
       ...current,
       events: current.events.map((item) => (item.id === event.id ? { ...item, status } : item)),
@@ -1889,6 +2011,7 @@ export default function Home() {
   }
 
   function deleteEvent(event: ChurchEvent) {
+    if (!requireAdministrativeAccess("excluir eventos")) return;
     if (!window.confirm(`Excluir o evento "${event.title}" da agenda?`)) return;
 
     setData((current) => ({
@@ -1899,6 +2022,7 @@ export default function Home() {
   }
 
   function createNotice() {
+    if (!requireAdministrativeAccess("criar comunicados")) return;
     if (!canCreateNotice) return;
 
     const now = new Date().toISOString();
@@ -1914,6 +2038,7 @@ export default function Home() {
   }
 
   function deleteNotice(notice: Notice) {
+    if (!requireAdministrativeAccess("excluir comunicados")) return;
     if (!window.confirm(`Excluir o aviso "${notice.title}"?`)) return;
 
     setData((current) => ({
@@ -1924,6 +2049,7 @@ export default function Home() {
   }
 
   function createMinistry() {
+    if (!requireAdministrativeAccess("criar ministerios")) return;
     if (!canCreateMinistry) return;
 
     const now = new Date().toISOString();
@@ -1938,6 +2064,7 @@ export default function Home() {
   }
 
   function createSchoolNotice() {
+    if (!requireAdministrativeAccess("enviar avisos da EBD")) return;
     if (!canCreateSchoolNotice) return;
 
     const now = new Date().toISOString();
@@ -1973,6 +2100,7 @@ export default function Home() {
   }
 
   function createDiscipleshipNotice() {
+    if (!requireAdministrativeAccess("enviar avisos do discipulado")) return;
     if (!canCreateDiscipleshipNotice) return;
 
     const now = new Date().toISOString();
@@ -2076,6 +2204,9 @@ export default function Home() {
     const email = String(form.get("email") ?? "");
     const password = String(form.get("password") ?? "");
     const supabase = getSupabaseClient();
+    const loginEmail = normalizeEmail(email);
+    let resolvedUserId = "";
+    let resolvedRole: AccessRole = data.users.find((user) => normalizeEmail(user.email) === loginEmail)?.role ?? "Administrador";
 
     if (supabase) {
       const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -2089,10 +2220,17 @@ export default function Home() {
         setAccessMessage("Seu acesso ainda nao esta ativo. Fale com a administracao.");
         return;
       }
+      resolvedUserId = authData.user?.id ?? "";
+      resolvedRole =
+        data.users.find((user) => normalizeEmail(user.email) === normalizeEmail(authData.user?.email ?? loginEmail))?.role ??
+        accessRoleFromMetadata(authData.user?.app_metadata?.church_gp_role ?? authData.user?.app_metadata?.role);
       setRemoteStateReady(false);
       setSyncStatus("Sessao Supabase ativa. Novos dados serao sincronizados.");
     }
 
+    setSessionUserId(resolvedUserId);
+    setSessionEmail(loginEmail);
+    setSessionRole(resolvedRole);
     setHasSession(true);
   }
 
@@ -2100,6 +2238,9 @@ export default function Home() {
     const supabase = getSupabaseClient();
     if (supabase) await supabase.auth.signOut();
     setHasSession(false);
+    setSessionUserId("");
+    setSessionEmail("");
+    setSessionRole("Administrador");
     setNotificationsOpen(false);
     setActiveModule("overview");
     setAccessMode("login");
@@ -2115,6 +2256,8 @@ export default function Home() {
   }
 
   function openBulkWhatsapp() {
+    if (!requireAdministrativeAccess("enviar mensagens em massa")) return;
+
     messageRecipients.slice(0, 12).forEach((recipient, index) => {
       window.setTimeout(() => {
         window.open(whatsappUrl(recipient.phone, messageText, recipient.name), "_blank", "noopener,noreferrer");
@@ -2277,12 +2420,12 @@ export default function Home() {
             <div className="brand-mark">IG</div>
             <div>
               <p className="brand-name">Igreja Conectada</p>
-              <p className="brand-caption">Painel administrativo</p>
+              <p className="brand-caption">{isAdminView ? "Painel administrativo" : "Area do membro"}</p>
             </div>
           </div>
 
           <nav className="module-list" aria-label="Modulos do sistema">
-            {modules.map((module) => (
+            {visibleModules.map((module) => (
               <button
                 className={activeModule === module.key ? "module-button active" : "module-button"}
                 key={module.key}
@@ -2345,11 +2488,11 @@ export default function Home() {
           <header className="topbar">
             <div>
               <p className="eyebrow">Quarta-feira, 2 de setembro</p>
-              <h1>{modules.find((module) => module.key === activeModule)?.label}</h1>
+              <h1>{visibleModules.find((module) => module.key === activeModule)?.label}</h1>
               <label className="mobile-module-picker">
                 Ir para modulo
                 <select onChange={(event) => setActiveModule(event.target.value as ModuleKey)} value={activeModule}>
-                  {modules.map((module) => (
+                  {visibleModules.map((module) => (
                     <option key={module.key} value={module.key}>
                       {module.label}
                     </option>
@@ -2373,10 +2516,10 @@ export default function Home() {
                 {unreadCount > 0 && <strong>{unreadCount}</strong>}
               </button>
               <div className="profile-pill">
-                <span>M</span>
+                <span>{profileInitial}</span>
                 <div>
-                  <strong>marianabsilva1987</strong>
-                  <small>Administrador</small>
+                  <strong>{profileName}</strong>
+                  <small>{currentAccessRole}</small>
                 </div>
               </div>
               <button className="logout-button" onClick={handleLogout} type="button">
@@ -2416,7 +2559,7 @@ export default function Home() {
             )}
           </header>
 
-          {activeModule === "overview" && (
+          {activeModule === "overview" && (isAdminView ? (
             <section className="content-grid">
               <div className="hero-panel">
                 <p className="eyebrow">Painel inteligente da igreja</p>
@@ -2487,30 +2630,113 @@ export default function Home() {
                 </div>
               </article>
             </section>
-          )}
+          ) : (
+            <section className="content-grid">
+              <div className="hero-panel">
+                <p className="eyebrow">Area do membro</p>
+                <h2>Bem-vindo, {profileName}.</h2>
+                <p>Veja sua ficha, acompanhe a agenda e envie pedidos de atendimento pastoral ou oracao.</p>
+                <div className="hero-actions">
+                  <button onClick={() => setActiveModule("members")} type="button">
+                    Meu cadastro
+                  </button>
+                  <button className="secondary" onClick={() => setActiveModule("pastoral")} type="button">
+                    Novo pedido
+                  </button>
+                </div>
+              </div>
 
-          {activeModule === "pastoral" && selectedRequest && (
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Minha ficha</h2>
+                  <span>{currentMember ? "Cadastro localizado" : "Sem vinculo"}</span>
+                </div>
+                {currentMember ? (
+                  <div className="data-row member-row">
+                    <div className="member-avatar">
+                      {currentMember.photoDataUrl ? <img alt="" src={currentMember.photoDataUrl} /> : currentMember.fullName.slice(0, 1)}
+                    </div>
+                    <div>
+                      <strong>{currentMember.fullName}</strong>
+                      <small>{currentMember.memberType} - {currentMember.status}</small>
+                      <small>{currentMember.phone} - {currentMember.email || "E-mail nao informado"}</small>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="empty-state">Nao encontramos uma ficha vinculada a este login. Fale com a secretaria para vincular seu cadastro.</p>
+                )}
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Proximos encontros</h2>
+                  <button onClick={() => setActiveModule("events")} type="button">
+                    Ver agenda
+                  </button>
+                </div>
+                <div className="row-list">
+                  {data.events.map((event) => (
+                    <div className="data-row" key={event.id}>
+                      <span className="date-box">{formatDate(event.date)}</span>
+                      <div>
+                        <strong>{event.title}</strong>
+                        <small>
+                          {event.time || "Sem horario"} - {event.ministry} - {event.location || "Local nao informado"}
+                        </small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Meus pedidos</h2>
+                  <span>{visibleCareRequests.length} registros</span>
+                </div>
+                <div className="row-list">
+                  {visibleCareRequests.length ? (
+                    visibleCareRequests.map((request) => (
+                      <div className="data-row" key={request.id}>
+                        <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>{request.status}</span>
+                        <div>
+                          <strong>{request.category}</strong>
+                          <small>{request.summary}</small>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="empty-state">Nenhum pedido enviado por este acesso.</p>
+                  )}
+                </div>
+              </article>
+            </section>
+          ))}
+
+          {activeModule === "pastoral" && (
             <section className="pastoral-layout">
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>Novo pedido pastoral</h2>
-                  <span>Fluxo real</span>
+                  <h2>{isAdminView ? "Novo pedido pastoral" : "Solicitar atendimento ou oracao"}</h2>
+                  <span>{isAdminView ? "Fluxo real" : "Pedido pessoal"}</span>
                 </div>
                 <div className="form-grid">
                   <label>
                     Nome do membro
                     <input
+                      disabled={!isAdminView}
                       onChange={(event) => setCareForm((form) => ({ ...form, member: event.target.value }))}
                       placeholder="Ex.: Maria Oliveira"
-                      value={careForm.member}
+                      value={isAdminView ? careForm.member : currentMember?.fullName ?? profileName}
                     />
                   </label>
                   <label>
                     Telefone
                     <input
+                      disabled={!isAdminView}
                       onChange={(event) => setCareForm((form) => ({ ...form, phone: event.target.value }))}
                       placeholder="(00) 00000-0000"
-                      value={careForm.phone}
+                      value={isAdminView ? careForm.phone : currentMember?.phone ?? careForm.phone}
                     />
                   </label>
                   <label>
@@ -2535,20 +2761,20 @@ export default function Home() {
                     />
                   </label>
                   <button className="primary-action" onClick={createCareRequest} type="button">
-                    Criar atendimento
+                    {isAdminView ? "Criar atendimento" : "Enviar pedido"}
                   </button>
                 </div>
               </article>
 
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>Fila pastoral</h2>
-                  <span>{data.careRequests.length} registros</span>
+                  <h2>{isAdminView ? "Fila pastoral" : "Meus pedidos"}</h2>
+                  <span>{visibleCareRequests.length} registros</span>
                 </div>
                 <div className="care-list">
-                  {data.careRequests.map((request) => (
+                  {visibleCareRequests.map((request) => (
                     <button
-                      className={request.id === selectedRequest.id ? "care-list-item selected" : "care-list-item"}
+                      className={request.id === selectedRequest?.id ? "care-list-item selected" : "care-list-item"}
                       key={request.id}
                       onClick={() => setSelectedRequestId(request.id)}
                       type="button"
@@ -2560,10 +2786,11 @@ export default function Home() {
                       <small>{suggestedNextStep(request)}</small>
                     </button>
                   ))}
+                  {!visibleCareRequests.length && <p className="empty-state">Nenhum pedido registrado para este acesso.</p>}
                 </div>
               </article>
 
-              <article className="surface care-detail">
+              {isAdminView && selectedRequest && <article className="surface care-detail">
                 <div className="panel-heading">
                   <h2>{selectedRequest.member}</h2>
                   <span>{selectedRequest.category}</span>
@@ -2647,13 +2874,13 @@ export default function Home() {
                     Concluir
                   </button>
                 </div>
-              </article>
+              </article>}
             </section>
           )}
 
           {activeModule === "mural" && (
             <section className="content-grid">
-              <article className="surface">
+              {isAdminView && <article className="surface">
                 <div className="panel-heading">
                   <h2>Novo item do mural</h2>
                   <span>Publicacao</span>
@@ -2731,15 +2958,15 @@ export default function Home() {
                     Adicionar ao mural
                   </button>
                 </div>
-              </article>
+              </article>}
 
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>Administrar mural</h2>
+                  <h2>{isAdminView ? "Administrar mural" : "Mural da igreja"}</h2>
                   <span>{data.mural.filter((item) => item.published).length} publicados</span>
                 </div>
                 <div className="table-like">
-                  {data.mural.map((item) => (
+                  {(isAdminView ? data.mural : data.mural.filter((item) => item.published)).map((item) => (
                     <div className="table-row" key={item.id}>
                       <div>
                         {(item.imageDataUrl || item.bannerUrl) && (
@@ -2755,17 +2982,17 @@ export default function Home() {
                           </a>
                         )}
                       </div>
-                      <label className="switch">
+                      {isAdminView && <label className="switch">
                         Publicado
                         <input checked={item.published} onChange={() => toggleMural(item.id, "published")} type="checkbox" />
-                      </label>
-                      <label className="switch">
+                      </label>}
+                      {isAdminView && <label className="switch">
                         Destaque
                         <input checked={item.featured} onChange={() => toggleMural(item.id, "featured")} type="checkbox" />
-                      </label>
-                      <button className="danger-action" onClick={() => deleteMuralItem(item)} type="button">
+                      </label>}
+                      {isAdminView && <button className="danger-action" onClick={() => deleteMuralItem(item)} type="button">
                         Excluir
-                      </button>
+                      </button>}
                     </div>
                   ))}
                 </div>
@@ -2775,7 +3002,7 @@ export default function Home() {
 
           {activeModule === "events" && (
             <section className="content-grid">
-              <article className="surface">
+              {isAdminView && <article className="surface">
                 <div className="panel-heading">
                   <h2>Novo evento</h2>
                   <span>Agenda</span>
@@ -2833,7 +3060,7 @@ export default function Home() {
                     Adicionar evento
                   </button>
                 </div>
-              </article>
+              </article>}
 
               <article className="surface">
                 <div className="panel-heading">
@@ -2851,7 +3078,7 @@ export default function Home() {
                         </small>
                         <small>{event.location || "Local nao informado"} - {event.responsible || "Sem responsavel"}</small>
                       </div>
-                      <div className="row-actions">
+                      {isAdminView && <div className="row-actions">
                         <button
                           className={event.status === "Concluido" ? "secondary" : "danger-action"}
                           onClick={() => updateEventStatus(event, event.status === "Concluido" ? "Programado" : "Concluido")}
@@ -2862,7 +3089,7 @@ export default function Home() {
                         <button className="danger-action" onClick={() => deleteEvent(event)} type="button">
                           Excluir
                         </button>
-                      </div>
+                      </div>}
                     </div>
                   ))}
                 </div>
@@ -2872,7 +3099,7 @@ export default function Home() {
 
           {activeModule === "notices" && (
             <section className="content-grid">
-              <article className="surface">
+              {isAdminView && <article className="surface">
                 <div className="panel-heading">
                   <h2>Novo comunicado</h2>
                   <span>Avisos</span>
@@ -2945,7 +3172,7 @@ export default function Home() {
                     Criar comunicado
                   </button>
                 </div>
-              </article>
+              </article>}
 
               <article className="surface">
                 <div className="panel-heading">
@@ -2964,11 +3191,11 @@ export default function Home() {
                         <small>Expira em {formatDate(notice.expiresAt)} - {notice.retentionDays} dias no ar</small>
                         <small>{notice.body}</small>
                       </div>
-                      <div className="row-actions">
+                      {isAdminView && <div className="row-actions">
                         <button className="danger-action" onClick={() => deleteNotice(notice)} type="button">
                           Excluir
                         </button>
-                      </div>
+                      </div>}
                     </div>
                   ))}
                 </div>
@@ -3068,10 +3295,11 @@ export default function Home() {
 
           {activeModule === "members" && (
             <section className="content-grid">
+              {isAdminView || editingMemberId === currentMember?.id ? (
               <article className={editingMemberId ? "surface editing-surface" : "surface"} id="member-form-panel">
                 <div className="panel-heading">
                   <h2>{editingMemberId ? "Editar ficha" : "Ficha completa"}</h2>
-                  <span>{editingMemberId ? "Atualizando cadastro" : "Membro ou visitante"}</span>
+                  <span>{isAdminView ? (editingMemberId ? "Atualizando cadastro" : "Membro ou visitante") : "Meu cadastro"}</span>
                 </div>
                 <div className="form-grid">
                   <div className="photo-uploader full">
@@ -3109,7 +3337,7 @@ export default function Home() {
                       value={memberForm.email}
                     />
                   </label>
-                  <label>
+                  {isAdminView && <label>
                     Tipo de pessoa
                     <select
                       onChange={(event) => setMemberForm((form) => ({ ...form, memberType: event.target.value as MemberRecord["memberType"] }))}
@@ -3120,8 +3348,8 @@ export default function Home() {
                       <option>Congregado</option>
                       <option>Lideranca</option>
                     </select>
-                  </label>
-                  <label>
+                  </label>}
+                  {isAdminView && <label>
                     Status
                     <select onChange={(event) => setMemberForm((form) => ({ ...form, status: event.target.value as MemberRecord["status"] }))} value={memberForm.status}>
                       <option>Membro ativo</option>
@@ -3129,23 +3357,23 @@ export default function Home() {
                       <option>Novo convertido</option>
                       <option>Transferencia</option>
                     </select>
-                  </label>
-                  <label>
+                  </label>}
+                  {isAdminView && <label>
                     Funcao na igreja
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, role: event.target.value }))}
                       placeholder="Ex.: Professor EBD, obreiro, lider"
                       value={memberForm.role}
                     />
-                  </label>
-                  <label>
+                  </label>}
+                  {isAdminView && <label>
                     Ministerio
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, ministry: event.target.value }))}
                       placeholder="Ex.: Louvor"
                       value={memberForm.ministry}
                     />
-                  </label>
+                  </label>}
                   <label>
                     Classe EBD
                     <select onChange={(event) => setMemberForm((form) => ({ ...form, schoolClassId: event.target.value }))} value={memberForm.schoolClassId}>
@@ -3236,14 +3464,14 @@ export default function Home() {
                     />
                     Batizado no Espirito Santo
                   </label>
-                  <label className="full">
+                  {isAdminView && <label className="full">
                     Observacoes
                     <textarea
                       onChange={(event) => setMemberForm((form) => ({ ...form, notes: event.target.value }))}
                       placeholder="Historico, acompanhamento, restricoes ou observacoes pastorais"
                       value={memberForm.notes}
                     />
-                  </label>
+                  </label>}
                   <div className="form-actions full">
                     <button className="primary-action" disabled={!canCreateMember} onClick={createMember} type="button">
                       {editingMemberId ? "Atualizar ficha" : "Salvar ficha"}
@@ -3256,13 +3484,26 @@ export default function Home() {
                   </div>
                 </div>
               </article>
+              ) : (
+              <article className="surface" id="member-form-panel">
+                <div className="panel-heading">
+                  <h2>Meu cadastro</h2>
+                  <span>{currentMember ? "Visualizacao pessoal" : "Nao vinculado"}</span>
+                </div>
+                <p className="empty-state">
+                  {currentMember
+                    ? "Use o botao Editar ficha no seu cadastro para atualizar seus dados pessoais."
+                    : "Nao encontramos uma ficha vinculada a este login. Fale com a secretaria para revisar o acesso."}
+                </p>
+              </article>
+              )}
 
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>Membros cadastrados</h2>
-                  <span>{data.members.length} registros</span>
+                  <h2>{isAdminView ? "Membros cadastrados" : "Meu cadastro"}</h2>
+                  <span>{visibleMembers.length} registro{visibleMembers.length === 1 ? "" : "s"}</span>
                 </div>
-                <div className="birthday-grid">
+                {isAdminView && <div className="birthday-grid">
                   <div className="birthday-card">
                     <strong>Aniversariantes da semana</strong>
                     <span>{weeklyBirthdays.length}</span>
@@ -3278,12 +3519,12 @@ export default function Home() {
                     <small>
                       {monthlyBirthdays.length
                         ? monthlyBirthdays.map((member) => `${member.fullName} (${birthdayLabel(member.birthDate)})`).join(", ")
-                        : "Nenhum aniversario neste mes."}
+                      : "Nenhum aniversario neste mes."}
                     </small>
                   </div>
-                </div>
+                </div>}
                 <div className="row-list">
-                  {data.members.map((member) => {
+                  {visibleMembers.map((member) => {
                     const card = memberCardData(member);
                     const schoolClassName = classNameById(data.schoolClasses, member.schoolClassId);
                     const discipleshipClassName = classNameById(data.discipleshipClasses, member.discipleshipClassId);
@@ -3337,15 +3578,15 @@ export default function Home() {
                           <button className="secondary" onClick={() => editMember(member)} type="button">
                             Editar ficha
                           </button>
-                          <button className="secondary" onClick={() => toggleMemberCredentials(member)} type="button">
+                          {isAdminView && <button className="secondary" onClick={() => toggleMemberCredentials(member)} type="button">
                             Login e senha
-                          </button>
-                          <button className="danger-action" onClick={() => deleteMember(member)} type="button">
+                          </button>}
+                          {isAdminView && <button className="danger-action" onClick={() => deleteMember(member)} type="button">
                             Excluir ficha
-                          </button>
+                          </button>}
                         </div>
                       </div>
-                      {memberCredentialForm.memberId === member.id && (
+                      {isAdminView && memberCredentialForm.memberId === member.id && (
                         <div className="credential-panel">
                           <div className="panel-heading compact-heading">
                             <h2>Acesso do membro</h2>
@@ -3388,6 +3629,7 @@ export default function Home() {
                     </div>
                     );
                   })}
+                  {!visibleMembers.length && <p className="empty-state">Nenhuma ficha vinculada a este acesso.</p>}
                 </div>
               </article>
             </section>
@@ -3395,7 +3637,7 @@ export default function Home() {
 
           {activeModule === "kids" && (
             <section className="content-grid">
-              <article className="surface">
+              {isAdminView && <article className="surface">
                 <div className="panel-heading">
                   <h2>Cadastro Kids</h2>
                   <span>Crianca e responsavel</span>
@@ -3520,14 +3762,14 @@ export default function Home() {
                     Salvar Kids
                   </button>
                 </div>
-              </article>
+              </article>}
 
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>Kids cadastrados</h2>
-                  <span>{data.kids.length} criancas</span>
+                  <h2>{isAdminView ? "Kids cadastrados" : "Area Kids vinculada"}</h2>
+                  <span>{visibleKids.length} crianca{visibleKids.length === 1 ? "" : "s"}</span>
                 </div>
-                <div className="birthday-grid">
+                {isAdminView && <div className="birthday-grid">
                   <div className="birthday-card kids-birthday">
                     <strong>Aniversariantes Kids do mes</strong>
                     <span>{monthlyKidsBirthdays.length}</span>
@@ -3542,9 +3784,9 @@ export default function Home() {
                     <span>{new Set(data.kids.map((kid) => kid.guardianPhone)).size}</span>
                     <small>Contatos para check-in, retirada e avisos do departamento.</small>
                   </div>
-                </div>
+                </div>}
                 <div className="row-list">
-                  {data.kids.map((kid) => {
+                  {visibleKids.map((kid) => {
                     const card = kidCardData(kid);
 
                     return (
@@ -3590,14 +3832,15 @@ export default function Home() {
                           <button className="secondary" onClick={() => { void saveCardExportToSupabase(card, "image_svg"); downloadDigitalCardImage(card); }} type="button">
                             Baixar imagem
                           </button>
-                          <button className="danger-action" onClick={() => deleteKid(kid)} type="button">
+                          {isAdminView && <button className="danger-action" onClick={() => deleteKid(kid)} type="button">
                             Excluir cadastro
-                          </button>
+                          </button>}
                         </div>
                       </div>
                     </div>
                     );
                   })}
+                  {!visibleKids.length && <p className="empty-state">Nenhum cadastro Kids vinculado a este acesso.</p>}
                 </div>
               </article>
             </section>
@@ -3703,7 +3946,7 @@ export default function Home() {
 
           {activeModule === "school" && (
             <section className="content-grid">
-              <article className="surface">
+              {isAdminView && <article className="surface">
                 <div className="panel-heading">
                   <h2>Novo aviso da EBD</h2>
                   <span>Por classe</span>
@@ -3753,7 +3996,7 @@ export default function Home() {
                     Enviar via WhatsApp
                   </button>
                 </div>
-              </article>
+              </article>}
 
               <article className="surface">
                 <div className="panel-heading">
@@ -3767,7 +4010,7 @@ export default function Home() {
                       <div>
                         <strong>{schoolClass.name}</strong>
                         <small>Professor: {schoolClass.teacher} - Proxima aula: {schoolClass.nextLesson}</small>
-                        <small>{classWhatsappRecipients(schoolClass, "EBD").length} contatos de WhatsApp encontrados</small>
+                        {isAdminView && <small>{classWhatsappRecipients(schoolClass, "EBD").length} contatos de WhatsApp encontrados</small>}
                         <div className="notice-stack">
                           {schoolClass.notices.length === 0 ? (
                             <small>Nenhum aviso enviado para esta classe.</small>
@@ -3789,7 +4032,7 @@ export default function Home() {
 
           {activeModule === "discipleship" && (
             <section className="content-grid">
-              <article className="surface">
+              {isAdminView && <article className="surface">
                 <div className="panel-heading">
                   <h2>Novo aviso do Discipulado</h2>
                   <span>Por classe</span>
@@ -3839,7 +4082,7 @@ export default function Home() {
                     Enviar via WhatsApp
                   </button>
                 </div>
-              </article>
+              </article>}
 
               <article className="surface">
                 <div className="panel-heading">
@@ -3853,7 +4096,7 @@ export default function Home() {
                       <div>
                         <strong>{discipleshipClass.name}</strong>
                         <small>Professor: {discipleshipClass.teacher} - Proxima aula: {discipleshipClass.nextLesson}</small>
-                        <small>{classWhatsappRecipients(discipleshipClass, "Discipulado").length} contatos de WhatsApp encontrados</small>
+                        {isAdminView && <small>{classWhatsappRecipients(discipleshipClass, "Discipulado").length} contatos de WhatsApp encontrados</small>}
                         <div className="notice-stack">
                           {discipleshipClass.notices.length === 0 ? (
                             <small>Nenhum aviso enviado para esta classe.</small>
