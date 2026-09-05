@@ -952,6 +952,20 @@ button.data-row.active {
   padding: 14px;
 }
 
+.mural-card-media {
+  aspect-ratio: 16 / 8;
+  background: rgba(7, 17, 31, 0.62);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.mural-card-media img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
 .mural-card.featured {
   border-color: rgba(241, 199, 91, 0.56);
   box-shadow: inset 4px 0 0 var(--gold);
@@ -1246,6 +1260,13 @@ textarea:focus {
 .mural-preview {
   height: 88px;
   width: 88px;
+}
+
+.form-hint {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: none;
 }
 
 .mural-media {

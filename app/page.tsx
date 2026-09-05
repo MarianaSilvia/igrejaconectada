@@ -71,6 +71,11 @@ type MuralItem = {
   socialUrl: string;
 };
 
+type MuralImageResult = {
+  dataUrl: string;
+  message: string;
+};
+
 type AccessUser = {
   id: string;
   name: string;
@@ -922,6 +927,63 @@ function normalizeMuralItem(item: Partial<MuralItem>): MuralItem {
   };
 }
 
+function readImageFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Imagem invalida."));
+    };
+    reader.onerror = () => reject(new Error("Nao foi possivel ler a imagem."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(dataUrl: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Nao foi possivel processar a imagem."));
+    image.src = dataUrl;
+  });
+}
+
+async function optimizeMuralImage(file: File): Promise<MuralImageResult> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Selecione um arquivo de imagem valido.");
+  }
+
+  const originalDataUrl = await readImageFileAsDataUrl(file);
+  const image = await loadImage(originalDataUrl);
+  const maxSide = 1000;
+  const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Nao foi possivel preparar a imagem.");
+
+  context.drawImage(image, 0, 0, width, height);
+  const optimizedDataUrl = canvas.toDataURL("image/jpeg", 0.72);
+  const chosenDataUrl = optimizedDataUrl.length < originalDataUrl.length ? optimizedDataUrl : originalDataUrl;
+  const approxKb = Math.round((chosenDataUrl.length * 3) / 4 / 1024);
+
+  if (approxKb > 450) {
+    throw new Error("Imagem muito grande. Escolha uma imagem menor ou use um link de imagem.");
+  }
+
+  return {
+    dataUrl: chosenDataUrl,
+    message: `Imagem carregada e otimizada (${approxKb} KB).`,
+  };
+}
+
 function normalizeAppData(value: Partial<AppData>): AppData {
   return {
     ...initialData,
@@ -937,6 +999,15 @@ function normalizeAppData(value: Partial<AppData>): AppData {
     ministries: (value.ministries ?? initialData.ministries).map((ministry) => normalizeMinistry(ministry)),
     audit: value.audit ?? initialData.audit,
     notificationReadIds: value.notificationReadIds ?? initialData.notificationReadIds,
+  };
+}
+
+function createLocalBackupData(data: AppData): AppData {
+  return {
+    ...data,
+    mural: data.mural.map((item) => ({ ...item, imageDataUrl: "" })),
+    members: data.members.map((member) => ({ ...member, photoDataUrl: "" })),
+    kids: data.kids.map((kid) => ({ ...kid, photoDataUrl: "" })),
   };
 }
 
@@ -971,6 +1042,7 @@ export default function Home() {
   const [memberCredentialForm, setMemberCredentialForm] = useState(blankMemberCredential);
   const [kidForm, setKidForm] = useState(blankKid);
   const [muralForm, setMuralForm] = useState(blankMuralItem);
+  const [muralImageMessage, setMuralImageMessage] = useState("");
   const [schoolNoticeForm, setSchoolNoticeForm] = useState(blankSchoolNotice);
   const [selectedRequestId, setSelectedRequestId] = useState("care-1");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -988,7 +1060,18 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(storageKey, JSON.stringify(data));
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(data));
+    } catch {
+      let statusMessage = "O navegador esta sem espaco local. Os cadastros continuam sendo enviados para a base quando houver sessao ativa.";
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(createLocalBackupData(data)));
+        statusMessage = "Backup local salvo sem imagens pesadas. A base Supabase continua preservando os cadastros.";
+      } catch {
+        // Mantem a tela funcionando mesmo quando o navegador recusa qualquer novo backup local.
+      }
+      window.setTimeout(() => setSyncStatus(statusMessage), 0);
+    }
   }, [data]);
 
   useEffect(() => {
@@ -1223,11 +1306,26 @@ export default function Home() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") onReady(reader.result);
-    };
-    reader.readAsDataURL(file);
+    void readImageFileAsDataUrl(file).then(onReady).catch(() => {
+      setSyncStatus("Nao foi possivel carregar a imagem selecionada.");
+    });
+  }
+
+  async function readMuralImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setMuralImageMessage("Preparando imagem...");
+
+    try {
+      const result = await optimizeMuralImage(file);
+      setMuralForm((form) => ({ ...form, imageDataUrl: result.dataUrl }));
+      setMuralImageMessage(result.message);
+    } catch (error) {
+      setMuralForm((form) => ({ ...form, imageDataUrl: "" }));
+      setMuralImageMessage(error instanceof Error ? error.message : "Nao foi possivel carregar a imagem.");
+    }
   }
 
   function log(action: string) {
@@ -1606,6 +1704,7 @@ export default function Home() {
       audit: [{ id: uid("audit"), action: `Item publicado no mural: ${item.title}`, when: now }, ...current.audit].slice(0, 12),
     }));
     setMuralForm(blankMuralItem);
+    setMuralImageMessage("");
   }
 
   function deleteMuralItem(item: MuralItem) {
@@ -2191,6 +2290,11 @@ export default function Home() {
                     .filter((item) => item.published)
                     .map((item) => (
                       <div className={item.featured ? "mural-card featured" : "mural-card"} key={item.id}>
+                        {(item.imageDataUrl || item.bannerUrl) && (
+                          <div className="mural-card-media">
+                            <img alt="" src={item.imageDataUrl || item.bannerUrl} />
+                          </div>
+                        )}
                         <strong>{item.title}</strong>
                         <small>{item.category}</small>
                       </div>
@@ -2392,8 +2496,9 @@ export default function Home() {
                     </div>
                     <label>
                       Foto, imagem ou banner
-                      <input accept="image/*" onChange={(event) => readPhoto(event, (imageDataUrl) => setMuralForm((form) => ({ ...form, imageDataUrl })))} type="file" />
+                      <input accept="image/*" onChange={readMuralImage} type="file" />
                     </label>
+                    {muralImageMessage && <small className="form-hint">{muralImageMessage}</small>}
                   </div>
                   <label className="full">
                     Link da imagem ou banner
