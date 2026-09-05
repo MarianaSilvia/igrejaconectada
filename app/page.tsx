@@ -1154,6 +1154,97 @@ export default function Home() {
     setUserForm(blankUser);
   }
 
+  async function updateAccessUserStatus(user: AccessUser, status: AccessUser["status"]) {
+    const now = new Date().toISOString();
+
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        setSyncStatus("Entre com uma conta Supabase antes de alterar acessos.");
+        return;
+      }
+
+      const response = await fetch("/api/admin/access-users", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          currentEmail: user.email,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          status,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setSyncStatus(result.error ?? "Nao foi possivel alterar o acesso no Supabase.");
+        return;
+      }
+    }
+
+    setData((current) => ({
+      ...current,
+      users: current.users.map((item) => (item.id === user.id ? { ...item, status } : item)),
+      audit: [{ id: uid("audit"), action: `Acesso ${status.toLowerCase()}: ${user.name}`, when: now }, ...current.audit].slice(0, 12),
+    }));
+    setSyncStatus(status === "Bloqueado" ? `Acesso de ${user.name} cancelado.` : `Acesso de ${user.name} reativado.`);
+  }
+
+  async function deleteAccessUser(user: AccessUser) {
+    if (!window.confirm(`Excluir definitivamente o acesso de ${user.name}?`)) return;
+
+    const now = new Date().toISOString();
+
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        setSyncStatus("Entre com uma conta Supabase antes de excluir acessos.");
+        return;
+      }
+
+      const response = await fetch("/api/admin/access-users", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setSyncStatus(result.error ?? "Nao foi possivel excluir o acesso no Supabase.");
+        return;
+      }
+    }
+
+    setData((current) => ({
+      ...current,
+      users: current.users.filter((item) => item.id !== user.id),
+      members: current.members.map((member) =>
+        member.authUserId === user.id || member.email.toLowerCase() === user.email.toLowerCase()
+          ? { ...member, authUserId: "" }
+          : member,
+      ),
+      audit: [{ id: uid("audit"), action: `Acesso excluido: ${user.name}`, when: now }, ...current.audit].slice(0, 12),
+    }));
+    setSyncStatus(`Acesso de ${user.name} excluido.`);
+  }
+
   function createMember() {
     if (!memberForm.fullName.trim() || !memberForm.phone.trim()) return;
 
@@ -2351,11 +2442,23 @@ export default function Home() {
                 </div>
                 <div className="row-list">
                   {data.users.map((user) => (
-                    <div className="data-row" key={user.id}>
-                      <span className="bullet-mark" />
+                    <div className="data-row access-user-row" key={user.id}>
+                      <span className={user.status === "Bloqueado" ? "bullet-mark danger-mark" : "bullet-mark"} />
                       <div>
                         <strong>{user.name}</strong>
                         <small>{user.role} - {user.status} - {user.email}</small>
+                      </div>
+                      <div className="row-actions">
+                        <button
+                          className={user.status === "Bloqueado" ? "secondary" : "danger-action"}
+                          onClick={() => { void updateAccessUserStatus(user, user.status === "Bloqueado" ? "Ativo" : "Bloqueado"); }}
+                          type="button"
+                        >
+                          {user.status === "Bloqueado" ? "Reativar" : "Cancelar acesso"}
+                        </button>
+                        <button className="danger-action" onClick={() => { void deleteAccessUser(user); }} type="button">
+                          Excluir acesso
+                        </button>
                       </div>
                     </div>
                   ))}

@@ -15,6 +15,11 @@ type AccessUserPayload = {
   status?: string;
 };
 
+type DeleteAccessUserPayload = {
+  userId?: string;
+  email?: string;
+};
+
 function toChurchRole(role?: string) {
   if (role === "Administrador") return "ADMIN";
   if (role === "Lider") return "LEADER";
@@ -177,6 +182,42 @@ export async function PATCH(request: Request) {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Nao foi possivel localizar o usuario no Supabase." },
+      { status: 400 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  const session = await getSessionUser(request);
+  if (session.response || !session.user) return session.response;
+
+  const payload = (await request.json()) as DeleteAccessUserPayload;
+  const email = payload.email?.trim().toLowerCase();
+
+  const client = adminClient();
+  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+
+  try {
+    const userId = payload.userId ?? (await findUserIdByEmail(client, email));
+
+    if (!userId) {
+      return NextResponse.json({ error: "Usuario nao localizado no Supabase." }, { status: 404 });
+    }
+
+    if (userId === session.user.id) {
+      return NextResponse.json({ error: "Voce nao pode excluir o proprio acesso enquanto esta conectado." }, { status: 400 });
+    }
+
+    const { error } = await client.auth.admin.deleteUser(userId);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ id: userId });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Nao foi possivel excluir o acesso no Supabase." },
       { status: 400 },
     );
   }

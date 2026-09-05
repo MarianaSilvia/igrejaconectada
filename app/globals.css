@@ -912,6 +912,41 @@ button.data-row.active {
   width: 12px;
 }
 
+.danger-mark {
+  background: rgba(255, 93, 112, 0.16);
+  border-color: rgba(255, 93, 112, 0.36);
+}
+
+.access-user-row {
+  align-items: center;
+}
+
+.access-user-row > div:first-of-type {
+  min-width: 0;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.row-actions button {
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.row-actions button.secondary {
+  background: rgba(72, 184, 255, 0.1);
+  border: 1px solid rgba(72, 184, 255, 0.28);
+  color: #9bd7ff;
+}
+
 .mural-card {
   background: rgba(18, 45, 76, 0.62);
   padding: 14px;
@@ -1602,6 +1637,20 @@ textarea:focus {
   .message-row {
     align-items: stretch;
     grid-template-columns: 1fr;
+  }
+
+  .access-user-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .row-actions {
+    justify-content: stretch;
+    margin-left: 0;
+  }
+
+  .row-actions button {
+    flex: 1 1 100%;
   }
 
   .message-row .whatsapp-link {
