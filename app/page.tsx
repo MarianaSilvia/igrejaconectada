@@ -805,6 +805,24 @@ function whatsappUrl(phone: string, text: string, recipientName: string) {
   return `https://wa.me/${number}?text=${encodeURIComponent(messageFor(text, recipientName))}`;
 }
 
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function classNoticeWhatsappText(className: string, title: string, body: string) {
+  return [
+    `Paz, {nome}! Aviso para a classe ${className}.`,
+    title ? `Tema: ${title}.` : "",
+    body,
+    "Igreja Conectada.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 function escapeText(value: string) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
@@ -1357,6 +1375,50 @@ export default function Home() {
         group: kid.childName,
       }));
   }, [data.kids, data.members, messageAudience, monthlyBirthdays, weeklyBirthdays]);
+
+  function classWhatsappRecipients(className: string, area: "EBD" | "Discipulado") {
+    const classText = normalizeSearchText(className);
+    const classWords = classText.split(/\s+/).filter((word) => word.length > 3);
+    const areaWords =
+      area === "EBD"
+        ? ["ebd", "escola biblica", "biblica", "professor"]
+        : ["discipulado", "discipulador", "novo convertido", "novos convertidos", "batismo"];
+
+    return data.members
+      .filter((member) => normalizeWhatsappPhone(member.phone))
+      .filter((member) => {
+        const memberText = normalizeSearchText(
+          [member.fullName, member.status, member.memberType, member.role, member.ministry, member.notes].join(" "),
+        );
+        const matchesArea = areaWords.some((word) => memberText.includes(word));
+        const matchesClass = classWords.some((word) => memberText.includes(word));
+        return matchesArea || matchesClass;
+      })
+      .map((member) => ({
+        id: member.id,
+        name: member.fullName,
+        phone: member.phone,
+        group: className,
+      }));
+  }
+
+  function openClassWhatsapp(className: string, title: string, body: string, area: "EBD" | "Discipulado") {
+    const recipients = classWhatsappRecipients(className, area);
+    const text = classNoticeWhatsappText(className, title, body);
+
+    if (!recipients.length || !text.trim()) {
+      setSyncStatus(`Nenhum contato de WhatsApp encontrado para ${className}. Vincule membros pela funcao, ministerio ou observacoes.`);
+      return;
+    }
+
+    recipients.slice(0, 12).forEach((recipient, index) => {
+      window.setTimeout(() => {
+        window.open(whatsappUrl(recipient.phone, text, recipient.name), "_blank", "noopener,noreferrer");
+      }, index * 250);
+    });
+    setSyncStatus(`Envio por WhatsApp preparado para ${Math.min(recipients.length, 12)} contatos de ${className}.`);
+    log(`WhatsApp preparado para ${Math.min(recipients.length, 12)} contatos de ${className}`);
+  }
 
   function readPhoto(event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) {
     const file = event.target.files?.[0];
@@ -3618,6 +3680,17 @@ export default function Home() {
                   <button className="primary-action" disabled={!canCreateSchoolNotice} onClick={createSchoolNotice} type="button">
                     Gerar aviso para classe
                   </button>
+                  <button
+                    className="secondary"
+                    disabled={!canCreateSchoolNotice}
+                    onClick={() => {
+                      const selectedClass = data.schoolClasses.find((schoolClass) => schoolClass.id === schoolNoticeForm.classId);
+                      openClassWhatsapp(selectedClass?.name ?? "Classe EBD", schoolNoticeForm.title, schoolNoticeForm.body, "EBD");
+                    }}
+                    type="button"
+                  >
+                    Enviar via WhatsApp
+                  </button>
                 </div>
               </article>
 
@@ -3633,6 +3706,7 @@ export default function Home() {
                       <div>
                         <strong>{schoolClass.name}</strong>
                         <small>Professor: {schoolClass.teacher} - Proxima aula: {schoolClass.nextLesson}</small>
+                        <small>{classWhatsappRecipients(schoolClass.name, "EBD").length} contatos de WhatsApp encontrados</small>
                         <div className="notice-stack">
                           {schoolClass.notices.length === 0 ? (
                             <small>Nenhum aviso enviado para esta classe.</small>
@@ -3692,6 +3766,17 @@ export default function Home() {
                   <button className="primary-action" disabled={!canCreateDiscipleshipNotice} onClick={createDiscipleshipNotice} type="button">
                     Gerar aviso para classe
                   </button>
+                  <button
+                    className="secondary"
+                    disabled={!canCreateDiscipleshipNotice}
+                    onClick={() => {
+                      const selectedClass = data.discipleshipClasses.find((discipleshipClass) => discipleshipClass.id === discipleshipNoticeForm.classId);
+                      openClassWhatsapp(selectedClass?.name ?? "Classe de discipulado", discipleshipNoticeForm.title, discipleshipNoticeForm.body, "Discipulado");
+                    }}
+                    type="button"
+                  >
+                    Enviar via WhatsApp
+                  </button>
                 </div>
               </article>
 
@@ -3707,6 +3792,7 @@ export default function Home() {
                       <div>
                         <strong>{discipleshipClass.name}</strong>
                         <small>Professor: {discipleshipClass.teacher} - Proxima aula: {discipleshipClass.nextLesson}</small>
+                        <small>{classWhatsappRecipients(discipleshipClass.name, "Discipulado").length} contatos de WhatsApp encontrados</small>
                         <div className="notice-stack">
                           {discipleshipClass.notices.length === 0 ? (
                             <small>Nenhum aviso enviado para esta classe.</small>
