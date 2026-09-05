@@ -3029,7 +3029,11 @@ export default function Home() {
               <article className="surface">
                 <div className="panel-heading">
                   <h2>{isAdminView ? "Administrar mural" : "Mural da igreja"}</h2>
-                  <span>{data.mural.filter((item) => item.published).length} publicados</span>
+                  <span>
+                    {isAdminView
+                      ? `${data.mural.filter((item) => item.published).length} publicados`
+                      : `${data.mural.filter((item) => item.published).length + activeNotices.filter((notice) => notice.status === "Publicado").length + data.events.length} itens gerais`}
+                  </span>
                 </div>
                 <div className="table-like">
                   {(isAdminView ? data.mural : data.mural.filter((item) => item.published)).map((item) => (
@@ -3061,6 +3065,42 @@ export default function Home() {
                       </button>}
                     </div>
                   ))}
+                  {!isAdminView && !data.mural.filter((item) => item.published).length && (
+                    <div className="data-row">
+                      <span className="bullet-mark" />
+                      <div>
+                        <strong>Nenhum banner publicado</strong>
+                        <small>Quando a administracao publicar fotos, imagens ou banners, eles aparecem aqui.</small>
+                      </div>
+                    </div>
+                  )}
+                  {!isAdminView && activeNotices.filter((notice) => notice.status === "Publicado").map((notice) => (
+                    <div className="table-row" key={`notice-${notice.id}`}>
+                      <div>
+                        <strong>{notice.title}</strong>
+                        <small>Aviso - {notice.audience} - {notice.channel}</small>
+                        <small>{notice.body}</small>
+                      </div>
+                    </div>
+                  ))}
+                  {!isAdminView && data.events.map((event) => (
+                    <div className="table-row" key={`event-${event.id}`}>
+                      <span className="date-box">{formatDate(event.date)}</span>
+                      <div>
+                        <strong>{event.title}</strong>
+                        <small>
+                          Evento - {event.time || "Sem horario"} - {event.ministry} - {event.status}
+                        </small>
+                        <small>{event.location || "Local nao informado"} - {event.responsible || "Sem responsavel"}</small>
+                      </div>
+                    </div>
+                  ))}
+                  {!isAdminView &&
+                    !data.mural.filter((item) => item.published).length &&
+                    !activeNotices.filter((notice) => notice.status === "Publicado").length &&
+                    !data.events.length && (
+                      <p className="empty-state">Nenhum aviso, banner ou evento publicado no momento.</p>
+                    )}
                 </div>
               </article>
             </section>
