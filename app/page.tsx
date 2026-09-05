@@ -103,7 +103,7 @@ type AccessUser = {
   id: string;
   name: string;
   email: string;
-  role: "Administrador" | "Lider" | "Membro";
+  role: "Administrador" | "Lider" | "Professor" | "Secretario" | "Tesoureiro" | "Membro";
   status: "Ativo" | "Pendente" | "Bloqueado";
 };
 
@@ -852,11 +852,14 @@ function comparablePhone(value: string) {
 function accessRoleFromMetadata(value: unknown): AccessRole {
   if (value === "Administrador" || value === "ADMIN" || value === "admin") return "Administrador";
   if (value === "Lider" || value === "LEADER" || value === "leader") return "Lider";
+  if (value === "Professor" || value === "PROFESSOR" || value === "teacher") return "Professor";
+  if (value === "Secretario" || value === "SECRETARY" || value === "secretary") return "Secretario";
+  if (value === "Tesoureiro" || value === "TREASURER" || value === "treasurer") return "Tesoureiro";
   return "Membro";
 }
 
 function isAdministrativeRole(role: AccessRole) {
-  return role === "Administrador" || role === "Lider";
+  return role === "Administrador" || role === "Lider" || role === "Secretario" || role === "Tesoureiro";
 }
 
 function messageFor(text: string, recipientName: string) {
@@ -1638,12 +1641,13 @@ export default function Home() {
 
   function canManageAttendanceClass(classRecord: SchoolClass) {
     if (isAdminView) return true;
-    if (!currentMember || !/professor/i.test(currentMember.role)) return false;
+    const hasTeacherAccess = currentAccessRole === "Professor" || /professor/i.test(currentMember?.role ?? "");
+    if (!hasTeacherAccess) return false;
 
     const teacherText = normalizeSearchText(classRecord.teacher);
-    const memberName = normalizeSearchText(currentMember.fullName);
+    const memberName = normalizeSearchText(currentMember?.fullName ?? "");
     const accessName = normalizeSearchText(currentAccessUser?.name ?? "");
-    return teacherText.includes(memberName) || Boolean(accessName && teacherText.includes(accessName));
+    return Boolean((memberName && teacherText.includes(memberName)) || (accessName && teacherText.includes(accessName)));
   }
 
   function updateAttendanceRecord(area: AttendanceArea, classRecord: SchoolClass, event: ChurchEvent, member: MemberRecord, status: AttendanceStatus) {
@@ -3693,7 +3697,9 @@ export default function Home() {
                     <select onChange={(event) => setUserForm((form) => ({ ...form, role: event.target.value as AccessUser["role"] }))} value={userForm.role}>
                       <option>Administrador</option>
                       <option>Lider</option>
-                      <option>Membro</option>
+                      <option>Professor</option>
+                      <option>Secretario</option>
+                      <option>Tesoureiro</option>
                     </select>
                   </label>
                   <label>

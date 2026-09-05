@@ -23,6 +23,9 @@ type DeleteAccessUserPayload = {
 function toChurchRole(role?: string) {
   if (role === "Administrador") return "ADMIN";
   if (role === "Lider") return "LEADER";
+  if (role === "Professor") return "PROFESSOR";
+  if (role === "Secretario") return "SECRETARY";
+  if (role === "Tesoureiro") return "TREASURER";
   return "MEMBER";
 }
 
