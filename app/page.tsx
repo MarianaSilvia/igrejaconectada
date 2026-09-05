@@ -495,7 +495,7 @@ const initialData: AppData = {
   discipleshipClasses: [
     {
       id: "discipleship-new",
-      name: "Novos convertidos",
+      name: "Discipulado 1",
       teacher: "Pr. Marcos",
       students: 16,
       nextLesson: "Fundamentos da fe crista",
@@ -505,7 +505,7 @@ const initialData: AppData = {
           title: "Encontro de acompanhamento",
           body: "Trazer Biblia e anotacoes da ultima aula para revisao em grupo.",
           status: "Publicado",
-          audience: "Novos convertidos",
+          audience: "Discipulado 1",
           channel: "App",
           retentionDays: 7,
           expiresAt: "2026-09-09",
@@ -513,19 +513,19 @@ const initialData: AppData = {
       ],
     },
     {
-      id: "discipleship-baptism",
-      name: "Preparacao para batismo",
-      teacher: "Diac. Paulo",
-      students: 10,
-      nextLesson: "Nova vida em Cristo",
-      notices: [],
-    },
-    {
       id: "discipleship-leaders",
-      name: "Formacao de discipuladores",
+      name: "Discipulado 2",
       teacher: "Lider Ana",
       students: 8,
       nextLesson: "Acompanhamento e cuidado",
+      notices: [],
+    },
+    {
+      id: "discipleship-baptism",
+      name: "Preparacao para o batismo",
+      teacher: "Diac. Paulo",
+      students: 10,
+      nextLesson: "Nova vida em Cristo",
       notices: [],
     },
   ],
@@ -1391,7 +1391,7 @@ export default function Home() {
     const areaWords =
       area === "EBD"
         ? ["ebd", "escola biblica", "biblica", "professor"]
-        : ["discipulado", "discipulador", "novo convertido", "novos convertidos", "batismo"];
+        : ["discipulado", "discipulado 1", "discipulado 2", "discipulador", "novo convertido", "novos convertidos", "batismo"];
 
     return data.members
       .filter((member) => normalizeWhatsappPhone(member.phone))
