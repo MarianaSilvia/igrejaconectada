@@ -1145,6 +1145,70 @@ textarea:focus {
   line-height: 1.5;
 }
 
+.birthday-spotlight {
+  background:
+    linear-gradient(135deg, rgba(72, 184, 255, 0.2), transparent 44%),
+    linear-gradient(145deg, rgba(20, 217, 196, 0.12), rgba(18, 45, 76, 0.82));
+  border-color: rgba(72, 184, 255, 0.32);
+}
+
+.birthday-spotlight-list {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.birthday-person-card {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.birthday-person-photo {
+  align-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  color: #05182a;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 20px;
+  font-weight: 900;
+  height: 52px;
+  justify-content: center;
+  overflow: hidden;
+  width: 52px;
+}
+
+.birthday-person-photo img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.birthday-person-card strong,
+.birthday-person-card small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.birthday-person-card strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.birthday-person-card small {
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
 .digital-card {
   overflow: hidden;
   padding: 0;
@@ -1813,6 +1877,10 @@ textarea:focus {
   .action-strip {
     grid-template-columns: 1fr;
   }
+
+  .birthday-spotlight-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -1922,6 +1990,7 @@ textarea:focus {
   .module-list,
   .stats-grid,
   .birthday-grid,
+  .birthday-spotlight-list,
   .card-actions,
   .form-grid,
   .detail-grid,

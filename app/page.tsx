@@ -1610,9 +1610,25 @@ export default function Home() {
 
   const unreadCount = notifications.filter((notice) => !data.notificationReadIds.includes(notice.id)).length;
   const activeNotices = data.notices.filter((notice) => !isExpiredDate(notice.expiresAt));
-  const monthlyBirthdays = data.members.filter((member) => isBirthdayThisMonth(member.birthDate));
-  const weeklyBirthdays = monthlyBirthdays.filter((member) => isBirthdayThisWeek(member.birthDate));
-  const monthlyKidsBirthdays = data.kids.filter((kid) => isBirthdayThisMonth(kid.birthDate));
+  const monthlyBirthdays = useMemo(
+    () =>
+      data.members
+        .filter((member) => isBirthdayThisMonth(member.birthDate))
+        .sort((first, second) => {
+          const firstDate = birthdayDateThisYear(first.birthDate)?.getTime() ?? 0;
+          const secondDate = birthdayDateThisYear(second.birthDate)?.getTime() ?? 0;
+          return firstDate - secondDate;
+        }),
+    [data.members],
+  );
+  const weeklyBirthdays = useMemo(
+    () => monthlyBirthdays.filter((member) => isBirthdayThisWeek(member.birthDate)),
+    [monthlyBirthdays],
+  );
+  const monthlyKidsBirthdays = useMemo(
+    () => data.kids.filter((kid) => isBirthdayThisMonth(kid.birthDate)),
+    [data.kids],
+  );
   const canCreateUser = isAdminView && Boolean(userForm.name.trim() && userForm.email.trim() && userForm.password.trim().length >= 6);
   const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim()) && (isAdminView || editingMemberId === currentMember?.id);
   const canSaveMemberAccess = Boolean(
@@ -1631,6 +1647,38 @@ export default function Home() {
   const canCreateNotice = isAdminView && Boolean(noticeForm.title.trim() && noticeForm.body.trim());
   const canCreateMinistry = isAdminView && Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
   const availableMessageTemplates = remoteMessageTemplates.length ? remoteMessageTemplates : messageTemplates;
+  const birthdaySpotlightPanel = (
+    <article className="surface birthday-spotlight wide">
+      <div className="panel-heading">
+        <div>
+          <h2>Aniversariantes do mes</h2>
+          <span>{monthlyBirthdays.length ? `${monthlyBirthdays.length} pessoas para celebrar` : "Nenhum aniversario neste mes"}</span>
+        </div>
+        {isAdminView && (
+          <button onClick={() => setActiveModule("messages")} type="button">
+            Enviar mensagem
+          </button>
+        )}
+      </div>
+      {monthlyBirthdays.length ? (
+        <div className="birthday-spotlight-list">
+          {monthlyBirthdays.slice(0, 8).map((member) => (
+            <div className="birthday-person-card" key={member.id}>
+              <div className="birthday-person-photo">
+                {member.photoDataUrl ? <img alt="" src={member.photoDataUrl} /> : member.fullName.slice(0, 1)}
+              </div>
+              <div>
+                <strong>{member.fullName}</strong>
+                <small>{birthdayLabel(member.birthDate)}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="empty-state">Assim que houver aniversariantes cadastrados neste mes, eles aparecem aqui com nome e foto.</p>
+      )}
+    </article>
+  );
   const messageRecipients = useMemo<MessageRecipient[]>(() => {
     const memberRecipients = data.members
       .filter((member) => normalizeWhatsappPhone(member.phone))
@@ -3098,6 +3146,8 @@ export default function Home() {
                 ))}
               </div>
 
+              {birthdaySpotlightPanel}
+
               <article className="surface wide">
                 <div className="panel-heading">
                   <h2>Proximos encontros</h2>
@@ -3161,6 +3211,8 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+
+              {birthdaySpotlightPanel}
 
               <article className="surface">
                 <div className="panel-heading">
