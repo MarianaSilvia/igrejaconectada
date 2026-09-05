@@ -2635,13 +2635,19 @@ export default function Home() {
               <div className="hero-panel">
                 <p className="eyebrow">Area do membro</p>
                 <h2>Bem-vindo, {profileName}.</h2>
-                <p>Veja sua ficha, acompanhe a agenda e envie pedidos de atendimento pastoral ou oracao.</p>
+                <p>Veja sua ficha, acompanhe a agenda, leia os avisos e envie pedidos de atendimento pastoral ou oracao.</p>
                 <div className="hero-actions">
                   <button onClick={() => setActiveModule("members")} type="button">
                     Meu cadastro
                   </button>
                   <button className="secondary" onClick={() => setActiveModule("pastoral")} type="button">
                     Novo pedido
+                  </button>
+                  <button className="secondary" onClick={() => setActiveModule("notices")} type="button">
+                    Ver avisos
+                  </button>
+                  <button className="secondary" onClick={() => setActiveModule("mural")} type="button">
+                    Ver mural
                   </button>
                 </div>
               </div>
@@ -2686,6 +2692,66 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Avisos gerais</h2>
+                  <button onClick={() => setActiveModule("notices")} type="button">
+                    Ver avisos
+                  </button>
+                </div>
+                <div className="row-list">
+                  {activeNotices
+                    .filter((notice) => notice.status === "Publicado")
+                    .slice(0, 4)
+                    .map((notice) => (
+                      <div className="data-row" key={notice.id}>
+                        <span className="bullet-mark" />
+                        <div>
+                          <strong>{notice.title}</strong>
+                          <small>{notice.audience} - {notice.channel}</small>
+                          <small>{notice.body}</small>
+                        </div>
+                      </div>
+                    ))}
+                  {!activeNotices.filter((notice) => notice.status === "Publicado").length && (
+                    <p className="empty-state">Nenhum aviso geral publicado no momento.</p>
+                  )}
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Mural da igreja</h2>
+                  <button onClick={() => setActiveModule("mural")} type="button">
+                    Ver mural
+                  </button>
+                </div>
+                <div className="mural-stack">
+                  {data.mural
+                    .filter((item) => item.published)
+                    .slice(0, 4)
+                    .map((item) => (
+                      <div className={item.featured ? "mural-card featured" : "mural-card"} key={item.id}>
+                        {(item.imageDataUrl || item.bannerUrl) && (
+                          <div className="mural-card-media">
+                            <img alt="" src={item.imageDataUrl || item.bannerUrl} />
+                          </div>
+                        )}
+                        <strong>{item.title}</strong>
+                        <small>{item.category}</small>
+                        {item.socialUrl && (
+                          <a className="inline-link" href={item.socialUrl} rel="noreferrer" target="_blank">
+                            Abrir link
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  {!data.mural.filter((item) => item.published).length && (
+                    <p className="empty-state">Nenhum item publicado no mural no momento.</p>
+                  )}
                 </div>
               </article>
 
