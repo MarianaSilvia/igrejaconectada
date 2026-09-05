@@ -1001,6 +1001,22 @@ function normalizeMuralItem(item: Partial<MuralItem>): MuralItem {
   };
 }
 
+function normalizeDiscipleshipClasses(classes: SchoolClass[] | undefined) {
+  const currentClasses = classes ?? initialData.discipleshipClasses;
+  const byId = new Map(currentClasses.map((item) => [item.id, item]));
+
+  return initialData.discipleshipClasses.map((template) => {
+    const current = byId.get(template.id);
+    return {
+      ...template,
+      teacher: current?.teacher ?? template.teacher,
+      students: current?.students ?? template.students,
+      nextLesson: current?.nextLesson ?? template.nextLesson,
+      notices: current?.notices ?? template.notices,
+    };
+  });
+}
+
 function readImageFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -1070,7 +1086,7 @@ function normalizeAppData(value: Partial<AppData>): AppData {
     members: (value.members ?? initialData.members).map((member) => normalizeMember(member)),
     kids: (value.kids ?? initialData.kids).map((kid) => normalizeKid(kid)),
     schoolClasses: value.schoolClasses ?? initialData.schoolClasses,
-    discipleshipClasses: value.discipleshipClasses ?? initialData.discipleshipClasses,
+    discipleshipClasses: normalizeDiscipleshipClasses(value.discipleshipClasses),
     ministries: (value.ministries ?? initialData.ministries).map((ministry) => normalizeMinistry(ministry)),
     audit: value.audit ?? initialData.audit,
     notificationReadIds: value.notificationReadIds ?? initialData.notificationReadIds,
