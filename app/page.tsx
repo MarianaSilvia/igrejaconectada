@@ -917,6 +917,23 @@ function escapeText(value: string) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
 
+function cardChurchTitleLines(church: string) {
+  const normalized = church.trim();
+  const marker = " AD ";
+  const markerIndex = normalized.toUpperCase().indexOf(marker);
+  if (markerIndex > 0) {
+    return [normalized.slice(0, markerIndex), `AD ${normalized.slice(markerIndex + marker.length)}`];
+  }
+  return [normalized];
+}
+
+function cardChurchTitleHtml(church: string) {
+  const [mainLine, secondLine] = cardChurchTitleLines(church);
+  return secondLine
+    ? `${escapeText(mainLine)}<small>${escapeText(secondLine)}</small>`
+    : escapeText(mainLine);
+}
+
 function cardMarkup(card: DigitalCardData) {
   const initial = card.name.slice(0, 1).toUpperCase();
   const photo = card.photoDataUrl
@@ -930,7 +947,7 @@ function cardMarkup(card: DigitalCardData) {
           <strong>AD</strong>
           <span>Maringa</span>
         </div>
-        <h1>${escapeText(card.church)}</h1>
+        <h1>${cardChurchTitleHtml(card.church)}</h1>
         <div class="card-photo">${photo}</div>
         <div class="field field-name"><span>NOME</span><strong>${escapeText(card.name)}</strong></div>
         <div class="field field-function"><span>FUNCAO</span><strong>${escapeText(card.functionName)}</strong></div>
@@ -978,19 +995,20 @@ function cardPrintStyles() {
     .card-logo { align-items: center; background: radial-gradient(circle, #0a376d, #02153c 72%); border: 1px solid rgba(255,255,255,.22); border-radius: 50%; color: #fff; display: grid; height: 76px; justify-items: center; left: 52px; line-height: 1; position: absolute; top: 14px; width: 76px; z-index: 1; }
     .card-logo strong { color: #ffb43b; font-size: 27px; }
     .card-logo span { color: #9ec4ff; font-size: 10px; font-weight: 800; text-transform: uppercase; }
-    .front-card h1 { color: #fff; font-size: 26px; left: 150px; line-height: 1; margin: 0; position: absolute; text-align: center; text-shadow: 0 2px 5px rgba(0,0,0,.35); top: 32px; width: 310px; z-index: 1; }
+    .front-card h1 { color: #fff; font-size: 21px; left: 150px; line-height: .98; margin: 0; position: absolute; text-align: center; text-shadow: 0 2px 5px rgba(0,0,0,.35); top: 29px; width: 310px; z-index: 1; }
+    .front-card h1 small { display: block; font-size: 23px; line-height: 1.04; }
     .card-photo { align-items: center; background: linear-gradient(#d8f5ff, #effcff 65%, #9aba00 66%); border: 5px solid #ffd35c; border-radius: 18px; display: flex; height: 198px; justify-content: center; left: 22px; overflow: hidden; position: absolute; top: 96px; width: 154px; z-index: 1; }
     .card-photo img { height: 100%; object-fit: cover; width: 100%; }
     .avatar-fallback { color: #fff; font-size: 64px; font-weight: 900; }
-    .field { background: #fff; border-radius: 999px; min-height: 36px; padding: 14px 14px 5px; position: absolute; z-index: 1; }
-    .field span, .back-card h2 { background: linear-gradient(180deg, #a9c9ff, #6c91f2); border-radius: 4px; color: #071e52; font-size: 11px; font-weight: 900; letter-spacing: .02em; padding: 5px 10px; position: absolute; top: -10px; }
-    .field strong { display: block; font-family: Arial, sans-serif; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .field { background: #fff; border-radius: 999px; min-height: 36px; padding: 13px 12px 5px; position: absolute; z-index: 1; }
+    .field span, .back-card h2 { background: linear-gradient(180deg, #a9c9ff, #6c91f2); border-radius: 4px; color: #071e52; font-size: 9px; font-weight: 900; letter-spacing: .01em; padding: 4px 8px; position: absolute; top: -9px; }
+    .field strong { display: block; font-family: Arial, sans-serif; font-size: 10.5px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .field-name { height: 36px; left: 190px; top: 126px; width: 298px; }
     .field-function { height: 36px; left: 190px; top: 184px; width: 192px; }
     .field-validity { height: 36px; left: 388px; top: 184px; width: 100px; }
     .field-registration { height: 36px; left: 190px; top: 242px; width: 100px; }
     .field-congregation { height: 36px; left: 298px; top: 242px; width: 190px; }
-    .back-card h2 { font-size: 16px; left: 166px; margin: 0; position: absolute; text-align: center; top: 16px; width: 176px; }
+    .back-card h2 { font-size: 13px; left: 166px; margin: 0; position: absolute; text-align: center; top: 16px; width: 176px; }
     .back-father { left: 18px; top: 54px; width: 230px; }
     .back-mother { left: 260px; top: 54px; width: 230px; }
     .back-cpf { left: 30px; top: 98px; width: 108px; }
@@ -998,12 +1016,12 @@ function cardPrintStyles() {
     .back-birth { left: 350px; top: 98px; width: 108px; }
     .back-baptism { left: 84px; top: 142px; width: 110px; }
     .back-natural { left: 260px; top: 142px; width: 230px; }
-    .signature-panel { background: #fff; border-radius: 999px; left: 84px; padding: 16px 24px 8px; position: absolute; text-align: center; top: 186px; width: 340px; }
-    .signature-panel strong { color: #000; display: block; font-size: 26px; font-style: italic; font-weight: 400; line-height: 1; }
-    .signature-panel span { color: #000; display: block; font-size: 12px; margin-top: 2px; }
+    .signature-panel { background: #fff; border-radius: 999px; left: 84px; padding: 14px 24px 8px; position: absolute; text-align: center; top: 186px; width: 340px; }
+    .signature-panel strong { color: #000; display: block; font-size: 21px; font-style: italic; font-weight: 400; line-height: 1; }
+    .signature-panel span { color: #000; display: block; font-size: 10px; margin-top: 2px; }
     .back-logo { height: 76px; left: 14px; top: 226px; width: 76px; }
-    footer { bottom: 18px; color: #fff; font-size: 11px; left: 110px; line-height: 1.1; position: absolute; text-align: center; width: 360px; }
-    footer p { margin: 7px 0; }
+    footer { bottom: 18px; color: #fff; font-size: 9.5px; left: 110px; line-height: 1.08; position: absolute; text-align: center; width: 360px; }
+    footer p { margin: 6px 0; }
     @media print { body { background: #fff; } .membership-card-sheet { gap: 8mm; } }
   `;
 }
@@ -1030,6 +1048,11 @@ function downloadDigitalCardImage(card: DigitalCardData) {
   const svgPhoto = card.photoDataUrl
     ? `<image href="${card.photoDataUrl}" x="27" y="101" width="144" height="188" preserveAspectRatio="xMidYMid slice"/>`
     : `<text x="99" y="205" fill="#ffffff" font-family="Arial" font-size="64" font-weight="900" text-anchor="middle">${escapeText(card.name.slice(0, 1).toUpperCase())}</text>`;
+  const [churchMainLine, churchSecondLine] = cardChurchTitleLines(card.church);
+  const svgChurchTitle = churchSecondLine
+    ? `<text x="304" y="39" fill="#ffffff" font-family="Georgia" font-size="20" font-weight="900" text-anchor="middle">${escapeText(churchMainLine)}</text>
+      <text x="304" y="63" fill="#ffffff" font-family="Georgia" font-size="22" font-weight="900" text-anchor="middle">${escapeText(churchSecondLine)}</text>`
+    : `<text x="304" y="49" fill="#ffffff" font-family="Georgia" font-size="20" font-weight="900" text-anchor="middle">${escapeText(card.church)}</text>`;
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="1016" height="636" viewBox="0 0 1016 636">
       <defs>
@@ -1049,51 +1072,51 @@ function downloadDigitalCardImage(card: DigitalCardData) {
       <circle cx="90" cy="54" r="38" fill="#062052" stroke="#638bd0"/>
       <text x="90" y="53" fill="#ffb43b" font-family="Georgia" font-size="27" font-weight="900" text-anchor="middle">AD</text>
       <text x="90" y="74" fill="#9ec4ff" font-family="Arial" font-size="10" font-weight="800" text-anchor="middle">MARINGA</text>
-      <text x="304" y="44" fill="#ffffff" font-family="Georgia" font-size="26" font-weight="900" text-anchor="middle">${escapeText(card.church)}</text>
+      ${svgChurchTitle}
       <rect x="22" y="96" width="154" height="198" rx="18" fill="#dff6ff" stroke="#ffd35c" stroke-width="5"/>
       <rect x="27" y="224" width="144" height="65" fill="#93ad00"/>
       ${svgPhoto}
       <rect x="190" y="126" width="298" height="36" rx="18" fill="#ffffff"/>
       <rect x="198" y="118" width="70" height="18" rx="4" fill="#86a9fb"/>
-      <text x="206" y="131" fill="#071e52" font-family="Georgia" font-size="11" font-weight="900">NOME</text>
-      <text x="204" y="150" fill="#071e52" font-family="Arial" font-size="13" font-weight="700">${escapeText(card.name)}</text>
+      <text x="206" y="131" fill="#071e52" font-family="Georgia" font-size="9" font-weight="900">NOME</text>
+      <text x="204" y="150" fill="#071e52" font-family="Arial" font-size="10.5" font-weight="700">${escapeText(card.name)}</text>
       <rect x="190" y="184" width="192" height="36" rx="18" fill="#ffffff"/>
       <rect x="198" y="176" width="70" height="18" rx="4" fill="#86a9fb"/>
-      <text x="206" y="189" fill="#071e52" font-family="Georgia" font-size="11" font-weight="900">FUNCAO</text>
-      <text x="204" y="208" fill="#071e52" font-family="Arial" font-size="13" font-weight="700">${escapeText(card.functionName)}</text>
+      <text x="206" y="189" fill="#071e52" font-family="Georgia" font-size="9" font-weight="900">FUNCAO</text>
+      <text x="204" y="208" fill="#071e52" font-family="Arial" font-size="10.5" font-weight="700">${escapeText(card.functionName)}</text>
       <rect x="388" y="184" width="100" height="36" rx="18" fill="#ffffff"/>
       <rect x="396" y="176" width="70" height="18" rx="4" fill="#86a9fb"/>
-      <text x="404" y="189" fill="#071e52" font-family="Georgia" font-size="11" font-weight="900">VALIDADE</text>
-      <text x="402" y="208" fill="#071e52" font-family="Arial" font-size="13" font-weight="700">${escapeText(card.validity)}</text>
+      <text x="404" y="189" fill="#071e52" font-family="Georgia" font-size="9" font-weight="900">VALIDADE</text>
+      <text x="402" y="208" fill="#071e52" font-family="Arial" font-size="10.5" font-weight="700">${escapeText(card.validity)}</text>
       <rect x="190" y="242" width="100" height="36" rx="18" fill="#ffffff"/>
       <rect x="198" y="234" width="70" height="18" rx="4" fill="#86a9fb"/>
-      <text x="206" y="247" fill="#071e52" font-family="Georgia" font-size="10" font-weight="900">No. REG.</text>
-      <text x="204" y="266" fill="#071e52" font-family="Arial" font-size="12" font-weight="700">${escapeText(card.registration)}</text>
+      <text x="206" y="247" fill="#071e52" font-family="Georgia" font-size="8.5" font-weight="900">No. REG.</text>
+      <text x="204" y="266" fill="#071e52" font-family="Arial" font-size="10" font-weight="700">${escapeText(card.registration)}</text>
       <rect x="298" y="242" width="190" height="36" rx="18" fill="#ffffff"/>
       <rect x="306" y="234" width="88" height="18" rx="4" fill="#86a9fb"/>
-      <text x="314" y="247" fill="#071e52" font-family="Georgia" font-size="10" font-weight="900">CONGREG.</text>
-      <text x="312" y="266" fill="#071e52" font-family="Arial" font-size="13" font-weight="700">${escapeText(card.congregation)}</text>
+      <text x="314" y="247" fill="#071e52" font-family="Georgia" font-size="8.5" font-weight="900">CONGREG.</text>
+      <text x="312" y="266" fill="#071e52" font-family="Arial" font-size="10.5" font-weight="700">${escapeText(card.congregation)}</text>
 
       <g transform="translate(508 0)">
         <rect width="508" height="318" fill="url(#backBg)"/>
         <rect x="166" y="16" width="176" height="22" rx="5" fill="#86a9fb"/>
-        <text x="254" y="32" fill="#071e52" font-family="Georgia" font-size="16" font-weight="900" text-anchor="middle">${escapeText(card.title)}</text>
-        <rect x="18" y="54" width="230" height="36" rx="18" fill="#fff"/><text x="26" y="58" fill="#071e52" font-size="11" font-weight="900">PAI</text><text x="32" y="78" fill="#071e52" font-size="13">${escapeText(card.fatherName)}</text>
-        <rect x="260" y="54" width="230" height="36" rx="18" fill="#fff"/><text x="268" y="58" fill="#071e52" font-size="11" font-weight="900">MAE</text><text x="274" y="78" fill="#071e52" font-size="13">${escapeText(card.motherName)}</text>
-        <rect x="30" y="98" width="108" height="36" rx="18" fill="#fff"/><text x="38" y="102" fill="#071e52" font-size="11" font-weight="900">CPF.</text><text x="44" y="122" fill="#071e52" font-size="12">${escapeText(card.cpf)}</text>
-        <rect x="205" y="98" width="108" height="36" rx="18" fill="#fff"/><text x="213" y="102" fill="#071e52" font-size="11" font-weight="900">EST. CIVIL</text><text x="219" y="122" fill="#071e52" font-size="12">${escapeText(card.maritalStatus)}</text>
-        <rect x="350" y="98" width="108" height="36" rx="18" fill="#fff"/><text x="358" y="102" fill="#071e52" font-size="11" font-weight="900">NASC.</text><text x="364" y="122" fill="#071e52" font-size="12">${escapeText(card.birthDate)}</text>
-        <rect x="84" y="142" width="110" height="36" rx="18" fill="#fff"/><text x="92" y="146" fill="#071e52" font-size="11" font-weight="900">BATISMO</text><text x="98" y="166" fill="#071e52" font-size="12">${escapeText(card.baptism)}</text>
-        <rect x="260" y="142" width="230" height="36" rx="18" fill="#fff"/><text x="268" y="146" fill="#071e52" font-size="11" font-weight="900">NATURAL</text><text x="274" y="166" fill="#071e52" font-size="12">${escapeText(card.naturalFrom)}</text>
+        <text x="254" y="32" fill="#071e52" font-family="Georgia" font-size="13" font-weight="900" text-anchor="middle">${escapeText(card.title)}</text>
+        <rect x="18" y="54" width="230" height="36" rx="18" fill="#fff"/><text x="26" y="58" fill="#071e52" font-size="9" font-weight="900">PAI</text><text x="32" y="78" fill="#071e52" font-size="10.5">${escapeText(card.fatherName)}</text>
+        <rect x="260" y="54" width="230" height="36" rx="18" fill="#fff"/><text x="268" y="58" fill="#071e52" font-size="9" font-weight="900">MAE</text><text x="274" y="78" fill="#071e52" font-size="10.5">${escapeText(card.motherName)}</text>
+        <rect x="30" y="98" width="108" height="36" rx="18" fill="#fff"/><text x="38" y="102" fill="#071e52" font-size="9" font-weight="900">CPF.</text><text x="44" y="122" fill="#071e52" font-size="10">${escapeText(card.cpf)}</text>
+        <rect x="205" y="98" width="108" height="36" rx="18" fill="#fff"/><text x="213" y="102" fill="#071e52" font-size="9" font-weight="900">EST. CIVIL</text><text x="219" y="122" fill="#071e52" font-size="10">${escapeText(card.maritalStatus)}</text>
+        <rect x="350" y="98" width="108" height="36" rx="18" fill="#fff"/><text x="358" y="102" fill="#071e52" font-size="9" font-weight="900">NASC.</text><text x="364" y="122" fill="#071e52" font-size="10">${escapeText(card.birthDate)}</text>
+        <rect x="84" y="142" width="110" height="36" rx="18" fill="#fff"/><text x="92" y="146" fill="#071e52" font-size="9" font-weight="900">BATISMO</text><text x="98" y="166" fill="#071e52" font-size="10">${escapeText(card.baptism)}</text>
+        <rect x="260" y="142" width="230" height="36" rx="18" fill="#fff"/><text x="268" y="146" fill="#071e52" font-size="9" font-weight="900">NATURAL</text><text x="274" y="166" fill="#071e52" font-size="10">${escapeText(card.naturalFrom)}</text>
         <rect x="84" y="186" width="340" height="50" rx="25" fill="#fff"/>
-        <text x="254" y="215" fill="#000" font-family="Georgia" font-size="26" font-style="italic" text-anchor="middle">Lionor Ribeiro</text>
-        <text x="254" y="230" fill="#000" font-family="Georgia" font-size="12" text-anchor="middle">PASTOR PRESIDENTE</text>
+        <text x="254" y="214" fill="#000" font-family="Georgia" font-size="21" font-style="italic" text-anchor="middle">Lionor Ribeiro</text>
+        <text x="254" y="229" fill="#000" font-family="Georgia" font-size="10" text-anchor="middle">PASTOR PRESIDENTE</text>
         <circle cx="52" cy="264" r="38" fill="#062052" stroke="#638bd0"/>
         <text x="52" y="263" fill="#ffb43b" font-family="Georgia" font-size="27" font-weight="900" text-anchor="middle">AD</text>
         <text x="52" y="284" fill="#9ec4ff" font-family="Arial" font-size="10" font-weight="800" text-anchor="middle">MARINGA</text>
-        <text x="290" y="265" fill="#ffffff" font-family="Georgia" font-size="11" text-anchor="middle">SEDE: Rua Nicomedes M. Afonso, 123 - Litoraneo, Sao Mateus/ES - 29932000</text>
-        <text x="290" y="282" fill="#ffffff" font-family="Georgia" font-size="11" text-anchor="middle">Tel.: (27) 9.9999-8888 E-mail: ademanuel@gmail.com</text>
-        <text x="290" y="299" fill="#ffffff" font-family="Georgia" font-size="11" text-anchor="middle">Fundacao da Igreja em 15/03/1956</text>
+        <text x="290" y="265" fill="#ffffff" font-family="Georgia" font-size="9.5" text-anchor="middle">SEDE: Rua Nicomedes M. Afonso, 123 - Litoraneo, Sao Mateus/ES - 29932000</text>
+        <text x="290" y="282" fill="#ffffff" font-family="Georgia" font-size="9.5" text-anchor="middle">Tel.: (27) 9.9999-8888 E-mail: ademanuel@gmail.com</text>
+        <text x="290" y="299" fill="#ffffff" font-family="Georgia" font-size="9.5" text-anchor="middle">Fundacao da Igreja em 15/03/1956</text>
       </g>
     </svg>
   `;
