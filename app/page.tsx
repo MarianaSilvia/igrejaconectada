@@ -188,6 +188,17 @@ type DigitalCardData = {
   title: string;
   church: string;
   name: string;
+  functionName: string;
+  validity: string;
+  registration: string;
+  congregation: string;
+  fatherName: string;
+  motherName: string;
+  cpf: string;
+  maritalStatus: string;
+  birthDate: string;
+  baptism: string;
+  naturalFrom: string;
   subtitle: string;
   id: string;
   detail: string;
@@ -913,30 +924,92 @@ function cardMarkup(card: DigitalCardData) {
     : `<div class="avatar-fallback">${escapeText(initial)}</div>`;
 
   return `
-    <article class="printable-card" style="--accent:${card.accent}">
-      <div class="card-top">
-        <span>${escapeText(card.title)}</span>
-        <strong>${escapeText(card.church)}</strong>
-      </div>
-      <div class="card-body">
-        <div class="card-photo">${photo}</div>
-        <div>
-          <h1>${escapeText(card.name)}</h1>
-          <p>${escapeText(card.id)}</p>
-          <p>${escapeText(card.subtitle)}</p>
-          <p>${escapeText(card.detail)}</p>
+    <section class="membership-card-sheet" style="--accent:${card.accent}">
+      <article class="membership-card front-card">
+        <div class="card-logo">
+          <strong>AD</strong>
+          <span>Maringa</span>
         </div>
-      </div>
-      <div class="card-footer">
-        <span>${escapeText(card.footerLeft)}</span>
-        <span>${escapeText(card.footerRight)}</span>
-      </div>
-    </article>
+        <h1>${escapeText(card.church)}</h1>
+        <div class="card-photo">${photo}</div>
+        <div class="field field-name"><span>NOME</span><strong>${escapeText(card.name)}</strong></div>
+        <div class="field field-function"><span>FUNCAO</span><strong>${escapeText(card.functionName)}</strong></div>
+        <div class="field field-validity"><span>VALIDADE</span><strong>${escapeText(card.validity)}</strong></div>
+        <div class="field field-registration"><span>No. REGISTRO</span><strong>${escapeText(card.registration)}</strong></div>
+        <div class="field field-congregation"><span>CONGREGACAO</span><strong>${escapeText(card.congregation)}</strong></div>
+      </article>
+
+      <article class="membership-card back-card">
+        <h2>${escapeText(card.title)}</h2>
+        <div class="field back-father"><span>PAI</span><strong>${escapeText(card.fatherName)}</strong></div>
+        <div class="field back-mother"><span>MAE</span><strong>${escapeText(card.motherName)}</strong></div>
+        <div class="field back-cpf"><span>CPF.</span><strong>${escapeText(card.cpf)}</strong></div>
+        <div class="field back-marital"><span>EST. CIVIL</span><strong>${escapeText(card.maritalStatus)}</strong></div>
+        <div class="field back-birth"><span>NASC.</span><strong>${escapeText(card.birthDate)}</strong></div>
+        <div class="field back-baptism"><span>BATISMO</span><strong>${escapeText(card.baptism)}</strong></div>
+        <div class="field back-natural"><span>NATURAL</span><strong>${escapeText(card.naturalFrom)}</strong></div>
+        <div class="signature-panel">
+          <strong>Lionor Ribeiro</strong>
+          <span>PASTOR PRESIDENTE</span>
+        </div>
+        <div class="card-logo back-logo">
+          <strong>AD</strong>
+          <span>Maringa</span>
+        </div>
+        <footer>
+          <p>SEDE: Rua Nicomedes M. Afonso, 123 - Litoraneo, Sao Mateus/ES - 29932000</p>
+          <p>Tel.: (27) 9.9999-8888 E-mail: ademanuel@gmail.com</p>
+          <p>Fundacao da Igreja em 15/03/1956</p>
+        </footer>
+      </article>
+    </section>
+  `;
+}
+
+function cardPrintStyles() {
+  return `
+    @page { size: A4 landscape; margin: 10mm; }
+    * { box-sizing: border-box; }
+    body { background: #eef3f8; font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 12px; }
+    .membership-card-sheet { display: grid; gap: 12px; justify-content: center; }
+    .membership-card { background: radial-gradient(circle at 58% 12%, rgba(255,255,255,.5), transparent 18%), linear-gradient(145deg, #063178, #005bad 42%, #061b62); border-radius: 4px; color: #081f54; height: 318px; overflow: hidden; position: relative; width: 508px; }
+    .front-card:before { background: linear-gradient(135deg, rgba(255,94,146,.42), transparent 24%), linear-gradient(165deg, transparent 58%, rgba(19,153,255,.34)); content: ""; inset: 0; position: absolute; }
+    .back-card { background: radial-gradient(circle at 52% 2%, rgba(255,255,255,.72), transparent 22%), linear-gradient(135deg, #92c8ff 0%, #0058ae 38%, #01245f 76%, #39a8ff 100%); }
+    .card-logo { align-items: center; background: radial-gradient(circle, #0a376d, #02153c 72%); border: 1px solid rgba(255,255,255,.22); border-radius: 50%; color: #fff; display: grid; height: 76px; justify-items: center; left: 52px; line-height: 1; position: absolute; top: 14px; width: 76px; z-index: 1; }
+    .card-logo strong { color: #ffb43b; font-size: 27px; }
+    .card-logo span { color: #9ec4ff; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+    .front-card h1 { color: #fff; font-size: 26px; left: 150px; line-height: 1; margin: 0; position: absolute; text-align: center; text-shadow: 0 2px 5px rgba(0,0,0,.35); top: 32px; width: 310px; z-index: 1; }
+    .card-photo { align-items: center; background: linear-gradient(#d8f5ff, #effcff 65%, #9aba00 66%); border: 5px solid #ffd35c; border-radius: 18px; display: flex; height: 198px; justify-content: center; left: 22px; overflow: hidden; position: absolute; top: 96px; width: 154px; z-index: 1; }
+    .card-photo img { height: 100%; object-fit: cover; width: 100%; }
+    .avatar-fallback { color: #fff; font-size: 64px; font-weight: 900; }
+    .field { background: #fff; border-radius: 999px; min-height: 36px; padding: 14px 14px 5px; position: absolute; z-index: 1; }
+    .field span, .back-card h2 { background: linear-gradient(180deg, #a9c9ff, #6c91f2); border-radius: 4px; color: #071e52; font-size: 11px; font-weight: 900; letter-spacing: .02em; padding: 5px 10px; position: absolute; top: -10px; }
+    .field strong { display: block; font-family: Arial, sans-serif; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .field-name { height: 36px; left: 190px; top: 126px; width: 298px; }
+    .field-function { height: 36px; left: 190px; top: 184px; width: 192px; }
+    .field-validity { height: 36px; left: 388px; top: 184px; width: 100px; }
+    .field-registration { height: 36px; left: 190px; top: 242px; width: 100px; }
+    .field-congregation { height: 36px; left: 298px; top: 242px; width: 190px; }
+    .back-card h2 { font-size: 16px; left: 166px; margin: 0; position: absolute; text-align: center; top: 16px; width: 176px; }
+    .back-father { left: 18px; top: 54px; width: 230px; }
+    .back-mother { left: 260px; top: 54px; width: 230px; }
+    .back-cpf { left: 30px; top: 98px; width: 108px; }
+    .back-marital { left: 205px; top: 98px; width: 108px; }
+    .back-birth { left: 350px; top: 98px; width: 108px; }
+    .back-baptism { left: 84px; top: 142px; width: 110px; }
+    .back-natural { left: 260px; top: 142px; width: 230px; }
+    .signature-panel { background: #fff; border-radius: 999px; left: 84px; padding: 16px 24px 8px; position: absolute; text-align: center; top: 186px; width: 340px; }
+    .signature-panel strong { color: #000; display: block; font-size: 26px; font-style: italic; font-weight: 400; line-height: 1; }
+    .signature-panel span { color: #000; display: block; font-size: 12px; margin-top: 2px; }
+    .back-logo { height: 76px; left: 14px; top: 226px; width: 76px; }
+    footer { bottom: 18px; color: #fff; font-size: 11px; left: 110px; line-height: 1.1; position: absolute; text-align: center; width: 360px; }
+    footer p { margin: 7px 0; }
+    @media print { body { background: #fff; } .membership-card-sheet { gap: 8mm; } }
   `;
 }
 
 function printDigitalCard(card: DigitalCardData) {
-  const popup = window.open("", "_blank", "width=720,height=520");
+  const popup = window.open("", "_blank", "width=1120,height=760");
   if (!popup) return;
 
   popup.document.write(`
@@ -945,21 +1018,7 @@ function printDigitalCard(card: DigitalCardData) {
       <head>
         <meta charset="utf-8" />
         <title>${escapeText(card.name)} - carteirinha</title>
-        <style>
-          @page { size: A4; margin: 18mm; }
-          * { box-sizing: border-box; }
-          body { align-items: center; background: #eef3f8; display: flex; font-family: Arial, sans-serif; justify-content: center; margin: 0; min-height: 100vh; }
-          .printable-card { background: linear-gradient(135deg, #07111f, #122d4c); border: 2px solid var(--accent); border-radius: 14px; color: white; overflow: hidden; width: 420px; }
-          .card-top, .card-footer { align-items: center; background: color-mix(in srgb, var(--accent) 22%, transparent); display: flex; gap: 12px; justify-content: space-between; padding: 14px 16px; }
-          .card-top span, .card-footer span { color: #cce0f4; font-size: 12px; font-weight: 800; }
-          .card-top strong { color: var(--accent); font-size: 14px; }
-          .card-body { align-items: center; display: flex; gap: 16px; padding: 18px; }
-          .card-photo { align-items: center; border: 1px solid var(--accent); border-radius: 12px; display: flex; height: 92px; justify-content: center; overflow: hidden; width: 92px; }
-          .card-photo img { height: 100%; object-fit: cover; width: 100%; }
-          .avatar-fallback { color: var(--accent); font-size: 44px; font-weight: 900; }
-          h1 { font-size: 22px; line-height: 1.1; margin: 0 0 8px; }
-          p { color: #cce0f4; font-size: 13px; font-weight: 700; margin: 4px 0; }
-        </style>
+        <style>${cardPrintStyles()}</style>
       </head>
       <body>${cardMarkup(card)}<script>window.onload = () => { window.print(); };</script></body>
     </html>
@@ -968,27 +1027,74 @@ function printDigitalCard(card: DigitalCardData) {
 }
 
 function downloadDigitalCardImage(card: DigitalCardData) {
+  const svgPhoto = card.photoDataUrl
+    ? `<image href="${card.photoDataUrl}" x="27" y="101" width="144" height="188" preserveAspectRatio="xMidYMid slice"/>`
+    : `<text x="99" y="205" fill="#ffffff" font-family="Arial" font-size="64" font-weight="900" text-anchor="middle">${escapeText(card.name.slice(0, 1).toUpperCase())}</text>`;
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="840" height="520" viewBox="0 0 840 520">
+    <svg xmlns="http://www.w3.org/2000/svg" width="1016" height="636" viewBox="0 0 1016 636">
       <defs>
-        <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-          <stop stop-color="#07111f"/>
-          <stop offset="1" stop-color="#122d4c"/>
+        <linearGradient id="frontBg" x1="0" x2="1" y1="0" y2="1">
+          <stop stop-color="#063178"/>
+          <stop offset=".48" stop-color="#005bad"/>
+          <stop offset="1" stop-color="#061b62"/>
+        </linearGradient>
+        <linearGradient id="backBg" x1="0" x2="1" y1="0" y2="1">
+          <stop stop-color="#92c8ff"/>
+          <stop offset=".4" stop-color="#0058ae"/>
+          <stop offset=".78" stop-color="#01245f"/>
+          <stop offset="1" stop-color="#39a8ff"/>
         </linearGradient>
       </defs>
-      <rect width="820" height="500" x="10" y="10" rx="28" fill="url(#bg)" stroke="${card.accent}" stroke-width="4"/>
-      <rect width="820" height="86" x="10" y="10" rx="28" fill="${card.accent}" opacity="0.2"/>
-      <text x="42" y="64" fill="#cce0f4" font-family="Arial" font-size="24" font-weight="700">${escapeText(card.title)}</text>
-      <text x="560" y="64" fill="${card.accent}" font-family="Arial" font-size="24" font-weight="900">${escapeText(card.church)}</text>
-      <rect x="46" y="148" width="150" height="150" rx="22" fill="#0d1c31" stroke="${card.accent}" stroke-width="2"/>
-      <text x="104" y="246" fill="${card.accent}" font-family="Arial" font-size="76" font-weight="900">${escapeText(card.name.slice(0, 1).toUpperCase())}</text>
-      <text x="230" y="174" fill="#ffffff" font-family="Arial" font-size="42" font-weight="900">${escapeText(card.name)}</text>
-      <text x="230" y="222" fill="#cce0f4" font-family="Arial" font-size="24" font-weight="700">${escapeText(card.id)}</text>
-      <text x="230" y="264" fill="#cce0f4" font-family="Arial" font-size="24" font-weight="700">${escapeText(card.subtitle)}</text>
-      <text x="230" y="306" fill="#cce0f4" font-family="Arial" font-size="24" font-weight="700">${escapeText(card.detail)}</text>
-      <rect width="820" height="78" x="10" y="432" rx="28" fill="${card.accent}" opacity="0.16"/>
-      <text x="42" y="480" fill="#cce0f4" font-family="Arial" font-size="22" font-weight="700">${escapeText(card.footerLeft)}</text>
-      <text x="560" y="480" fill="#cce0f4" font-family="Arial" font-size="22" font-weight="700">${escapeText(card.footerRight)}</text>
+      <rect width="508" height="318" fill="url(#frontBg)"/>
+      <circle cx="90" cy="54" r="38" fill="#062052" stroke="#638bd0"/>
+      <text x="90" y="53" fill="#ffb43b" font-family="Georgia" font-size="27" font-weight="900" text-anchor="middle">AD</text>
+      <text x="90" y="74" fill="#9ec4ff" font-family="Arial" font-size="10" font-weight="800" text-anchor="middle">MARINGA</text>
+      <text x="304" y="44" fill="#ffffff" font-family="Georgia" font-size="26" font-weight="900" text-anchor="middle">${escapeText(card.church)}</text>
+      <rect x="22" y="96" width="154" height="198" rx="18" fill="#dff6ff" stroke="#ffd35c" stroke-width="5"/>
+      <rect x="27" y="224" width="144" height="65" fill="#93ad00"/>
+      ${svgPhoto}
+      <rect x="190" y="126" width="298" height="36" rx="18" fill="#ffffff"/>
+      <rect x="198" y="118" width="70" height="18" rx="4" fill="#86a9fb"/>
+      <text x="206" y="131" fill="#071e52" font-family="Georgia" font-size="11" font-weight="900">NOME</text>
+      <text x="204" y="150" fill="#071e52" font-family="Arial" font-size="13" font-weight="700">${escapeText(card.name)}</text>
+      <rect x="190" y="184" width="192" height="36" rx="18" fill="#ffffff"/>
+      <rect x="198" y="176" width="70" height="18" rx="4" fill="#86a9fb"/>
+      <text x="206" y="189" fill="#071e52" font-family="Georgia" font-size="11" font-weight="900">FUNCAO</text>
+      <text x="204" y="208" fill="#071e52" font-family="Arial" font-size="13" font-weight="700">${escapeText(card.functionName)}</text>
+      <rect x="388" y="184" width="100" height="36" rx="18" fill="#ffffff"/>
+      <rect x="396" y="176" width="70" height="18" rx="4" fill="#86a9fb"/>
+      <text x="404" y="189" fill="#071e52" font-family="Georgia" font-size="11" font-weight="900">VALIDADE</text>
+      <text x="402" y="208" fill="#071e52" font-family="Arial" font-size="13" font-weight="700">${escapeText(card.validity)}</text>
+      <rect x="190" y="242" width="100" height="36" rx="18" fill="#ffffff"/>
+      <rect x="198" y="234" width="70" height="18" rx="4" fill="#86a9fb"/>
+      <text x="206" y="247" fill="#071e52" font-family="Georgia" font-size="10" font-weight="900">No. REG.</text>
+      <text x="204" y="266" fill="#071e52" font-family="Arial" font-size="12" font-weight="700">${escapeText(card.registration)}</text>
+      <rect x="298" y="242" width="190" height="36" rx="18" fill="#ffffff"/>
+      <rect x="306" y="234" width="88" height="18" rx="4" fill="#86a9fb"/>
+      <text x="314" y="247" fill="#071e52" font-family="Georgia" font-size="10" font-weight="900">CONGREG.</text>
+      <text x="312" y="266" fill="#071e52" font-family="Arial" font-size="13" font-weight="700">${escapeText(card.congregation)}</text>
+
+      <g transform="translate(508 0)">
+        <rect width="508" height="318" fill="url(#backBg)"/>
+        <rect x="166" y="16" width="176" height="22" rx="5" fill="#86a9fb"/>
+        <text x="254" y="32" fill="#071e52" font-family="Georgia" font-size="16" font-weight="900" text-anchor="middle">${escapeText(card.title)}</text>
+        <rect x="18" y="54" width="230" height="36" rx="18" fill="#fff"/><text x="26" y="58" fill="#071e52" font-size="11" font-weight="900">PAI</text><text x="32" y="78" fill="#071e52" font-size="13">${escapeText(card.fatherName)}</text>
+        <rect x="260" y="54" width="230" height="36" rx="18" fill="#fff"/><text x="268" y="58" fill="#071e52" font-size="11" font-weight="900">MAE</text><text x="274" y="78" fill="#071e52" font-size="13">${escapeText(card.motherName)}</text>
+        <rect x="30" y="98" width="108" height="36" rx="18" fill="#fff"/><text x="38" y="102" fill="#071e52" font-size="11" font-weight="900">CPF.</text><text x="44" y="122" fill="#071e52" font-size="12">${escapeText(card.cpf)}</text>
+        <rect x="205" y="98" width="108" height="36" rx="18" fill="#fff"/><text x="213" y="102" fill="#071e52" font-size="11" font-weight="900">EST. CIVIL</text><text x="219" y="122" fill="#071e52" font-size="12">${escapeText(card.maritalStatus)}</text>
+        <rect x="350" y="98" width="108" height="36" rx="18" fill="#fff"/><text x="358" y="102" fill="#071e52" font-size="11" font-weight="900">NASC.</text><text x="364" y="122" fill="#071e52" font-size="12">${escapeText(card.birthDate)}</text>
+        <rect x="84" y="142" width="110" height="36" rx="18" fill="#fff"/><text x="92" y="146" fill="#071e52" font-size="11" font-weight="900">BATISMO</text><text x="98" y="166" fill="#071e52" font-size="12">${escapeText(card.baptism)}</text>
+        <rect x="260" y="142" width="230" height="36" rx="18" fill="#fff"/><text x="268" y="146" fill="#071e52" font-size="11" font-weight="900">NATURAL</text><text x="274" y="166" fill="#071e52" font-size="12">${escapeText(card.naturalFrom)}</text>
+        <rect x="84" y="186" width="340" height="50" rx="25" fill="#fff"/>
+        <text x="254" y="215" fill="#000" font-family="Georgia" font-size="26" font-style="italic" text-anchor="middle">Lionor Ribeiro</text>
+        <text x="254" y="230" fill="#000" font-family="Georgia" font-size="12" text-anchor="middle">PASTOR PRESIDENTE</text>
+        <circle cx="52" cy="264" r="38" fill="#062052" stroke="#638bd0"/>
+        <text x="52" y="263" fill="#ffb43b" font-family="Georgia" font-size="27" font-weight="900" text-anchor="middle">AD</text>
+        <text x="52" y="284" fill="#9ec4ff" font-family="Arial" font-size="10" font-weight="800" text-anchor="middle">MARINGA</text>
+        <text x="290" y="265" fill="#ffffff" font-family="Georgia" font-size="11" text-anchor="middle">SEDE: Rua Nicomedes M. Afonso, 123 - Litoraneo, Sao Mateus/ES - 29932000</text>
+        <text x="290" y="282" fill="#ffffff" font-family="Georgia" font-size="11" text-anchor="middle">Tel.: (27) 9.9999-8888 E-mail: ademanuel@gmail.com</text>
+        <text x="290" y="299" fill="#ffffff" font-family="Georgia" font-size="11" text-anchor="middle">Fundacao da Igreja em 15/03/1956</text>
+      </g>
     </svg>
   `;
   const blob = new Blob([svg], { type: "image/svg+xml" });
@@ -2493,9 +2599,20 @@ export default function Home() {
     return {
       ownerType: "member",
       ownerId: member.id,
-      title: "Carteirinha digital",
-      church: "Igreja Conectada",
+      title: "Carteirinha de membro",
+      church: "Igreja Assembleia de Deus AD Maringa",
       name: member.fullName,
+      functionName: member.role || member.memberType,
+      validity: "31/12/2026",
+      registration: member.id.slice(0, 12).toUpperCase(),
+      congregation: member.congregation || "Sede",
+      fatherName: member.fatherName || "Nao informado",
+      motherName: member.motherName || "Nao informado",
+      cpf: member.cpf || "Nao informado",
+      maritalStatus: member.maritalStatus || "Nao informado",
+      birthDate: member.birthDate ? formatDate(member.birthDate) : "Nao informado",
+      baptism: member.waterBaptized ? "Sim" : "Nao",
+      naturalFrom: member.congregation || member.address || "Nao informado",
       subtitle: `${member.memberType} - ${member.status}`,
       id: `ID ${member.id.slice(0, 12).toUpperCase()}`,
       detail: member.role || "Funcao nao informada",
@@ -2513,6 +2630,17 @@ export default function Home() {
       title: "Carteirinha Kids",
       church: "Igreja Conectada Kids",
       name: kid.childName,
+      functionName: kid.ageGroup,
+      validity: "31/12/2026",
+      registration: kid.id.slice(0, 12).toUpperCase(),
+      congregation: kid.className || "Kids",
+      fatherName: kid.guardianName || "Responsavel",
+      motherName: kid.guardianName || "Responsavel",
+      cpf: "Nao se aplica",
+      maritalStatus: "Kids",
+      birthDate: kid.birthDate ? formatDate(kid.birthDate) : "Nao informado",
+      baptism: "Nao se aplica",
+      naturalFrom: kid.className || kid.ageGroup,
       subtitle: `${kid.ageGroup} - ${kid.className || "Turma Kids"}`,
       id: `ID ${kid.id.slice(0, 12).toUpperCase()}`,
       detail: `Responsavel: ${kid.guardianName}`,
@@ -4047,25 +4175,38 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="digital-card">
-                        <div className="digital-card-top">
-                          <span>{card.title}</span>
-                          <strong>{card.church}</strong>
-                        </div>
-                        <div className="digital-card-body">
-                          <div className="member-avatar">
-                            {member.photoDataUrl ? <img alt="" src={member.photoDataUrl} /> : member.fullName.slice(0, 1)}
+                        <div className="membership-preview front-preview">
+                          <div className="card-logo-preview">
+                            <strong>AD</strong>
+                            <span>Maringa</span>
                           </div>
-                          <div>
-                            <strong>{card.name}</strong>
-                            <small>{card.id}</small>
-                            <small>{card.subtitle}</small>
-                            <small>{card.detail}</small>
+                          <h3>{card.church}</h3>
+                          <div className="membership-photo">
+                            {member.photoDataUrl ? <img alt="" src={member.photoDataUrl} /> : <span>{member.fullName.slice(0, 1)}</span>}
                           </div>
+                          <div className="card-field preview-name"><span>NOME</span><strong>{card.name}</strong></div>
+                          <div className="card-field preview-function"><span>FUNCAO</span><strong>{card.functionName}</strong></div>
+                          <div className="card-field preview-validity"><span>VALIDADE</span><strong>{card.validity}</strong></div>
+                          <div className="card-field preview-registration"><span>No. REGISTRO</span><strong>{card.registration}</strong></div>
+                          <div className="card-field preview-congregation"><span>CONGREGACAO</span><strong>{card.congregation}</strong></div>
                         </div>
-                        <div className="digital-card-footer">
-                          <span>{card.footerLeft}</span>
-                          <span>{card.footerRight}</span>
+
+                        <div className="membership-preview back-preview">
+                          <h3>{card.title}</h3>
+                          <div className="card-field preview-father"><span>PAI</span><strong>{card.fatherName}</strong></div>
+                          <div className="card-field preview-mother"><span>MAE</span><strong>{card.motherName}</strong></div>
+                          <div className="card-field preview-cpf"><span>CPF.</span><strong>{card.cpf}</strong></div>
+                          <div className="card-field preview-marital"><span>EST. CIVIL</span><strong>{card.maritalStatus}</strong></div>
+                          <div className="card-field preview-birth"><span>NASC.</span><strong>{card.birthDate}</strong></div>
+                          <div className="card-field preview-baptism"><span>BATISMO</span><strong>{card.baptism}</strong></div>
+                          <div className="card-field preview-natural"><span>NATURAL</span><strong>{card.naturalFrom}</strong></div>
+                          <div className="signature-preview">
+                            <strong>Lionor Ribeiro</strong>
+                            <span>PASTOR PRESIDENTE</span>
+                          </div>
+                          <small>SEDE: Rua Nicomedes M. Afonso, 123 - Litoraneo, Sao Mateus/ES</small>
                         </div>
+
                         <div className="card-actions">
                           <button onClick={() => { void saveCardExportToSupabase(card, "print_pdf"); printDigitalCard(card); }} type="button">
                             Imprimir/PDF
