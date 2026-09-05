@@ -117,6 +117,9 @@ type MemberRecord = {
   id: string;
   authUserId?: string;
   fullName: string;
+  fatherName: string;
+  motherName: string;
+  cpf: string;
   phone: string;
   email: string;
   status: "Membro ativo" | "Visitante" | "Novo convertido" | "Transferencia";
@@ -414,6 +417,9 @@ const initialData: AppData = {
     {
       id: "member-1",
       fullName: "Ana Ribeiro",
+      fatherName: "",
+      motherName: "",
+      cpf: "",
       phone: "(11) 98888-1201",
       email: "ana@igreja.com",
       status: "Membro ativo",
@@ -436,6 +442,9 @@ const initialData: AppData = {
     {
       id: "member-2",
       fullName: "Carlos Lima",
+      fatherName: "",
+      motherName: "",
+      cpf: "",
       phone: "(21) 97777-5402",
       email: "carlos@igreja.com",
       status: "Visitante",
@@ -659,6 +668,9 @@ const blankUser: AccessUserForm = {
 const blankMember: Omit<MemberRecord, "id"> = {
   authUserId: "",
   fullName: "",
+  fatherName: "",
+  motherName: "",
+  cpf: "",
   phone: "",
   email: "",
   status: "Visitante",
@@ -3776,6 +3788,31 @@ export default function Home() {
                     />
                   </label>
                   <label>
+                    Nome do pai
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, fatherName: event.target.value }))}
+                      placeholder="Nome completo do pai"
+                      value={memberForm.fatherName}
+                    />
+                  </label>
+                  <label>
+                    Nome da mae
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, motherName: event.target.value }))}
+                      placeholder="Nome completo da mae"
+                      value={memberForm.motherName}
+                    />
+                  </label>
+                  <label>
+                    CPF
+                    <input
+                      inputMode="numeric"
+                      onChange={(event) => setMemberForm((form) => ({ ...form, cpf: event.target.value }))}
+                      placeholder="000.000.000-00"
+                      value={memberForm.cpf}
+                    />
+                  </label>
+                  <label>
                     Telefone
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, phone: event.target.value }))}
@@ -3995,6 +4032,12 @@ export default function Home() {
                           <small>
                             {member.memberType} - {member.status} - {member.role || "Sem funcao"} - {member.phone}
                           </small>
+                          <small>CPF: {member.cpf || "Nao informado"}</small>
+                          {(member.fatherName || member.motherName) && (
+                            <small>
+                              Filiacao: {member.fatherName || "Pai nao informado"} / {member.motherName || "Mae nao informada"}
+                            </small>
+                          )}
                           <small>
                             {member.ministry || "Sem ministerio"} - {member.congregation || "Congregacao nao informada"} - Aniv. {birthdayLabel(member.birthDate)}
                           </small>
