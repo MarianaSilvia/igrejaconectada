@@ -1243,6 +1243,36 @@ textarea:focus {
   color: #ffd778;
 }
 
+.mural-preview {
+  height: 88px;
+  width: 88px;
+}
+
+.mural-media {
+  aspect-ratio: 16 / 7;
+  background: rgba(7, 17, 31, 0.64);
+  border: 1px solid rgba(72, 184, 255, 0.2);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  max-width: 420px;
+  overflow: hidden;
+}
+
+.mural-media img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.inline-link {
+  color: var(--accent-strong);
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 900;
+  margin-top: 7px;
+  text-decoration: none;
+}
+
 .notice-stack {
   display: flex;
   flex-wrap: wrap;
@@ -1411,7 +1441,7 @@ textarea:focus {
   background: rgba(18, 45, 76, 0.62);
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 1fr) 150px 130px;
+  grid-template-columns: minmax(0, 1fr) 150px 130px 100px;
   min-height: 76px;
   padding: 12px;
 }

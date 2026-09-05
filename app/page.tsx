@@ -55,6 +55,8 @@ type Notice = {
   status: "Publicado" | "Rascunho";
   audience: string;
   channel: "App" | "WhatsApp" | "Mural" | "Todos";
+  retentionDays: number;
+  expiresAt: string;
 };
 
 type MuralItem = {
@@ -64,6 +66,9 @@ type MuralItem = {
   published: boolean;
   featured: boolean;
   expiresAt: string;
+  imageDataUrl: string;
+  bannerUrl: string;
+  socialUrl: string;
 };
 
 type AccessUser = {
@@ -281,6 +286,8 @@ const initialData: AppData = {
       status: "Publicado",
       audience: "Lideres",
       channel: "App",
+      retentionDays: 7,
+      expiresAt: "2026-09-09",
     },
     {
       id: "notice-2",
@@ -289,6 +296,8 @@ const initialData: AppData = {
       status: "Publicado",
       audience: "Secretaria e EBD",
       channel: "Todos",
+      retentionDays: 7,
+      expiresAt: "2026-09-09",
     },
   ],
   mural: [
@@ -299,6 +308,9 @@ const initialData: AppData = {
       published: true,
       featured: true,
       expiresAt: "2026-09-20",
+      imageDataUrl: "",
+      bannerUrl: "",
+      socialUrl: "https://instagram.com/",
     },
     {
       id: "mural-2",
@@ -307,6 +319,9 @@ const initialData: AppData = {
       published: true,
       featured: false,
       expiresAt: "2026-09-18",
+      imageDataUrl: "",
+      bannerUrl: "",
+      socialUrl: "",
     },
     {
       id: "mural-3",
@@ -315,6 +330,9 @@ const initialData: AppData = {
       published: false,
       featured: false,
       expiresAt: "2026-09-30",
+      imageDataUrl: "",
+      bannerUrl: "",
+      socialUrl: "",
     },
   ],
   users: [
@@ -426,6 +444,8 @@ const initialData: AppData = {
           status: "Publicado",
           audience: "Classe adultos",
           channel: "App",
+          retentionDays: 7,
+          expiresAt: "2026-09-09",
         },
       ],
     },
@@ -513,6 +533,8 @@ const blankNotice: Omit<Notice, "id"> = {
   status: "Publicado",
   audience: "Toda igreja",
   channel: "Todos",
+  retentionDays: 3,
+  expiresAt: "",
 };
 
 const blankMinistry: Omit<MinistryRecord, "id"> = {
@@ -583,6 +605,9 @@ const blankMuralItem: Omit<MuralItem, "id"> = {
   published: true,
   featured: false,
   expiresAt: "",
+  imageDataUrl: "",
+  bannerUrl: "",
+  socialUrl: "",
 };
 
 const blankSchoolNotice = {
@@ -638,6 +663,19 @@ const messageTemplates: MessageTemplateItem[] = [
 function formatDate(value: string) {
   if (!value) return "Sem data";
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(new Date(`${value}T12:00:00`));
+}
+
+function dateAfterDays(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function isExpiredDate(value: string) {
+  if (!value) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(`${value}T23:59:59`) < today;
 }
 
 function formatDateTime(value: string) {
@@ -853,6 +891,8 @@ function normalizeNotice(notice: Partial<Notice>): Notice {
     ...blankNotice,
     ...notice,
     id: notice.id ?? uid("notice"),
+    retentionDays: notice.retentionDays ?? 3,
+    expiresAt: notice.expiresAt ?? dateAfterDays(notice.retentionDays ?? 3),
   };
 }
 
@@ -864,14 +904,22 @@ function normalizeMinistry(ministry: Partial<MinistryRecord>): MinistryRecord {
   };
 }
 
+function normalizeMuralItem(item: Partial<MuralItem>): MuralItem {
+  return {
+    ...blankMuralItem,
+    ...item,
+    id: item.id ?? uid("mural"),
+  };
+}
+
 function normalizeAppData(value: Partial<AppData>): AppData {
   return {
     ...initialData,
     ...value,
     careRequests: value.careRequests ?? initialData.careRequests,
     events: (value.events ?? initialData.events).map((event) => normalizeEvent(event)),
-    notices: (value.notices ?? initialData.notices).map((notice) => normalizeNotice(notice)),
-    mural: value.mural ?? initialData.mural,
+    notices: (value.notices ?? initialData.notices).map((notice) => normalizeNotice(notice)).filter((notice) => !isExpiredDate(notice.expiresAt)),
+    mural: (value.mural ?? initialData.mural).map((item) => normalizeMuralItem(item)),
     users: value.users ?? initialData.users,
     members: (value.members ?? initialData.members).map((member) => normalizeMember(member)),
     kids: (value.kids ?? initialData.kids).map((kid) => normalizeKid(kid)),
@@ -929,6 +977,23 @@ export default function Home() {
   useEffect(() => {
     window.localStorage.setItem(storageKey, JSON.stringify(data));
   }, [data]);
+
+  useEffect(() => {
+    const cleanup = window.setTimeout(() => {
+      setData((current) => {
+        const activeItems = current.notices.filter((notice) => !isExpiredDate(notice.expiresAt));
+        if (activeItems.length === current.notices.length) return current;
+
+        return {
+          ...current,
+          notices: activeItems,
+          audit: [{ id: uid("audit"), action: "Avisos expirados removidos automaticamente", when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+        };
+      });
+    }, 0);
+
+    return () => window.clearTimeout(cleanup);
+  }, []);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -993,6 +1058,7 @@ export default function Home() {
   }, [data.careRequests, data.events, data.mural]);
 
   const unreadCount = notifications.filter((notice) => !data.notificationReadIds.includes(notice.id)).length;
+  const activeNotices = data.notices.filter((notice) => !isExpiredDate(notice.expiresAt));
   const monthlyBirthdays = data.members.filter((member) => isBirthdayThisMonth(member.birthDate));
   const weeklyBirthdays = monthlyBirthdays.filter((member) => isBirthdayThisWeek(member.birthDate));
   const monthlyKidsBirthdays = data.kids.filter((kid) => isBirthdayThisMonth(kid.birthDate));
@@ -1411,6 +1477,17 @@ export default function Home() {
     setKidForm(blankKid);
   }
 
+  function deleteKid(kid: KidRecord) {
+    if (!window.confirm(`Excluir o cadastro Kids de ${kid.childName}?`)) return;
+
+    setData((current) => ({
+      ...current,
+      kids: current.kids.filter((item) => item.id !== kid.id),
+      audit: [{ id: uid("audit"), action: `Cadastro Kids excluido: ${kid.childName}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
+    setSyncStatus(`Cadastro Kids de ${kid.childName} excluido.`);
+  }
+
   function createMuralItem() {
     if (!muralForm.title.trim() || !muralForm.expiresAt) return;
 
@@ -1423,6 +1500,16 @@ export default function Home() {
       audit: [{ id: uid("audit"), action: `Item publicado no mural: ${item.title}`, when: now }, ...current.audit].slice(0, 12),
     }));
     setMuralForm(blankMuralItem);
+  }
+
+  function deleteMuralItem(item: MuralItem) {
+    if (!window.confirm(`Excluir o item do mural "${item.title}"?`)) return;
+
+    setData((current) => ({
+      ...current,
+      mural: current.mural.filter((muralItem) => muralItem.id !== item.id),
+      audit: [{ id: uid("audit"), action: `Item excluido do mural: ${item.title}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
   }
 
   function createEvent() {
@@ -1439,18 +1526,47 @@ export default function Home() {
     setEventForm(blankEvent);
   }
 
+  function updateEventStatus(event: ChurchEvent, status: ChurchEvent["status"]) {
+    setData((current) => ({
+      ...current,
+      events: current.events.map((item) => (item.id === event.id ? { ...item, status } : item)),
+      audit: [{ id: uid("audit"), action: `Evento ${status.toLowerCase()}: ${event.title}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
+  }
+
+  function deleteEvent(event: ChurchEvent) {
+    if (!window.confirm(`Excluir o evento "${event.title}" da agenda?`)) return;
+
+    setData((current) => ({
+      ...current,
+      events: current.events.filter((item) => item.id !== event.id),
+      audit: [{ id: uid("audit"), action: `Evento excluido da agenda: ${event.title}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
+  }
+
   function createNotice() {
     if (!canCreateNotice) return;
 
     const now = new Date().toISOString();
-    const notice: Notice = { ...noticeForm, id: uid("notice") };
+    const expiresAt = noticeForm.expiresAt || dateAfterDays(noticeForm.retentionDays);
+    const notice: Notice = { ...noticeForm, expiresAt, id: uid("notice") };
 
     setData((current) => ({
       ...current,
-      notices: [notice, ...current.notices],
+      notices: [notice, ...current.notices.filter((item) => !isExpiredDate(item.expiresAt))],
       audit: [{ id: uid("audit"), action: `Comunicado criado: ${notice.title}`, when: now }, ...current.audit].slice(0, 12),
     }));
     setNoticeForm(blankNotice);
+  }
+
+  function deleteNotice(notice: Notice) {
+    if (!window.confirm(`Excluir o aviso "${notice.title}"?`)) return;
+
+    setData((current) => ({
+      ...current,
+      notices: current.notices.filter((item) => item.id !== notice.id),
+      audit: [{ id: uid("audit"), action: `Aviso excluido: ${notice.title}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
   }
 
   function createMinistry() {
@@ -1479,6 +1595,8 @@ export default function Home() {
       status: "Publicado",
       audience: targetClass?.name ?? "Classe EBD",
       channel: "App",
+      retentionDays: 7,
+      expiresAt: dateAfterDays(7),
     };
 
     setData((current) => ({
@@ -1538,7 +1656,7 @@ export default function Home() {
     },
     {
       label: "Comunicados ativos",
-      value: data.notices.filter((notice) => notice.status === "Publicado").length.toString(),
+      value: activeNotices.filter((notice) => notice.status === "Publicado").length.toString(),
       hint: "publicados",
       module: "notices" as ModuleKey,
     },
@@ -2159,6 +2277,33 @@ export default function Home() {
                       value={muralForm.category}
                     />
                   </label>
+                  <div className="photo-uploader full">
+                    <div className="photo-preview mural-preview">
+                      {muralForm.imageDataUrl ? <img alt="" src={muralForm.imageDataUrl} /> : <span>Banner</span>}
+                    </div>
+                    <label>
+                      Foto, imagem ou banner
+                      <input accept="image/*" onChange={(event) => readPhoto(event, (imageDataUrl) => setMuralForm((form) => ({ ...form, imageDataUrl })))} type="file" />
+                    </label>
+                  </div>
+                  <label className="full">
+                    Link da imagem ou banner
+                    <input
+                      onChange={(event) => setMuralForm((form) => ({ ...form, bannerUrl: event.target.value }))}
+                      placeholder="https://..."
+                      type="url"
+                      value={muralForm.bannerUrl}
+                    />
+                  </label>
+                  <label className="full">
+                    Link de rede social
+                    <input
+                      onChange={(event) => setMuralForm((form) => ({ ...form, socialUrl: event.target.value }))}
+                      placeholder="Instagram, Facebook, YouTube ou outro link"
+                      type="url"
+                      value={muralForm.socialUrl}
+                    />
+                  </label>
                   <label>
                     Expira em
                     <input
@@ -2198,8 +2343,18 @@ export default function Home() {
                   {data.mural.map((item) => (
                     <div className="table-row" key={item.id}>
                       <div>
+                        {(item.imageDataUrl || item.bannerUrl) && (
+                          <div className="mural-media">
+                            <img alt="" src={item.imageDataUrl || item.bannerUrl} />
+                          </div>
+                        )}
                         <strong>{item.title}</strong>
                         <small>{item.category} - expira em {formatDate(item.expiresAt)}</small>
+                        {item.socialUrl && (
+                          <a className="inline-link" href={item.socialUrl} rel="noreferrer" target="_blank">
+                            Abrir rede social
+                          </a>
+                        )}
                       </div>
                       <label className="switch">
                         Publicado
@@ -2209,6 +2364,9 @@ export default function Home() {
                         Destaque
                         <input checked={item.featured} onChange={() => toggleMural(item.id, "featured")} type="checkbox" />
                       </label>
+                      <button className="danger-action" onClick={() => deleteMuralItem(item)} type="button">
+                        Excluir
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -2285,7 +2443,7 @@ export default function Home() {
                 </div>
                 <div className="row-list">
                   {data.events.map((event) => (
-                    <div className="data-row" key={event.id}>
+                    <div className="data-row access-user-row" key={event.id}>
                       <span className="date-box">{formatDate(event.date)}</span>
                       <div>
                         <strong>{event.title}</strong>
@@ -2293,6 +2451,18 @@ export default function Home() {
                           {event.time || "Sem horario"} - {event.ministry} - {event.status}
                         </small>
                         <small>{event.location || "Local nao informado"} - {event.responsible || "Sem responsavel"}</small>
+                      </div>
+                      <div className="row-actions">
+                        <button
+                          className={event.status === "Concluido" ? "secondary" : "danger-action"}
+                          onClick={() => updateEventStatus(event, event.status === "Concluido" ? "Programado" : "Concluido")}
+                          type="button"
+                        >
+                          {event.status === "Concluido" ? "Reativar" : "Cancelar"}
+                        </button>
+                        <button className="danger-action" onClick={() => deleteEvent(event)} type="button">
+                          Excluir
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -2341,6 +2511,29 @@ export default function Home() {
                       <option>Rascunho</option>
                     </select>
                   </label>
+                  <label>
+                    Tempo no ar
+                    <select
+                      onChange={(event) => {
+                        const retentionDays = Number(event.target.value);
+                        setNoticeForm((form) => ({ ...form, retentionDays, expiresAt: dateAfterDays(retentionDays) }));
+                      }}
+                      value={noticeForm.retentionDays}
+                    >
+                      <option value={3}>3 dias</option>
+                      <option value={4}>4 dias</option>
+                      <option value={7}>7 dias</option>
+                      <option value={15}>15 dias</option>
+                    </select>
+                  </label>
+                  <label>
+                    Excluir em
+                    <input
+                      onChange={(event) => setNoticeForm((form) => ({ ...form, expiresAt: event.target.value }))}
+                      type="date"
+                      value={noticeForm.expiresAt || dateAfterDays(noticeForm.retentionDays)}
+                    />
+                  </label>
                   <label className="full">
                     Mensagem
                     <textarea
@@ -2358,18 +2551,24 @@ export default function Home() {
               <article className="surface">
                 <div className="panel-heading">
                   <h2>Comunicados</h2>
-                  <span>{data.notices.length} avisos</span>
+                  <span>{activeNotices.length} avisos ativos</span>
                 </div>
                 <div className="row-list">
-                  {data.notices.map((notice) => (
-                    <div className="data-row" key={notice.id}>
+                  {activeNotices.map((notice) => (
+                    <div className="data-row access-user-row" key={notice.id}>
                       <span className="bullet-mark" />
                       <div>
                         <strong>{notice.title}</strong>
                         <small>
                           {notice.status} - {notice.audience} - {notice.channel}
                         </small>
+                        <small>Expira em {formatDate(notice.expiresAt)} - {notice.retentionDays} dias no ar</small>
                         <small>{notice.body}</small>
+                      </div>
+                      <div className="row-actions">
+                        <button className="danger-action" onClick={() => deleteNotice(notice)} type="button">
+                          Excluir
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -2962,6 +3161,9 @@ export default function Home() {
                           <button className="secondary" onClick={() => { void saveCardExportToSupabase(card, "image_svg"); downloadDigitalCardImage(card); }} type="button">
                             Baixar imagem
                           </button>
+                          <button className="danger-action" onClick={() => deleteKid(kid)} type="button">
+                            Excluir cadastro
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -3266,7 +3468,7 @@ export default function Home() {
                     {" "}
                     {data.careRequests.length} atendimentos,
                     {" "}
-                    {data.events.length} eventos, {data.schoolClasses.length} classes EBD, {data.notices.length} comunicados,
+                    {data.events.length} eventos, {data.schoolClasses.length} classes EBD, {activeNotices.length} comunicados ativos,
                     {" "}
                     {data.mural.length} itens de mural e {data.audit.length} auditorias.
                   </small>
