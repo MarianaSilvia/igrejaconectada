@@ -99,6 +99,8 @@ type MemberRecord = {
   memberType: "Membro" | "Visitante" | "Congregado" | "Lideranca";
   role: string;
   ministry: string;
+  schoolClassId: string;
+  discipleshipClassId: string;
   photoDataUrl: string;
   birthDate: string;
   maritalStatus: string;
@@ -381,6 +383,8 @@ const initialData: AppData = {
       memberType: "Membro",
       role: "Lider de familia",
       ministry: "Familia",
+      schoolClassId: "class-adults",
+      discipleshipClassId: "",
       photoDataUrl: "",
       birthDate: "1991-04-12",
       maritalStatus: "Casado(a)",
@@ -401,6 +405,8 @@ const initialData: AppData = {
       memberType: "Visitante",
       role: "Sem funcao definida",
       ministry: "Recepcao",
+      schoolClassId: "",
+      discipleshipClassId: "discipleship-new",
       photoDataUrl: "",
       birthDate: "1988-10-08",
       maritalStatus: "Solteiro(a)",
@@ -621,6 +627,8 @@ const blankMember: Omit<MemberRecord, "id"> = {
   memberType: "Visitante",
   role: "",
   ministry: "",
+  schoolClassId: "",
+  discipleshipClassId: "",
   photoDataUrl: "",
   birthDate: "",
   maritalStatus: "Solteiro(a)",
@@ -1376,7 +1384,8 @@ export default function Home() {
       }));
   }, [data.kids, data.members, messageAudience, monthlyBirthdays, weeklyBirthdays]);
 
-  function classWhatsappRecipients(className: string, area: "EBD" | "Discipulado") {
+  function classWhatsappRecipients(classRecord: SchoolClass, area: "EBD" | "Discipulado") {
+    const className = classRecord.name;
     const classText = normalizeSearchText(className);
     const classWords = classText.split(/\s+/).filter((word) => word.length > 3);
     const areaWords =
@@ -1390,9 +1399,10 @@ export default function Home() {
         const memberText = normalizeSearchText(
           [member.fullName, member.status, member.memberType, member.role, member.ministry, member.notes].join(" "),
         );
+        const matchesEnrollment = area === "EBD" ? member.schoolClassId === classRecord.id : member.discipleshipClassId === classRecord.id;
         const matchesArea = areaWords.some((word) => memberText.includes(word));
         const matchesClass = classWords.some((word) => memberText.includes(word));
-        return matchesArea || matchesClass;
+        return matchesEnrollment || matchesArea || matchesClass;
       })
       .map((member) => ({
         id: member.id,
@@ -1402,8 +1412,9 @@ export default function Home() {
       }));
   }
 
-  function openClassWhatsapp(className: string, title: string, body: string, area: "EBD" | "Discipulado") {
-    const recipients = classWhatsappRecipients(className, area);
+  function openClassWhatsapp(classRecord: SchoolClass, title: string, body: string, area: "EBD" | "Discipulado") {
+    const recipients = classWhatsappRecipients(classRecord, area);
+    const className = classRecord.name;
     const text = classNoticeWhatsappText(className, title, body);
 
     if (!recipients.length || !text.trim()) {
@@ -1418,6 +1429,10 @@ export default function Home() {
     });
     setSyncStatus(`Envio por WhatsApp preparado para ${Math.min(recipients.length, 12)} contatos de ${className}.`);
     log(`WhatsApp preparado para ${Math.min(recipients.length, 12)} contatos de ${className}`);
+  }
+
+  function classNameById(classes: SchoolClass[], classId: string) {
+    return classes.find((item) => item.id === classId)?.name ?? "";
   }
 
   function readPhoto(event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) {
@@ -3116,6 +3131,31 @@ export default function Home() {
                     />
                   </label>
                   <label>
+                    Classe EBD
+                    <select onChange={(event) => setMemberForm((form) => ({ ...form, schoolClassId: event.target.value }))} value={memberForm.schoolClassId}>
+                      <option value="">Nao matriculado</option>
+                      {data.schoolClasses.map((schoolClass) => (
+                        <option key={schoolClass.id} value={schoolClass.id}>
+                          {schoolClass.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Classe Discipulado
+                    <select
+                      onChange={(event) => setMemberForm((form) => ({ ...form, discipleshipClassId: event.target.value }))}
+                      value={memberForm.discipleshipClassId}
+                    >
+                      <option value="">Nao matriculado</option>
+                      {data.discipleshipClasses.map((discipleshipClass) => (
+                        <option key={discipleshipClass.id} value={discipleshipClass.id}>
+                          {discipleshipClass.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
                     Nascimento
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, birthDate: event.target.value }))}
@@ -3229,6 +3269,8 @@ export default function Home() {
                 <div className="row-list">
                   {data.members.map((member) => {
                     const card = memberCardData(member);
+                    const schoolClassName = classNameById(data.schoolClasses, member.schoolClassId);
+                    const discipleshipClassName = classNameById(data.discipleshipClasses, member.discipleshipClassId);
 
                     return (
                     <div className="member-record" key={member.id}>
@@ -3243,6 +3285,9 @@ export default function Home() {
                           </small>
                           <small>
                             {member.ministry || "Sem ministerio"} - {member.congregation || "Congregacao nao informada"} - Aniv. {birthdayLabel(member.birthDate)}
+                          </small>
+                          <small>
+                            EBD: {schoolClassName || "Nao matriculado"} - Discipulado: {discipleshipClassName || "Nao matriculado"}
                           </small>
                         </div>
                       </div>
@@ -3685,7 +3730,7 @@ export default function Home() {
                     disabled={!canCreateSchoolNotice}
                     onClick={() => {
                       const selectedClass = data.schoolClasses.find((schoolClass) => schoolClass.id === schoolNoticeForm.classId);
-                      openClassWhatsapp(selectedClass?.name ?? "Classe EBD", schoolNoticeForm.title, schoolNoticeForm.body, "EBD");
+                      if (selectedClass) openClassWhatsapp(selectedClass, schoolNoticeForm.title, schoolNoticeForm.body, "EBD");
                     }}
                     type="button"
                   >
@@ -3706,7 +3751,7 @@ export default function Home() {
                       <div>
                         <strong>{schoolClass.name}</strong>
                         <small>Professor: {schoolClass.teacher} - Proxima aula: {schoolClass.nextLesson}</small>
-                        <small>{classWhatsappRecipients(schoolClass.name, "EBD").length} contatos de WhatsApp encontrados</small>
+                        <small>{classWhatsappRecipients(schoolClass, "EBD").length} contatos de WhatsApp encontrados</small>
                         <div className="notice-stack">
                           {schoolClass.notices.length === 0 ? (
                             <small>Nenhum aviso enviado para esta classe.</small>
@@ -3771,7 +3816,7 @@ export default function Home() {
                     disabled={!canCreateDiscipleshipNotice}
                     onClick={() => {
                       const selectedClass = data.discipleshipClasses.find((discipleshipClass) => discipleshipClass.id === discipleshipNoticeForm.classId);
-                      openClassWhatsapp(selectedClass?.name ?? "Classe de discipulado", discipleshipNoticeForm.title, discipleshipNoticeForm.body, "Discipulado");
+                      if (selectedClass) openClassWhatsapp(selectedClass, discipleshipNoticeForm.title, discipleshipNoticeForm.body, "Discipulado");
                     }}
                     type="button"
                   >
@@ -3792,7 +3837,7 @@ export default function Home() {
                       <div>
                         <strong>{discipleshipClass.name}</strong>
                         <small>Professor: {discipleshipClass.teacher} - Proxima aula: {discipleshipClass.nextLesson}</small>
-                        <small>{classWhatsappRecipients(discipleshipClass.name, "Discipulado").length} contatos de WhatsApp encontrados</small>
+                        <small>{classWhatsappRecipients(discipleshipClass, "Discipulado").length} contatos de WhatsApp encontrados</small>
                         <div className="notice-stack">
                           {discipleshipClass.notices.length === 0 ? (
                             <small>Nenhum aviso enviado para esta classe.</small>
