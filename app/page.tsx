@@ -1320,6 +1320,7 @@ export default function Home() {
   function memberAccessMessage(member: MemberRecord) {
     return [
       "Ola, {nome}! Seu acesso ao Igreja Conectada foi preparado.",
+      "Acesse: https://igrejaconectada-kappa.vercel.app",
       `Login: ${memberCredentialForm.email.trim() || member.email}`,
       `Senha: ${memberCredentialForm.password.trim() || "senha ja cadastrada"}`,
       "Acesse o sistema e altere sua senha se solicitado pela secretaria.",
