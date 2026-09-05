@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
 
 type ModuleKey =
@@ -193,6 +193,11 @@ type AppData = {
   ministries: MinistryRecord[];
   audit: AuditItem[];
   notificationReadIds: string[];
+};
+
+type RemoteAppStateResponse = {
+  payload?: Partial<AppData> | null;
+  error?: string;
 };
 
 const storageKey = "igreja-gestao-local-v1";
@@ -678,6 +683,11 @@ function isExpiredDate(value: string) {
   return new Date(`${value}T23:59:59`) < today;
 }
 
+function hasPersistedPayload(value: Partial<AppData> | null | undefined) {
+  if (!value) return false;
+  return Object.keys(value).some((key) => Array.isArray(value[key as keyof AppData]));
+}
+
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -931,6 +941,8 @@ function normalizeAppData(value: Partial<AppData>): AppData {
 }
 
 export default function Home() {
+  const saveTimerRef = useRef<number | null>(null);
+  const lastSavedPayloadRef = useRef("");
   const [hasSession, setHasSession] = useState(false);
   const [accessMode, setAccessMode] = useState<AccessMode>("login");
   const [accessMessage, setAccessMessage] = useState("");
@@ -966,6 +978,7 @@ export default function Home() {
   const [messageTemplateId, setMessageTemplateId] = useState("general-invite");
   const [messageText, setMessageText] = useState(messageTemplates[4].text);
   const [remoteMessageTemplates, setRemoteMessageTemplates] = useState<MessageTemplateItem[]>([]);
+  const [remoteStateReady, setRemoteStateReady] = useState(!isSupabaseConfigured());
   const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Modo local: configure o Supabase no Vercel.");
 
   useEffect(() => {
@@ -977,6 +990,99 @@ export default function Home() {
   useEffect(() => {
     window.localStorage.setItem(storageKey, JSON.stringify(data));
   }, [data]);
+
+  useEffect(() => {
+    if (!hasSession || !isSupabaseConfigured()) return;
+
+    let cancelled = false;
+
+    async function loadRemoteState() {
+      const supabase = getSupabaseClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        setRemoteStateReady(true);
+        return;
+      }
+
+      const response = await fetch("/api/admin/app-state", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = (await response.json()) as RemoteAppStateResponse;
+
+      if (cancelled) return;
+
+      if (!response.ok) {
+        setRemoteStateReady(true);
+        setSyncStatus(result.error ?? "Nao foi possivel carregar cadastros da base.");
+        return;
+      }
+
+      if (hasPersistedPayload(result.payload)) {
+        const remoteData = normalizeAppData(result.payload ?? {});
+        lastSavedPayloadRef.current = JSON.stringify(remoteData);
+        setData(remoteData);
+        setSyncStatus("Cadastros carregados da base Supabase.");
+      } else {
+        setSyncStatus("Base pronta. Cadastros deste painel serao preservados no Supabase.");
+      }
+
+      setRemoteStateReady(true);
+    }
+
+    void loadRemoteState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasSession]);
+
+  useEffect(() => {
+    if (!hasSession || !isSupabaseConfigured() || !remoteStateReady) return;
+
+    const payload = JSON.stringify(data);
+    if (payload === lastSavedPayloadRef.current) return;
+
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = window.setTimeout(async () => {
+      const supabase = getSupabaseClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        setSyncStatus("Sessao expirada. Entre novamente para salvar cadastros na base.");
+        return;
+      }
+
+      const response = await fetch("/api/admin/app-state", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ payload: data }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setSyncStatus(result.error ?? "Nao foi possivel salvar cadastros na base.");
+        return;
+      }
+
+      lastSavedPayloadRef.current = payload;
+      setSyncStatus("Cadastros salvos na base Supabase.");
+    }, 900);
+
+    return () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [data, hasSession, remoteStateReady]);
 
   useEffect(() => {
     const cleanup = window.setTimeout(() => {
@@ -1699,6 +1805,7 @@ export default function Home() {
         setAccessMessage("Seu acesso ainda nao esta ativo. Fale com a administracao.");
         return;
       }
+      setRemoteStateReady(false);
       setSyncStatus("Sessao Supabase ativa. Novos dados serao sincronizados.");
     }
 
@@ -1712,6 +1819,8 @@ export default function Home() {
     setNotificationsOpen(false);
     setActiveModule("overview");
     setAccessMode("login");
+    setRemoteStateReady(!isSupabaseConfigured());
+    lastSavedPayloadRef.current = "";
     setAccessMessage("Voce saiu do sistema com seguranca.");
   }
 
