@@ -49,6 +49,28 @@ type ChurchEvent = {
   status: "Programado" | "Confirmado" | "Concluido";
 };
 
+type AttendanceArea = "school" | "discipleship";
+
+type AttendanceStatus = "Presente" | "Falta" | "Justificado";
+
+type AttendanceRecord = {
+  memberId: string;
+  status: AttendanceStatus;
+  note: string;
+};
+
+type AttendanceSession = {
+  id: string;
+  area: AttendanceArea;
+  classId: string;
+  eventId: string;
+  date: string;
+  title: string;
+  teacher: string;
+  records: AttendanceRecord[];
+  updatedAt: string;
+};
+
 type Notice = {
   id: string;
   title: string;
@@ -209,6 +231,7 @@ type AppData = {
   schoolClasses: SchoolClass[];
   discipleshipClasses: SchoolClass[];
   ministries: MinistryRecord[];
+  attendanceSessions: AttendanceSession[];
   audit: AuditItem[];
   notificationReadIds: string[];
 };
@@ -579,6 +602,7 @@ const initialData: AppData = {
     { id: "audit-1", action: "Central de notificacoes criada", when: "2026-09-02T15:10:00.000Z" },
     { id: "audit-2", action: "Modulo de backup validado", when: "2026-09-02T14:42:00.000Z" },
   ],
+  attendanceSessions: [],
   notificationReadIds: [],
 };
 
@@ -1033,6 +1057,20 @@ function normalizeMuralItem(item: Partial<MuralItem>): MuralItem {
   };
 }
 
+function normalizeAttendanceSession(session: Partial<AttendanceSession>): AttendanceSession {
+  return {
+    id: session.id ?? uid("attendance"),
+    area: session.area ?? "school",
+    classId: session.classId ?? "",
+    eventId: session.eventId ?? "",
+    date: session.date ?? "",
+    title: session.title ?? "",
+    teacher: session.teacher ?? "",
+    records: session.records ?? [],
+    updatedAt: session.updatedAt ?? new Date().toISOString(),
+  };
+}
+
 function normalizeDiscipleshipClasses(classes: SchoolClass[] | undefined) {
   const currentClasses = classes ?? initialData.discipleshipClasses;
   const byId = new Map(currentClasses.map((item) => [item.id, item]));
@@ -1120,6 +1158,9 @@ function normalizeAppData(value: Partial<AppData>): AppData {
     schoolClasses: value.schoolClasses ?? initialData.schoolClasses,
     discipleshipClasses: normalizeDiscipleshipClasses(value.discipleshipClasses),
     ministries: (value.ministries ?? initialData.ministries).map((ministry) => normalizeMinistry(ministry)),
+    attendanceSessions: (value.attendanceSessions ?? initialData.attendanceSessions).map((session) =>
+      normalizeAttendanceSession(session),
+    ),
     audit: value.audit ?? initialData.audit,
     notificationReadIds: value.notificationReadIds ?? initialData.notificationReadIds,
   };
@@ -1171,6 +1212,7 @@ export default function Home() {
   const [muralImageMessage, setMuralImageMessage] = useState("");
   const [schoolNoticeForm, setSchoolNoticeForm] = useState(blankSchoolNotice);
   const [discipleshipNoticeForm, setDiscipleshipNoticeForm] = useState({ ...blankSchoolNotice, classId: "discipleship-new" });
+  const [attendanceEventSelection, setAttendanceEventSelection] = useState<Record<string, string>>({});
   const [selectedRequestId, setSelectedRequestId] = useState("care-1");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [messageAudience, setMessageAudience] = useState<MessageAudience>("Todos os membros");
@@ -1536,6 +1578,169 @@ export default function Home() {
 
   function classNameById(classes: SchoolClass[], classId: string) {
     return classes.find((item) => item.id === classId)?.name ?? "";
+  }
+
+  function attendanceKey(area: AttendanceArea, classId: string) {
+    return `${area}-${classId}`;
+  }
+
+  function eventsForAttendance(area: AttendanceArea) {
+    const areaWords =
+      area === "school"
+        ? ["ebd", "escola biblica", "biblica"]
+        : ["discipulado", "batismo", "novo convertido", "novos convertidos"];
+
+    return data.events.filter((event) => {
+      const eventText = normalizeSearchText([event.title, event.ministry, event.location, event.responsible].join(" "));
+      return areaWords.some((word) => eventText.includes(word));
+    });
+  }
+
+  function membersForAttendanceClass(area: AttendanceArea, classId: string) {
+    return data.members.filter((member) => (area === "school" ? member.schoolClassId === classId : member.discipleshipClassId === classId));
+  }
+
+  function attendanceSessionsForClass(area: AttendanceArea, classId: string) {
+    return data.attendanceSessions
+      .filter((session) => session.area === area && session.classId === classId)
+      .sort((first, second) => second.date.localeCompare(first.date));
+  }
+
+  function selectedAttendanceEvent(area: AttendanceArea, classId: string) {
+    const events = eventsForAttendance(area);
+    const selectedEventId = attendanceEventSelection[attendanceKey(area, classId)] ?? events[0]?.id ?? "";
+    return events.find((event) => event.id === selectedEventId) ?? events[0];
+  }
+
+  function attendanceSessionForEvent(area: AttendanceArea, classId: string, eventId: string) {
+    return data.attendanceSessions.find((session) => session.area === area && session.classId === classId && session.eventId === eventId);
+  }
+
+  function attendanceStatusForMember(session: AttendanceSession | undefined, memberId: string): AttendanceStatus {
+    return session?.records.find((record) => record.memberId === memberId)?.status ?? "Presente";
+  }
+
+  function attendanceNoteForMember(session: AttendanceSession | undefined, memberId: string) {
+    return session?.records.find((record) => record.memberId === memberId)?.note ?? "";
+  }
+
+  function attendanceSummary(session: AttendanceSession | undefined, members: MemberRecord[]) {
+    if (!session) return { present: 0, absent: 0, justified: 0, total: members.length, percent: 0 };
+
+    const records = members.map((member) => attendanceStatusForMember(session, member.id));
+    const present = records.filter((status) => status === "Presente").length;
+    const absent = records.filter((status) => status === "Falta").length;
+    const justified = records.filter((status) => status === "Justificado").length;
+    const percent = members.length ? Math.round(((present + justified) / members.length) * 100) : 0;
+
+    return { present, absent, justified, total: members.length, percent };
+  }
+
+  function canManageAttendanceClass(classRecord: SchoolClass) {
+    if (isAdminView) return true;
+    if (!currentMember || !/professor/i.test(currentMember.role)) return false;
+
+    const teacherText = normalizeSearchText(classRecord.teacher);
+    const memberName = normalizeSearchText(currentMember.fullName);
+    const accessName = normalizeSearchText(currentAccessUser?.name ?? "");
+    return teacherText.includes(memberName) || Boolean(accessName && teacherText.includes(accessName));
+  }
+
+  function updateAttendanceRecord(area: AttendanceArea, classRecord: SchoolClass, event: ChurchEvent, member: MemberRecord, status: AttendanceStatus) {
+    if (!canManageAttendanceClass(classRecord)) {
+      setSyncStatus("Apenas o professor da turma ou a administracao pode registrar a chamada.");
+      return;
+    }
+
+    const now = new Date().toISOString();
+    setData((current) => {
+      const existing = current.attendanceSessions.find(
+        (session) => session.area === area && session.classId === classRecord.id && session.eventId === event.id,
+      );
+      const currentRecords = existing?.records ?? membersForAttendanceClass(area, classRecord.id).map((item) => ({
+        memberId: item.id,
+        status: "Presente" as AttendanceStatus,
+        note: "",
+      }));
+      const hasRecord = currentRecords.some((record) => record.memberId === member.id);
+      const records = (hasRecord ? currentRecords : [...currentRecords, { memberId: member.id, status: "Presente" as AttendanceStatus, note: "" }]).map(
+        (record) => (record.memberId === member.id ? { ...record, status } : record),
+      );
+      const session: AttendanceSession = {
+        id: existing?.id ?? uid("attendance"),
+        area,
+        classId: classRecord.id,
+        eventId: event.id,
+        date: event.date,
+        title: event.title,
+        teacher: classRecord.teacher,
+        records,
+        updatedAt: now,
+      };
+
+      return {
+        ...current,
+        attendanceSessions: existing
+          ? current.attendanceSessions.map((item) => (item.id === existing.id ? session : item))
+          : [session, ...current.attendanceSessions],
+        audit: [{ id: uid("audit"), action: `Chamada atualizada: ${classRecord.name} - ${event.title}`, when: now }, ...current.audit].slice(0, 12),
+      };
+    });
+    setSyncStatus(`Chamada atualizada para ${classRecord.name}.`);
+  }
+
+  function updateAttendanceNote(area: AttendanceArea, classRecord: SchoolClass, event: ChurchEvent, member: MemberRecord, note: string) {
+    if (!canManageAttendanceClass(classRecord)) {
+      setSyncStatus("Apenas o professor da turma ou a administracao pode justificar faltas.");
+      return;
+    }
+
+    const now = new Date().toISOString();
+    setData((current) => {
+      const existing = current.attendanceSessions.find(
+        (session) => session.area === area && session.classId === classRecord.id && session.eventId === event.id,
+      );
+      const baseRecords = existing?.records ?? membersForAttendanceClass(area, classRecord.id).map((item) => ({
+        memberId: item.id,
+        status: "Presente" as AttendanceStatus,
+        note: "",
+      }));
+      const hasRecord = baseRecords.some((record) => record.memberId === member.id);
+      const records = (hasRecord ? baseRecords : [...baseRecords, { memberId: member.id, status: "Justificado" as AttendanceStatus, note: "" }]).map(
+        (record) => (record.memberId === member.id ? { ...record, note } : record),
+      );
+      const session: AttendanceSession = {
+        id: existing?.id ?? uid("attendance"),
+        area,
+        classId: classRecord.id,
+        eventId: event.id,
+        date: event.date,
+        title: event.title,
+        teacher: classRecord.teacher,
+        records,
+        updatedAt: now,
+      };
+
+      return {
+        ...current,
+        attendanceSessions: existing
+          ? current.attendanceSessions.map((item) => (item.id === existing.id ? session : item))
+          : [session, ...current.attendanceSessions],
+      };
+    });
+  }
+
+  function memberAttendanceHistory(area: AttendanceArea, member: MemberRecord) {
+    const classId = area === "school" ? member.schoolClassId : member.discipleshipClassId;
+    if (!classId) return [];
+
+    return data.attendanceSessions
+      .filter((session) => session.area === area && session.classId === classId)
+      .map((session) => ({
+        session,
+        record: session.records.find((item) => item.memberId === member.id),
+      }))
+      .sort((first, second) => second.session.date.localeCompare(first.session.date));
   }
 
   function readPhoto(event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) {
@@ -2157,6 +2362,7 @@ export default function Home() {
     setMuralForm(blankMuralItem);
     setSchoolNoticeForm(blankSchoolNotice);
     setDiscipleshipNoticeForm({ ...blankSchoolNotice, classId: "discipleship-new" });
+    setAttendanceEventSelection({});
   }
 
   const actionHighlights = [
@@ -2299,6 +2505,143 @@ export default function Home() {
       photoDataUrl: kid.photoDataUrl,
       accent: "#ffd778",
     };
+  }
+
+  function renderAttendancePanel(area: AttendanceArea, classRecord: SchoolClass) {
+    const classMembers = membersForAttendanceClass(area, classRecord.id);
+    const events = eventsForAttendance(area);
+    const selectedEvent = selectedAttendanceEvent(area, classRecord.id);
+    const session = selectedEvent ? attendanceSessionForEvent(area, classRecord.id, selectedEvent.id) : undefined;
+    const summary = attendanceSummary(session, classMembers);
+    const canManage = canManageAttendanceClass(classRecord);
+    const currentMemberIsStudent = Boolean(
+      currentMember && (area === "school" ? currentMember.schoolClassId === classRecord.id : currentMember.discipleshipClassId === classRecord.id),
+    );
+    const currentMemberHistory = currentMember ? memberAttendanceHistory(area, currentMember).filter((item) => item.session.classId === classRecord.id) : [];
+    const areaLabel = area === "school" ? "EBD" : "Discipulado";
+
+    if (!canManage && !currentMemberIsStudent) return null;
+
+    return (
+      <div className="credential-panel">
+        <div className="panel-heading compact-heading">
+          <h2>{canManage ? `Chamada da aula - ${areaLabel}` : "Minha frequencia"}</h2>
+          <span>{summary.total} aluno{summary.total === 1 ? "" : "s"}</span>
+        </div>
+
+        {canManage ? (
+          <div className="form-grid">
+            <label className="full">
+              Aula da agenda
+              <select
+                disabled={!events.length}
+                onChange={(event) =>
+                  setAttendanceEventSelection((current) => ({
+                    ...current,
+                    [attendanceKey(area, classRecord.id)]: event.target.value,
+                  }))
+                }
+                value={selectedEvent?.id ?? ""}
+              >
+                {events.length ? (
+                  events.map((event) => (
+                    <option key={event.id} value={event.id}>
+                      {formatDate(event.date)} - {event.title}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">Crie um evento de {areaLabel} na agenda</option>
+                )}
+              </select>
+            </label>
+
+            <div className="message-preview full">
+              <strong>
+                {summary.present} presentes, {summary.absent} faltas, {summary.justified} justificadas
+              </strong>
+              <span>{session ? `${summary.percent}% de frequencia registrada` : "Selecione a aula e marque os alunos para iniciar a chamada."}</span>
+            </div>
+
+            <div className="row-list full">
+              {!classMembers.length && (
+                <div className="data-row">
+                  <span className="bullet-mark" />
+                  <div>
+                    <strong>Nenhum aluno matriculado</strong>
+                    <small>Vincule alunos a esta classe na ficha de membros.</small>
+                  </div>
+                </div>
+              )}
+
+              {selectedEvent &&
+                classMembers.map((member) => (
+                  <div className="data-row access-user-row" key={member.id}>
+                    <div>
+                      <strong>{member.fullName}</strong>
+                      <small>{member.phone} - {member.status}</small>
+                    </div>
+                    <select
+                      onChange={(event) =>
+                        updateAttendanceRecord(area, classRecord, selectedEvent, member, event.target.value as AttendanceStatus)
+                      }
+                      value={attendanceStatusForMember(session, member.id)}
+                    >
+                      <option>Presente</option>
+                      <option>Falta</option>
+                      <option>Justificado</option>
+                    </select>
+                    <input
+                      onChange={(event) => updateAttendanceNote(area, classRecord, selectedEvent, member, event.target.value)}
+                      placeholder="Justificativa ou observacao"
+                      value={attendanceNoteForMember(session, member.id)}
+                    />
+                  </div>
+                ))}
+            </div>
+
+            <div className="row-list full">
+              <strong>Historico da turma</strong>
+              {attendanceSessionsForClass(area, classRecord.id).length ? (
+                attendanceSessionsForClass(area, classRecord.id).map((attendanceSession) => {
+                  const sessionSummary = attendanceSummary(attendanceSession, classMembers);
+                  return (
+                    <div className="data-row" key={attendanceSession.id}>
+                      <span className="date-box">{formatDate(attendanceSession.date)}</span>
+                      <div>
+                        <strong>{attendanceSession.title}</strong>
+                        <small>
+                          {sessionSummary.present} presentes - {sessionSummary.absent} faltas - {sessionSummary.justified} justificadas
+                        </small>
+                        <small>{sessionSummary.percent}% de frequencia</small>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="empty-state">Nenhuma chamada registrada para esta classe.</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="row-list">
+            {currentMemberHistory.length ? (
+              currentMemberHistory.map(({ session: attendanceSession, record }) => (
+                <div className="data-row" key={attendanceSession.id}>
+                  <span className="date-box">{formatDate(attendanceSession.date)}</span>
+                  <div>
+                    <strong>{attendanceSession.title}</strong>
+                    <small>{record?.status ?? "Nao registrado"}</small>
+                    {record?.note && <small>{record.note}</small>}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="empty-state">Sua frequencia ainda nao foi registrada nesta classe.</p>
+            )}
+          </div>
+        )}
+      </div>
+    );
   }
 
   async function saveKidToSupabase(kid: KidRecord) {
@@ -4128,6 +4471,7 @@ export default function Home() {
                             ))
                           )}
                         </div>
+                        {renderAttendancePanel("school", schoolClass)}
                       </div>
                     </div>
                   ))}
@@ -4214,6 +4558,7 @@ export default function Home() {
                             ))
                           )}
                         </div>
+                        {renderAttendancePanel("discipleship", discipleshipClass)}
                       </div>
                     </div>
                   ))}
