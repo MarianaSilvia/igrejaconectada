@@ -15,6 +15,7 @@ type ModuleKey =
   | "mural"
   | "pastoral"
   | "school"
+  | "discipleship"
   | "reports"
   | "settings";
 
@@ -128,7 +129,14 @@ type KidRecord = {
   joinedAt: string;
 };
 
-type MessageAudience = "Todos os membros" | "Aniversariantes da semana" | "Aniversariantes do mes" | "EBD" | "Ministerios" | "Responsaveis Kids";
+type MessageAudience =
+  | "Todos os membros"
+  | "Aniversariantes da semana"
+  | "Aniversariantes do mes"
+  | "EBD"
+  | "Discipulado"
+  | "Ministerios"
+  | "Responsaveis Kids";
 
 type MessageRecipient = {
   id: string;
@@ -195,6 +203,7 @@ type AppData = {
   members: MemberRecord[];
   kids: KidRecord[];
   schoolClasses: SchoolClass[];
+  discipleshipClasses: SchoolClass[];
   ministries: MinistryRecord[];
   audit: AuditItem[];
   notificationReadIds: string[];
@@ -219,6 +228,7 @@ const modules: { key: ModuleKey; label: string; short: string }[] = [
   { key: "mural", label: "Mural", short: "Mural" },
   { key: "pastoral", label: "Atendimento pastoral", short: "Pastoral" },
   { key: "school", label: "Escola Biblica", short: "EBD" },
+  { key: "discipleship", label: "Discipulado", short: "Discipulado" },
   { key: "reports", label: "Relatorios", short: "Relatorios" },
   { key: "settings", label: "Configuracoes", short: "Config" },
 ];
@@ -476,6 +486,43 @@ const initialData: AppData = {
       notices: [],
     },
   ],
+  discipleshipClasses: [
+    {
+      id: "discipleship-new",
+      name: "Novos convertidos",
+      teacher: "Pr. Marcos",
+      students: 16,
+      nextLesson: "Fundamentos da fe crista",
+      notices: [
+        {
+          id: "discipleship-notice-1",
+          title: "Encontro de acompanhamento",
+          body: "Trazer Biblia e anotacoes da ultima aula para revisao em grupo.",
+          status: "Publicado",
+          audience: "Novos convertidos",
+          channel: "App",
+          retentionDays: 7,
+          expiresAt: "2026-09-09",
+        },
+      ],
+    },
+    {
+      id: "discipleship-baptism",
+      name: "Preparacao para batismo",
+      teacher: "Diac. Paulo",
+      students: 10,
+      nextLesson: "Nova vida em Cristo",
+      notices: [],
+    },
+    {
+      id: "discipleship-leaders",
+      name: "Formacao de discipuladores",
+      teacher: "Lider Ana",
+      students: 8,
+      nextLesson: "Acompanhamento e cuidado",
+      notices: [],
+    },
+  ],
   ministries: [
     {
       id: "ministry-1",
@@ -631,6 +678,7 @@ const messageAudiences: MessageAudience[] = [
   "Aniversariantes da semana",
   "Aniversariantes do mes",
   "EBD",
+  "Discipulado",
   "Ministerios",
   "Responsaveis Kids",
 ];
@@ -996,6 +1044,7 @@ function normalizeAppData(value: Partial<AppData>): AppData {
     members: (value.members ?? initialData.members).map((member) => normalizeMember(member)),
     kids: (value.kids ?? initialData.kids).map((kid) => normalizeKid(kid)),
     schoolClasses: value.schoolClasses ?? initialData.schoolClasses,
+    discipleshipClasses: value.discipleshipClasses ?? initialData.discipleshipClasses,
     ministries: (value.ministries ?? initialData.ministries).map((ministry) => normalizeMinistry(ministry)),
     audit: value.audit ?? initialData.audit,
     notificationReadIds: value.notificationReadIds ?? initialData.notificationReadIds,
@@ -1044,6 +1093,7 @@ export default function Home() {
   const [muralForm, setMuralForm] = useState(blankMuralItem);
   const [muralImageMessage, setMuralImageMessage] = useState("");
   const [schoolNoticeForm, setSchoolNoticeForm] = useState(blankSchoolNotice);
+  const [discipleshipNoticeForm, setDiscipleshipNoticeForm] = useState({ ...blankSchoolNotice, classId: "discipleship-new" });
   const [selectedRequestId, setSelectedRequestId] = useState("care-1");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [messageAudience, setMessageAudience] = useState<MessageAudience>("Todos os membros");
@@ -1261,6 +1311,9 @@ export default function Home() {
   const canCreateKid = Boolean(kidForm.childName.trim() && kidForm.guardianName.trim() && kidForm.guardianPhone.trim());
   const canCreateMuralItem = Boolean(muralForm.title.trim() && muralForm.expiresAt);
   const canCreateSchoolNotice = Boolean(schoolNoticeForm.classId && schoolNoticeForm.title.trim() && schoolNoticeForm.body.trim());
+  const canCreateDiscipleshipNotice = Boolean(
+    discipleshipNoticeForm.classId && discipleshipNoticeForm.title.trim() && discipleshipNoticeForm.body.trim(),
+  );
   const canCreateEvent = Boolean(eventForm.title.trim() && eventForm.date);
   const canCreateNotice = Boolean(noticeForm.title.trim() && noticeForm.body.trim());
   const canCreateMinistry = Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
@@ -1288,6 +1341,9 @@ export default function Home() {
     }
     if (messageAudience === "EBD") {
       return memberRecipients.filter((recipient) => /ebd|biblica|professor/i.test(recipient.group));
+    }
+    if (messageAudience === "Discipulado") {
+      return memberRecipients.filter((recipient) => /discipulado|discipulador|novo convertido|batismo/i.test(recipient.group));
     }
     if (messageAudience === "Ministerios") {
       return memberRecipients.filter((recipient) => Boolean(recipient.group && recipient.group !== "Visitante"));
@@ -1823,6 +1879,41 @@ export default function Home() {
     setSchoolNoticeForm((form) => ({ ...blankSchoolNotice, classId: form.classId }));
   }
 
+  function createDiscipleshipNotice() {
+    if (!canCreateDiscipleshipNotice) return;
+
+    const now = new Date().toISOString();
+    const targetClass = data.discipleshipClasses.find((discipleshipClass) => discipleshipClass.id === discipleshipNoticeForm.classId);
+    const notice: Notice = {
+      id: uid("discipleship-notice"),
+      title: discipleshipNoticeForm.title,
+      body: discipleshipNoticeForm.body,
+      status: "Publicado",
+      audience: targetClass?.name ?? "Classe de discipulado",
+      channel: "App",
+      retentionDays: 7,
+      expiresAt: dateAfterDays(7),
+    };
+
+    setData((current) => ({
+      ...current,
+      discipleshipClasses: current.discipleshipClasses.map((discipleshipClass) =>
+        discipleshipClass.id === discipleshipNoticeForm.classId
+          ? { ...discipleshipClass, notices: [notice, ...discipleshipClass.notices] }
+          : discipleshipClass,
+      ),
+      audit: [
+        {
+          id: uid("audit"),
+          action: `Aviso enviado para ${targetClass?.name ?? "classe de discipulado"}: ${notice.title}`,
+          when: now,
+        },
+        ...current.audit,
+      ].slice(0, 12),
+    }));
+    setDiscipleshipNoticeForm((form) => ({ ...blankSchoolNotice, classId: form.classId }));
+  }
+
   function markAllNotificationsRead() {
     setData((current) => ({
       ...current,
@@ -1844,6 +1935,7 @@ export default function Home() {
     setKidForm(blankKid);
     setMuralForm(blankMuralItem);
     setSchoolNoticeForm(blankSchoolNotice);
+    setDiscipleshipNoticeForm({ ...blankSchoolNotice, classId: "discipleship-new" });
   }
 
   const actionHighlights = [
@@ -3560,6 +3652,80 @@ export default function Home() {
             </section>
           )}
 
+          {activeModule === "discipleship" && (
+            <section className="content-grid">
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Novo aviso do Discipulado</h2>
+                  <span>Por classe</span>
+                </div>
+                <div className="form-grid">
+                  <label className="full">
+                    Classe
+                    <select
+                      onChange={(event) => setDiscipleshipNoticeForm((form) => ({ ...form, classId: event.target.value }))}
+                      value={discipleshipNoticeForm.classId}
+                    >
+                      {data.discipleshipClasses.map((discipleshipClass) => (
+                        <option key={discipleshipClass.id} value={discipleshipClass.id}>
+                          {discipleshipClass.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="full">
+                    Titulo do aviso
+                    <input
+                      onChange={(event) => setDiscipleshipNoticeForm((form) => ({ ...form, title: event.target.value }))}
+                      placeholder="Ex.: Encontro de acompanhamento"
+                      value={discipleshipNoticeForm.title}
+                    />
+                  </label>
+                  <label className="full">
+                    Mensagem
+                    <textarea
+                      onChange={(event) => setDiscipleshipNoticeForm((form) => ({ ...form, body: event.target.value }))}
+                      placeholder="Escreva o aviso para a classe selecionada"
+                      value={discipleshipNoticeForm.body}
+                    />
+                  </label>
+                  <button className="primary-action" disabled={!canCreateDiscipleshipNotice} onClick={createDiscipleshipNotice} type="button">
+                    Gerar aviso para classe
+                  </button>
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Classes do Discipulado</h2>
+                  <span>{data.discipleshipClasses.length} classes</span>
+                </div>
+                <div className="row-list">
+                  {data.discipleshipClasses.map((discipleshipClass) => (
+                    <div className="data-row class-row" key={discipleshipClass.id}>
+                      <span className="date-box">{discipleshipClass.students}</span>
+                      <div>
+                        <strong>{discipleshipClass.name}</strong>
+                        <small>Professor: {discipleshipClass.teacher} - Proxima aula: {discipleshipClass.nextLesson}</small>
+                        <div className="notice-stack">
+                          {discipleshipClass.notices.length === 0 ? (
+                            <small>Nenhum aviso enviado para esta classe.</small>
+                          ) : (
+                            discipleshipClass.notices.map((notice) => (
+                              <span className="notice-pill" key={notice.id}>
+                                {notice.title}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </section>
+          )}
+
           {activeModule === "messages" && (
             <section className="content-grid">
               <article className="surface">
@@ -3653,6 +3819,7 @@ export default function Home() {
                 `${monthlyKidsBirthdays.length} aniversariantes Kids no mes`,
                 `${data.users.length} usuarios com acesso`,
                 `${data.schoolClasses.length} classes EBD`,
+                `${data.discipleshipClasses.length} classes Discipulado`,
                 `${messageRecipients.length} contatos no envio atual`,
                 `${data.events.length} eventos cadastrados`,
                 `${unreadCount} notificacoes nao lidas`,
@@ -3682,7 +3849,9 @@ export default function Home() {
                     {" "}
                     {data.careRequests.length} atendimentos,
                     {" "}
-                    {data.events.length} eventos, {data.schoolClasses.length} classes EBD, {activeNotices.length} comunicados ativos,
+                    {data.events.length} eventos, {data.schoolClasses.length} classes EBD,
+                    {" "}
+                    {data.discipleshipClasses.length} classes Discipulado, {activeNotices.length} comunicados ativos,
                     {" "}
                     {data.mural.length} itens de mural e {data.audit.length} auditorias.
                   </small>
