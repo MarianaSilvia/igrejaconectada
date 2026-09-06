@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminClient, requireSession } from "../auth";
+import { adminClient, churchRoleFromLabel, requireSession } from "../auth";
 
 type AccessUserPayload = {
   userId?: string;
@@ -16,6 +16,8 @@ type DeleteAccessUserPayload = {
   email?: string;
 };
 
+type JsonRecord = Record<string, unknown>;
+
 function toChurchRole(role?: string) {
   if (role === "Administrador") return "ADMIN";
   if (role === "Lider") return "LEADER";
@@ -29,6 +31,29 @@ function toChurchAccess(status?: string) {
   return status === "Ativo" ? "approved" : "pending";
 }
 
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function recordsFrom(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function textValue(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+async function canManageAccessUsers(client: NonNullable<ReturnType<typeof adminClient>>, email: string, metadataRole: string) {
+  if (metadataRole === "ADMIN") return true;
+
+  const { data } = await client.from("church_app_state").select("payload").eq("id", "main").maybeSingle();
+  const payload = data?.payload;
+  if (!isRecord(payload)) return false;
+
+  const localUser = recordsFrom(payload.users).find((user) => textValue(user.email).toLowerCase() === email.toLowerCase());
+  return Boolean(localUser && churchRoleFromLabel(localUser.role) === "ADMIN");
+}
+
 async function findUserIdByEmail(client: NonNullable<ReturnType<typeof adminClient>>, email?: string) {
   if (!email) return null;
 
@@ -40,7 +65,7 @@ async function findUserIdByEmail(client: NonNullable<ReturnType<typeof adminClie
 }
 
 export async function POST(request: Request) {
-  const session = await requireSession(request, ["ADMIN"]);
+  const session = await requireSession(request);
   if (session.response || !session.user) return session.response;
 
   const payload = (await request.json()) as AccessUserPayload;
@@ -54,6 +79,8 @@ export async function POST(request: Request) {
 
   const client = adminClient();
   if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  const canManage = await canManageAccessUsers(client, session.user.email ?? "", session.role);
+  if (!canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
 
   const { data, error } = await client.auth.admin.createUser({
     email,
@@ -77,7 +104,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const session = await requireSession(request, ["ADMIN"]);
+  const session = await requireSession(request);
   if (session.response || !session.user) return session.response;
 
   const payload = (await request.json()) as AccessUserPayload;
@@ -96,6 +123,8 @@ export async function PATCH(request: Request) {
 
   const client = adminClient();
   if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  const canManage = await canManageAccessUsers(client, session.user.email ?? "", session.role);
+  if (!canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
 
   try {
     const userId = payload.userId ?? (await findUserIdByEmail(client, currentEmail ?? email));
@@ -149,7 +178,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const session = await requireSession(request, ["ADMIN"]);
+  const session = await requireSession(request);
   if (session.response || !session.user) return session.response;
 
   const payload = (await request.json()) as DeleteAccessUserPayload;
@@ -157,6 +186,8 @@ export async function DELETE(request: Request) {
 
   const client = adminClient();
   if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  const canManage = await canManageAccessUsers(client, session.user.email ?? "", session.role);
+  if (!canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
 
   try {
     const userId = payload.userId ?? (await findUserIdByEmail(client, email));

@@ -1,6 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { adminClient, administrativeRoles, requireSession } from "../auth";
+import { adminClient, administrativeRoles, churchRoleFromLabel, requireSession, type ChurchRole } from "../auth";
 
 const stateId = "main";
 
@@ -46,6 +46,13 @@ function memberBelongsToUser(member: JsonRecord, user: User) {
 
 function findCurrentMember(payload: JsonRecord, user: User) {
   return recordsFrom(payload.members).find((member) => memberBelongsToUser(member, user));
+}
+
+function roleFromPayload(payload: unknown, user: User): ChurchRole {
+  if (!isRecord(payload)) return "MEMBER";
+
+  const accessUser = recordsFrom(payload.users).find((item) => textValue(item.email).toLowerCase() === userEmail(user));
+  return accessUser ? churchRoleFromLabel(accessUser.role) : "MEMBER";
 }
 
 function careBelongsToMember(request: JsonRecord, member: JsonRecord | undefined, user: User) {
@@ -205,7 +212,8 @@ export async function GET(request: Request) {
   const stored = await readStoredPayload();
   if (stored.response || !stored.client) return stored.response;
 
-  const payload = administrativeRoles.has(session.role) ? stored.payload : filteredPayloadForMember(stored.payload, session.user);
+  const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(stored.payload, session.user);
+  const payload = administrativeRoles.has(effectiveRole) ? stored.payload : filteredPayloadForMember(stored.payload, session.user);
 
   return NextResponse.json({ payload, updatedAt: stored.updatedAt });
 }
@@ -223,7 +231,8 @@ export async function PUT(request: Request) {
   const stored = await readStoredPayload();
   if (stored.response || !stored.client) return stored.response;
 
-  const mergedPayload = administrativeRoles.has(session.role)
+  const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(stored.payload, session.user);
+  const mergedPayload = administrativeRoles.has(effectiveRole)
     ? { payload }
     : mergeMemberPayload(isRecord(stored.payload) ? stored.payload : {}, payload, session.user);
 

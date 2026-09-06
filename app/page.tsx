@@ -1059,6 +1059,39 @@ async function optimizeMuralImage(file: File): Promise<MuralImageResult> {
   };
 }
 
+async function optimizeProfilePhoto(file: File): Promise<MuralImageResult> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Selecione um arquivo de imagem valido.");
+  }
+
+  const originalDataUrl = await readImageFileAsDataUrl(file);
+  const image = await loadImage(originalDataUrl);
+  const maxSide = 420;
+  const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Nao foi possivel preparar a foto.");
+
+  context.drawImage(image, 0, 0, width, height);
+  const optimizedDataUrl = canvas.toDataURL("image/jpeg", 0.68);
+  const chosenDataUrl = optimizedDataUrl.length < originalDataUrl.length ? optimizedDataUrl : originalDataUrl;
+  const approxKb = Math.round((chosenDataUrl.length * 3) / 4 / 1024);
+
+  if (approxKb > 180) {
+    throw new Error("Foto muito grande. Escolha uma foto menor ou recorte antes de enviar.");
+  }
+
+  return {
+    dataUrl: chosenDataUrl,
+    message: `Foto carregada e otimizada (${approxKb} KB).`,
+  };
+}
+
 function normalizeAppData(value: Partial<AppData>): AppData {
   return {
     ...initialData,
@@ -1756,11 +1789,18 @@ export default function Home() {
 
   function readPhoto(event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
 
-    void readImageFileAsDataUrl(file).then(onReady).catch(() => {
-      setSyncStatus("Nao foi possivel carregar a imagem selecionada.");
-    });
+    setSyncStatus("Preparando foto...");
+    void optimizeProfilePhoto(file)
+      .then((result) => {
+        onReady(result.dataUrl);
+        setSyncStatus(result.message);
+      })
+      .catch((error) => {
+        setSyncStatus(error instanceof Error ? error.message : "Nao foi possivel carregar a foto selecionada.");
+      });
   }
 
   async function readMuralImage(event: ChangeEvent<HTMLInputElement>) {

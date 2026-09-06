@@ -25,6 +25,17 @@ const roleByLabel: Record<string, ChurchRole> = {
 
 export const administrativeRoles = new Set<ChurchRole>(["ADMIN", "LEADER", "PROFESSOR", "SECRETARY", "TREASURER"]);
 
+export function churchRoleFromLabel(value: unknown): ChurchRole {
+  const role = String(value ?? "").trim();
+  const normalizedRole = role.toUpperCase();
+
+  if (["ADMIN", "LEADER", "PROFESSOR", "SECRETARY", "TREASURER", "MEMBER"].includes(normalizedRole)) {
+    return normalizedRole as ChurchRole;
+  }
+
+  return roleByLabel[role.toLowerCase()] ?? "MEMBER";
+}
+
 export function unavailableResponse() {
   if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
     return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
@@ -42,20 +53,15 @@ export function adminClient() {
 
 export function churchRoleFromUser(user: User): ChurchRole {
   const metadata = user.app_metadata ?? {};
-  const metadataRole = String(metadata.church_gp_role ?? metadata.role ?? "").trim();
-  const normalizedRole = metadataRole.toUpperCase();
-
-  if (["ADMIN", "LEADER", "PROFESSOR", "SECRETARY", "TREASURER", "MEMBER"].includes(normalizedRole)) {
-    return normalizedRole as ChurchRole;
-  }
-
-  return roleByLabel[metadataRole.toLowerCase()] ?? "MEMBER";
+  return churchRoleFromLabel(metadata.church_gp_role ?? metadata.role);
 }
 
 export function hasApprovedAccess(user: User) {
   const metadata = user.app_metadata ?? {};
   const access = String(metadata.church_gp_access ?? "").toLowerCase();
   const status = String(metadata.status ?? "").toLowerCase();
+
+  if (!access && !status) return true;
 
   return access === "approved" || status === "ativo" || status === "active";
 }
