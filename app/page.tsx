@@ -704,6 +704,15 @@ function memberRolesToText(values: string[]) {
   return values.map((role) => role.trim()).filter(Boolean).join(", ");
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 const blankMemberCredential = {
   memberId: "",
   email: "",
@@ -1253,6 +1262,7 @@ export default function Home() {
   });
   const [careForm, setCareForm] = useState(blankCare);
   const [eventForm, setEventForm] = useState(blankEvent);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [noticeForm, setNoticeForm] = useState(blankNotice);
   const [ministryForm, setMinistryForm] = useState(blankMinistry);
   const [editingMinistryId, setEditingMinistryId] = useState<string | null>(null);
@@ -1936,6 +1946,97 @@ export default function Home() {
       .sort((first, second) => second.session.date.localeCompare(first.session.date));
   }
 
+  function printAttendanceSessionPdf(area: AttendanceArea, classRecord: SchoolClass, session: AttendanceSession) {
+    const classMembers = membersForAttendanceClass(area, classRecord.id);
+    const summary = attendanceSummary(session, classMembers);
+    const areaLabel = area === "school" ? "Escola Dominical" : "Discipulado";
+    const rows = classMembers
+      .map((member, index) => {
+        const status = attendanceStatusForMember(session, member.id);
+        const note = attendanceNoteForMember(session, member.id);
+        return `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${escapeHtml(member.fullName)}</td>
+            <td>${escapeHtml(member.phone || "Nao informado")}</td>
+            <td>${escapeHtml(status)}</td>
+            <td>${escapeHtml(note || "-")}</td>
+          </tr>
+        `;
+      })
+      .join("");
+    const reportWindow = window.open("", "_blank", "noopener,noreferrer,width=980,height=720");
+
+    if (!reportWindow) {
+      setSyncStatus("Nao foi possivel abrir o PDF. Libere pop-ups para salvar o historico.");
+      return;
+    }
+
+    reportWindow.document.write(`
+      <!doctype html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8" />
+          <title>Historico da aula - ${escapeHtml(classRecord.name)}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { color: #111827; font-family: Arial, sans-serif; margin: 32px; }
+            header { border-bottom: 3px solid #0f766e; margin-bottom: 24px; padding-bottom: 16px; }
+            h1 { font-size: 24px; margin: 0 0 8px; }
+            h2 { font-size: 16px; margin: 24px 0 10px; }
+            p { margin: 4px 0; }
+            .meta, .summary { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); margin: 18px 0; }
+            .box { border: 1px solid #d1d5db; border-radius: 8px; padding: 10px; }
+            .box strong { display: block; font-size: 18px; margin-top: 4px; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #d1d5db; font-size: 12px; padding: 8px; text-align: left; vertical-align: top; }
+            th { background: #f3f4f6; }
+            footer { color: #6b7280; font-size: 11px; margin-top: 24px; }
+            @media print { body { margin: 18mm; } button { display: none; } }
+          </style>
+        </head>
+        <body>
+          <button onclick="window.print()">Salvar em PDF / Imprimir</button>
+          <header>
+            <h1>Historico da aula - ${escapeHtml(areaLabel)}</h1>
+            <p>Igreja Conectada</p>
+          </header>
+          <section class="meta">
+            <div class="box">Classe<strong>${escapeHtml(classRecord.name)}</strong></div>
+            <div class="box">Aula<strong>${escapeHtml(session.title)}</strong></div>
+            <div class="box">Data<strong>${escapeHtml(formatDate(session.date))}</strong></div>
+            <div class="box">Professor<strong>${escapeHtml(session.teacher || classRecord.teacher || "Nao informado")}</strong></div>
+          </section>
+          <section class="summary">
+            <div class="box">Alunos<strong>${summary.total}</strong></div>
+            <div class="box">Presentes<strong>${summary.present}</strong></div>
+            <div class="box">Faltas<strong>${summary.absent}</strong></div>
+            <div class="box">Justificadas<strong>${summary.justified}</strong></div>
+          </section>
+          <h2>Lista de frequencia</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Aluno</th>
+                <th>Telefone</th>
+                <th>Status</th>
+                <th>Observacao</th>
+              </tr>
+            </thead>
+            <tbody>${rows || '<tr><td colspan="5">Nenhum aluno matriculado nesta classe.</td></tr>'}</tbody>
+          </table>
+          <footer>Relatorio gerado em ${escapeHtml(new Date().toLocaleString("pt-BR"))}.</footer>
+          <script>
+            window.addEventListener("load", () => setTimeout(() => window.print(), 250));
+          </script>
+        </body>
+      </html>
+    `);
+    reportWindow.document.close();
+    setSyncStatus(`Historico em PDF preparado para ${classRecord.name}.`);
+  }
+
   function readPhoto(event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -2433,18 +2534,55 @@ export default function Home() {
   }
 
   function createEvent() {
-    if (!requireAdministrativeAccess("adicionar eventos")) return;
+    if (!requireAdministrativeAccess(editingEventId ? "editar eventos" : "adicionar eventos")) return;
     if (!canCreateEvent) return;
 
     const now = new Date().toISOString();
-    const event: ChurchEvent = { ...eventForm, id: uid("event") };
+    const event: ChurchEvent = { ...eventForm, id: editingEventId ?? uid("event") };
 
     setData((current) => ({
       ...current,
-      events: [event, ...current.events],
-      audit: [{ id: uid("audit"), action: `Evento adicionado na agenda: ${event.title}`, when: now }, ...current.audit].slice(0, 12),
+      events: editingEventId
+        ? current.events.map((item) => (item.id === editingEventId ? event : item))
+        : [event, ...current.events],
+      attendanceSessions: editingEventId
+        ? current.attendanceSessions.map((session) =>
+            session.eventId === editingEventId
+              ? { ...session, date: event.date, title: event.title, updatedAt: now }
+              : session,
+          )
+        : current.attendanceSessions,
+      audit: [
+        {
+          id: uid("audit"),
+          action: editingEventId ? `Evento atualizado na agenda: ${event.title}` : `Evento adicionado na agenda: ${event.title}`,
+          when: now,
+        },
+        ...current.audit,
+      ].slice(0, 12),
     }));
     setEventForm(blankEvent);
+    setEditingEventId(null);
+  }
+
+  function editEvent(event: ChurchEvent) {
+    if (!requireAdministrativeAccess("editar eventos")) return;
+    setEventForm({
+      title: event.title,
+      date: event.date,
+      time: event.time,
+      ministry: event.ministry,
+      location: event.location,
+      responsible: event.responsible,
+      status: event.status,
+    });
+    setEditingEventId(event.id);
+    setSyncStatus(`Evento selecionado para edicao: ${event.title}.`);
+  }
+
+  function cancelEventEdit() {
+    setEventForm(blankEvent);
+    setEditingEventId(null);
   }
 
   function updateEventStatus(event: ChurchEvent, status: ChurchEvent["status"]) {
@@ -2465,6 +2603,10 @@ export default function Home() {
       events: current.events.filter((item) => item.id !== event.id),
       audit: [{ id: uid("audit"), action: `Evento excluido da agenda: ${event.title}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
     }));
+
+    if (editingEventId === event.id) {
+      cancelEventEdit();
+    }
   }
 
   function createNotice() {
@@ -2873,7 +3015,7 @@ export default function Home() {
                 attendanceSessionsForClass(area, classRecord.id).map((attendanceSession) => {
                   const sessionSummary = attendanceSummary(attendanceSession, classMembers);
                   return (
-                    <div className="data-row" key={attendanceSession.id}>
+                    <div className="data-row access-user-row" key={attendanceSession.id}>
                       <span className="date-box">{formatDate(attendanceSession.date)}</span>
                       <div>
                         <strong>{attendanceSession.title}</strong>
@@ -2881,6 +3023,11 @@ export default function Home() {
                           {sessionSummary.present} presentes - {sessionSummary.absent} faltas - {sessionSummary.justified} justificadas
                         </small>
                         <small>{sessionSummary.percent}% de frequencia</small>
+                      </div>
+                      <div className="row-actions">
+                        <button className="secondary" onClick={() => printAttendanceSessionPdf(area, classRecord, attendanceSession)} type="button">
+                          Salvar PDF
+                        </button>
                       </div>
                     </div>
                   );
@@ -3702,8 +3849,8 @@ export default function Home() {
             <section className="content-grid">
               {isAdminView && <article className="surface">
                 <div className="panel-heading">
-                  <h2>Novo evento</h2>
-                  <span>Agenda</span>
+                  <h2>{editingEventId ? "Editar evento" : "Novo evento"}</h2>
+                  <span>{editingEventId ? "Atualizando agenda" : "Agenda"}</span>
                 </div>
                 <div className="form-grid">
                   <label className="full">
@@ -3754,9 +3901,16 @@ export default function Home() {
                       value={eventForm.responsible}
                     />
                   </label>
-                  <button className="primary-action" disabled={!canCreateEvent} onClick={createEvent} type="button">
-                    Adicionar evento
-                  </button>
+                  <div className="form-actions full">
+                    <button className="primary-action" disabled={!canCreateEvent} onClick={createEvent} type="button">
+                      {editingEventId ? "Atualizar evento" : "Adicionar evento"}
+                    </button>
+                    {editingEventId && (
+                      <button className="secondary" onClick={cancelEventEdit} type="button">
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
                 </div>
               </article>}
 
@@ -3777,6 +3931,9 @@ export default function Home() {
                         <small>{event.location || "Local nao informado"} - {event.responsible || "Sem responsavel"}</small>
                       </div>
                       {isAdminView && <div className="row-actions">
+                        <button className="secondary" onClick={() => editEvent(event)} type="button">
+                          Editar
+                        </button>
                         <button
                           className={event.status === "Concluido" ? "secondary" : "danger-action"}
                           onClick={() => updateEventStatus(event, event.status === "Concluido" ? "Programado" : "Concluido")}
