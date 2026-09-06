@@ -2,6 +2,24 @@
 
 import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  absentStudentRows,
+  attendanceKey,
+  attendanceNoteForMember,
+  attendanceSessionForEvent,
+  attendanceSessionsForClass,
+  attendanceStatusForMember,
+  attendanceSummary,
+  classNameById,
+  eventsForAttendance,
+  memberAttendanceHistory,
+  membersForAttendanceClass,
+} from "./attendance-helpers";
+import {
+  classWhatsappRecipients,
+  messageRecipientsForAudience,
+  selectedOrAllRecipients,
+} from "./communication-helpers";
+import {
   birthdayDateThisYear,
   birthdayLabel,
   classNoticeWhatsappText,
@@ -1287,6 +1305,7 @@ export default function Home() {
     () => monthlyBirthdays.filter((member) => isBirthdayThisWeek(member.birthDate)),
     [monthlyBirthdays],
   );
+  const absentRows = useMemo(() => absentStudentRows(data.members, data.attendanceSessions), [data.attendanceSessions, data.members]);
   const monthlyKidsBirthdays = useMemo(
     () => data.kids.filter((kid) => isBirthdayThisMonth(kid.birthDate)),
     [data.kids],
@@ -1526,96 +1545,29 @@ export default function Home() {
       )}
     </article>
   );
-  const messageRecipients = useMemo<MessageRecipient[]>(() => {
-    const memberRecipients = data.members
-      .filter((member) => normalizeWhatsappPhone(member.phone))
-      .map((member) => ({
-        id: member.id,
-        name: member.fullName,
-        phone: member.phone,
-        group: member.ministry || member.memberType,
-      }));
-
-    if (messageAudience === "Todos os membros") return memberRecipients;
-    if (messageAudience === "Aniversariantes da semana") {
-      return weeklyBirthdays
-        .filter((member) => normalizeWhatsappPhone(member.phone))
-        .map((member) => ({ id: member.id, name: member.fullName, phone: member.phone, group: birthdayLabel(member.birthDate) }));
-    }
-    if (messageAudience === "Aniversariantes do mes") {
-      return monthlyBirthdays
-        .filter((member) => normalizeWhatsappPhone(member.phone))
-        .map((member) => ({ id: member.id, name: member.fullName, phone: member.phone, group: birthdayLabel(member.birthDate) }));
-    }
-    if (messageAudience === "EBD") {
-      return data.members
-        .filter((member) => member.schoolClassId && normalizeWhatsappPhone(member.phone))
-        .map((member) => ({ id: member.id, name: member.fullName, phone: member.phone, group: classNameById(data.schoolClasses, member.schoolClassId) }));
-    }
-    if (messageAudience === "Discipulado") {
-      return data.members
-        .filter((member) => member.discipleshipClassId && normalizeWhatsappPhone(member.phone))
-        .map((member) => ({ id: member.id, name: member.fullName, phone: member.phone, group: classNameById(data.discipleshipClasses, member.discipleshipClassId) }));
-    }
-    if (messageAudience === "Grupos") {
-      return memberRecipients.filter((recipient) => Boolean(recipient.group && recipient.group !== "Visitante"));
-    }
-    if (messageAudience === "Visitantes") {
-      return data.visitors
-        .filter((visitor) => normalizeWhatsappPhone(visitor.phone))
-        .map((visitor) => ({ id: visitor.id, name: visitor.fullName, phone: visitor.phone, group: visitor.integrationStatus }));
-    }
-    if (messageAudience === "Escalas") {
-      return data.schedules
-        .filter((schedule) => normalizeWhatsappPhone(schedule.phone))
-        .map((schedule) => ({ id: schedule.id, name: schedule.assignedTo, phone: schedule.phone, group: `${schedule.serviceType} - ${schedule.functionName}` }));
-    }
-    return data.kids
-      .filter((kid) => normalizeWhatsappPhone(kid.guardianPhone))
-      .map((kid) => ({
-        id: kid.id,
-        name: kid.guardianName,
-        phone: kid.guardianPhone,
-        group: kid.childName,
-      }));
-  }, [data.discipleshipClasses, data.kids, data.members, data.schedules, data.schoolClasses, data.visitors, messageAudience, monthlyBirthdays, weeklyBirthdays]);
+  const messageRecipients = useMemo<MessageRecipient[]>(
+    () =>
+      messageRecipientsForAudience({
+        audience: messageAudience,
+        members: data.members,
+        visitors: data.visitors,
+        kids: data.kids,
+        schedules: data.schedules,
+        schoolClasses: data.schoolClasses,
+        discipleshipClasses: data.discipleshipClasses,
+        weeklyBirthdays,
+        monthlyBirthdays,
+      }),
+    [data.discipleshipClasses, data.kids, data.members, data.schedules, data.schoolClasses, data.visitors, messageAudience, monthlyBirthdays, weeklyBirthdays],
+  );
   const selectedMessageRecipients = useMemo(() => {
-    const selected = messageRecipients.filter((recipient) => selectedMessageRecipientIds.includes(recipient.id));
-    return selected.length ? selected : messageRecipients;
+    return selectedOrAllRecipients(messageRecipients, selectedMessageRecipientIds);
   }, [messageRecipients, selectedMessageRecipientIds]);
-
-  function classWhatsappRecipients(classRecord: SchoolClass, area: "EBD" | "Discipulado") {
-    const className = classRecord.name;
-    const classText = normalizeSearchText(className);
-    const classWords = classText.split(/\s+/).filter((word) => word.length > 3);
-    const areaWords =
-      area === "EBD"
-        ? ["ebd", "escola biblica", "biblica", "professor"]
-        : ["discipulado", "discipulado 1", "discipulado 2", "discipulador", "novo convertido", "novos convertidos", "batismo"];
-
-    return data.members
-      .filter((member) => normalizeWhatsappPhone(member.phone))
-      .filter((member) => {
-        const memberText = normalizeSearchText(
-          [member.fullName, member.status, member.memberType, member.role, member.ministry, member.notes].join(" "),
-        );
-        const matchesEnrollment = area === "EBD" ? member.schoolClassId === classRecord.id : member.discipleshipClassId === classRecord.id;
-        const matchesArea = areaWords.some((word) => memberText.includes(word));
-        const matchesClass = classWords.some((word) => memberText.includes(word));
-        return matchesEnrollment || matchesArea || matchesClass;
-      })
-      .map((member) => ({
-        id: member.id,
-        name: member.fullName,
-        phone: member.phone,
-        group: className,
-      }));
-  }
 
   function openClassWhatsapp(classRecord: SchoolClass, title: string, body: string, area: "EBD" | "Discipulado") {
     if (!requireModuleAccess(area === "EBD" ? "school" : "discipleship", `enviar WhatsApp da ${area}`)) return;
 
-    const recipients = classWhatsappRecipients(classRecord, area);
+    const recipients = classWhatsappRecipients(data.members, classRecord, area);
     const className = classRecord.name;
     const text = classNoticeWhatsappText(className, title, body);
 
@@ -1633,65 +1585,10 @@ export default function Home() {
     log(`WhatsApp preparado para ${Math.min(recipients.length, 12)} contatos de ${className}`);
   }
 
-  function classNameById(classes: SchoolClass[], classId: string) {
-    return classes.find((item) => item.id === classId)?.name ?? "";
-  }
-
-  function attendanceKey(area: AttendanceArea, classId: string) {
-    return `${area}-${classId}`;
-  }
-
-  function eventsForAttendance(area: AttendanceArea) {
-    const areaWords =
-      area === "school"
-        ? ["ebd", "escola biblica", "biblica"]
-        : ["discipulado", "batismo", "novo convertido", "novos convertidos"];
-
-    return data.events.filter((event) => {
-      const eventText = normalizeSearchText([event.title, event.ministry, event.location, event.responsible].join(" "));
-      return areaWords.some((word) => eventText.includes(word));
-    });
-  }
-
-  function membersForAttendanceClass(area: AttendanceArea, classId: string) {
-    return data.members.filter((member) => (area === "school" ? member.schoolClassId === classId : member.discipleshipClassId === classId));
-  }
-
-  function attendanceSessionsForClass(area: AttendanceArea, classId: string) {
-    return data.attendanceSessions
-      .filter((session) => session.area === area && session.classId === classId)
-      .sort((first, second) => second.date.localeCompare(first.date));
-  }
-
   function selectedAttendanceEvent(area: AttendanceArea, classId: string) {
-    const events = eventsForAttendance(area);
+    const events = eventsForAttendance(data.events, area);
     const selectedEventId = attendanceEventSelection[attendanceKey(area, classId)] ?? events[0]?.id ?? "";
     return events.find((event) => event.id === selectedEventId) ?? events[0];
-  }
-
-  function attendanceSessionForEvent(area: AttendanceArea, classId: string, eventId: string) {
-    return data.attendanceSessions.find((session) => session.area === area && session.classId === classId && session.eventId === eventId);
-  }
-
-  function attendanceStatusForMember(session: AttendanceSession | undefined, memberId: string): AttendanceStatus {
-    return session?.records.find((record) => record.memberId === memberId)?.status ?? "Presente";
-  }
-
-  function attendanceNoteForMember(session: AttendanceSession | undefined, memberId: string) {
-    return session?.records.find((record) => record.memberId === memberId)?.note ?? "";
-  }
-
-  function attendanceSummary(session: AttendanceSession | undefined, members: MemberRecord[]) {
-    if (!session) return { present: 0, absent: 0, justified: 0, contact: 0, total: members.length, percent: 0 };
-
-    const records = members.map((member) => attendanceStatusForMember(session, member.id));
-    const present = records.filter((status) => status === "Presente").length;
-    const absent = records.filter((status) => status === "Falta").length;
-    const justified = records.filter((status) => status === "Justificado").length;
-    const contact = records.filter((status) => status === "Precisa de contato").length;
-    const percent = members.length ? Math.round(((present + justified) / members.length) * 100) : 0;
-
-    return { present, absent, justified, contact, total: members.length, percent };
   }
 
   function canManageAttendanceClass(classRecord: SchoolClass) {
@@ -1717,7 +1614,7 @@ export default function Home() {
       const existing = current.attendanceSessions.find(
         (session) => session.area === area && session.classId === classRecord.id && session.eventId === event.id,
       );
-      const currentRecords = existing?.records ?? membersForAttendanceClass(area, classRecord.id).map((item) => ({
+      const currentRecords = existing?.records ?? membersForAttendanceClass(current.members, area, classRecord.id).map((item) => ({
         memberId: item.id,
         status: "Presente" as AttendanceStatus,
         note: "",
@@ -1760,7 +1657,7 @@ export default function Home() {
       const existing = current.attendanceSessions.find(
         (session) => session.area === area && session.classId === classRecord.id && session.eventId === event.id,
       );
-      const baseRecords = existing?.records ?? membersForAttendanceClass(area, classRecord.id).map((item) => ({
+      const baseRecords = existing?.records ?? membersForAttendanceClass(current.members, area, classRecord.id).map((item) => ({
         memberId: item.id,
         status: "Presente" as AttendanceStatus,
         note: "",
@@ -1790,21 +1687,8 @@ export default function Home() {
     });
   }
 
-  function memberAttendanceHistory(area: AttendanceArea, member: MemberRecord) {
-    const classId = area === "school" ? member.schoolClassId : member.discipleshipClassId;
-    if (!classId) return [];
-
-    return data.attendanceSessions
-      .filter((session) => session.area === area && session.classId === classId)
-      .map((session) => ({
-        session,
-        record: session.records.find((item) => item.memberId === member.id),
-      }))
-      .sort((first, second) => second.session.date.localeCompare(first.session.date));
-  }
-
   function printAttendanceSessionPdf(area: AttendanceArea, classRecord: SchoolClass, session: AttendanceSession) {
-    const classMembers = membersForAttendanceClass(area, classRecord.id);
+    const classMembers = membersForAttendanceClass(data.members, area, classRecord.id);
     const summary = attendanceSummary(session, classMembers);
     const areaLabel = area === "school" ? "Escola Dominical" : "Discipulado";
     const rows = classMembers
@@ -1906,26 +1790,6 @@ export default function Home() {
       classNameById(data.discipleshipClasses, member.discipleshipClassId) || "Nao matriculado",
       member.pastoralStatus || "Sem acompanhamento definido",
     ]);
-  }
-
-  function absentStudentRows() {
-    return data.members
-      .map((member) => {
-        const records = data.attendanceSessions
-          .flatMap((session) => session.records.map((record) => ({ session, record })))
-          .filter(({ record }) => record.memberId === member.id)
-          .sort((first, second) => second.session.date.localeCompare(first.session.date));
-        const recentMisses = records.slice(0, 3).filter(({ record }) => record.status === "Falta" || record.status === "Precisa de contato").length;
-        const monthMisses = records.filter(({ session, record }) => {
-          const date = eventDate(session.date);
-          const now = new Date();
-          return Boolean(date && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear() && (record.status === "Falta" || record.status === "Precisa de contato"));
-        }).length;
-
-        return { member, recentMisses, monthMisses, lastStatus: records[0]?.record.status ?? "Sem chamada" };
-      })
-      .filter((item) => item.recentMisses >= 2 || item.monthMisses >= 3 || item.lastStatus === "Precisa de contato")
-      .map(({ member, recentMisses, monthMisses, lastStatus }) => [member.fullName, member.phone, lastStatus, recentMisses, monthMisses]);
   }
 
   function agendaWeekRows() {
@@ -2038,7 +1902,7 @@ export default function Home() {
       absences: {
         title: "Faltosos recentes",
         headers: ["Nome", "WhatsApp", "Ultimo status", "Faltas recentes", "Faltas no mes"],
-        rows: absentStudentRows(),
+        rows: absentRows,
       },
       finance: {
         title: "Financeiro",
@@ -3343,16 +3207,16 @@ export default function Home() {
   }
 
   function renderAttendancePanel(area: AttendanceArea, classRecord: SchoolClass) {
-    const classMembers = membersForAttendanceClass(area, classRecord.id);
-    const events = eventsForAttendance(area);
+    const classMembers = membersForAttendanceClass(data.members, area, classRecord.id);
+    const events = eventsForAttendance(data.events, area);
     const selectedEvent = selectedAttendanceEvent(area, classRecord.id);
-    const session = selectedEvent ? attendanceSessionForEvent(area, classRecord.id, selectedEvent.id) : undefined;
+    const session = selectedEvent ? attendanceSessionForEvent(data.attendanceSessions, area, classRecord.id, selectedEvent.id) : undefined;
     const summary = attendanceSummary(session, classMembers);
     const canManage = canManageAttendanceClass(classRecord);
     const currentMemberIsStudent = Boolean(
       currentMember && (area === "school" ? currentMember.schoolClassId === classRecord.id : currentMember.discipleshipClassId === classRecord.id),
     );
-    const currentMemberHistory = currentMember ? memberAttendanceHistory(area, currentMember).filter((item) => item.session.classId === classRecord.id) : [];
+    const currentMemberHistory = currentMember ? memberAttendanceHistory(data.attendanceSessions, area, currentMember).filter((item) => item.session.classId === classRecord.id) : [];
     const areaLabel = area === "school" ? "EBD" : "Discipulado";
 
     if (!canManage && !currentMemberIsStudent) return null;
@@ -3437,8 +3301,8 @@ export default function Home() {
 
             <div className="row-list full">
               <strong>Historico da turma</strong>
-              {attendanceSessionsForClass(area, classRecord.id).length ? (
-                attendanceSessionsForClass(area, classRecord.id).map((attendanceSession) => {
+              {attendanceSessionsForClass(data.attendanceSessions, area, classRecord.id).length ? (
+                attendanceSessionsForClass(data.attendanceSessions, area, classRecord.id).map((attendanceSession) => {
                   const sessionSummary = attendanceSummary(attendanceSession, classMembers);
                   return (
                     <div className="data-row access-user-row" key={attendanceSession.id}>
@@ -5994,7 +5858,7 @@ export default function Home() {
                       <div>
                         <strong>{schoolClass.name}</strong>
                         <small>Professor: {schoolClass.teacher} - Proxima aula: {schoolClass.nextLesson}</small>
-                        {canManageModule(currentAccessRole, "school") && <small>{classWhatsappRecipients(schoolClass, "EBD").length} contatos de WhatsApp encontrados</small>}
+                        {canManageModule(currentAccessRole, "school") && <small>{classWhatsappRecipients(data.members, schoolClass, "EBD").length} contatos de WhatsApp encontrados</small>}
                         <div className="notice-stack">
                           {schoolClass.notices.length === 0 ? (
                             <small>Nenhum aviso enviado para esta classe.</small>
@@ -6081,7 +5945,7 @@ export default function Home() {
                       <div>
                         <strong>{discipleshipClass.name}</strong>
                         <small>Professor: {discipleshipClass.teacher} - Proxima aula: {discipleshipClass.nextLesson}</small>
-                        {canManageModule(currentAccessRole, "discipleship") && <small>{classWhatsappRecipients(discipleshipClass, "Discipulado").length} contatos de WhatsApp encontrados</small>}
+                        {canManageModule(currentAccessRole, "discipleship") && <small>{classWhatsappRecipients(data.members, discipleshipClass, "Discipulado").length} contatos de WhatsApp encontrados</small>}
                         <div className="notice-stack">
                           {discipleshipClass.notices.length === 0 ? (
                             <small>Nenhum aviso enviado para esta classe.</small>
@@ -6592,7 +6456,7 @@ export default function Home() {
                     ["agenda", "Agenda semanal", `${weekEvents.length} eventos na semana`],
                     ["schedules", "Escalas", `${data.schedules.length} pessoas escaladas`],
                     ["attendance", "Presenca EBD/Discipulado", `${data.attendanceSessions.length} chamadas`],
-                    ["absences", "Faltosos recentes", `${absentStudentRows().length} alertas`],
+                    ["absences", "Faltosos recentes", `${absentRows.length} alertas`],
                     ["finance", "Financeiro", `${data.transactions.length} lancamentos`],
                     ["assets", "Patrimonio", `${data.assets.length} itens`],
                   ].filter(([kind]) => {
@@ -6644,10 +6508,10 @@ export default function Home() {
               <article className="surface">
                 <div className="panel-heading">
                   <h2>Previa de faltosos</h2>
-                  <span>{absentStudentRows().length} alertas</span>
+                  <span>{absentRows.length} alertas</span>
                 </div>
                 <div className="row-list">
-                  {absentStudentRows().map(([name, phone, status, recent, month]) => (
+                  {absentRows.map(([name, phone, status, recent, month]) => (
                     <div className="data-row" key={`${name}-${phone}`}>
                       <span className="date-box">{month}</span>
                       <div>
@@ -6659,7 +6523,7 @@ export default function Home() {
                       </a>
                     </div>
                   ))}
-                  {!absentStudentRows().length && <p className="empty-state">Nenhum aluno em alerta de falta no momento.</p>}
+                  {!absentRows.length && <p className="empty-state">Nenhum aluno em alerta de falta no momento.</p>}
                 </div>
               </article>
             </section>

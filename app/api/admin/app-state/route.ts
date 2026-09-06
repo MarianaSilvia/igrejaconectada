@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { adminClient, administrativeRoles, churchRoleFromLabel, requireSession, type ChurchRole } from "../auth";
+import { hiddenPayloadKeysByRole, payloadKeysByRole, visiblePublishedOnlyKeys } from "../../../state-access-policy";
 
 const stateId = "main";
 
@@ -9,14 +10,6 @@ type JsonRecord = Record<string, unknown>;
 type AppStatePayload = {
   payload?: unknown;
   baseUpdatedAt?: string | null;
-};
-
-const payloadKeysByRole: Record<Exclude<ChurchRole, "MEMBER">, string[]> = {
-  ADMIN: [],
-  SECRETARY: ["members", "visitors", "kids", "events", "notices", "messageTemplates", "messageCampaigns", "mural", "notificationReadIds"],
-  LEADER: ["visitors", "careRequests", "events", "schedules", "ministries", "notices", "messageTemplates", "messageCampaigns", "mural", "devotionals", "notificationReadIds"],
-  PROFESSOR: ["schoolClasses", "discipleshipClasses", "attendanceSessions", "schedules", "messageTemplates", "messageCampaigns", "notificationReadIds"],
-  TREASURER: ["transactions", "notificationReadIds"],
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -109,46 +102,18 @@ function sanitizedAdministrativePayloadForRole(payload: JsonRecord, role: Church
   const strippedPayload = stripMemberPhotos(payload);
   if (role === "ADMIN") return strippedPayload;
 
-  const hiddenForEveryNonAdmin = {
-    users: [],
-    audit: [],
-  };
-
-  if (role === "SECRETARY") {
-    return { ...strippedPayload, ...hiddenForEveryNonAdmin, transactions: [], assets: [] };
-  }
-
-  if (role === "LEADER") {
-    return { ...strippedPayload, ...hiddenForEveryNonAdmin, transactions: [], assets: [], kids: [] };
-  }
-
-  if (role === "PROFESSOR") {
-    return {
-      ...strippedPayload,
-      ...hiddenForEveryNonAdmin,
-      visitors: [],
-      kids: [],
-      careRequests: [],
-      transactions: [],
-      assets: [],
-      devotionals: recordsFrom(strippedPayload.devotionals).filter((devotional) => textValue(devotional.status) === "Publicado"),
-    };
-  }
-
-  if (role === "TREASURER") {
-    return {
-      ...strippedPayload,
-      ...hiddenForEveryNonAdmin,
-      members: [],
-      visitors: [],
-      kids: [],
-      careRequests: [],
-      schedules: [],
-      attendanceSessions: [],
-      messageCampaigns: [],
-      assets: [],
-      devotionals: recordsFrom(strippedPayload.devotionals).filter((devotional) => textValue(devotional.status) === "Publicado"),
-    };
+  if (role in hiddenPayloadKeysByRole) {
+    const hiddenKeys = hiddenPayloadKeysByRole[role as Exclude<ChurchRole, "ADMIN" | "MEMBER">];
+    const visibleKeys = visiblePublishedOnlyKeys(role);
+    return hiddenKeys.reduce<JsonRecord>(
+      (nextPayload, key) => ({ ...nextPayload, [key]: [] }),
+      {
+        ...strippedPayload,
+        ...(visibleKeys.includes("devotionals")
+          ? { devotionals: recordsFrom(strippedPayload.devotionals).filter((devotional) => textValue(devotional.status) === "Publicado") }
+          : {}),
+      },
+    );
   }
 
   return sanitizeMemberPayloadForResponse(strippedPayload, user);

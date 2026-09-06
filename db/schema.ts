@@ -18,7 +18,7 @@ export const profiles = sqliteTable("profiles", {
   email: text("email").notNull(),
   phone: text("phone"),
   role: text("role", {
-    enum: ["pastor", "tesoureiro", "secretaria", "lider", "membro"],
+    enum: ["administrador", "lider", "professor", "secretario", "tesoureiro", "membro"],
   }).notNull(),
   ministryId: text("ministry_id"),
   invitedBy: text("invited_by"),
@@ -54,6 +54,73 @@ export const members = sqliteTable("members", {
   status: text("status", { enum: ["membro", "visitante", "inativo"] }).notNull(),
   lgpdConsentAt: text("lgpd_consent_at"),
   createdAt: text("created_at").notNull(),
+});
+
+export const visitors = sqliteTable("visitors", {
+  id: text("id").primaryKey(),
+  churchId: text("church_id").notNull().references(() => churches.id),
+  fullName: text("full_name").notNull(),
+  phone: text("phone").notNull(),
+  firstVisitDate: text("first_visit_date"),
+  returnDate: text("return_date"),
+  invitedBy: text("invited_by"),
+  contactMade: integer("contact_made", { mode: "boolean" }).notNull(),
+  integrationStatus: text("integration_status", {
+    enum: ["primeira_visita", "retornou", "em_acompanhamento", "integrado"],
+  }).notNull(),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const kids = sqliteTable("kids", {
+  id: text("id").primaryKey(),
+  churchId: text("church_id").notNull().references(() => churches.id),
+  childName: text("child_name").notNull(),
+  birthDate: text("birth_date"),
+  ageGroup: text("age_group", { enum: ["bercario", "maternal", "kids", "juniores"] }).notNull(),
+  className: text("class_name"),
+  photoFileKey: text("photo_file_key"),
+  allergies: text("allergies"),
+  guardianName: text("guardian_name").notNull(),
+  guardianPhone: text("guardian_phone").notNull(),
+  guardianEmail: text("guardian_email"),
+  relationship: text("relationship"),
+  authorizedPickup: text("authorized_pickup"),
+  consentImage: integer("consent_image", { mode: "boolean" }).notNull(),
+  notes: text("notes"),
+  joinedAt: text("joined_at"),
+});
+
+export const schoolClasses = sqliteTable("school_classes", {
+  id: text("id").primaryKey(),
+  churchId: text("church_id").notNull().references(() => churches.id),
+  area: text("area", { enum: ["ebd", "discipulado"] }).notNull(),
+  name: text("name").notNull(),
+  teacher: text("teacher"),
+  nextLesson: text("next_lesson"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const attendanceSessions = sqliteTable("attendance_sessions", {
+  id: text("id").primaryKey(),
+  churchId: text("church_id").notNull().references(() => churches.id),
+  classId: text("class_id").notNull().references(() => schoolClasses.id),
+  eventId: text("event_id"),
+  area: text("area", { enum: ["school", "discipleship"] }).notNull(),
+  title: text("title").notNull(),
+  teacher: text("teacher"),
+  date: text("date").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const attendanceRecords = sqliteTable("attendance_records", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id").notNull().references(() => attendanceSessions.id),
+  memberId: text("member_id").notNull().references(() => members.id),
+  status: text("status", {
+    enum: ["presente", "falta", "justificado", "precisa_de_contato"],
+  }).notNull(),
+  note: text("note"),
 });
 
 export const attendance = sqliteTable("attendance", {
@@ -137,6 +204,39 @@ export const noticePosts = sqliteTable("notice_posts", {
   status: text("status", { enum: ["rascunho", "publicado"] }).notNull(),
   publishedAt: text("published_at"),
   createdBy: text("created_by").notNull().references(() => profiles.id),
+});
+
+export const muralItems = sqliteTable("mural_items", {
+  id: text("id").primaryKey(),
+  churchId: text("church_id").notNull().references(() => churches.id),
+  title: text("title").notNull(),
+  category: text("category").notNull(),
+  published: integer("published", { mode: "boolean" }).notNull(),
+  featured: integer("featured", { mode: "boolean" }).notNull(),
+  expiresAt: text("expires_at"),
+  imageFileKey: text("image_file_key"),
+  bannerUrl: text("banner_url"),
+  socialUrl: text("social_url"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const messageTemplates = sqliteTable("message_templates", {
+  id: text("id").primaryKey(),
+  churchId: text("church_id").notNull().references(() => churches.id),
+  label: text("label").notNull(),
+  audience: text("audience"),
+  body: text("body").notNull(),
+  isBirthday: integer("is_birthday", { mode: "boolean" }).notNull(),
+});
+
+export const messageCampaigns = sqliteTable("message_campaigns", {
+  id: text("id").primaryKey(),
+  churchId: text("church_id").notNull().references(() => churches.id),
+  audience: text("audience").notNull(),
+  templateId: text("template_id").references(() => messageTemplates.id),
+  body: text("body").notNull(),
+  recipientCount: integer("recipient_count").notNull(),
+  createdAt: text("created_at").notNull(),
 });
 
 export const mediaFiles = sqliteTable("media_files", {

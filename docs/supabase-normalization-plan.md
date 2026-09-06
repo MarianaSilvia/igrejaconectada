@@ -9,17 +9,17 @@ Este documento prepara a migracao futura do estado unico `church_app_state` para
 - Facilitar relatorios, filtros e auditoria.
 - Manter uma migracao reversivel e validada antes de trocar a fonte principal.
 
-## Tabelas candidatas
+## Tabelas candidatas alinhadas ao sistema atual
 
 - `members`: cadastro principal de membros, congregados, visitantes convertidos e dados de acesso vinculados.
 - `visitors`: visitantes em acompanhamento antes da integracao.
 - `kids`: criancas e responsaveis.
-- `groups`: grupos da igreja.
+- `ministries`: grupos da igreja, mantendo o nome tecnico existente ate uma migracao completa.
 - `events`: agenda e eventos.
 - `schedules`: escalas.
-- `school_classes`: classes da EBD.
-- `discipleship_classes`: classes de discipulado.
+- `school_classes`: classes da EBD e do discipulado identificadas por area.
 - `attendance_sessions`: chamadas e historico de aula.
+- `attendance_records`: presenca, falta, justificativa e precisa de contato por aluno.
 - `notices`: avisos.
 - `mural_items`: mural com imagens, links e banners.
 - `care_requests`: pedidos pastorais e pedidos de oracao.
@@ -29,6 +29,8 @@ Este documento prepara a migracao futura do estado unico `church_app_state` para
 - `assets`: patrimonio futuro.
 - `devotionals`: palavra do dia.
 - `audit_log`: registros de alteracao.
+
+O arquivo `db/schema.ts` deve funcionar como rascunho tecnico do alvo normalizado. Ele nao representa uma migracao aplicada enquanto `church_app_state` continuar sendo a fonte principal.
 
 ## Estrategia segura
 
