@@ -945,6 +945,27 @@ function normalizeSearchText(value: string) {
     .toLowerCase();
 }
 
+function replaceLegacyMinistryText(value: string) {
+  return value
+    .replaceAll("Ministérios", "Grupos")
+    .replaceAll("Ministerios", "Grupos")
+    .replaceAll("ministérios", "grupos")
+    .replaceAll("ministerios", "grupos")
+    .replaceAll("Ministério", "Grupo")
+    .replaceAll("Ministerio", "Grupo")
+    .replaceAll("ministério", "grupo")
+    .replaceAll("ministerio", "grupo");
+}
+
+function normalizeMessageTemplate(template: MessageTemplateItem): MessageTemplateItem {
+  return {
+    ...template,
+    label: replaceLegacyMinistryText(template.label),
+    text: replaceLegacyMinistryText(template.text),
+    audience: template.audience ? replaceLegacyMinistryText(template.audience) : template.audience,
+  };
+}
+
 function classNoticeWhatsappText(className: string, title: string, body: string) {
   return [
     `Paz, {nome}! Aviso para a classe ${className}.`,
@@ -1429,11 +1450,11 @@ export default function Home() {
         }
 
         if (templates?.length) {
-          const mappedTemplates = templates.map((template) => ({
+          const mappedTemplates = templates.map((template) => normalizeMessageTemplate({
               id: template.id,
-              label: template.label,
-              text: template.body,
-              audience: template.audience,
+              label: template.label ?? "",
+              text: template.body ?? "",
+              audience: template.audience ?? undefined,
               isBirthday: template.is_birthday,
             }));
           const defaultTemplate = mappedTemplates.find((template) => template.id === "general_invite") ?? mappedTemplates[0];
@@ -1582,7 +1603,7 @@ export default function Home() {
   const canCreateEvent = isAdminView && Boolean(eventForm.title.trim() && eventForm.date);
   const canCreateNotice = isAdminView && Boolean(noticeForm.title.trim() && noticeForm.body.trim());
   const canCreateMinistry = isAdminView && Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
-  const availableMessageTemplates = remoteMessageTemplates.length ? remoteMessageTemplates : messageTemplates;
+  const availableMessageTemplates = remoteMessageTemplates.length ? remoteMessageTemplates : messageTemplates.map(normalizeMessageTemplate);
   const groupOptions = useMemo(() => {
     const groups = data.ministries.map((group) => group.name).filter(Boolean);
     if (memberForm.ministry.trim() && !groups.includes(memberForm.ministry.trim())) {
