@@ -810,6 +810,13 @@ button:disabled {
   line-height: 1;
 }
 
+.stats-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
 .surface {
   min-width: 0;
   padding: 18px;
@@ -1047,6 +1054,52 @@ button.secondary.full {
   font-weight: 900;
   min-height: 42px;
   padding: 0 12px;
+}
+
+.week-switcher {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+  grid-template-columns: auto minmax(150px, 1fr) auto;
+}
+
+.week-switcher span {
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.sync-reload-button {
+  background: rgba(255, 93, 112, 0.12);
+  border: 1px solid rgba(255, 93, 112, 0.32);
+  border-radius: 8px;
+  color: #ff9aa7;
+  font-size: 12px;
+  font-weight: 900;
+  margin-top: 8px;
+  min-height: 34px;
+  padding: 0 10px;
+  width: fit-content;
+}
+
+.devotional-card {
+  background:
+    linear-gradient(135deg, rgba(20, 217, 196, 0.12), rgba(143, 124, 255, 0.1)),
+    var(--panel);
+}
+
+.devotional-card > strong {
+  color: var(--gold);
+  display: block;
+  margin-bottom: 10px;
+}
+
+.devotional-card p {
+  color: #d9eaff;
+  line-height: 1.65;
+  margin: 0 0 14px;
 }
 
 .report-grid {
@@ -1865,6 +1918,8 @@ textarea:focus {
   .birthday-spotlight-list,
   .report-grid,
   .filter-bar,
+  .stats-row,
+  .week-switcher,
   .member-form-tabs,
   .record-actions,
   .form-grid,

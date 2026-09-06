@@ -3,6 +3,7 @@
 import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { accessRoleFromMetadata, canAccessModule, canManageModule, isAdministrativeRole, modules, type AccessRole, type ModuleKey } from "./permissions";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
+import type { AssetRecord, DevotionalRecord, ReportKind, TransactionRecord } from "./types";
 
 type AccessMode = "login" | "recover";
 
@@ -40,7 +41,6 @@ type AttendanceArea = "school" | "discipleship";
 type AttendanceStatus = "Presente" | "Falta" | "Justificado" | "Precisa de contato";
 type SaveState = "idle" | "saving" | "saved" | "error";
 type MemberFormTab = "Dados" | "Igreja" | "Classes" | "Observacoes" | "Acesso";
-type ReportKind = "members" | "visitors" | "birthdays" | "kids" | "agenda" | "schedules" | "attendance" | "absences";
 
 type AttendanceRecord = {
   memberId: string;
@@ -251,6 +251,9 @@ type AppData = {
   attendanceSessions: AttendanceSession[];
   messageTemplates: MessageTemplateItem[];
   messageCampaigns: MessageCampaign[];
+  transactions: TransactionRecord[];
+  assets: AssetRecord[];
+  devotionals: DevotionalRecord[];
   audit: AuditItem[];
   notificationReadIds: string[];
 };
@@ -635,6 +638,42 @@ const initialData: AppData = {
       notes: "Chegar 30 minutos antes para alinhamento.",
     },
   ],
+  transactions: [
+    {
+      id: "transaction-1",
+      date: "2026-09-06",
+      type: "Oferta",
+      category: "Culto",
+      description: "Oferta do culto da familia",
+      amount: 0,
+      method: "Dinheiro/Pix",
+      status: "Pendente",
+      memberName: "",
+      notes: "Modulo inicial preparado para a tesouraria.",
+    },
+  ],
+  assets: [
+    {
+      id: "asset-1",
+      name: "Microfone principal",
+      category: "Som",
+      location: "Templo principal",
+      responsible: "Equipe de midia",
+      condition: "Bom",
+      lastMaintenance: "",
+      notes: "Cadastro inicial para controle de patrimonio.",
+    },
+  ],
+  devotionals: [
+    {
+      id: "devotional-1",
+      title: "Palavra do dia",
+      verse: "Salmo 23:1",
+      body: "O Senhor e o nosso pastor. Hoje, caminhe com confianca, cuidado e gratidao.",
+      status: "Publicado",
+      publishedAt: "2026-09-06",
+    },
+  ],
   audit: [
     { id: "audit-1", action: "Central de notificacoes criada", when: "2026-09-02T15:10:00.000Z" },
     { id: "audit-2", action: "Modulo de backup validado", when: "2026-09-02T14:42:00.000Z" },
@@ -808,6 +847,36 @@ const blankSchedule: Omit<ScheduleRecord, "id"> = {
   notes: "",
 };
 
+const blankTransaction: Omit<TransactionRecord, "id"> = {
+  date: "",
+  type: "Entrada",
+  category: "",
+  description: "",
+  amount: 0,
+  method: "Pix",
+  status: "Pendente",
+  memberName: "",
+  notes: "",
+};
+
+const blankAsset: Omit<AssetRecord, "id"> = {
+  name: "",
+  category: "",
+  location: "",
+  responsible: "",
+  condition: "Bom",
+  lastMaintenance: "",
+  notes: "",
+};
+
+const blankDevotional: Omit<DevotionalRecord, "id"> = {
+  title: "",
+  verse: "",
+  body: "",
+  status: "Rascunho",
+  publishedAt: "",
+};
+
 const blankMuralItem: Omit<MuralItem, "id"> = {
   title: "",
   category: "Secretaria",
@@ -869,6 +938,26 @@ const messageTemplates: MessageTemplateItem[] = [
     id: "kids-note",
     label: "Kids - responsaveis",
     text: "Paz, {nome}! Temos um comunicado da Area Kids. Confira as orientacoes e, se precisar, fale com a coordenacao. {igreja}.",
+  },
+  {
+    id: "visitor-follow-up",
+    label: "Visitante - acompanhamento",
+    text: "Paz, {nome}! Foi uma alegria receber voce. Queremos caminhar com sua familia e estamos a disposicao para ajudar. {igreja}.",
+  },
+  {
+    id: "absence-follow-up",
+    label: "Faltoso - cuidado",
+    text: "Paz, {nome}! Sentimos sua falta na aula. Estamos orando por voce e queremos saber se podemos ajudar em algo. {igreja}.",
+  },
+  {
+    id: "schedule-confirmation",
+    label: "Escala - confirmar servico",
+    text: "Paz, {nome}! Voce esta na escala desta semana. Por favor, confirme sua disponibilidade e horario de chegada. {igreja}.",
+  },
+  {
+    id: "class-notice",
+    label: "Classe - aviso",
+    text: "Paz, {nome}! Temos um aviso importante para sua classe. Confira a orientacao e confirme leitura. {igreja}.",
   },
 ];
 
@@ -1199,6 +1288,31 @@ function normalizeSchedule(schedule: Partial<ScheduleRecord>): ScheduleRecord {
   };
 }
 
+function normalizeTransaction(transaction: Partial<TransactionRecord>): TransactionRecord {
+  return {
+    ...blankTransaction,
+    ...transaction,
+    id: transaction.id ?? uid("transaction"),
+    amount: Number(transaction.amount ?? 0),
+  };
+}
+
+function normalizeAsset(asset: Partial<AssetRecord>): AssetRecord {
+  return {
+    ...blankAsset,
+    ...asset,
+    id: asset.id ?? uid("asset"),
+  };
+}
+
+function normalizeDevotional(devotional: Partial<DevotionalRecord>): DevotionalRecord {
+  return {
+    ...blankDevotional,
+    ...devotional,
+    id: devotional.id ?? uid("devotional"),
+  };
+}
+
 function visitorsFromMembers(members: MemberRecord[]): VisitorRecord[] {
   return members
     .filter((member) => member.memberType === "Visitante" || member.status === "Visitante" || member.status === "Novo convertido")
@@ -1369,6 +1483,9 @@ function normalizeAppData(value: Partial<AppData>): AppData {
     ),
     messageTemplates: (value.messageTemplates ?? initialData.messageTemplates).map((template) => normalizeMessageTemplate(template)),
     messageCampaigns: value.messageCampaigns ?? initialData.messageCampaigns,
+    transactions: (value.transactions ?? initialData.transactions).map((transaction) => normalizeTransaction(transaction)),
+    assets: (value.assets ?? initialData.assets).map((asset) => normalizeAsset(asset)),
+    devotionals: (value.devotionals ?? initialData.devotionals).map((devotional) => normalizeDevotional(devotional)),
     audit: value.audit ?? initialData.audit,
     notificationReadIds: value.notificationReadIds ?? initialData.notificationReadIds,
   };
@@ -1425,6 +1542,12 @@ export default function Home() {
   const [kidForm, setKidForm] = useState(blankKid);
   const [scheduleForm, setScheduleForm] = useState(blankSchedule);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [transactionForm, setTransactionForm] = useState(blankTransaction);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
+  const [assetForm, setAssetForm] = useState(blankAsset);
+  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
+  const [devotionalForm, setDevotionalForm] = useState(blankDevotional);
+  const [editingDevotionalId, setEditingDevotionalId] = useState<string | null>(null);
   const [muralForm, setMuralForm] = useState(blankMuralItem);
   const [muralImageMessage, setMuralImageMessage] = useState("");
   const [schoolNoticeForm, setSchoolNoticeForm] = useState(blankSchoolNotice);
@@ -1450,6 +1573,16 @@ export default function Home() {
   const [eventGroupFilter, setEventGroupFilter] = useState("Todos");
   const [eventStatusFilter, setEventStatusFilter] = useState("Todos");
   const [scheduleGroupFilter, setScheduleGroupFilter] = useState("Todos");
+  const [scheduleWeekOffset, setScheduleWeekOffset] = useState(0);
+  const [scheduleServiceFilter, setScheduleServiceFilter] = useState("Todos");
+  const [scheduleFunctionFilter, setScheduleFunctionFilter] = useState("Todos");
+  const [scheduleStatusFilter, setScheduleStatusFilter] = useState("Todos");
+  const [memberSchoolFilter, setMemberSchoolFilter] = useState("Todos");
+  const [memberDiscipleshipFilter, setMemberDiscipleshipFilter] = useState("Todos");
+  const [memberPastoralFilter, setMemberPastoralFilter] = useState("Todos");
+  const [visitorContactFilter, setVisitorContactFilter] = useState("Todos");
+  const [financeTypeFilter, setFinanceTypeFilter] = useState("Todos");
+  const [assetConditionFilter, setAssetConditionFilter] = useState("Todos");
   const [remoteMessageTemplates, setRemoteMessageTemplates] = useState<MessageTemplateItem[]>([]);
   const [remoteStateReady, setRemoteStateReady] = useState(!isSupabaseConfigured());
   const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Modo local: configure o Supabase no Vercel.");
@@ -1501,6 +1634,45 @@ export default function Home() {
     setSyncStatus(`Salvo agora as ${savedAt}.`);
     return true;
   }, [remoteUpdatedAt]);
+
+  const reloadRemoteStateNow = useCallback(async () => {
+    if (!hasSession || !isSupabaseConfigured()) return false;
+
+    setSaveState("saving");
+    setSyncStatus("Recarregando dados mais recentes da Supabase...");
+    const supabase = getSupabaseClient();
+    const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+      setSaveState("error");
+      setSyncStatus("Sessao expirada. Entre novamente para recarregar dados da base.");
+      return false;
+    }
+
+    const response = await fetch("/api/admin/app-state", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const result = (await response.json()) as RemoteAppStateResponse;
+
+    if (!response.ok) {
+      setSaveState("error");
+      setSyncStatus(result.error ?? "Nao foi possivel recarregar cadastros da base.");
+      return false;
+    }
+
+    const normalizedRemoteData = normalizeAppData(result.payload ?? {});
+    const remoteData = mergePhotoCache(normalizedRemoteData, loadPhotoCache());
+    lastSavedPayloadRef.current = JSON.stringify(normalizedRemoteData);
+    setData(remoteData);
+    setRemoteUpdatedAt(result.updatedAt ?? null);
+    const savedAt = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    setLastSavedAt(savedAt);
+    setSaveState("saved");
+    setRemoteStateReady(true);
+    setSyncStatus("Dados mais recentes carregados da base Supabase.");
+    return true;
+  }, [hasSession]);
 
   useEffect(() => {
     if (window.location.search.includes("cadastro=novo")) {
@@ -1724,6 +1896,9 @@ export default function Home() {
   const canManageMessages = canManageModule(currentAccessRole, "messages");
   const canManageMural = canManageModule(currentAccessRole, "mural");
   const canManagePastoral = canManageModule(currentAccessRole, "pastoral");
+  const canManageFinance = canManageModule(currentAccessRole, "finance");
+  const canManageAssets = canManageModule(currentAccessRole, "assets");
+  const canManageDevotional = canManageModule(currentAccessRole, "devotional");
   const visibleModules = useMemo(
     () => modules.filter((module) => canAccessModule(currentAccessRole, module.key)),
     [currentAccessRole],
@@ -1766,6 +1941,10 @@ export default function Home() {
     const today = eventDate(todayKey) ?? new Date();
     return weekRangeWithOffset(eventWeekOffset, today);
   }, [eventWeekOffset, todayKey]);
+  const selectedScheduleWeekRange = useMemo(() => {
+    const today = eventDate(todayKey) ?? new Date();
+    return weekRangeWithOffset(scheduleWeekOffset, today);
+  }, [scheduleWeekOffset, todayKey]);
   const weekEvents = useMemo(() => {
     return data.events
       .filter((event) => isEventInWeek(event, selectedWeekRange.start, selectedWeekRange.end))
@@ -1878,6 +2057,9 @@ export default function Home() {
   const canCreateSchedule = canManageSchedules && Boolean(scheduleForm.date && scheduleForm.serviceType.trim() && scheduleForm.assignedTo.trim());
   const canCreateNotice = canManageNotices && Boolean(noticeForm.title.trim() && noticeForm.body.trim());
   const canCreateMinistry = canManageGroups && Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
+  const canCreateTransaction = canManageFinance && Boolean(transactionForm.date && transactionForm.category.trim() && transactionForm.description.trim());
+  const canCreateAsset = canManageAssets && Boolean(assetForm.name.trim() && assetForm.category.trim());
+  const canCreateDevotional = canManageDevotional && Boolean(devotionalForm.title.trim() && devotionalForm.body.trim());
   const availableMemberFormTabs = useMemo<MemberFormTab[]>(
     () => [
       "Dados",
@@ -1926,6 +2108,9 @@ export default function Home() {
         .filter((member) => memberStatusFilter === "Todos" || member.status === memberStatusFilter)
         .filter((member) => memberTypeFilter === "Todos" || member.memberType === memberTypeFilter)
         .filter((member) => memberGroupFilter === "Todos" || member.ministry === memberGroupFilter)
+        .filter((member) => memberSchoolFilter === "Todos" || member.schoolClassId === memberSchoolFilter)
+        .filter((member) => memberDiscipleshipFilter === "Todos" || member.discipleshipClassId === memberDiscipleshipFilter)
+        .filter((member) => memberPastoralFilter === "Todos" || member.pastoralStatus === memberPastoralFilter)
         .filter((member) => {
           if (!searchQuery) return true;
           const schoolClassName = classNameById(data.schoolClasses, member.schoolClassId);
@@ -1947,18 +2132,19 @@ export default function Home() {
             ].join(" "),
           ).includes(searchQuery);
         }),
-    [data.discipleshipClasses, data.schoolClasses, memberGroupFilter, memberStatusFilter, memberTypeFilter, searchQuery, visibleMembers],
+    [data.discipleshipClasses, data.schoolClasses, memberDiscipleshipFilter, memberGroupFilter, memberPastoralFilter, memberSchoolFilter, memberStatusFilter, memberTypeFilter, searchQuery, visibleMembers],
   );
   const filteredVisitors = useMemo(
     () =>
       data.visitors
         .filter(() => canManageVisitors)
         .filter((visitor) => visitorStatusFilter === "Todos" || visitor.integrationStatus === visitorStatusFilter)
+        .filter((visitor) => visitorContactFilter === "Todos" || (visitorContactFilter === "Contato feito" ? visitor.contactMade : !visitor.contactMade))
         .filter((visitor) => {
           if (!searchQuery) return true;
           return normalizeSearchText([visitor.fullName, visitor.phone, visitor.invitedBy, visitor.integrationStatus, visitor.notes].join(" ")).includes(searchQuery);
         }),
-    [canManageVisitors, data.visitors, searchQuery, visitorStatusFilter],
+    [canManageVisitors, data.visitors, searchQuery, visitorContactFilter, visitorStatusFilter],
   );
   const filteredKids = useMemo(
     () =>
@@ -1992,13 +2178,50 @@ export default function Home() {
     () =>
       data.schedules
         .filter(() => canAccessModule(currentAccessRole, "schedules"))
+        .filter((schedule) => {
+          const date = eventDate(schedule.date);
+          return Boolean(date && date >= selectedScheduleWeekRange.start && date <= selectedScheduleWeekRange.end);
+        })
         .filter((schedule) => scheduleGroupFilter === "Todos" || schedule.group === scheduleGroupFilter)
+        .filter((schedule) => scheduleServiceFilter === "Todos" || schedule.serviceType === scheduleServiceFilter)
+        .filter((schedule) => scheduleFunctionFilter === "Todos" || schedule.functionName === scheduleFunctionFilter)
+        .filter((schedule) => scheduleStatusFilter === "Todos" || schedule.confirmationStatus === scheduleStatusFilter)
         .filter((schedule) => {
           if (!searchQuery) return true;
           return normalizeSearchText([schedule.serviceType, schedule.group, schedule.functionName, schedule.assignedTo, schedule.phone, schedule.confirmationStatus].join(" ")).includes(searchQuery);
         })
         .sort((first, second) => `${first.date} ${first.serviceType}`.localeCompare(`${second.date} ${second.serviceType}`)),
-    [currentAccessRole, data.schedules, scheduleGroupFilter, searchQuery],
+    [currentAccessRole, data.schedules, scheduleFunctionFilter, scheduleGroupFilter, scheduleServiceFilter, scheduleStatusFilter, searchQuery, selectedScheduleWeekRange],
+  );
+  const filteredTransactions = useMemo(
+    () =>
+      data.transactions
+        .filter(() => canAccessModule(currentAccessRole, "finance"))
+        .filter((transaction) => financeTypeFilter === "Todos" || transaction.type === financeTypeFilter)
+        .filter((transaction) => {
+          if (!searchQuery) return true;
+          return normalizeSearchText([transaction.type, transaction.category, transaction.description, transaction.memberName, transaction.method, transaction.status].join(" ")).includes(searchQuery);
+        })
+        .sort((first, second) => second.date.localeCompare(first.date)),
+    [currentAccessRole, data.transactions, financeTypeFilter, searchQuery],
+  );
+  const filteredAssets = useMemo(
+    () =>
+      data.assets
+        .filter(() => canAccessModule(currentAccessRole, "assets"))
+        .filter((asset) => assetConditionFilter === "Todos" || asset.condition === assetConditionFilter)
+        .filter((asset) => {
+          if (!searchQuery) return true;
+          return normalizeSearchText([asset.name, asset.category, asset.location, asset.responsible, asset.condition, asset.notes].join(" ")).includes(searchQuery);
+        }),
+    [assetConditionFilter, currentAccessRole, data.assets, searchQuery],
+  );
+  const publishedDevotional = useMemo(
+    () =>
+      data.devotionals
+        .filter((devotional) => devotional.status === "Publicado")
+        .sort((first, second) => second.publishedAt.localeCompare(first.publishedAt))[0],
+    [data.devotionals],
   );
   const birthdaySpotlightPanel = (
     <article className="surface birthday-spotlight wide">
@@ -2524,6 +2747,32 @@ export default function Home() {
     ]);
   }
 
+  function financeReportRows() {
+    return data.transactions.map((transaction) => [
+      formatDate(transaction.date),
+      transaction.type,
+      transaction.category,
+      transaction.description,
+      transaction.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+      transaction.method,
+      transaction.status,
+      transaction.memberName || "Nao vinculado",
+      transaction.notes,
+    ]);
+  }
+
+  function assetReportRows() {
+    return data.assets.map((asset) => [
+      asset.name,
+      asset.category,
+      asset.location || "Sem local",
+      asset.responsible || "Sem responsavel",
+      asset.condition,
+      formatDate(asset.lastMaintenance),
+      asset.notes,
+    ]);
+  }
+
   function reportDefinition(kind: ReportKind) {
     const reports: Record<ReportKind, { title: string; headers: string[]; rows: unknown[][] }> = {
       members: {
@@ -2579,6 +2828,16 @@ export default function Home() {
         title: "Faltosos recentes",
         headers: ["Nome", "WhatsApp", "Ultimo status", "Faltas recentes", "Faltas no mes"],
         rows: absentStudentRows(),
+      },
+      finance: {
+        title: "Financeiro",
+        headers: ["Data", "Tipo", "Categoria", "Descricao", "Valor", "Metodo", "Status", "Membro", "Observacoes"],
+        rows: financeReportRows(),
+      },
+      assets: {
+        title: "Patrimonio",
+        headers: ["Item", "Categoria", "Local", "Responsavel", "Estado", "Ultima manutencao", "Observacoes"],
+        rows: assetReportRows(),
       },
     };
 
@@ -3342,6 +3601,156 @@ export default function Home() {
     }
   }
 
+  function createTransaction() {
+    if (!requireModuleAccess("finance", editingTransactionId ? "editar lancamento financeiro" : "criar lancamento financeiro")) return;
+    if (!canCreateTransaction) return;
+
+    const transaction: TransactionRecord = {
+      ...transactionForm,
+      id: editingTransactionId ?? uid("transaction"),
+      amount: Number(transactionForm.amount || 0),
+    };
+
+    setData((current) => ({
+      ...current,
+      transactions: editingTransactionId
+        ? current.transactions.map((item) => (item.id === editingTransactionId ? transaction : item))
+        : [transaction, ...current.transactions],
+      audit: [
+        {
+          id: uid("audit"),
+          action: editingTransactionId ? `Lancamento financeiro atualizado: ${transaction.description}` : `Lancamento financeiro criado: ${transaction.description}`,
+          when: new Date().toISOString(),
+        },
+        ...current.audit,
+      ].slice(0, 12),
+    }));
+    setTransactionForm(blankTransaction);
+    setEditingTransactionId(null);
+    setSyncStatus(editingTransactionId ? "Lancamento financeiro atualizado." : "Lancamento financeiro cadastrado.");
+  }
+
+  function editTransaction(transaction: TransactionRecord) {
+    if (!requireModuleAccess("finance", "editar lancamento financeiro")) return;
+    const { id, ...form } = transaction;
+    setTransactionForm(form);
+    setEditingTransactionId(id);
+    setSyncStatus(`Editando lancamento financeiro: ${transaction.description}.`);
+  }
+
+  function deleteTransaction(transaction: TransactionRecord) {
+    if (!requireModuleAccess("finance", "excluir lancamento financeiro")) return;
+    if (!window.confirm(`Excluir o lancamento "${transaction.description}"?`)) return;
+
+    setData((current) => ({
+      ...current,
+      transactions: current.transactions.filter((item) => item.id !== transaction.id),
+      audit: [{ id: uid("audit"), action: `Lancamento financeiro excluido: ${transaction.description}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
+    if (editingTransactionId === transaction.id) {
+      setTransactionForm(blankTransaction);
+      setEditingTransactionId(null);
+    }
+  }
+
+  function createAsset() {
+    if (!requireModuleAccess("assets", editingAssetId ? "editar patrimonio" : "criar patrimonio")) return;
+    if (!canCreateAsset) return;
+
+    const asset: AssetRecord = { ...assetForm, id: editingAssetId ?? uid("asset") };
+
+    setData((current) => ({
+      ...current,
+      assets: editingAssetId ? current.assets.map((item) => (item.id === editingAssetId ? asset : item)) : [asset, ...current.assets],
+      audit: [
+        {
+          id: uid("audit"),
+          action: editingAssetId ? `Patrimonio atualizado: ${asset.name}` : `Patrimonio cadastrado: ${asset.name}`,
+          when: new Date().toISOString(),
+        },
+        ...current.audit,
+      ].slice(0, 12),
+    }));
+    setAssetForm(blankAsset);
+    setEditingAssetId(null);
+    setSyncStatus(editingAssetId ? "Patrimonio atualizado." : "Patrimonio cadastrado.");
+  }
+
+  function editAsset(asset: AssetRecord) {
+    if (!requireModuleAccess("assets", "editar patrimonio")) return;
+    const { id, ...form } = asset;
+    setAssetForm(form);
+    setEditingAssetId(id);
+    setSyncStatus(`Editando patrimonio: ${asset.name}.`);
+  }
+
+  function deleteAsset(asset: AssetRecord) {
+    if (!requireModuleAccess("assets", "excluir patrimonio")) return;
+    if (!window.confirm(`Excluir o patrimonio "${asset.name}"?`)) return;
+
+    setData((current) => ({
+      ...current,
+      assets: current.assets.filter((item) => item.id !== asset.id),
+      audit: [{ id: uid("audit"), action: `Patrimonio excluido: ${asset.name}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
+    if (editingAssetId === asset.id) {
+      setAssetForm(blankAsset);
+      setEditingAssetId(null);
+    }
+  }
+
+  function createDevotional() {
+    if (!requireModuleAccess("devotional", editingDevotionalId ? "editar devocional" : "criar devocional")) return;
+    if (!canCreateDevotional) return;
+
+    const devotional: DevotionalRecord = {
+      ...devotionalForm,
+      id: editingDevotionalId ?? uid("devotional"),
+      publishedAt: devotionalForm.publishedAt || currentDateKey(),
+    };
+
+    setData((current) => ({
+      ...current,
+      devotionals: editingDevotionalId
+        ? current.devotionals.map((item) => (item.id === editingDevotionalId ? devotional : item))
+        : [devotional, ...current.devotionals],
+      audit: [
+        {
+          id: uid("audit"),
+          action: editingDevotionalId ? `Devocional atualizado: ${devotional.title}` : `Devocional cadastrado: ${devotional.title}`,
+          when: new Date().toISOString(),
+        },
+        ...current.audit,
+      ].slice(0, 12),
+    }));
+    setDevotionalForm(blankDevotional);
+    setEditingDevotionalId(null);
+    setSyncStatus(editingDevotionalId ? "Devocional atualizado." : "Devocional cadastrado.");
+  }
+
+  function editDevotional(devotional: DevotionalRecord) {
+    if (!requireModuleAccess("devotional", "editar devocional")) return;
+    const { id, ...form } = devotional;
+    setDevotionalForm(form);
+    setEditingDevotionalId(id);
+    setSyncStatus(`Editando devocional: ${devotional.title}.`);
+  }
+
+  function deleteDevotional(devotional: DevotionalRecord) {
+    if (!requireModuleAccess("devotional", "excluir devocional")) return;
+    if (!window.confirm(`Excluir o devocional "${devotional.title}"?`)) return;
+
+    setData((current) => ({
+      ...current,
+      devotionals: current.devotionals.filter((item) => item.id !== devotional.id),
+      audit: [{ id: uid("audit"), action: `Devocional excluido: ${devotional.title}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
+    if (editingDevotionalId === devotional.id) {
+      setDevotionalForm(blankDevotional);
+      setEditingDevotionalId(null);
+    }
+  }
+
   function createNotice() {
     if (!requireModuleAccess("notices", "criar comunicados")) return;
     if (!canCreateNotice) return;
@@ -3982,6 +4391,11 @@ export default function Home() {
               <strong>{isSupabaseConfigured() ? "Supabase preparado" : "Modo local ativo"}</strong>
               <span>{syncStatus}</span>
               {lastSavedAt && <small>Ultimo salvamento: {lastSavedAt}</small>}
+              {saveState === "error" && hasSession && isSupabaseConfigured() && (
+                <button className="sync-reload-button" onClick={reloadRemoteStateNow} type="button">
+                  Recarregar dados da base
+                </button>
+              )}
             </div>
           </div>
         </aside>
@@ -4148,6 +4562,22 @@ export default function Home() {
 
               {birthdaySpotlightPanel}
 
+              {publishedDevotional && (
+                <article className="surface wide devotional-card">
+                  <div className="panel-heading">
+                    <h2>{publishedDevotional.title}</h2>
+                    <span>{formatDate(publishedDevotional.publishedAt)}</span>
+                  </div>
+                  <strong>{publishedDevotional.verse}</strong>
+                  <p>{publishedDevotional.body}</p>
+                  {canManageDevotional && (
+                    <button className="secondary" onClick={() => setActiveModule("devotional")} type="button">
+                      Gerenciar palavra
+                    </button>
+                  )}
+                </article>
+              )}
+
               <article className="surface wide">
                 <div className="panel-heading">
                   <h2>Agenda da semana</h2>
@@ -4214,6 +4644,17 @@ export default function Home() {
               </div>
 
               {birthdaySpotlightPanel}
+
+              {publishedDevotional && (
+                <article className="surface wide devotional-card">
+                  <div className="panel-heading">
+                    <h2>{publishedDevotional.title}</h2>
+                    <span>{formatDate(publishedDevotional.publishedAt)}</span>
+                  </div>
+                  <strong>{publishedDevotional.verse}</strong>
+                  <p>{publishedDevotional.body}</p>
+                </article>
+              )}
 
               <article className="surface">
                 <div className="panel-heading">
@@ -4972,6 +5413,15 @@ export default function Home() {
                   <span>{filteredSchedules.length} registros</span>
                 </div>
                 <div className="filter-bar">
+                  <div className="week-switcher">
+                    <button className="secondary" onClick={() => setScheduleWeekOffset((offset) => offset - 1)} type="button">
+                      Semana anterior
+                    </button>
+                    <span>{formatDate(selectedScheduleWeekRange.start.toISOString().slice(0, 10))} a {formatDate(selectedScheduleWeekRange.end.toISOString().slice(0, 10))}</span>
+                    <button className="secondary" onClick={() => setScheduleWeekOffset((offset) => offset + 1)} type="button">
+                      Proxima semana
+                    </button>
+                  </div>
                   <label>
                     Grupo
                     <select onChange={(event) => setScheduleGroupFilter(event.target.value)} value={scheduleGroupFilter}>
@@ -4979,6 +5429,33 @@ export default function Home() {
                       {groupOptions.map((group) => (
                         <option key={group}>{group}</option>
                       ))}
+                    </select>
+                  </label>
+                  <label>
+                    Culto
+                    <select onChange={(event) => setScheduleServiceFilter(event.target.value)} value={scheduleServiceFilter}>
+                      <option>Todos</option>
+                      {Array.from(new Set(data.schedules.map((schedule) => schedule.serviceType).filter(Boolean))).map((serviceType) => (
+                        <option key={serviceType}>{serviceType}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Funcao
+                    <select onChange={(event) => setScheduleFunctionFilter(event.target.value)} value={scheduleFunctionFilter}>
+                      <option>Todos</option>
+                      {Array.from(new Set(data.schedules.map((schedule) => schedule.functionName).filter(Boolean))).map((functionName) => (
+                        <option key={functionName}>{functionName}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Status
+                    <select onChange={(event) => setScheduleStatusFilter(event.target.value)} value={scheduleStatusFilter}>
+                      <option>Todos</option>
+                      <option>Pendente</option>
+                      <option>Confirmado</option>
+                      <option>Substituir</option>
                     </select>
                   </label>
                   <button className="secondary" onClick={() => exportReport("schedules", "pdf")} type="button">
@@ -5364,6 +5841,14 @@ export default function Home() {
                       <option>Retornou</option>
                       <option>Em acompanhamento</option>
                       <option>Integrado</option>
+                    </select>
+                  </label>
+                  <label>
+                    Contato
+                    <select onChange={(event) => setVisitorContactFilter(event.target.value)} value={visitorContactFilter}>
+                      <option>Todos</option>
+                      <option>Contato pendente</option>
+                      <option>Contato feito</option>
                     </select>
                   </label>
                   <button className="secondary" onClick={() => exportReport("visitors", "pdf")} type="button">
@@ -5765,6 +6250,39 @@ export default function Home() {
                         {groupOptions.map((group) => (
                           <option key={group}>{group}</option>
                         ))}
+                      </select>
+                    </label>
+                    <label>
+                      Classe EBD
+                      <select onChange={(event) => setMemberSchoolFilter(event.target.value)} value={memberSchoolFilter}>
+                        <option>Todos</option>
+                        {data.schoolClasses.map((schoolClass) => (
+                          <option key={schoolClass.id} value={schoolClass.id}>
+                            {schoolClass.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Discipulado
+                      <select onChange={(event) => setMemberDiscipleshipFilter(event.target.value)} value={memberDiscipleshipFilter}>
+                        <option>Todos</option>
+                        {data.discipleshipClasses.map((discipleshipClass) => (
+                          <option key={discipleshipClass.id} value={discipleshipClass.id}>
+                            {discipleshipClass.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Situacao pastoral
+                      <select onChange={(event) => setMemberPastoralFilter(event.target.value)} value={memberPastoralFilter}>
+                        <option>Todos</option>
+                        <option>Sem acompanhamento definido</option>
+                        <option>Acompanhamento regular</option>
+                        <option>Precisa de contato</option>
+                        <option>Em discipulado</option>
+                        <option>Integrado</option>
                       </select>
                     </label>
                   </div>
@@ -6421,7 +6939,8 @@ export default function Home() {
                     />
                   </label>
                   <div className="message-preview full">
-                    <strong>Previa</strong>
+                    <strong>Previa individual</strong>
+                    <small>{selectedMessageRecipients.length} selecionado{selectedMessageRecipients.length === 1 ? "" : "s"} de {messageRecipients.length} contato{messageRecipients.length === 1 ? "" : "s"}</small>
                     <span>{selectedMessageRecipients[0] ? messageFor(messageText, selectedMessageRecipients[0].name) : "Nenhum contato encontrado para este publico."}</span>
                   </div>
                   <div className="form-actions full">
@@ -6457,7 +6976,7 @@ export default function Home() {
               <article className="surface">
                 <div className="panel-heading">
                   <h2>Lista de envio</h2>
-                  <span>WhatsApp</span>
+                  <span>{selectedMessageRecipients.length} no lote atual</span>
                 </div>
                 <p className="body-copy">
                   O WhatsApp pode bloquear muitas abas ao mesmo tempo. Se necessario, envie pela lista individual abaixo.
@@ -6518,6 +7037,331 @@ export default function Home() {
             </section>
           )}
 
+          {activeModule === "finance" && (
+            <section className="content-grid">
+              {canManageFinance && (
+                <article className={editingTransactionId ? "surface editing-surface" : "surface"}>
+                  <div className="panel-heading">
+                    <h2>{editingTransactionId ? "Editar lancamento" : "Novo lancamento"}</h2>
+                    <span>Tesouraria inicial</span>
+                  </div>
+                  <div className="form-grid">
+                    <label>
+                      Data
+                      <input onChange={(event) => setTransactionForm((form) => ({ ...form, date: event.target.value }))} type="date" value={transactionForm.date} />
+                    </label>
+                    <label>
+                      Tipo
+                      <select onChange={(event) => setTransactionForm((form) => ({ ...form, type: event.target.value as TransactionRecord["type"] }))} value={transactionForm.type}>
+                        <option>Entrada</option>
+                        <option>Saida</option>
+                        <option>Dizimo</option>
+                        <option>Oferta</option>
+                      </select>
+                    </label>
+                    <label>
+                      Categoria
+                      <input onChange={(event) => setTransactionForm((form) => ({ ...form, category: event.target.value }))} placeholder="Ex.: Culto, manutencao, missao" value={transactionForm.category} />
+                    </label>
+                    <label>
+                      Valor
+                      <input min={0} onChange={(event) => setTransactionForm((form) => ({ ...form, amount: Number(event.target.value) }))} step="0.01" type="number" value={transactionForm.amount} />
+                    </label>
+                    <label className="full">
+                      Descricao
+                      <input onChange={(event) => setTransactionForm((form) => ({ ...form, description: event.target.value }))} placeholder="Resumo do lancamento" value={transactionForm.description} />
+                    </label>
+                    <label>
+                      Metodo
+                      <select onChange={(event) => setTransactionForm((form) => ({ ...form, method: event.target.value }))} value={transactionForm.method}>
+                        <option>Pix</option>
+                        <option>Dinheiro</option>
+                        <option>Cartao</option>
+                        <option>Transferencia</option>
+                      </select>
+                    </label>
+                    <label>
+                      Status
+                      <select onChange={(event) => setTransactionForm((form) => ({ ...form, status: event.target.value as TransactionRecord["status"] }))} value={transactionForm.status}>
+                        <option>Pendente</option>
+                        <option>Confirmado</option>
+                      </select>
+                    </label>
+                    <label>
+                      Membro vinculado
+                      <select onChange={(event) => setTransactionForm((form) => ({ ...form, memberName: event.target.value }))} value={transactionForm.memberName}>
+                        <option value="">Nao vinculado</option>
+                        {data.members.map((member) => (
+                          <option key={member.id} value={member.fullName}>
+                            {member.fullName}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="full">
+                      Observacoes
+                      <textarea onChange={(event) => setTransactionForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Observacoes internas da tesouraria" value={transactionForm.notes} />
+                    </label>
+                    <div className="form-actions full">
+                      <button className="primary-action" disabled={!canCreateTransaction} onClick={createTransaction} type="button">
+                        {editingTransactionId ? "Atualizar lancamento" : "Salvar lancamento"}
+                      </button>
+                      {editingTransactionId && (
+                        <button className="secondary" onClick={() => { setTransactionForm(blankTransaction); setEditingTransactionId(null); }} type="button">
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              )}
+
+              <article className="surface wide">
+                <div className="panel-heading">
+                  <h2>Resumo financeiro</h2>
+                  <span>{filteredTransactions.length} lancamentos</span>
+                </div>
+                <div className="stats-row">
+                  <div className="stat-card">
+                    <small>Entradas</small>
+                    <strong>{data.transactions.filter((item) => item.type !== "Saida").reduce((sum, item) => sum + item.amount, 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>
+                  </div>
+                  <div className="stat-card">
+                    <small>Saidas</small>
+                    <strong>{data.transactions.filter((item) => item.type === "Saida").reduce((sum, item) => sum + item.amount, 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>
+                  </div>
+                </div>
+                <div className="filter-bar">
+                  <label>
+                    Tipo
+                    <select onChange={(event) => setFinanceTypeFilter(event.target.value)} value={financeTypeFilter}>
+                      <option>Todos</option>
+                      <option>Entrada</option>
+                      <option>Saida</option>
+                      <option>Dizimo</option>
+                      <option>Oferta</option>
+                    </select>
+                  </label>
+                  <button className="secondary" onClick={() => exportReport("finance", "pdf")} type="button">
+                    PDF
+                  </button>
+                  <button className="secondary" onClick={() => exportReport("finance", "csv")} type="button">
+                    Excel
+                  </button>
+                </div>
+                <div className="row-list">
+                  {filteredTransactions.map((transaction) => (
+                    <div className="data-row access-user-row" key={transaction.id}>
+                      <span className="date-box">{formatDate(transaction.date)}</span>
+                      <div>
+                        <strong>{transaction.description}</strong>
+                        <small>{transaction.type} - {transaction.category} - {transaction.status}</small>
+                        <small>{transaction.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} - {transaction.method}</small>
+                      </div>
+                      {canManageFinance && (
+                        <div className="row-actions">
+                          <button className="secondary" onClick={() => editTransaction(transaction)} type="button">
+                            Editar
+                          </button>
+                          <button className="danger-action" onClick={() => deleteTransaction(transaction)} type="button">
+                            Excluir
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {!filteredTransactions.length && <p className="empty-state">Nenhum lancamento encontrado para este filtro.</p>}
+                </div>
+              </article>
+            </section>
+          )}
+
+          {activeModule === "assets" && (
+            <section className="content-grid">
+              {canManageAssets && (
+                <article className={editingAssetId ? "surface editing-surface" : "surface"}>
+                  <div className="panel-heading">
+                    <h2>{editingAssetId ? "Editar patrimonio" : "Novo patrimonio"}</h2>
+                    <span>Equipamentos e bens</span>
+                  </div>
+                  <div className="form-grid">
+                    <label className="full">
+                      Item
+                      <input onChange={(event) => setAssetForm((form) => ({ ...form, name: event.target.value }))} placeholder="Ex.: Teclado, caixa de som, cadeira" value={assetForm.name} />
+                    </label>
+                    <label>
+                      Categoria
+                      <input onChange={(event) => setAssetForm((form) => ({ ...form, category: event.target.value }))} placeholder="Som, musica, moveis" value={assetForm.category} />
+                    </label>
+                    <label>
+                      Local
+                      <input onChange={(event) => setAssetForm((form) => ({ ...form, location: event.target.value }))} placeholder="Templo, sala Kids, secretaria" value={assetForm.location} />
+                    </label>
+                    <label>
+                      Responsavel
+                      <input onChange={(event) => setAssetForm((form) => ({ ...form, responsible: event.target.value }))} placeholder="Pessoa ou equipe" value={assetForm.responsible} />
+                    </label>
+                    <label>
+                      Estado
+                      <select onChange={(event) => setAssetForm((form) => ({ ...form, condition: event.target.value as AssetRecord["condition"] }))} value={assetForm.condition}>
+                        <option>Novo</option>
+                        <option>Bom</option>
+                        <option>Manutencao</option>
+                        <option>Baixado</option>
+                      </select>
+                    </label>
+                    <label>
+                      Ultima manutencao
+                      <input onChange={(event) => setAssetForm((form) => ({ ...form, lastMaintenance: event.target.value }))} type="date" value={assetForm.lastMaintenance} />
+                    </label>
+                    <label className="full">
+                      Observacoes
+                      <textarea onChange={(event) => setAssetForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Estado de conservacao, manutencao, compra ou observacao" value={assetForm.notes} />
+                    </label>
+                    <div className="form-actions full">
+                      <button className="primary-action" disabled={!canCreateAsset} onClick={createAsset} type="button">
+                        {editingAssetId ? "Atualizar patrimonio" : "Salvar patrimonio"}
+                      </button>
+                      {editingAssetId && (
+                        <button className="secondary" onClick={() => { setAssetForm(blankAsset); setEditingAssetId(null); }} type="button">
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              )}
+
+              <article className="surface wide">
+                <div className="panel-heading">
+                  <h2>Patrimonio cadastrado</h2>
+                  <span>{filteredAssets.length} itens</span>
+                </div>
+                <div className="filter-bar">
+                  <label>
+                    Estado
+                    <select onChange={(event) => setAssetConditionFilter(event.target.value)} value={assetConditionFilter}>
+                      <option>Todos</option>
+                      <option>Novo</option>
+                      <option>Bom</option>
+                      <option>Manutencao</option>
+                      <option>Baixado</option>
+                    </select>
+                  </label>
+                  <button className="secondary" onClick={() => exportReport("assets", "pdf")} type="button">
+                    PDF
+                  </button>
+                  <button className="secondary" onClick={() => exportReport("assets", "csv")} type="button">
+                    Excel
+                  </button>
+                </div>
+                <div className="row-list">
+                  {filteredAssets.map((asset) => (
+                    <div className="data-row access-user-row" key={asset.id}>
+                      <span className="status-chip">{asset.condition}</span>
+                      <div>
+                        <strong>{asset.name}</strong>
+                        <small>{asset.category} - {asset.location || "Sem local"} - {asset.responsible || "Sem responsavel"}</small>
+                        <small>{asset.lastMaintenance ? `Manutencao: ${formatDate(asset.lastMaintenance)}` : "Sem manutencao registrada"}</small>
+                        {asset.notes && <small>{asset.notes}</small>}
+                      </div>
+                      {canManageAssets && (
+                        <div className="row-actions">
+                          <button className="secondary" onClick={() => editAsset(asset)} type="button">
+                            Editar
+                          </button>
+                          <button className="danger-action" onClick={() => deleteAsset(asset)} type="button">
+                            Excluir
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {!filteredAssets.length && <p className="empty-state">Nenhum item de patrimonio encontrado para este filtro.</p>}
+                </div>
+              </article>
+            </section>
+          )}
+
+          {activeModule === "devotional" && (
+            <section className="content-grid">
+              {canManageDevotional && (
+                <article className={editingDevotionalId ? "surface editing-surface" : "surface"}>
+                  <div className="panel-heading">
+                    <h2>{editingDevotionalId ? "Editar devocional" : "Nova palavra"}</h2>
+                    <span>Painel do membro</span>
+                  </div>
+                  <div className="form-grid">
+                    <label className="full">
+                      Titulo
+                      <input onChange={(event) => setDevotionalForm((form) => ({ ...form, title: event.target.value }))} placeholder="Ex.: Palavra do dia" value={devotionalForm.title} />
+                    </label>
+                    <label>
+                      Versiculo
+                      <input onChange={(event) => setDevotionalForm((form) => ({ ...form, verse: event.target.value }))} placeholder="Ex.: Salmo 23:1" value={devotionalForm.verse} />
+                    </label>
+                    <label>
+                      Publicacao
+                      <input onChange={(event) => setDevotionalForm((form) => ({ ...form, publishedAt: event.target.value }))} type="date" value={devotionalForm.publishedAt} />
+                    </label>
+                    <label>
+                      Status
+                      <select onChange={(event) => setDevotionalForm((form) => ({ ...form, status: event.target.value as DevotionalRecord["status"] }))} value={devotionalForm.status}>
+                        <option>Publicado</option>
+                        <option>Rascunho</option>
+                        <option>Arquivado</option>
+                      </select>
+                    </label>
+                    <label className="full">
+                      Mensagem
+                      <textarea onChange={(event) => setDevotionalForm((form) => ({ ...form, body: event.target.value }))} placeholder="Texto que aparece no painel do membro" value={devotionalForm.body} />
+                    </label>
+                    <div className="form-actions full">
+                      <button className="primary-action" disabled={!canCreateDevotional} onClick={createDevotional} type="button">
+                        {editingDevotionalId ? "Atualizar palavra" : "Salvar palavra"}
+                      </button>
+                      {editingDevotionalId && (
+                        <button className="secondary" onClick={() => { setDevotionalForm(blankDevotional); setEditingDevotionalId(null); }} type="button">
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              )}
+
+              <article className="surface wide">
+                <div className="panel-heading">
+                  <h2>Devocionais</h2>
+                  <span>{data.devotionals.length} registros</span>
+                </div>
+                <div className="row-list">
+                  {data.devotionals.map((devotional) => (
+                    <div className="data-row access-user-row" key={devotional.id}>
+                      <span className="date-box">{formatDate(devotional.publishedAt)}</span>
+                      <div>
+                        <strong>{devotional.title}</strong>
+                        <small>{devotional.verse || "Sem versiculo"} - {devotional.status}</small>
+                        <small>{devotional.body}</small>
+                      </div>
+                      {canManageDevotional && (
+                        <div className="row-actions">
+                          <button className="secondary" onClick={() => editDevotional(devotional)} type="button">
+                            Editar
+                          </button>
+                          <button className="danger-action" onClick={() => deleteDevotional(devotional)} type="button">
+                            Excluir
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {!data.devotionals.length && <p className="empty-state">Nenhuma palavra cadastrada ainda.</p>}
+                </div>
+              </article>
+            </section>
+          )}
+
           {activeModule === "reports" && (
             <section className="content-grid">
               <article className="surface wide">
@@ -6535,7 +7379,13 @@ export default function Home() {
                     ["schedules", "Escalas", `${data.schedules.length} pessoas escaladas`],
                     ["attendance", "Presenca EBD/Discipulado", `${data.attendanceSessions.length} chamadas`],
                     ["absences", "Faltosos recentes", `${absentStudentRows().length} alertas`],
-                  ].map(([kind, title, count]) => (
+                    ["finance", "Financeiro", `${data.transactions.length} lancamentos`],
+                    ["assets", "Patrimonio", `${data.assets.length} itens`],
+                  ].filter(([kind]) => {
+                    if (kind === "finance") return canAccessModule(currentAccessRole, "finance");
+                    if (kind === "assets") return canAccessModule(currentAccessRole, "assets");
+                    return true;
+                  }).map(([kind, title, count]) => (
                     <div className="report-card" key={kind}>
                       <strong>{title}</strong>
                       <small>{count}</small>
@@ -6628,7 +7478,9 @@ export default function Home() {
                     {" "}
                     {data.discipleshipClasses.length} classes Discipulado, {activeNotices.length} comunicados ativos,
                     {" "}
-                    {data.mural.length} itens de mural e {data.audit.length} auditorias.
+                    {data.mural.length} itens de mural, {data.transactions.length} lancamentos financeiros,
+                    {" "}
+                    {data.assets.length} itens de patrimonio, {data.devotionals.length} devocionais e {data.audit.length} auditorias.
                   </small>
                 </div>
                 <textarea className="backup-json" readOnly value={JSON.stringify(data, null, 2)} />

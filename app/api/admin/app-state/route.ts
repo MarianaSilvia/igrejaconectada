@@ -112,6 +112,9 @@ function filteredPayloadForMember(payload: unknown, user: User) {
     schedules: [],
     attendanceSessions: filterAttendanceForMember(recordsFrom(payload.attendanceSessions), currentMember),
     messageCampaigns: [],
+    transactions: [],
+    assets: [],
+    devotionals: recordsFrom(payload.devotionals).filter((devotional) => textValue(devotional.status) === "Publicado"),
     audit: [],
   };
 }

@@ -14,6 +14,9 @@ export type ModuleKey =
   | "school"
   | "discipleship"
   | "reports"
+  | "finance"
+  | "assets"
+  | "devotional"
   | "settings";
 
 export type AccessRole = "Administrador" | "Lider" | "Professor" | "Secretario" | "Tesoureiro" | "Membro";
@@ -35,6 +38,9 @@ export const modules: { key: ModuleKey; label: string; short: string }[] = [
   { key: "school", label: "Escola Biblica", short: "EBD" },
   { key: "discipleship", label: "Discipulado", short: "Discipulado" },
   { key: "reports", label: "Relatorios", short: "Relatorios" },
+  { key: "finance", label: "Financeiro", short: "Financeiro" },
+  { key: "assets", label: "Patrimonio", short: "Patrimonio" },
+  { key: "devotional", label: "Devocional", short: "Palavra" },
   { key: "settings", label: "Configuracoes", short: "Config" },
 ];
 
@@ -48,6 +54,7 @@ export const memberVisibleModuleKeys: ModuleKey[] = [
   "pastoral",
   "school",
   "discipleship",
+  "devotional",
 ];
 
 export const administrativeRoles = new Set<ChurchRole>(["ADMIN", "LEADER", "PROFESSOR", "SECRETARY", "TREASURER"]);
@@ -88,10 +95,10 @@ const roleByLabel: Record<string, ChurchRole> = {
 
 export const moduleAccessByRole: Record<AccessRole, ModuleKey[]> = {
   Administrador: modules.map((module) => module.key),
-  Lider: ["overview", "members", "visitors", "events", "schedules", "ministries", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports"],
+  Lider: ["overview", "members", "visitors", "events", "schedules", "ministries", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports", "devotional"],
   Professor: ["overview", "members", "events", "schedules", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports"],
   Secretario: ["overview", "users", "members", "visitors", "kids", "events", "schedules", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports", "settings"],
-  Tesoureiro: ["overview", "events", "schedules", "notices", "messages", "mural", "reports"],
+  Tesoureiro: ["overview", "events", "schedules", "notices", "messages", "mural", "reports", "finance"],
   Membro: memberVisibleModuleKeys,
 };
 
@@ -125,8 +132,8 @@ export function canAccessModule(role: AccessRole, moduleKey: ModuleKey) {
 export function canManageModule(role: AccessRole, moduleKey: ModuleKey) {
   if (role === "Administrador") return true;
   if (role === "Secretario") return ["users", "members", "visitors", "kids", "events", "schedules", "notices", "messages", "mural", "reports"].includes(moduleKey);
-  if (role === "Lider") return ["ministries", "pastoral", "visitors", "events", "schedules", "notices", "messages", "mural", "reports"].includes(moduleKey);
+  if (role === "Lider") return ["ministries", "pastoral", "visitors", "events", "schedules", "notices", "messages", "mural", "reports", "devotional"].includes(moduleKey);
   if (role === "Professor") return ["school", "discipleship", "schedules", "messages", "reports"].includes(moduleKey);
-  if (role === "Tesoureiro") return moduleKey === "reports";
+  if (role === "Tesoureiro") return moduleKey === "reports" || moduleKey === "finance";
   return false;
 }
