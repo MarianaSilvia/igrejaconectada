@@ -1208,6 +1208,7 @@ export default function Home() {
   const [noticeForm, setNoticeForm] = useState(blankNotice);
   const [ministryForm, setMinistryForm] = useState(blankMinistry);
   const [userForm, setUserForm] = useState(blankUser);
+  const [selectedAccessMemberId, setSelectedAccessMemberId] = useState("");
   const [memberForm, setMemberForm] = useState(blankMember);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [memberCredentialForm, setMemberCredentialForm] = useState(blankMemberCredential);
@@ -1546,7 +1547,25 @@ export default function Home() {
     () => data.kids.filter((kid) => isBirthdayThisMonth(kid.birthDate)),
     [data.kids],
   );
-  const canCreateUser = isAdminView && Boolean(userForm.name.trim() && userForm.email.trim() && userForm.password.trim().length >= 6);
+  const selectedAccessMember = useMemo(
+    () => data.members.find((member) => member.id === selectedAccessMemberId),
+    [data.members, selectedAccessMemberId],
+  );
+  const selectedAccessExistingUser = useMemo(
+    () =>
+      selectedAccessMember
+        ? data.users.find(
+            (user) => normalizeEmail(user.email) === normalizeEmail(selectedAccessMember.email) || user.id === selectedAccessMember.authUserId,
+          )
+        : undefined,
+    [data.users, selectedAccessMember],
+  );
+  const canCreateUser = Boolean(
+    isAdminView &&
+      userForm.name.trim() &&
+      userForm.email.trim() &&
+      (selectedAccessExistingUser || userForm.password.trim().length >= 6),
+  );
   const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim()) && (isAdminView || editingMemberId === currentMember?.id);
   const canSaveMemberAccess = Boolean(
     isAdminView &&
@@ -1899,6 +1918,28 @@ export default function Home() {
     return false;
   }
 
+  function selectAccessMember(memberId: string) {
+    setSelectedAccessMemberId(memberId);
+    const member = data.members.find((item) => item.id === memberId);
+    if (!member) {
+      setUserForm(blankUser);
+      return;
+    }
+
+    const existingAccess = data.users.find(
+      (user) => normalizeEmail(user.email) === normalizeEmail(member.email) || user.id === member.authUserId,
+    );
+
+    setUserForm((form) => ({
+      ...form,
+      name: member.fullName,
+      email: member.email,
+      role: existingAccess?.role ?? "Lider",
+      status: existingAccess?.status ?? "Ativo",
+    }));
+    setSyncStatus(`Membro selecionado para acesso administrativo: ${member.fullName}.`);
+  }
+
   function createCareRequest() {
     const memberName = isAdminView ? careForm.member.trim() : currentMember?.fullName ?? profileName;
     const memberPhone = isAdminView ? careForm.phone.trim() : currentMember?.phone ?? careForm.phone.trim();
@@ -1950,10 +1991,16 @@ export default function Home() {
   async function createUser() {
     if (!requireAdministrativeAccess("criar usuarios")) return;
     if (!userForm.name.trim() || !userForm.email.trim()) return;
+    if (!selectedAccessExistingUser && userForm.password.trim().length < 6) {
+      setSyncStatus("Informe uma senha inicial com pelo menos 6 caracteres.");
+      return;
+    }
 
     const now = new Date().toISOString();
+    const existingAccess = selectedAccessExistingUser ?? data.users.find((item) => normalizeEmail(item.email) === normalizeEmail(userForm.email));
+    const isUpdatingAccess = Boolean(existingAccess);
     const user: AccessUser = {
-      id: uid("user"),
+      id: existingAccess?.id ?? uid("user"),
       name: userForm.name,
       email: userForm.email,
       role: userForm.role,
@@ -1971,12 +2018,16 @@ export default function Home() {
       }
 
       const response = await fetch("/api/admin/access-users", {
-        method: "POST",
+        method: isUpdatingAccess ? "PATCH" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(userForm),
+        body: JSON.stringify({
+          ...userForm,
+          userId: existingAccess?.id,
+          currentEmail: existingAccess?.email,
+        }),
       });
       const result = (await response.json()) as { id?: string; error?: string };
 
@@ -1986,15 +2037,24 @@ export default function Home() {
       }
 
       user.id = result.id ?? user.id;
-      setSyncStatus(`Acesso Supabase criado para ${user.name}.`);
+      setSyncStatus(isUpdatingAccess ? `Acesso Supabase atualizado para ${user.name}.` : `Acesso Supabase criado para ${user.name}.`);
     }
 
     setData((current) => ({
       ...current,
-      users: [user, ...current.users],
-      audit: [{ id: uid("audit"), action: `Usuario criado para ${user.name}`, when: now }, ...current.audit].slice(0, 12),
+      users: isUpdatingAccess ? current.users.map((item) => (item.id === user.id ? user : item)) : [user, ...current.users],
+      members: selectedAccessMemberId
+        ? current.members.map((member) =>
+            member.id === selectedAccessMemberId ? { ...member, email: user.email, authUserId: user.id, role: user.role } : member,
+          )
+        : current.members,
+      audit: [
+        { id: uid("audit"), action: isUpdatingAccess ? `Acesso promovido: ${user.name}` : `Usuario criado para ${user.name}`, when: now },
+        ...current.audit,
+      ].slice(0, 12),
     }));
     setUserForm(blankUser);
+    setSelectedAccessMemberId("");
   }
 
   async function updateAccessUserStatus(user: AccessUser, status: AccessUser["status"]) {
@@ -3732,6 +3792,35 @@ export default function Home() {
                 </div>
                 <div className="form-grid">
                   <label className="full">
+                    Selecionar membro cadastrado
+                    <select onChange={(event) => selectAccessMember(event.target.value)} value={selectedAccessMemberId}>
+                      <option value="">Criar acesso sem vincular membro</option>
+                      {data.members.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.fullName} - {member.email || "sem e-mail"} - {member.memberType}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {selectedAccessMember && (
+                    <div className="selected-member-access full">
+                      <div className="member-avatar">
+                        {selectedAccessMember.photoDataUrl ? <img alt="" src={selectedAccessMember.photoDataUrl} /> : selectedAccessMember.fullName.slice(0, 1)}
+                      </div>
+                      <div>
+                        <strong>{selectedAccessMember.fullName}</strong>
+                        <small>
+                          {selectedAccessMember.memberType} - {selectedAccessMember.status} - {selectedAccessMember.phone}
+                        </small>
+                        <small>
+                          {selectedAccessExistingUser
+                            ? `Acesso existente: ${selectedAccessExistingUser.role} - sera atualizado`
+                            : "Pronto para virar acesso administrativo"}
+                        </small>
+                      </div>
+                    </div>
+                  )}
+                  <label className="full">
                     Nome
                     <input
                       onChange={(event) => setUserForm((form) => ({ ...form, name: event.target.value }))}
@@ -3749,12 +3838,12 @@ export default function Home() {
                     />
                   </label>
                   <label className="full">
-                    Senha inicial
+                    {selectedAccessExistingUser ? "Nova senha (opcional)" : "Senha inicial"}
                     <input
                       autoComplete="new-password"
                       minLength={6}
                       onChange={(event) => setUserForm((form) => ({ ...form, password: event.target.value }))}
-                      placeholder="Minimo de 6 caracteres"
+                      placeholder={selectedAccessExistingUser ? "Preencha somente se quiser trocar" : "Minimo de 6 caracteres"}
                       type="password"
                       value={userForm.password}
                     />
@@ -3778,7 +3867,7 @@ export default function Home() {
                     </select>
                   </label>
                   <button className="primary-action" disabled={!canCreateUser} onClick={createUser} type="button">
-                    Adicionar usuario
+                    {selectedAccessExistingUser ? "Atualizar acesso" : "Adicionar usuario"}
                   </button>
                 </div>
               </article>

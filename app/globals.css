@@ -925,6 +925,26 @@ button.data-row.active {
   min-width: 0;
 }
 
+.selected-member-access {
+  align-items: center;
+  background: rgba(20, 217, 196, 0.08);
+  border: 1px solid rgba(20, 217, 196, 0.22);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+}
+
+.selected-member-access strong,
+.selected-member-access small {
+  display: block;
+}
+
+.selected-member-access small {
+  color: var(--muted);
+  margin-top: 3px;
+}
+
 .row-actions {
   display: flex;
   flex-wrap: wrap;
