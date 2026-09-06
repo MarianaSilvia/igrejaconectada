@@ -855,6 +855,19 @@ function accessRoleFromMetadata(value: unknown): AccessRole {
   return "Membro";
 }
 
+function isApprovedAccessStatus(value: unknown) {
+  if (!value) return true;
+  const status = String(value).toLowerCase();
+  return status === "approved" || status === "ativo" || status === "active";
+}
+
+function accessRoleForSession(users: AccessUser[], email: string, metadata: Record<string, unknown> | undefined) {
+  return (
+    users.find((user) => normalizeEmail(user.email) === normalizeEmail(email))?.role ??
+    accessRoleFromMetadata(metadata?.church_gp_role ?? metadata?.role)
+  );
+}
+
 function isAdministrativeRole(role: AccessRole) {
   return role === "Administrador" || role === "Lider" || role === "Professor" || role === "Secretario" || role === "Tesoureiro";
 }
@@ -1129,6 +1142,53 @@ export default function Home() {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
+
+  useEffect(() => {
+    if (hasSession || !isSupabaseConfigured()) return;
+
+    let cancelled = false;
+
+    async function restoreSupabaseSession() {
+      const supabase = getSupabaseClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const session = sessionData.session;
+
+      if (cancelled) return;
+
+      if (!session?.user) {
+        setRemoteStateReady(true);
+        return;
+      }
+
+      const metadata = session.user.app_metadata ?? {};
+      const accessStatus = metadata.church_gp_access ?? metadata.status;
+
+      if (!isApprovedAccessStatus(accessStatus)) {
+        await supabase?.auth.signOut();
+        if (!cancelled) {
+          setRemoteStateReady(true);
+          setAccessMessage("Seu acesso ainda nao esta ativo. Fale com a administracao.");
+        }
+        return;
+      }
+
+      const restoredEmail = normalizeEmail(session.user.email ?? "");
+      setSessionUserId(session.user.id);
+      setSessionEmail(restoredEmail);
+      setSessionRole(accessRoleForSession(data.users, restoredEmail, metadata));
+      setAccessMessage("");
+      setAccessMode("login");
+      setRemoteStateReady(false);
+      setSyncStatus("Sessao restaurada. Cadastros serao carregados da base Supabase.");
+      setHasSession(true);
+    }
+
+    void restoreSupabaseSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data.users, hasSession]);
 
   useEffect(() => {
     try {
@@ -2371,16 +2431,15 @@ export default function Home() {
         setAccessMessage("Nao foi possivel entrar pelo Supabase. Verifique e-mail, senha e usuario cadastrado.");
         return;
       }
-      const accessStatus = authData.user?.app_metadata?.church_gp_access ?? authData.user?.app_metadata?.status ?? authData.user?.user_metadata?.status;
-      if (accessStatus && accessStatus !== "approved" && accessStatus !== "Ativo") {
+      const metadata = authData.user?.app_metadata ?? {};
+      const accessStatus = metadata.church_gp_access ?? metadata.status;
+      if (!isApprovedAccessStatus(accessStatus)) {
         await supabase.auth.signOut();
         setAccessMessage("Seu acesso ainda nao esta ativo. Fale com a administracao.");
         return;
       }
       resolvedUserId = authData.user?.id ?? "";
-      resolvedRole =
-        data.users.find((user) => normalizeEmail(user.email) === normalizeEmail(authData.user?.email ?? loginEmail))?.role ??
-        accessRoleFromMetadata(authData.user?.app_metadata?.church_gp_role ?? authData.user?.app_metadata?.role);
+      resolvedRole = accessRoleForSession(data.users, authData.user?.email ?? loginEmail, metadata);
       setRemoteStateReady(false);
       setSyncStatus("Sessao Supabase ativa. Novos dados serao sincronizados.");
     }
