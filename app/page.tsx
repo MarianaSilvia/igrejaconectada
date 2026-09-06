@@ -677,6 +677,22 @@ const blankMember: Omit<MemberRecord, "id"> = {
   notes: "",
 };
 
+const memberRoleOptions = [
+  "Professor",
+  "Dirigente",
+  "Vice-dirigente",
+  "Lider da igreja",
+  "Vice-lider da igreja",
+  "Pastor",
+  "Secretaria",
+  "Vice-secretaria",
+  "Tesoureiro",
+  "Vice-tesoureiro",
+  "Professor das criancas",
+  "Maestro",
+  "Vice-maestro",
+];
+
 const blankMemberCredential = {
   memberId: "",
   email: "",
@@ -1605,6 +1621,13 @@ export default function Home() {
   const canCreateNotice = isAdminView && Boolean(noticeForm.title.trim() && noticeForm.body.trim());
   const canCreateMinistry = isAdminView && Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
   const availableMessageTemplates = remoteMessageTemplates.length ? remoteMessageTemplates : messageTemplates.map(normalizeMessageTemplate);
+  const roleOptions = useMemo(() => {
+    const roles = [...memberRoleOptions];
+    if (memberForm.role.trim() && !roles.includes(memberForm.role.trim())) {
+      roles.push(memberForm.role.trim());
+    }
+    return roles;
+  }, [memberForm.role]);
   const groupOptions = useMemo(() => {
     const groups = data.ministries.map((group) => group.name).filter(Boolean);
     if (memberForm.ministry.trim() && !groups.includes(memberForm.ministry.trim())) {
@@ -4079,11 +4102,17 @@ export default function Home() {
                   </label>}
                   {isAdminView && <label>
                     Funcao na igreja
-                    <input
+                    <select
                       onChange={(event) => setMemberForm((form) => ({ ...form, role: event.target.value }))}
-                      placeholder="Ex.: Professor EBD, obreiro, lider"
                       value={memberForm.role}
-                    />
+                    >
+                      <option value="">Sem funcao definida</option>
+                      {roleOptions.map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
                   </label>}
                   {isAdminView && <label>
                     Grupo
