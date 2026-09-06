@@ -19,6 +19,7 @@ import {
   messageRecipientsForAudience,
   selectedOrAllRecipients,
 } from "./communication-helpers";
+import { BirthdaySpotlightPanel } from "./components/BirthdaySpotlightPanel";
 import {
   birthdayDateThisYear,
   birthdayLabel,
@@ -64,6 +65,18 @@ import {
 } from "./data-normalization";
 import { accessRoleFromMetadata, canAccessModule, canManageModule, isAdministrativeRole, modules, type AccessRole, type ModuleKey } from "./permissions";
 import { downloadCsv, escapeHtml, printHtmlReport } from "./report-helpers";
+import {
+  convertVisitorToMemberData,
+  deleteEventData,
+  deleteMemberData,
+  deleteScheduleData,
+  deleteVisitorData,
+  updateEventStatusData,
+  upsertEventData,
+  upsertMemberData,
+  upsertScheduleData,
+  upsertVisitorData,
+} from "./system-actions";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
 import type {
   AccessMode,
@@ -1514,36 +1527,11 @@ export default function Home() {
     [data.devotionals],
   );
   const birthdaySpotlightPanel = (
-    <article className="surface birthday-spotlight wide">
-      <div className="panel-heading">
-        <div>
-          <h2>Aniversariantes do mes</h2>
-          <span>{monthlyBirthdays.length ? `${monthlyBirthdays.length} pessoas para celebrar` : "Nenhum aniversario neste mes"}</span>
-        </div>
-        {canManageMessages && (
-          <button onClick={() => setActiveModule("messages")} type="button">
-            Enviar mensagem
-          </button>
-        )}
-      </div>
-      {monthlyBirthdays.length ? (
-        <div className="birthday-spotlight-list">
-          {monthlyBirthdays.slice(0, 8).map((member) => (
-            <div className="birthday-person-card" key={member.id}>
-              <div className="birthday-person-photo">
-                {member.fullName.slice(0, 1)}
-              </div>
-              <div>
-                <strong>{member.fullName}</strong>
-                <small>{birthdayLabel(member.birthDate)}</small>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="empty-state">Assim que houver aniversariantes cadastrados neste mes, eles aparecem aqui com nome em destaque.</p>
-      )}
-    </article>
+    <BirthdaySpotlightPanel
+      canSendMessages={canManageMessages}
+      monthlyBirthdays={monthlyBirthdays}
+      onOpenMessages={() => setActiveModule("messages")}
+    />
   );
   const messageRecipients = useMemo<MessageRecipient[]>(
     () =>
@@ -2221,41 +2209,10 @@ export default function Home() {
       return;
     }
 
-    const now = new Date().toISOString();
     const isEditing = Boolean(editingMemberId);
     const member: MemberRecord = { ...memberForm, id: editingMemberId ?? uid("member") };
 
-    setData((current) => ({
-      ...current,
-      members: editingMemberId
-        ? current.members.map((item) => (item.id === editingMemberId ? member : item))
-        : [member, ...current.members],
-      visitors:
-        member.memberType === "Visitante" || member.status === "Visitante" || member.status === "Novo convertido"
-          ? [
-              {
-                id: `visitor-${member.id}`,
-                fullName: member.fullName,
-                phone: member.phone,
-                firstVisitDate: member.joinedAt || currentDateKey(),
-                returnDate: "",
-                invitedBy: member.registrationSource,
-                contactMade: member.pastoralStatus !== "Precisa de contato",
-                integrationStatus: member.status === "Novo convertido" ? "Em acompanhamento" : "Primeira visita",
-                notes: member.notes,
-              },
-              ...current.visitors.filter((visitor) => visitor.id !== `visitor-${member.id}`),
-            ]
-          : current.visitors,
-      audit: [
-        {
-          id: uid("audit"),
-          action: isEditing ? `Ficha atualizada: ${member.fullName}` : `Membro cadastrado: ${member.fullName}`,
-          when: now,
-        },
-        ...current.audit,
-      ].slice(0, 12),
-    }));
+    setData((current) => upsertMemberData(current, memberForm, editingMemberId, uid));
     setMemberForm(blankMember);
     setEditingMemberId(null);
     setSyncStatus(isEditing ? `Ficha de ${member.fullName} atualizada.` : `Ficha de ${member.fullName} cadastrada.`);
@@ -2286,11 +2243,7 @@ export default function Home() {
     if (!requireModuleAccess("members", "excluir fichas de membros")) return;
     if (!window.confirm(`Excluir a ficha de ${member.fullName}?`)) return;
 
-    setData((current) => ({
-      ...current,
-      members: current.members.filter((item) => item.id !== member.id),
-      audit: [{ id: uid("audit"), action: `Ficha excluida: ${member.fullName}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => deleteMemberData(current, member, uid));
 
     if (editingMemberId === member.id) {
       cancelMemberEdit();
@@ -2305,19 +2258,9 @@ export default function Home() {
     if (!requireModuleAccess("visitors", editingVisitorId ? "editar visitante" : "cadastrar visitante")) return;
     if (!canCreateVisitor) return;
 
-    const now = new Date().toISOString();
     const visitor: VisitorRecord = { ...visitorForm, id: editingVisitorId ?? uid("visitor") };
 
-    setData((current) => ({
-      ...current,
-      visitors: editingVisitorId
-        ? current.visitors.map((item) => (item.id === editingVisitorId ? visitor : item))
-        : [visitor, ...current.visitors],
-      audit: [
-        { id: uid("audit"), action: editingVisitorId ? `Visitante atualizado: ${visitor.fullName}` : `Visitante cadastrado: ${visitor.fullName}`, when: now },
-        ...current.audit,
-      ].slice(0, 12),
-    }));
+    setData((current) => upsertVisitorData(current, visitorForm, editingVisitorId, uid));
     setVisitorForm(blankVisitor);
     setEditingVisitorId(null);
     setSyncStatus(editingVisitorId ? `Visitante ${visitor.fullName} atualizado.` : `Visitante ${visitor.fullName} cadastrado.`);
@@ -2335,11 +2278,7 @@ export default function Home() {
     if (!requireModuleAccess("visitors", "excluir visitante")) return;
     if (!window.confirm(`Excluir o acompanhamento de ${visitor.fullName}?`)) return;
 
-    setData((current) => ({
-      ...current,
-      visitors: current.visitors.filter((item) => item.id !== visitor.id),
-      audit: [{ id: uid("audit"), action: `Visitante excluido: ${visitor.fullName}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => deleteVisitorData(current, visitor, uid));
     if (editingVisitorId === visitor.id) {
       setVisitorForm(blankVisitor);
       setEditingVisitorId(null);
@@ -2349,28 +2288,7 @@ export default function Home() {
   function convertVisitorToMember(visitor: VisitorRecord) {
     if (!requireModuleAccess("members", "converter visitante em membro")) return;
 
-    const now = new Date().toISOString();
-    const member: MemberRecord = {
-      ...blankMember,
-      id: uid("member"),
-      fullName: visitor.fullName,
-      phone: visitor.phone,
-      status: "Membro ativo",
-      memberType: "Membro",
-      registrationSource: "Visitante integrado",
-      pastoralStatus: "Integrado",
-      joinedAt: visitor.returnDate || visitor.firstVisitDate || currentDateKey(),
-      notes: visitor.notes,
-    };
-
-    setData((current) => ({
-      ...current,
-      members: [member, ...current.members],
-      visitors: current.visitors.map((item) =>
-        item.id === visitor.id ? { ...item, integrationStatus: "Integrado", contactMade: true, returnDate: item.returnDate || currentDateKey() } : item,
-      ),
-      audit: [{ id: uid("audit"), action: `Visitante integrado como membro: ${visitor.fullName}`, when: now }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => convertVisitorToMemberData(current, visitor, blankMember, uid));
     setSyncStatus(`${visitor.fullName} foi enviado para o cadastro de membros.`);
   }
 
@@ -2522,52 +2440,11 @@ export default function Home() {
     }));
   }
 
-  function recurringEventsFrom(event: ChurchEvent) {
-    if (event.recurrence === "Unico" || !event.date) return [event];
-
-    const total = event.recurrence === "Semanal" ? 4 : 3;
-    return Array.from({ length: total }, (_, index) => {
-      const date = eventDate(event.date);
-      if (!date) return event;
-      if (event.recurrence === "Semanal") date.setDate(date.getDate() + index * 7);
-      if (event.recurrence === "Mensal") date.setMonth(date.getMonth() + index);
-      return {
-        ...event,
-        id: index === 0 ? event.id : uid("event"),
-        date: date.toISOString().slice(0, 10),
-      };
-    });
-  }
-
   function createEvent() {
     if (!requireModuleAccess("events", editingEventId ? "editar eventos" : "adicionar eventos")) return;
     if (!canCreateEvent) return;
 
-    const now = new Date().toISOString();
-    const event: ChurchEvent = { ...eventForm, id: editingEventId ?? uid("event") };
-    const eventsToAdd = editingEventId ? [event] : recurringEventsFrom(event);
-
-    setData((current) => ({
-      ...current,
-      events: editingEventId
-        ? current.events.map((item) => (item.id === editingEventId ? event : item))
-        : [...eventsToAdd, ...current.events],
-      attendanceSessions: editingEventId
-        ? current.attendanceSessions.map((session) =>
-            session.eventId === editingEventId
-              ? { ...session, date: event.date, title: event.title, updatedAt: now }
-              : session,
-          )
-        : current.attendanceSessions,
-      audit: [
-        {
-          id: uid("audit"),
-          action: editingEventId ? `Evento atualizado na agenda: ${event.title}` : `Evento adicionado na agenda: ${event.title}`,
-          when: now,
-        },
-        ...current.audit,
-      ].slice(0, 12),
-    }));
+    setData((current) => upsertEventData(current, eventForm, editingEventId, uid));
     setEventForm(blankEvent);
     setEditingEventId(null);
   }
@@ -2612,22 +2489,14 @@ export default function Home() {
 
   function updateEventStatus(event: ChurchEvent, status: ChurchEvent["status"]) {
     if (!requireModuleAccess("events", "alterar eventos")) return;
-    setData((current) => ({
-      ...current,
-      events: current.events.map((item) => (item.id === event.id ? { ...item, status } : item)),
-      audit: [{ id: uid("audit"), action: `Evento ${status.toLowerCase()}: ${event.title}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => updateEventStatusData(current, event, status, uid));
   }
 
   function deleteEvent(event: ChurchEvent) {
     if (!requireModuleAccess("events", "excluir eventos")) return;
     if (!window.confirm(`Excluir o evento "${event.title}" da agenda?`)) return;
 
-    setData((current) => ({
-      ...current,
-      events: current.events.filter((item) => item.id !== event.id),
-      audit: [{ id: uid("audit"), action: `Evento excluido da agenda: ${event.title}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => deleteEventData(current, event, uid));
 
     if (editingEventId === event.id) {
       cancelEventEdit();
@@ -2638,19 +2507,7 @@ export default function Home() {
     if (!requireModuleAccess("schedules", editingScheduleId ? "editar escala" : "criar escala")) return;
     if (!canCreateSchedule) return;
 
-    const now = new Date().toISOString();
-    const schedule: ScheduleRecord = { ...scheduleForm, id: editingScheduleId ?? uid("schedule") };
-
-    setData((current) => ({
-      ...current,
-      schedules: editingScheduleId
-        ? current.schedules.map((item) => (item.id === editingScheduleId ? schedule : item))
-        : [schedule, ...current.schedules],
-      audit: [
-        { id: uid("audit"), action: editingScheduleId ? `Escala atualizada: ${schedule.serviceType}` : `Escala criada: ${schedule.serviceType}`, when: now },
-        ...current.audit,
-      ].slice(0, 12),
-    }));
+    setData((current) => upsertScheduleData(current, scheduleForm, editingScheduleId, uid));
     setScheduleForm(blankSchedule);
     setEditingScheduleId(null);
     setSyncStatus(editingScheduleId ? "Escala atualizada." : "Escala cadastrada.");
@@ -2668,11 +2525,7 @@ export default function Home() {
     if (!requireModuleAccess("schedules", "excluir escala")) return;
     if (!window.confirm(`Excluir a escala de ${schedule.serviceType} para ${schedule.assignedTo}?`)) return;
 
-    setData((current) => ({
-      ...current,
-      schedules: current.schedules.filter((item) => item.id !== schedule.id),
-      audit: [{ id: uid("audit"), action: `Escala excluida: ${schedule.serviceType}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => deleteScheduleData(current, schedule, uid));
     if (editingScheduleId === schedule.id) {
       setScheduleForm(blankSchedule);
       setEditingScheduleId(null);
