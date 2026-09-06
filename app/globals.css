@@ -1116,8 +1116,7 @@ textarea:focus {
   margin-bottom: 12px;
 }
 
-.birthday-card,
-.digital-card {
+.birthday-card {
   background:
     linear-gradient(135deg, rgba(20, 217, 196, 0.1), transparent 48%),
     rgba(18, 45, 76, 0.58);
@@ -1209,309 +1208,14 @@ textarea:focus {
   font-weight: 800;
 }
 
-.digital-card {
-  overflow: hidden;
-  padding: 0;
-}
-
-.membership-preview {
-  color: #071e52;
-  font-family: Georgia, "Times New Roman", serif;
-  margin: 12px;
-  min-height: 250px;
-  overflow: hidden;
-  position: relative;
-}
-
-.front-preview {
-  background:
-    linear-gradient(135deg, rgba(255, 94, 146, 0.32), transparent 28%),
-    radial-gradient(circle at 58% 12%, rgba(255, 255, 255, 0.28), transparent 18%),
-    linear-gradient(145deg, #063178, #005bad 42%, #061b62);
-  border-radius: 8px;
-}
-
-.back-preview {
-  background:
-    radial-gradient(circle at 52% 0%, rgba(255, 255, 255, 0.7), transparent 23%),
-    linear-gradient(135deg, #92c8ff 0%, #0058ae 38%, #01245f 76%, #39a8ff 100%);
-  border-radius: 8px;
-}
-
-.card-logo-preview {
-  align-items: center;
-  background: radial-gradient(circle, #0a376d, #02153c 72%);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 50%;
-  color: #fff;
-  display: grid;
-  height: 58px;
-  justify-items: center;
-  left: 7%;
-  line-height: 1;
-  position: absolute;
-  top: 6%;
-  width: 58px;
-  z-index: 1;
-}
-
-.card-logo-preview strong {
-  color: #ffb43b;
-  font-size: 21px;
-}
-
-.card-logo-preview span {
-  color: #9ec4ff;
-  font-size: 8px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.membership-preview h3 {
-  color: #fff;
-  font-size: clamp(14px, 2.6vw, 20px);
-  font-weight: 900;
-  left: 30%;
-  line-height: 1.05;
-  margin: 0;
-  overflow-wrap: anywhere;
-  position: absolute;
-  text-align: center;
-  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
-  top: 8%;
-  width: 62%;
-}
-
-.membership-photo {
-  align-items: center;
-  background: linear-gradient(#d8f5ff, #effcff 64%, #9aba00 65%);
-  border: 5px solid #ffd35c;
-  border-radius: 18px;
-  display: flex;
-  height: 60%;
-  justify-content: center;
-  left: 4%;
-  overflow: hidden;
-  position: absolute;
-  top: 32%;
-  width: 27%;
-}
-
-.membership-photo img {
-  height: 100%;
-  object-fit: cover;
-  width: 100%;
-}
-
-.membership-photo span {
-  color: #fff;
-  font-size: 56px;
-  font-weight: 900;
-}
-
-.card-field {
-  background: #fff;
-  border-radius: 999px;
-  min-height: 34px;
-  min-width: 0;
-  padding: 12px 11px 4px;
-  position: absolute;
-}
-
-.card-field span,
-.back-preview h3 {
-  background: linear-gradient(180deg, #a9c9ff, #6c91f2);
-  border-radius: 5px;
-  color: #071e52;
-  font-size: 8px;
-  font-weight: 900;
-  left: 12px;
-  line-height: 1;
-  padding: 4px 8px;
-  position: absolute;
-  top: -9px;
-}
-
-.card-field strong {
-  display: block;
-  font-family: Arial, sans-serif;
-  font-size: 9.5px;
-  line-height: 1.15;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.preview-name {
-  left: 37%;
-  top: 33%;
-  width: 58%;
-}
-
-.preview-function {
-  left: 37%;
-  top: 55%;
-  width: 36%;
-}
-
-.preview-validity {
-  left: 75%;
-  top: 55%;
-  width: 20%;
-}
-
-.preview-registration {
-  left: 37%;
-  top: 77%;
-  width: 24%;
-}
-
-.preview-congregation {
-  left: 63%;
-  top: 77%;
-  width: 32%;
-}
-
-.back-preview h3 {
-  font-size: 11px;
-  left: 33%;
-  margin: 0;
-  text-align: center;
-  top: 7%;
-  width: 34%;
-}
-
-.preview-father {
-  left: 4%;
-  top: 22%;
-  width: 44%;
-}
-
-.preview-mother {
-  left: 52%;
-  top: 22%;
-  width: 44%;
-}
-
-.preview-cpf {
-  left: 6%;
-  top: 41%;
-  width: 26%;
-}
-
-.preview-marital {
-  left: 40%;
-  top: 41%;
-  width: 24%;
-}
-
-.preview-birth {
-  left: 70%;
-  top: 41%;
-  width: 24%;
-}
-
-.preview-baptism {
-  left: 18%;
-  top: 59%;
-  width: 24%;
-}
-
-.preview-natural {
-  left: 52%;
-  top: 59%;
-  width: 44%;
-}
-
-.signature-preview {
-  background: #fff;
-  border-radius: 999px;
-  left: 18%;
-  padding: 10px 18px 7px;
-  position: absolute;
-  text-align: center;
-  top: 76%;
-  width: 64%;
-}
-
-.signature-preview strong {
-  color: #000;
-  display: block;
-  font-size: 18px;
-  font-style: italic;
-  font-weight: 400;
-  line-height: 1;
-}
-
-.signature-preview span {
-  color: #000;
-  display: block;
-  font-size: 9px;
-}
-
-.back-preview > small {
-  bottom: 8px;
-  color: #fff;
-  font-size: 8.5px;
-  left: 8%;
-  position: absolute;
-  right: 8%;
-  text-align: center;
-}
-
-.digital-card-top,
-.digital-card-footer {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: space-between;
-  padding: 10px 12px;
-}
-
-.digital-card-top {
-  background: linear-gradient(135deg, rgba(20, 217, 196, 0.18), rgba(72, 184, 255, 0.14));
-}
-
-.digital-card-top span,
-.digital-card-footer span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 850;
-}
-
-.digital-card-top strong {
-  color: var(--accent-strong);
-  font-size: 13px;
-}
-
-.digital-card-body {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-}
-
-.digital-card-body strong,
-.digital-card-body small {
-  display: block;
-}
-
-.digital-card-body small {
-  color: var(--muted);
-  font-size: 12px;
-  margin-top: 3px;
-}
-
-.card-actions {
-  border-top: 1px solid rgba(72, 184, 255, 0.18);
+.record-actions {
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 12px;
+  padding-top: 10px;
 }
 
-.card-actions button {
+.record-actions button {
   background: rgba(20, 217, 196, 0.12);
   border: 1px solid rgba(20, 217, 196, 0.28);
   color: var(--accent-strong);
@@ -1521,7 +1225,7 @@ textarea:focus {
   padding: 0 10px;
 }
 
-.card-actions button.secondary {
+.record-actions button.secondary {
   background: rgba(72, 184, 255, 0.1);
   border-color: rgba(72, 184, 255, 0.28);
   color: #9bd7ff;
@@ -1550,20 +1254,11 @@ textarea:focus {
   padding-left: 10px;
 }
 
-.kids-card,
 .kids-birthday {
   background:
     linear-gradient(135deg, rgba(255, 197, 61, 0.16), transparent 48%),
     rgba(18, 45, 76, 0.62);
   border-color: rgba(255, 197, 61, 0.28);
-}
-
-.kids-card .digital-card-top {
-  background: linear-gradient(135deg, rgba(255, 197, 61, 0.2), rgba(20, 217, 196, 0.12));
-}
-
-.kids-card .digital-card-top strong {
-  color: #ffd778;
 }
 
 .mural-preview {
@@ -1991,7 +1686,7 @@ textarea:focus {
   .stats-grid,
   .birthday-grid,
   .birthday-spotlight-list,
-  .card-actions,
+  .record-actions,
   .form-grid,
   .detail-grid,
   .flow-line,

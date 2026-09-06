@@ -182,32 +182,6 @@ type MessageTemplateItem = {
   isBirthday?: boolean;
 };
 
-type DigitalCardData = {
-  ownerType: "member" | "kid";
-  ownerId: string;
-  title: string;
-  church: string;
-  name: string;
-  functionName: string;
-  validity: string;
-  registration: string;
-  congregation: string;
-  fatherName: string;
-  motherName: string;
-  cpf: string;
-  maritalStatus: string;
-  birthDate: string;
-  baptism: string;
-  naturalFrom: string;
-  subtitle: string;
-  id: string;
-  detail: string;
-  footerLeft: string;
-  footerRight: string;
-  photoDataUrl: string;
-  accent: string;
-};
-
 type SchoolClass = {
   id: string;
   name: string;
@@ -911,222 +885,6 @@ function classNoticeWhatsappText(className: string, title: string, body: string)
   ]
     .filter(Boolean)
     .join("\n\n");
-}
-
-function escapeText(value: string) {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
-}
-
-function cardChurchTitleLines(church: string) {
-  const normalized = church.trim();
-  const marker = " AD ";
-  const markerIndex = normalized.toUpperCase().indexOf(marker);
-  if (markerIndex > 0) {
-    return [normalized.slice(0, markerIndex), `AD ${normalized.slice(markerIndex + marker.length)}`];
-  }
-  return [normalized];
-}
-
-function cardChurchTitleHtml(church: string) {
-  const [mainLine, secondLine] = cardChurchTitleLines(church);
-  return secondLine
-    ? `${escapeText(mainLine)}<small>${escapeText(secondLine)}</small>`
-    : escapeText(mainLine);
-}
-
-function cardMarkup(card: DigitalCardData) {
-  const initial = card.name.slice(0, 1).toUpperCase();
-  const photo = card.photoDataUrl
-    ? `<img src="${card.photoDataUrl}" alt="" />`
-    : `<div class="avatar-fallback">${escapeText(initial)}</div>`;
-
-  return `
-    <section class="membership-card-sheet" style="--accent:${card.accent}">
-      <article class="membership-card front-card">
-        <div class="card-logo">
-          <strong>AD</strong>
-          <span>Maringa</span>
-        </div>
-        <h1>${cardChurchTitleHtml(card.church)}</h1>
-        <div class="card-photo">${photo}</div>
-        <div class="field field-name"><span>NOME</span><strong>${escapeText(card.name)}</strong></div>
-        <div class="field field-function"><span>FUNCAO</span><strong>${escapeText(card.functionName)}</strong></div>
-        <div class="field field-validity"><span>VALIDADE</span><strong>${escapeText(card.validity)}</strong></div>
-        <div class="field field-registration"><span>No. REGISTRO</span><strong>${escapeText(card.registration)}</strong></div>
-        <div class="field field-congregation"><span>CONGREGACAO</span><strong>${escapeText(card.congregation)}</strong></div>
-      </article>
-
-      <article class="membership-card back-card">
-        <h2>${escapeText(card.title)}</h2>
-        <div class="field back-father"><span>PAI</span><strong>${escapeText(card.fatherName)}</strong></div>
-        <div class="field back-mother"><span>MAE</span><strong>${escapeText(card.motherName)}</strong></div>
-        <div class="field back-cpf"><span>CPF.</span><strong>${escapeText(card.cpf)}</strong></div>
-        <div class="field back-marital"><span>EST. CIVIL</span><strong>${escapeText(card.maritalStatus)}</strong></div>
-        <div class="field back-birth"><span>NASC.</span><strong>${escapeText(card.birthDate)}</strong></div>
-        <div class="field back-baptism"><span>BATISMO</span><strong>${escapeText(card.baptism)}</strong></div>
-        <div class="field back-natural"><span>NATURAL</span><strong>${escapeText(card.naturalFrom)}</strong></div>
-        <div class="signature-panel">
-          <strong>Lionor Ribeiro</strong>
-          <span>PASTOR PRESIDENTE</span>
-        </div>
-        <div class="card-logo back-logo">
-          <strong>AD</strong>
-          <span>Maringa</span>
-        </div>
-        <footer>
-          <p>SEDE: Rua Nicomedes M. Afonso, 123 - Litoraneo, Sao Mateus/ES - 29932000</p>
-          <p>Tel.: (27) 9.9999-8888 E-mail: ademanuel@gmail.com</p>
-          <p>Fundacao da Igreja em 15/03/1956</p>
-        </footer>
-      </article>
-    </section>
-  `;
-}
-
-function cardPrintStyles() {
-  return `
-    @page { size: A4 landscape; margin: 10mm; }
-    * { box-sizing: border-box; }
-    body { background: #eef3f8; font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 12px; }
-    .membership-card-sheet { display: grid; gap: 12px; justify-content: center; }
-    .membership-card { background: radial-gradient(circle at 58% 12%, rgba(255,255,255,.5), transparent 18%), linear-gradient(145deg, #063178, #005bad 42%, #061b62); border-radius: 4px; color: #081f54; height: 318px; overflow: hidden; position: relative; width: 508px; }
-    .front-card:before { background: linear-gradient(135deg, rgba(255,94,146,.42), transparent 24%), linear-gradient(165deg, transparent 58%, rgba(19,153,255,.34)); content: ""; inset: 0; position: absolute; }
-    .back-card { background: radial-gradient(circle at 52% 2%, rgba(255,255,255,.72), transparent 22%), linear-gradient(135deg, #92c8ff 0%, #0058ae 38%, #01245f 76%, #39a8ff 100%); }
-    .card-logo { align-items: center; background: radial-gradient(circle, #0a376d, #02153c 72%); border: 1px solid rgba(255,255,255,.22); border-radius: 50%; color: #fff; display: grid; height: 76px; justify-items: center; left: 52px; line-height: 1; position: absolute; top: 14px; width: 76px; z-index: 1; }
-    .card-logo strong { color: #ffb43b; font-size: 27px; }
-    .card-logo span { color: #9ec4ff; font-size: 10px; font-weight: 800; text-transform: uppercase; }
-    .front-card h1 { color: #fff; font-size: 21px; left: 150px; line-height: .98; margin: 0; position: absolute; text-align: center; text-shadow: 0 2px 5px rgba(0,0,0,.35); top: 29px; width: 310px; z-index: 1; }
-    .front-card h1 small { display: block; font-size: 23px; line-height: 1.04; }
-    .card-photo { align-items: center; background: linear-gradient(#d8f5ff, #effcff 65%, #9aba00 66%); border: 5px solid #ffd35c; border-radius: 18px; display: flex; height: 198px; justify-content: center; left: 22px; overflow: hidden; position: absolute; top: 96px; width: 154px; z-index: 1; }
-    .card-photo img { height: 100%; object-fit: cover; width: 100%; }
-    .avatar-fallback { color: #fff; font-size: 64px; font-weight: 900; }
-    .field { background: #fff; border-radius: 999px; min-height: 36px; padding: 13px 12px 5px; position: absolute; z-index: 1; }
-    .field span, .back-card h2 { background: linear-gradient(180deg, #a9c9ff, #6c91f2); border-radius: 4px; color: #071e52; font-size: 9px; font-weight: 900; letter-spacing: .01em; padding: 4px 8px; position: absolute; top: -9px; }
-    .field strong { display: block; font-family: Arial, sans-serif; font-size: 10.5px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .field-name { height: 36px; left: 190px; top: 126px; width: 298px; }
-    .field-function { height: 36px; left: 190px; top: 184px; width: 192px; }
-    .field-validity { height: 36px; left: 388px; top: 184px; width: 100px; }
-    .field-registration { height: 36px; left: 190px; top: 242px; width: 100px; }
-    .field-congregation { height: 36px; left: 298px; top: 242px; width: 190px; }
-    .back-card h2 { font-size: 13px; left: 166px; margin: 0; position: absolute; text-align: center; top: 16px; width: 176px; }
-    .back-father { left: 18px; top: 54px; width: 230px; }
-    .back-mother { left: 260px; top: 54px; width: 230px; }
-    .back-cpf { left: 30px; top: 98px; width: 108px; }
-    .back-marital { left: 205px; top: 98px; width: 108px; }
-    .back-birth { left: 350px; top: 98px; width: 108px; }
-    .back-baptism { left: 84px; top: 142px; width: 110px; }
-    .back-natural { left: 260px; top: 142px; width: 230px; }
-    .signature-panel { background: #fff; border-radius: 999px; left: 84px; padding: 14px 24px 8px; position: absolute; text-align: center; top: 186px; width: 340px; }
-    .signature-panel strong { color: #000; display: block; font-size: 21px; font-style: italic; font-weight: 400; line-height: 1; }
-    .signature-panel span { color: #000; display: block; font-size: 10px; margin-top: 2px; }
-    .back-logo { height: 76px; left: 14px; top: 226px; width: 76px; }
-    footer { bottom: 18px; color: #fff; font-size: 9.5px; left: 110px; line-height: 1.08; position: absolute; text-align: center; width: 360px; }
-    footer p { margin: 6px 0; }
-    @media print { body { background: #fff; } .membership-card-sheet { gap: 8mm; } }
-  `;
-}
-
-function printDigitalCard(card: DigitalCardData) {
-  const popup = window.open("", "_blank", "width=1120,height=760");
-  if (!popup) return;
-
-  popup.document.write(`
-    <!doctype html>
-    <html lang="pt-BR">
-      <head>
-        <meta charset="utf-8" />
-        <title>${escapeText(card.name)} - carteirinha</title>
-        <style>${cardPrintStyles()}</style>
-      </head>
-      <body>${cardMarkup(card)}<script>window.onload = () => { window.print(); };</script></body>
-    </html>
-  `);
-  popup.document.close();
-}
-
-function downloadDigitalCardImage(card: DigitalCardData) {
-  const svgPhoto = card.photoDataUrl
-    ? `<image href="${card.photoDataUrl}" x="27" y="101" width="144" height="188" preserveAspectRatio="xMidYMid slice"/>`
-    : `<text x="99" y="205" fill="#ffffff" font-family="Arial" font-size="64" font-weight="900" text-anchor="middle">${escapeText(card.name.slice(0, 1).toUpperCase())}</text>`;
-  const [churchMainLine, churchSecondLine] = cardChurchTitleLines(card.church);
-  const svgChurchTitle = churchSecondLine
-    ? `<text x="304" y="39" fill="#ffffff" font-family="Georgia" font-size="20" font-weight="900" text-anchor="middle">${escapeText(churchMainLine)}</text>
-      <text x="304" y="63" fill="#ffffff" font-family="Georgia" font-size="22" font-weight="900" text-anchor="middle">${escapeText(churchSecondLine)}</text>`
-    : `<text x="304" y="49" fill="#ffffff" font-family="Georgia" font-size="20" font-weight="900" text-anchor="middle">${escapeText(card.church)}</text>`;
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="1016" height="636" viewBox="0 0 1016 636">
-      <defs>
-        <linearGradient id="frontBg" x1="0" x2="1" y1="0" y2="1">
-          <stop stop-color="#063178"/>
-          <stop offset=".48" stop-color="#005bad"/>
-          <stop offset="1" stop-color="#061b62"/>
-        </linearGradient>
-        <linearGradient id="backBg" x1="0" x2="1" y1="0" y2="1">
-          <stop stop-color="#92c8ff"/>
-          <stop offset=".4" stop-color="#0058ae"/>
-          <stop offset=".78" stop-color="#01245f"/>
-          <stop offset="1" stop-color="#39a8ff"/>
-        </linearGradient>
-      </defs>
-      <rect width="508" height="318" fill="url(#frontBg)"/>
-      <circle cx="90" cy="54" r="38" fill="#062052" stroke="#638bd0"/>
-      <text x="90" y="53" fill="#ffb43b" font-family="Georgia" font-size="27" font-weight="900" text-anchor="middle">AD</text>
-      <text x="90" y="74" fill="#9ec4ff" font-family="Arial" font-size="10" font-weight="800" text-anchor="middle">MARINGA</text>
-      ${svgChurchTitle}
-      <rect x="22" y="96" width="154" height="198" rx="18" fill="#dff6ff" stroke="#ffd35c" stroke-width="5"/>
-      <rect x="27" y="224" width="144" height="65" fill="#93ad00"/>
-      ${svgPhoto}
-      <rect x="190" y="126" width="298" height="36" rx="18" fill="#ffffff"/>
-      <rect x="198" y="118" width="70" height="18" rx="4" fill="#86a9fb"/>
-      <text x="206" y="131" fill="#071e52" font-family="Georgia" font-size="9" font-weight="900">NOME</text>
-      <text x="204" y="150" fill="#071e52" font-family="Arial" font-size="10.5" font-weight="700">${escapeText(card.name)}</text>
-      <rect x="190" y="184" width="192" height="36" rx="18" fill="#ffffff"/>
-      <rect x="198" y="176" width="70" height="18" rx="4" fill="#86a9fb"/>
-      <text x="206" y="189" fill="#071e52" font-family="Georgia" font-size="9" font-weight="900">FUNCAO</text>
-      <text x="204" y="208" fill="#071e52" font-family="Arial" font-size="10.5" font-weight="700">${escapeText(card.functionName)}</text>
-      <rect x="388" y="184" width="100" height="36" rx="18" fill="#ffffff"/>
-      <rect x="396" y="176" width="70" height="18" rx="4" fill="#86a9fb"/>
-      <text x="404" y="189" fill="#071e52" font-family="Georgia" font-size="9" font-weight="900">VALIDADE</text>
-      <text x="402" y="208" fill="#071e52" font-family="Arial" font-size="10.5" font-weight="700">${escapeText(card.validity)}</text>
-      <rect x="190" y="242" width="100" height="36" rx="18" fill="#ffffff"/>
-      <rect x="198" y="234" width="70" height="18" rx="4" fill="#86a9fb"/>
-      <text x="206" y="247" fill="#071e52" font-family="Georgia" font-size="8.5" font-weight="900">No. REG.</text>
-      <text x="204" y="266" fill="#071e52" font-family="Arial" font-size="10" font-weight="700">${escapeText(card.registration)}</text>
-      <rect x="298" y="242" width="190" height="36" rx="18" fill="#ffffff"/>
-      <rect x="306" y="234" width="88" height="18" rx="4" fill="#86a9fb"/>
-      <text x="314" y="247" fill="#071e52" font-family="Georgia" font-size="8.5" font-weight="900">CONGREG.</text>
-      <text x="312" y="266" fill="#071e52" font-family="Arial" font-size="10.5" font-weight="700">${escapeText(card.congregation)}</text>
-
-      <g transform="translate(508 0)">
-        <rect width="508" height="318" fill="url(#backBg)"/>
-        <rect x="166" y="16" width="176" height="22" rx="5" fill="#86a9fb"/>
-        <text x="254" y="32" fill="#071e52" font-family="Georgia" font-size="13" font-weight="900" text-anchor="middle">${escapeText(card.title)}</text>
-        <rect x="18" y="54" width="230" height="36" rx="18" fill="#fff"/><text x="26" y="58" fill="#071e52" font-size="9" font-weight="900">PAI</text><text x="32" y="78" fill="#071e52" font-size="10.5">${escapeText(card.fatherName)}</text>
-        <rect x="260" y="54" width="230" height="36" rx="18" fill="#fff"/><text x="268" y="58" fill="#071e52" font-size="9" font-weight="900">MAE</text><text x="274" y="78" fill="#071e52" font-size="10.5">${escapeText(card.motherName)}</text>
-        <rect x="30" y="98" width="108" height="36" rx="18" fill="#fff"/><text x="38" y="102" fill="#071e52" font-size="9" font-weight="900">CPF.</text><text x="44" y="122" fill="#071e52" font-size="10">${escapeText(card.cpf)}</text>
-        <rect x="205" y="98" width="108" height="36" rx="18" fill="#fff"/><text x="213" y="102" fill="#071e52" font-size="9" font-weight="900">EST. CIVIL</text><text x="219" y="122" fill="#071e52" font-size="10">${escapeText(card.maritalStatus)}</text>
-        <rect x="350" y="98" width="108" height="36" rx="18" fill="#fff"/><text x="358" y="102" fill="#071e52" font-size="9" font-weight="900">NASC.</text><text x="364" y="122" fill="#071e52" font-size="10">${escapeText(card.birthDate)}</text>
-        <rect x="84" y="142" width="110" height="36" rx="18" fill="#fff"/><text x="92" y="146" fill="#071e52" font-size="9" font-weight="900">BATISMO</text><text x="98" y="166" fill="#071e52" font-size="10">${escapeText(card.baptism)}</text>
-        <rect x="260" y="142" width="230" height="36" rx="18" fill="#fff"/><text x="268" y="146" fill="#071e52" font-size="9" font-weight="900">NATURAL</text><text x="274" y="166" fill="#071e52" font-size="10">${escapeText(card.naturalFrom)}</text>
-        <rect x="84" y="186" width="340" height="50" rx="25" fill="#fff"/>
-        <text x="254" y="214" fill="#000" font-family="Georgia" font-size="21" font-style="italic" text-anchor="middle">Lionor Ribeiro</text>
-        <text x="254" y="229" fill="#000" font-family="Georgia" font-size="10" text-anchor="middle">PASTOR PRESIDENTE</text>
-        <circle cx="52" cy="264" r="38" fill="#062052" stroke="#638bd0"/>
-        <text x="52" y="263" fill="#ffb43b" font-family="Georgia" font-size="27" font-weight="900" text-anchor="middle">AD</text>
-        <text x="52" y="284" fill="#9ec4ff" font-family="Arial" font-size="10" font-weight="800" text-anchor="middle">MARINGA</text>
-        <text x="290" y="265" fill="#ffffff" font-family="Georgia" font-size="9.5" text-anchor="middle">SEDE: Rua Nicomedes M. Afonso, 123 - Litoraneo, Sao Mateus/ES - 29932000</text>
-        <text x="290" y="282" fill="#ffffff" font-family="Georgia" font-size="9.5" text-anchor="middle">Tel.: (27) 9.9999-8888 E-mail: ademanuel@gmail.com</text>
-        <text x="290" y="299" fill="#ffffff" font-family="Georgia" font-size="9.5" text-anchor="middle">Fundacao da Igreja em 15/03/1956</text>
-      </g>
-    </svg>
-  `;
-  const blob = new Blob([svg], { type: "image/svg+xml" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${card.name.toLowerCase().replace(/\s+/g, "-")}-carteirinha.svg`;
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 function uid(prefix: string) {
@@ -2666,62 +2424,6 @@ export default function Home() {
     log(`Mensagens preparadas para ${Math.min(messageRecipients.length, 12)} contatos`);
   }
 
-  function memberCardData(member: MemberRecord): DigitalCardData {
-    return {
-      ownerType: "member",
-      ownerId: member.id,
-      title: "Carteirinha de membro",
-      church: "Igreja Assembleia de Deus AD Maringa",
-      name: member.fullName,
-      functionName: member.role || member.memberType,
-      validity: "31/12/2026",
-      registration: member.id.slice(0, 12).toUpperCase(),
-      congregation: member.congregation || "Sede",
-      fatherName: member.fatherName || "Nao informado",
-      motherName: member.motherName || "Nao informado",
-      cpf: member.cpf || "Nao informado",
-      maritalStatus: member.maritalStatus || "Nao informado",
-      birthDate: member.birthDate ? formatDate(member.birthDate) : "Nao informado",
-      baptism: member.waterBaptized ? "Sim" : "Nao",
-      naturalFrom: member.congregation || member.address || "Nao informado",
-      subtitle: `${member.memberType} - ${member.status}`,
-      id: `ID ${member.id.slice(0, 12).toUpperCase()}`,
-      detail: member.role || "Funcao nao informada",
-      footerLeft: member.congregation || "Congregacao",
-      footerRight: member.joinedAt ? `Desde ${formatDate(member.joinedAt)}` : "Cadastro local",
-      photoDataUrl: member.photoDataUrl,
-      accent: "#14d9c4",
-    };
-  }
-
-  function kidCardData(kid: KidRecord): DigitalCardData {
-    return {
-      ownerType: "kid",
-      ownerId: kid.id,
-      title: "Carteirinha Kids",
-      church: "Igreja Conectada Kids",
-      name: kid.childName,
-      functionName: kid.ageGroup,
-      validity: "31/12/2026",
-      registration: kid.id.slice(0, 12).toUpperCase(),
-      congregation: kid.className || "Kids",
-      fatherName: kid.guardianName || "Responsavel",
-      motherName: kid.guardianName || "Responsavel",
-      cpf: "Nao se aplica",
-      maritalStatus: "Kids",
-      birthDate: kid.birthDate ? formatDate(kid.birthDate) : "Nao informado",
-      baptism: "Nao se aplica",
-      naturalFrom: kid.className || kid.ageGroup,
-      subtitle: `${kid.ageGroup} - ${kid.className || "Turma Kids"}`,
-      id: `ID ${kid.id.slice(0, 12).toUpperCase()}`,
-      detail: `Responsavel: ${kid.guardianName}`,
-      footerLeft: kid.allergies || "Sem cuidados especiais",
-      footerRight: kid.consentImage ? "Imagem autorizada" : "Sem autorizacao de imagem",
-      photoDataUrl: kid.photoDataUrl,
-      accent: "#ffd778",
-    };
-  }
-
   function renderAttendancePanel(area: AttendanceArea, classRecord: SchoolClass) {
     const classMembers = membersForAttendanceClass(area, classRecord.id);
     const events = eventsForAttendance(area);
@@ -2882,29 +2584,6 @@ export default function Home() {
     });
 
     setSyncStatus(error ? "Kids salvo localmente; faca login Supabase para sincronizar." : "Cadastro Kids sincronizado com Supabase.");
-  }
-
-  async function saveCardExportToSupabase(card: DigitalCardData, format: "print_pdf" | "image_svg") {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setSyncStatus("Carteirinha gerada localmente; faca login Supabase para registrar historico.");
-      return;
-    }
-
-    const { error } = await supabase.from("digital_card_exports").insert({
-      owner_type: card.ownerType,
-      owner_id: card.ownerId,
-      card_title: card.title,
-      export_format: format,
-      exported_by: user.id,
-    });
-
-    setSyncStatus(error ? "Carteirinha gerada; historico nao foi salvo no Supabase." : "Historico da carteirinha salvo no Supabase.");
   }
 
   async function saveMessageCampaignToSupabase() {
@@ -4220,7 +3899,6 @@ export default function Home() {
                 </div>}
                 <div className="row-list">
                   {visibleMembers.map((member) => {
-                    const card = memberCardData(member);
                     const schoolClassName = classNameById(data.schoolClasses, member.schoolClassId);
                     const discipleshipClassName = classNameById(data.discipleshipClasses, member.discipleshipClassId);
 
@@ -4249,56 +3927,16 @@ export default function Home() {
                           </small>
                         </div>
                       </div>
-                      <div className="digital-card">
-                        <div className="membership-preview front-preview">
-                          <div className="card-logo-preview">
-                            <strong>AD</strong>
-                            <span>Maringa</span>
-                          </div>
-                          <h3>{card.church}</h3>
-                          <div className="membership-photo">
-                            {member.photoDataUrl ? <img alt="" src={member.photoDataUrl} /> : <span>{member.fullName.slice(0, 1)}</span>}
-                          </div>
-                          <div className="card-field preview-name"><span>NOME</span><strong>{card.name}</strong></div>
-                          <div className="card-field preview-function"><span>FUNCAO</span><strong>{card.functionName}</strong></div>
-                          <div className="card-field preview-validity"><span>VALIDADE</span><strong>{card.validity}</strong></div>
-                          <div className="card-field preview-registration"><span>No. REGISTRO</span><strong>{card.registration}</strong></div>
-                          <div className="card-field preview-congregation"><span>CONGREGACAO</span><strong>{card.congregation}</strong></div>
-                        </div>
-
-                        <div className="membership-preview back-preview">
-                          <h3>{card.title}</h3>
-                          <div className="card-field preview-father"><span>PAI</span><strong>{card.fatherName}</strong></div>
-                          <div className="card-field preview-mother"><span>MAE</span><strong>{card.motherName}</strong></div>
-                          <div className="card-field preview-cpf"><span>CPF.</span><strong>{card.cpf}</strong></div>
-                          <div className="card-field preview-marital"><span>EST. CIVIL</span><strong>{card.maritalStatus}</strong></div>
-                          <div className="card-field preview-birth"><span>NASC.</span><strong>{card.birthDate}</strong></div>
-                          <div className="card-field preview-baptism"><span>BATISMO</span><strong>{card.baptism}</strong></div>
-                          <div className="card-field preview-natural"><span>NATURAL</span><strong>{card.naturalFrom}</strong></div>
-                          <div className="signature-preview">
-                            <strong>Lionor Ribeiro</strong>
-                            <span>PASTOR PRESIDENTE</span>
-                          </div>
-                          <small>SEDE: Rua Nicomedes M. Afonso, 123 - Litoraneo, Sao Mateus/ES</small>
-                        </div>
-
-                        <div className="card-actions">
-                          <button onClick={() => { void saveCardExportToSupabase(card, "print_pdf"); printDigitalCard(card); }} type="button">
-                            Imprimir/PDF
-                          </button>
-                          <button className="secondary" onClick={() => { void saveCardExportToSupabase(card, "image_svg"); downloadDigitalCardImage(card); }} type="button">
-                            Baixar imagem
-                          </button>
-                          <button className="secondary" onClick={() => editMember(member)} type="button">
-                            Editar ficha
-                          </button>
-                          {isAdminView && <button className="secondary" onClick={() => toggleMemberCredentials(member)} type="button">
-                            Login e senha
-                          </button>}
-                          {isAdminView && <button className="danger-action" onClick={() => deleteMember(member)} type="button">
-                            Excluir ficha
-                          </button>}
-                        </div>
+                      <div className="record-actions">
+                        <button className="secondary" onClick={() => editMember(member)} type="button">
+                          Editar ficha
+                        </button>
+                        {isAdminView && <button className="secondary" onClick={() => toggleMemberCredentials(member)} type="button">
+                          Login e senha
+                        </button>}
+                        {isAdminView && <button className="danger-action" onClick={() => deleteMember(member)} type="button">
+                          Excluir ficha
+                        </button>}
                       </div>
                       {isAdminView && memberCredentialForm.memberId === member.id && (
                         <div className="credential-panel">
@@ -4500,10 +4138,7 @@ export default function Home() {
                   </div>
                 </div>}
                 <div className="row-list">
-                  {visibleKids.map((kid) => {
-                    const card = kidCardData(kid);
-
-                    return (
+                  {visibleKids.map((kid) => (
                     <div className="member-record kids-record" key={kid.id}>
                       <div className="data-row member-row">
                         <div className="member-avatar kids-avatar">
@@ -4519,41 +4154,13 @@ export default function Home() {
                           </small>
                         </div>
                       </div>
-                      <div className="digital-card kids-card">
-                        <div className="digital-card-top">
-                          <span>{card.title}</span>
-                          <strong>{card.church}</strong>
-                        </div>
-                        <div className="digital-card-body">
-                          <div className="member-avatar kids-avatar">
-                            {kid.photoDataUrl ? <img alt="" src={kid.photoDataUrl} /> : kid.childName.slice(0, 1)}
-                          </div>
-                          <div>
-                            <strong>{card.name}</strong>
-                            <small>{card.id}</small>
-                            <small>{card.subtitle}</small>
-                            <small>{card.detail}</small>
-                          </div>
-                        </div>
-                        <div className="digital-card-footer">
-                          <span>{card.footerLeft}</span>
-                          <span>{card.footerRight}</span>
-                        </div>
-                        <div className="card-actions">
-                          <button onClick={() => { void saveCardExportToSupabase(card, "print_pdf"); printDigitalCard(card); }} type="button">
-                            Imprimir/PDF
-                          </button>
-                          <button className="secondary" onClick={() => { void saveCardExportToSupabase(card, "image_svg"); downloadDigitalCardImage(card); }} type="button">
-                            Baixar imagem
-                          </button>
-                          {isAdminView && <button className="danger-action" onClick={() => deleteKid(kid)} type="button">
-                            Excluir cadastro
-                          </button>}
-                        </div>
+                      <div className="record-actions">
+                        {isAdminView && <button className="danger-action" onClick={() => deleteKid(kid)} type="button">
+                          Excluir cadastro
+                        </button>}
                       </div>
                     </div>
-                    );
-                  })}
+                  ))}
                   {!visibleKids.length && <p className="empty-state">Nenhum cadastro Kids vinculado a este acesso.</p>}
                 </div>
               </article>
