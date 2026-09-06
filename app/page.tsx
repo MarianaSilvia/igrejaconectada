@@ -21,12 +21,21 @@ import {
 } from "./communication-helpers";
 import { BirthdaySpotlightPanel } from "./components/BirthdaySpotlightPanel";
 import { AgendaPanel } from "./components/AgendaPanel";
+import { AssetsPanel } from "./components/AssetsPanel";
 import { ClassModulePanel } from "./components/ClassModulePanel";
 import { CommunicationPanel } from "./components/CommunicationPanel";
+import { DevotionalPanel } from "./components/DevotionalPanel";
+import { FinancePanel } from "./components/FinancePanel";
+import { GroupsPanel } from "./components/GroupsPanel";
 import { KidsPanel } from "./components/KidsPanel";
 import { MembersPanel } from "./components/MembersPanel";
+import { MuralPanel } from "./components/MuralPanel";
+import { NoticesPanel } from "./components/NoticesPanel";
+import { PastoralPanel } from "./components/PastoralPanel";
 import { ReportsPanel } from "./components/ReportsPanel";
 import { SchedulesPanel } from "./components/SchedulesPanel";
+import { SettingsPanel } from "./components/SettingsPanel";
+import { UsersAccessPanel } from "./components/UsersAccessPanel";
 import { VisitorsPanel } from "./components/VisitorsPanel";
 import {
   birthdayDateThisYear,
@@ -36,7 +45,6 @@ import {
   dateAfterDays,
   eventDate,
   formatDate,
-  formatDateTime,
   isBirthdayThisMonth,
   isBirthdayThisWeek,
   isEventInWeek,
@@ -73,14 +81,32 @@ import { buildReportDefinition } from "./report-builders";
 import { downloadCsv, escapeHtml, printHtmlReport } from "./report-helpers";
 import {
   convertVisitorToMemberData,
+  createCareRequestData,
+  createNoticeData,
+  deleteAccessUserData,
+  deleteAssetData,
   deleteEventData,
+  deleteDevotionalData,
   deleteMemberData,
+  deleteMinistryData,
+  deleteMuralItemData,
+  deleteNoticeData,
   deleteScheduleData,
+  deleteTransactionData,
   deleteVisitorData,
+  toggleMuralItemData,
+  updateAccessUserStatusData,
+  updateCareRequestData,
   updateEventStatusData,
+  upsertAccessUserData,
+  upsertAssetData,
+  upsertDevotionalData,
   upsertEventData,
   upsertMemberData,
+  upsertMinistryData,
+  upsertMuralItemData,
   upsertScheduleData,
+  upsertTransactionData,
   upsertVisitorData,
 } from "./system-actions";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
@@ -700,11 +726,6 @@ function accessRoleForSession(users: AccessUser[], email: string, metadata: Reco
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function nextStatus(status: CareStatus): CareStatus {
-  const current = statusFlow.indexOf(status);
-  return statusFlow[Math.min(current + 1, statusFlow.length - 1)];
 }
 
 function suggestedNextStep(request: CareRequest) {
@@ -1862,22 +1883,13 @@ export default function Home() {
     const memberPhone = canManagePastoral ? careForm.phone.trim() : currentMember?.phone ?? careForm.phone.trim();
     if (!memberName || !careForm.summary.trim()) return;
 
-    const now = new Date().toISOString();
-    const request: CareRequest = {
-      ...careForm,
-      member: memberName,
-      phone: memberPhone,
-      id: uid("care"),
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    setData((current) => ({
-      ...current,
-      careRequests: [request, ...current.careRequests],
-      audit: [{ id: uid("audit"), action: `Pedido pastoral criado para ${request.member}`, when: now }, ...current.audit],
-    }));
-    setSelectedRequestId(request.id);
+    let createdRequestId = "";
+    setData((current) => {
+      const result = createCareRequestData(current, careForm, memberName, memberPhone, uid);
+      createdRequestId = result.request.id;
+      return result.data;
+    });
+    setSelectedRequestId(createdRequestId);
     setCareForm(canManagePastoral ? blankCare : { ...blankCare, member: memberName, phone: memberPhone });
     setActiveModule("pastoral");
   }
@@ -1885,24 +1897,13 @@ export default function Home() {
   function updateCareRequest(id: string, patch: Partial<CareRequest>, action: string) {
     if (!requireModuleAccess("pastoral", action)) return;
 
-    const now = new Date().toISOString();
-    setData((current) => ({
-      ...current,
-      careRequests: current.careRequests.map((request) =>
-        request.id === id ? { ...request, ...patch, updatedAt: now } : request,
-      ),
-      audit: [{ id: uid("audit"), action, when: now }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => updateCareRequestData(current, id, patch, action, uid));
   }
 
   function toggleMural(id: string, field: "published" | "featured") {
     if (!requireModuleAccess("mural", "alterar mural")) return;
 
-    setData((current) => ({
-      ...current,
-      mural: current.mural.map((item) => (item.id === id ? { ...item, [field]: !item[field] } : item)),
-      audit: [{ id: uid("audit"), action: "Mural atualizado", when: new Date().toISOString() }, ...current.audit],
-    }));
+    setData((current) => toggleMuralItemData(current, id, field, uid));
   }
 
   async function createUser() {
@@ -1913,7 +1914,6 @@ export default function Home() {
       return;
     }
 
-    const now = new Date().toISOString();
     const existingAccess = selectedAccessExistingUser ?? data.users.find((item) => normalizeEmail(item.email) === normalizeEmail(userForm.email));
     const isUpdatingAccess = Boolean(existingAccess);
     const user: AccessUser = {
@@ -1957,26 +1957,13 @@ export default function Home() {
       setSyncStatus(isUpdatingAccess ? `Acesso Supabase atualizado para ${user.name}.` : `Acesso Supabase criado para ${user.name}.`);
     }
 
-    setData((current) => ({
-      ...current,
-      users: isUpdatingAccess ? current.users.map((item) => (item.id === user.id ? user : item)) : [user, ...current.users],
-      members: selectedAccessMemberId
-        ? current.members.map((member) =>
-            member.id === selectedAccessMemberId ? { ...member, email: user.email, authUserId: user.id, role: user.role } : member,
-          )
-        : current.members,
-      audit: [
-        { id: uid("audit"), action: isUpdatingAccess ? `Acesso promovido: ${user.name}` : `Usuario criado para ${user.name}`, when: now },
-        ...current.audit,
-      ].slice(0, 12),
-    }));
+    setData((current) => upsertAccessUserData(current, user, selectedAccessMemberId, isUpdatingAccess, uid));
     setUserForm(blankUser);
     setSelectedAccessMemberId("");
   }
 
   async function updateAccessUserStatus(user: AccessUser, status: AccessUser["status"]) {
     if (!requireModuleAccess("users", "alterar acessos")) return;
-    const now = new Date().toISOString();
 
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
@@ -2011,19 +1998,13 @@ export default function Home() {
       }
     }
 
-    setData((current) => ({
-      ...current,
-      users: current.users.map((item) => (item.id === user.id ? { ...item, status } : item)),
-      audit: [{ id: uid("audit"), action: `Acesso ${status.toLowerCase()}: ${user.name}`, when: now }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => updateAccessUserStatusData(current, user, status, uid));
     setSyncStatus(status === "Bloqueado" ? `Acesso de ${user.name} cancelado.` : `Acesso de ${user.name} reativado.`);
   }
 
   async function deleteAccessUser(user: AccessUser) {
     if (!requireModuleAccess("users", "excluir acessos")) return;
     if (!window.confirm(`Excluir definitivamente o acesso de ${user.name}?`)) return;
-
-    const now = new Date().toISOString();
 
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
@@ -2054,16 +2035,7 @@ export default function Home() {
       }
     }
 
-    setData((current) => ({
-      ...current,
-      users: current.users.filter((item) => item.id !== user.id),
-      members: current.members.map((member) =>
-        member.authUserId === user.id || member.email.toLowerCase() === user.email.toLowerCase()
-          ? { ...member, authUserId: "" }
-          : member,
-      ),
-      audit: [{ id: uid("audit"), action: `Acesso excluido: ${user.name}`, when: now }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => deleteAccessUserData(current, user, uid));
     setSyncStatus(`Acesso de ${user.name} excluido.`);
   }
 
@@ -2282,14 +2254,7 @@ export default function Home() {
     if (!requireModuleAccess("mural", "criar itens do mural")) return;
     if (!muralForm.title.trim() || !muralForm.expiresAt) return;
 
-    const now = new Date().toISOString();
-    const item: MuralItem = { ...muralForm, id: uid("mural") };
-
-    setData((current) => ({
-      ...current,
-      mural: [item, ...current.mural],
-      audit: [{ id: uid("audit"), action: `Item publicado no mural: ${item.title}`, when: now }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => upsertMuralItemData(current, muralForm, uid));
     setMuralForm(blankMuralItem);
     setMuralImageMessage("");
   }
@@ -2298,11 +2263,7 @@ export default function Home() {
     if (!requireModuleAccess("mural", "excluir itens do mural")) return;
     if (!window.confirm(`Excluir o item do mural "${item.title}"?`)) return;
 
-    setData((current) => ({
-      ...current,
-      mural: current.mural.filter((muralItem) => muralItem.id !== item.id),
-      audit: [{ id: uid("audit"), action: `Item excluido do mural: ${item.title}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => deleteMuralItemData(current, item, uid));
   }
 
   function createEvent() {
@@ -2401,26 +2362,7 @@ export default function Home() {
     if (!requireModuleAccess("finance", editingTransactionId ? "editar lancamento financeiro" : "criar lancamento financeiro")) return;
     if (!canCreateTransaction) return;
 
-    const transaction: TransactionRecord = {
-      ...transactionForm,
-      id: editingTransactionId ?? uid("transaction"),
-      amount: Number(transactionForm.amount || 0),
-    };
-
-    setData((current) => ({
-      ...current,
-      transactions: editingTransactionId
-        ? current.transactions.map((item) => (item.id === editingTransactionId ? transaction : item))
-        : [transaction, ...current.transactions],
-      audit: [
-        {
-          id: uid("audit"),
-          action: editingTransactionId ? `Lancamento financeiro atualizado: ${transaction.description}` : `Lancamento financeiro criado: ${transaction.description}`,
-          when: new Date().toISOString(),
-        },
-        ...current.audit,
-      ].slice(0, 12),
-    }));
+    setData((current) => upsertTransactionData(current, transactionForm, editingTransactionId, uid));
     setTransactionForm(blankTransaction);
     setEditingTransactionId(null);
     setSyncStatus(editingTransactionId ? "Lancamento financeiro atualizado." : "Lancamento financeiro cadastrado.");
@@ -2438,11 +2380,7 @@ export default function Home() {
     if (!requireModuleAccess("finance", "excluir lancamento financeiro")) return;
     if (!window.confirm(`Excluir o lancamento "${transaction.description}"?`)) return;
 
-    setData((current) => ({
-      ...current,
-      transactions: current.transactions.filter((item) => item.id !== transaction.id),
-      audit: [{ id: uid("audit"), action: `Lancamento financeiro excluido: ${transaction.description}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => deleteTransactionData(current, transaction, uid));
     if (editingTransactionId === transaction.id) {
       setTransactionForm(blankTransaction);
       setEditingTransactionId(null);
@@ -2453,20 +2391,7 @@ export default function Home() {
     if (!requireModuleAccess("assets", editingAssetId ? "editar patrimonio" : "criar patrimonio")) return;
     if (!canCreateAsset) return;
 
-    const asset: AssetRecord = { ...assetForm, id: editingAssetId ?? uid("asset") };
-
-    setData((current) => ({
-      ...current,
-      assets: editingAssetId ? current.assets.map((item) => (item.id === editingAssetId ? asset : item)) : [asset, ...current.assets],
-      audit: [
-        {
-          id: uid("audit"),
-          action: editingAssetId ? `Patrimonio atualizado: ${asset.name}` : `Patrimonio cadastrado: ${asset.name}`,
-          when: new Date().toISOString(),
-        },
-        ...current.audit,
-      ].slice(0, 12),
-    }));
+    setData((current) => upsertAssetData(current, assetForm, editingAssetId, uid));
     setAssetForm(blankAsset);
     setEditingAssetId(null);
     setSyncStatus(editingAssetId ? "Patrimonio atualizado." : "Patrimonio cadastrado.");
@@ -2484,11 +2409,7 @@ export default function Home() {
     if (!requireModuleAccess("assets", "excluir patrimonio")) return;
     if (!window.confirm(`Excluir o patrimonio "${asset.name}"?`)) return;
 
-    setData((current) => ({
-      ...current,
-      assets: current.assets.filter((item) => item.id !== asset.id),
-      audit: [{ id: uid("audit"), action: `Patrimonio excluido: ${asset.name}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => deleteAssetData(current, asset, uid));
     if (editingAssetId === asset.id) {
       setAssetForm(blankAsset);
       setEditingAssetId(null);
@@ -2499,26 +2420,7 @@ export default function Home() {
     if (!requireModuleAccess("devotional", editingDevotionalId ? "editar devocional" : "criar devocional")) return;
     if (!canCreateDevotional) return;
 
-    const devotional: DevotionalRecord = {
-      ...devotionalForm,
-      id: editingDevotionalId ?? uid("devotional"),
-      publishedAt: devotionalForm.publishedAt || currentDateKey(),
-    };
-
-    setData((current) => ({
-      ...current,
-      devotionals: editingDevotionalId
-        ? current.devotionals.map((item) => (item.id === editingDevotionalId ? devotional : item))
-        : [devotional, ...current.devotionals],
-      audit: [
-        {
-          id: uid("audit"),
-          action: editingDevotionalId ? `Devocional atualizado: ${devotional.title}` : `Devocional cadastrado: ${devotional.title}`,
-          when: new Date().toISOString(),
-        },
-        ...current.audit,
-      ].slice(0, 12),
-    }));
+    setData((current) => upsertDevotionalData(current, devotionalForm, editingDevotionalId, uid));
     setDevotionalForm(blankDevotional);
     setEditingDevotionalId(null);
     setSyncStatus(editingDevotionalId ? "Devocional atualizado." : "Devocional cadastrado.");
@@ -2536,11 +2438,7 @@ export default function Home() {
     if (!requireModuleAccess("devotional", "excluir devocional")) return;
     if (!window.confirm(`Excluir o devocional "${devotional.title}"?`)) return;
 
-    setData((current) => ({
-      ...current,
-      devotionals: current.devotionals.filter((item) => item.id !== devotional.id),
-      audit: [{ id: uid("audit"), action: `Devocional excluido: ${devotional.title}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => deleteDevotionalData(current, devotional, uid));
     if (editingDevotionalId === devotional.id) {
       setDevotionalForm(blankDevotional);
       setEditingDevotionalId(null);
@@ -2551,15 +2449,9 @@ export default function Home() {
     if (!requireModuleAccess("notices", "criar comunicados")) return;
     if (!canCreateNotice) return;
 
-    const now = new Date().toISOString();
     const expiresAt = noticeForm.expiresAt || dateAfterDays(noticeForm.retentionDays);
-    const notice: Notice = { ...noticeForm, expiresAt, id: uid("notice") };
 
-    setData((current) => ({
-      ...current,
-      notices: [notice, ...current.notices.filter((item) => !isExpiredDate(item.expiresAt))],
-      audit: [{ id: uid("audit"), action: `Comunicado criado: ${notice.title}`, when: now }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => createNoticeData(current, noticeForm, expiresAt, uid));
     setNoticeForm(blankNotice);
   }
 
@@ -2567,41 +2459,14 @@ export default function Home() {
     if (!requireModuleAccess("notices", "excluir comunicados")) return;
     if (!window.confirm(`Excluir o aviso "${notice.title}"?`)) return;
 
-    setData((current) => ({
-      ...current,
-      notices: current.notices.filter((item) => item.id !== notice.id),
-      audit: [{ id: uid("audit"), action: `Aviso excluido: ${notice.title}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => deleteNoticeData(current, notice, uid));
   }
 
   function createMinistry() {
     if (!requireModuleAccess("ministries", "criar grupos")) return;
     if (!canCreateMinistry) return;
 
-    const now = new Date().toISOString();
-    const previousMinistry = editingMinistryId ? data.ministries.find((ministry) => ministry.id === editingMinistryId) : undefined;
-    const ministry: MinistryRecord = { ...ministryForm, id: editingMinistryId ?? uid("ministry") };
-
-    setData((current) => ({
-      ...current,
-      ministries: editingMinistryId
-        ? current.ministries.map((item) => (item.id === editingMinistryId ? ministry : item))
-        : [ministry, ...current.ministries],
-      members: previousMinistry?.name && previousMinistry.name !== ministry.name
-        ? current.members.map((member) => (member.ministry === previousMinistry.name ? { ...member, ministry: ministry.name } : member))
-        : current.members,
-      events: previousMinistry?.name && previousMinistry.name !== ministry.name
-        ? current.events.map((event) => (event.ministry === previousMinistry.name ? { ...event, ministry: ministry.name } : event))
-        : current.events,
-      audit: [
-        {
-          id: uid("audit"),
-          action: editingMinistryId ? `Grupo atualizado: ${ministry.name}` : `Grupo cadastrado: ${ministry.name}`,
-          when: now,
-        },
-        ...current.audit,
-      ].slice(0, 12),
-    }));
+    setData((current) => upsertMinistryData(current, ministryForm, editingMinistryId, uid));
     setMinistryForm(blankMinistry);
     setEditingMinistryId(null);
   }
@@ -2630,13 +2495,7 @@ export default function Home() {
     if (!requireModuleAccess("ministries", "excluir grupos")) return;
     if (!window.confirm(`Excluir o grupo "${ministry.name}"? Os membros vinculados ficarao sem grupo definido.`)) return;
 
-    setData((current) => ({
-      ...current,
-      ministries: current.ministries.filter((item) => item.id !== ministry.id),
-      members: current.members.map((member) => (member.ministry === ministry.name ? { ...member, ministry: "" } : member)),
-      events: current.events.map((event) => (event.ministry === ministry.name ? { ...event, ministry: "Todos" } : event)),
-      audit: [{ id: uid("audit"), action: `Grupo excluido: ${ministry.name}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
-    }));
+    setData((current) => deleteMinistryData(current, ministry, uid));
 
     if (editingMinistryId === ministry.id) {
       cancelMinistryEdit();
@@ -3581,343 +3440,40 @@ export default function Home() {
           ))}
 
           {activeModule === "pastoral" && (
-            <section className="pastoral-layout">
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>{canManagePastoral ? "Novo pedido pastoral" : "Solicitar atendimento ou oracao"}</h2>
-                  <span>{canManagePastoral ? "Fluxo real" : "Pedido pessoal"}</span>
-                </div>
-                <div className="form-grid" data-current-member-tab={memberFormTab}>
-                  <label>
-                    Nome do membro
-                    <input
-                      disabled={!canManagePastoral}
-                      onChange={(event) => setCareForm((form) => ({ ...form, member: event.target.value }))}
-                      placeholder="Ex.: Maria Oliveira"
-                      value={canManagePastoral ? careForm.member : currentMember?.fullName ?? profileName}
-                    />
-                  </label>
-                  <label>
-                    Telefone
-                    <input
-                      disabled={!canManagePastoral}
-                      onChange={(event) => setCareForm((form) => ({ ...form, phone: event.target.value }))}
-                      placeholder="(00) 00000-0000"
-                      value={canManagePastoral ? careForm.phone : currentMember?.phone ?? careForm.phone}
-                    />
-                  </label>
-                  <label>
-                    Categoria
-                    <select
-                      onChange={(event) => setCareForm((form) => ({ ...form, category: event.target.value }))}
-                      value={careForm.category}
-                    >
-                      <option>Aconselhamento</option>
-                      <option>Pedido de visita</option>
-                      <option>Oracao</option>
-                      <option>Familia</option>
-                      <option>Urgente</option>
-                    </select>
-                  </label>
-                  <label className="full">
-                    Descricao do pedido
-                    <textarea
-                      onChange={(event) => setCareForm((form) => ({ ...form, summary: event.target.value }))}
-                      placeholder="Escreva o motivo do atendimento"
-                      value={careForm.summary}
-                    />
-                  </label>
-                  <button className="primary-action" onClick={createCareRequest} type="button">
-                    {canManagePastoral ? "Criar atendimento" : "Enviar pedido"}
-                  </button>
-                </div>
-              </article>
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>{canManagePastoral ? "Fila pastoral" : "Meus pedidos"}</h2>
-                  <span>{filteredCareRequests.length} registros</span>
-                </div>
-                {canManagePastoral && (
-                  <div className="filter-bar">
-                    <label>
-                      Status
-                      <select onChange={(event) => setCareStatusFilter(event.target.value)} value={careStatusFilter}>
-                        <option>Todos</option>
-                        {statusFlow.map((status) => (
-                          <option key={status}>{status}</option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                )}
-                <div className="care-list">
-                  {filteredCareRequests.map((request) => (
-                    <button
-                      className={request.id === selectedRequest?.id ? "care-list-item selected" : "care-list-item"}
-                      key={request.id}
-                      onClick={() => setSelectedRequestId(request.id)}
-                      type="button"
-                    >
-                      <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>
-                        {request.status}
-                      </span>
-                      <strong>{request.member}</strong>
-                      <small>{suggestedNextStep(request)}</small>
-                    </button>
-                  ))}
-                  {!filteredCareRequests.length && <p className="empty-state">Nenhum pedido registrado para este filtro.</p>}
-                </div>
-              </article>
-
-              {canManagePastoral && selectedRequest && <article className="surface care-detail">
-                <div className="panel-heading">
-                  <h2>{selectedRequest.member}</h2>
-                  <span>{selectedRequest.category}</span>
-                </div>
-                <p>{selectedRequest.summary}</p>
-
-                <div className="flow-line" aria-label="Etapas do atendimento">
-                  {statusFlow.map((status) => (
-                    <span
-                      className={statusFlow.indexOf(status) <= statusFlow.indexOf(selectedRequest.status) ? "flow-step done" : "flow-step"}
-                      key={status}
-                    >
-                      {status}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="detail-grid">
-                  <label>
-                    Responsavel
-                    <input
-                      onChange={(event) =>
-                        updateCareRequest(selectedRequest.id, { responsible: event.target.value }, "Responsavel pastoral atualizado")
-                      }
-                      placeholder="Nome do pastor ou lider"
-                      value={selectedRequest.responsible}
-                    />
-                  </label>
-                  <label>
-                    Data
-                    <input
-                      onChange={(event) =>
-                        updateCareRequest(selectedRequest.id, { scheduleDate: event.target.value }, "Data do atendimento atualizada")
-                      }
-                      type="date"
-                      value={selectedRequest.scheduleDate}
-                    />
-                  </label>
-                  <label>
-                    Horario
-                    <input
-                      onChange={(event) =>
-                        updateCareRequest(selectedRequest.id, { scheduleTime: event.target.value }, "Horario do atendimento atualizado")
-                      }
-                      type="time"
-                      value={selectedRequest.scheduleTime}
-                    />
-                  </label>
-                  <label className="full">
-                    Retorno e encaminhamento
-                    <textarea
-                      onChange={(event) =>
-                        updateCareRequest(selectedRequest.id, { returnNote: event.target.value }, "Retorno pastoral registrado")
-                      }
-                      placeholder="Registre conversa, retorno, decisao e proximo passo"
-                      value={selectedRequest.returnNote}
-                    />
-                  </label>
-                </div>
-
-                <div className="detail-actions">
-                  <button
-                    onClick={() =>
-                      updateCareRequest(
-                        selectedRequest.id,
-                        { status: nextStatus(selectedRequest.status) },
-                        `Status alterado para ${nextStatus(selectedRequest.status)}`,
-                      )
-                    }
-                    type="button"
-                  >
-                    Avancar etapa
-                  </button>
-                  <button
-                    className="secondary"
-                    onClick={() =>
-                      updateCareRequest(selectedRequest.id, { status: "Concluido" }, "Atendimento pastoral concluido")
-                    }
-                    type="button"
-                  >
-                    Concluir
-                  </button>
-                </div>
-              </article>}
-            </section>
+            <PastoralPanel
+              canManagePastoral={canManagePastoral}
+              careForm={careForm}
+              careStatusFilter={careStatusFilter}
+              createCareRequest={createCareRequest}
+              currentMemberName={currentMember?.fullName ?? profileName}
+              currentMemberPhone={currentMember?.phone ?? careForm.phone}
+              filteredCareRequests={filteredCareRequests}
+              memberFormTab={memberFormTab}
+              selectedRequest={selectedRequest}
+              setCareForm={setCareForm}
+              setCareStatusFilter={setCareStatusFilter}
+              setSelectedRequestId={setSelectedRequestId}
+              statusFlow={statusFlow}
+              updateCareRequest={updateCareRequest}
+            />
           )}
 
           {activeModule === "mural" && (
-            <section className="content-grid">
-              {canManageMural && <article className="surface">
-                <div className="panel-heading">
-                  <h2>Novo item do mural</h2>
-                  <span>Publicacao</span>
-                </div>
-                <div className="form-grid">
-                  <label className="full">
-                    Titulo
-                    <input
-                      onChange={(event) => setMuralForm((form) => ({ ...form, title: event.target.value }))}
-                      placeholder="Ex.: Encontro de jovens"
-                      value={muralForm.title}
-                    />
-                  </label>
-                  <label>
-                    Categoria
-                    <input
-                      onChange={(event) => setMuralForm((form) => ({ ...form, category: event.target.value }))}
-                      placeholder="Ex.: Jovens"
-                      value={muralForm.category}
-                    />
-                  </label>
-                  <div className="photo-uploader full">
-                    <div className="photo-preview mural-preview">
-                      {muralForm.imageDataUrl ? <img alt="" src={muralForm.imageDataUrl} /> : <span>Banner</span>}
-                    </div>
-                    <label>
-                      Foto, imagem ou banner
-                      <input accept="image/*" onChange={readMuralImage} type="file" />
-                    </label>
-                    {muralImageMessage && <small className="form-hint">{muralImageMessage}</small>}
-                  </div>
-                  <label className="full">
-                    Link da imagem ou banner
-                    <input
-                      onChange={(event) => setMuralForm((form) => ({ ...form, bannerUrl: event.target.value }))}
-                      placeholder="https://..."
-                      type="url"
-                      value={muralForm.bannerUrl}
-                    />
-                  </label>
-                  <label className="full">
-                    Link de rede social
-                    <input
-                      onChange={(event) => setMuralForm((form) => ({ ...form, socialUrl: event.target.value }))}
-                      placeholder="Instagram, Facebook, YouTube ou outro link"
-                      type="url"
-                      value={muralForm.socialUrl}
-                    />
-                  </label>
-                  <label>
-                    Expira em
-                    <input
-                      onChange={(event) => setMuralForm((form) => ({ ...form, expiresAt: event.target.value }))}
-                      type="date"
-                      value={muralForm.expiresAt}
-                    />
-                  </label>
-                  <label className="switch full">
-                    <input
-                      checked={muralForm.published}
-                      onChange={(event) => setMuralForm((form) => ({ ...form, published: event.target.checked }))}
-                      type="checkbox"
-                    />
-                    Publicar agora
-                  </label>
-                  <label className="switch full">
-                    <input
-                      checked={muralForm.featured}
-                      onChange={(event) => setMuralForm((form) => ({ ...form, featured: event.target.checked }))}
-                      type="checkbox"
-                    />
-                    Marcar como destaque
-                  </label>
-                  <button className="primary-action" disabled={!canCreateMuralItem} onClick={createMuralItem} type="button">
-                    Adicionar ao mural
-                  </button>
-                </div>
-              </article>}
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>{canManageMural ? "Administrar mural" : "Mural da igreja"}</h2>
-                  <span>
-                    {canManageMural
-                      ? `${data.mural.filter((item) => item.published).length} publicados`
-                      : `${data.mural.filter((item) => item.published).length + activeNotices.filter((notice) => notice.status === "Publicado").length + data.events.length} itens gerais`}
-                  </span>
-                </div>
-                <div className="table-like">
-                  {filteredMuralItems.map((item) => (
-                    <div className="table-row" key={item.id}>
-                      <div>
-                        {(item.imageDataUrl || item.bannerUrl) && (
-                          <div className="mural-media">
-                            <img alt="" src={item.imageDataUrl || item.bannerUrl} />
-                          </div>
-                        )}
-                        <strong>{item.title}</strong>
-                        <small>{item.category} - expira em {formatDate(item.expiresAt)}</small>
-                        {item.socialUrl && (
-                          <a className="inline-link" href={item.socialUrl} rel="noreferrer" target="_blank">
-                            Abrir rede social
-                          </a>
-                        )}
-                      </div>
-                      {canManageMural && <label className="switch">
-                        Publicado
-                        <input checked={item.published} onChange={() => toggleMural(item.id, "published")} type="checkbox" />
-                      </label>}
-                      {canManageMural && <label className="switch">
-                        Destaque
-                        <input checked={item.featured} onChange={() => toggleMural(item.id, "featured")} type="checkbox" />
-                      </label>}
-                      {canManageMural && <button className="danger-action" onClick={() => deleteMuralItem(item)} type="button">
-                        Excluir
-                      </button>}
-                    </div>
-                  ))}
-                  {!canManageMural && !filteredMuralItems.length && (
-                    <div className="data-row">
-                      <span className="bullet-mark" />
-                      <div>
-                        <strong>Nenhum banner publicado</strong>
-                        <small>Quando a administracao publicar fotos, imagens ou banners, eles aparecem aqui.</small>
-                      </div>
-                    </div>
-                  )}
-                  {!canManageMural && activeNotices.filter((notice) => notice.status === "Publicado").map((notice) => (
-                    <div className="table-row" key={`notice-${notice.id}`}>
-                      <div>
-                        <strong>{notice.title}</strong>
-                        <small>Aviso - {notice.audience} - {notice.channel}</small>
-                        <small>{notice.body}</small>
-                      </div>
-                    </div>
-                  ))}
-                  {!canManageMural && weekEvents.map((event) => (
-                    <div className="table-row" key={`event-${event.id}`}>
-                      <span className="date-box">{formatDate(event.date)}</span>
-                      <div>
-                        <strong>{event.title}</strong>
-                        <small>
-                          Evento - {event.time || "Sem horario"} - {event.ministry} - {event.status}
-                        </small>
-                        <small>{event.location || "Local nao informado"} - {event.responsible || "Sem responsavel"}</small>
-                      </div>
-                    </div>
-                  ))}
-                  {!canManageMural &&
-                    !data.mural.filter((item) => item.published).length &&
-                    !activeNotices.filter((notice) => notice.status === "Publicado").length &&
-                    !weekEvents.length && (
-                      <p className="empty-state">Nenhum aviso, banner ou evento publicado no momento.</p>
-                    )}
-                </div>
-              </article>
-            </section>
+            <MuralPanel
+              activeNotices={activeNotices}
+              canCreateMuralItem={canCreateMuralItem}
+              canManageMural={canManageMural}
+              createMuralItem={createMuralItem}
+              deleteMuralItem={deleteMuralItem}
+              filteredMuralItems={filteredMuralItems}
+              muralForm={muralForm}
+              muralImageMessage={muralImageMessage}
+              readMuralImage={readMuralImage}
+              setMuralForm={setMuralForm}
+              toggleMural={toggleMural}
+              totalPublishedMuralItems={data.mural.filter((item) => item.published).length}
+              weekEvents={weekEvents}
+            />
           )}
 
           {activeModule === "events" && (
@@ -3976,230 +3532,31 @@ export default function Home() {
           )}
 
           {activeModule === "notices" && (
-            <section className="content-grid">
-              {canManageNotices && <article className="surface">
-                <div className="panel-heading">
-                  <h2>Novo comunicado</h2>
-                  <span>Avisos</span>
-                </div>
-                <div className="form-grid">
-                  <label className="full">
-                    Titulo
-                    <input
-                      onChange={(event) => setNoticeForm((form) => ({ ...form, title: event.target.value }))}
-                      placeholder="Ex.: Reuniao de lideres"
-                      value={noticeForm.title}
-                    />
-                  </label>
-                  <label>
-                    Publico
-                    <input
-                      onChange={(event) => setNoticeForm((form) => ({ ...form, audience: event.target.value }))}
-                      placeholder="Ex.: Toda igreja"
-                      value={noticeForm.audience}
-                    />
-                  </label>
-                  <label>
-                    Canal
-                    <select onChange={(event) => setNoticeForm((form) => ({ ...form, channel: event.target.value as Notice["channel"] }))} value={noticeForm.channel}>
-                      <option>Todos</option>
-                      <option>App</option>
-                      <option>WhatsApp</option>
-                      <option>Mural</option>
-                    </select>
-                  </label>
-                  <label>
-                    Status
-                    <select onChange={(event) => setNoticeForm((form) => ({ ...form, status: event.target.value as Notice["status"] }))} value={noticeForm.status}>
-                      <option>Publicado</option>
-                      <option>Rascunho</option>
-                    </select>
-                  </label>
-                  <label>
-                    Tempo no ar
-                    <select
-                      onChange={(event) => {
-                        const retentionDays = Number(event.target.value);
-                        setNoticeForm((form) => ({ ...form, retentionDays, expiresAt: dateAfterDays(retentionDays) }));
-                      }}
-                      value={noticeForm.retentionDays}
-                    >
-                      <option value={3}>3 dias</option>
-                      <option value={4}>4 dias</option>
-                      <option value={7}>7 dias</option>
-                      <option value={15}>15 dias</option>
-                    </select>
-                  </label>
-                  <label>
-                    Excluir em
-                    <input
-                      onChange={(event) => setNoticeForm((form) => ({ ...form, expiresAt: event.target.value }))}
-                      type="date"
-                      value={noticeForm.expiresAt || dateAfterDays(noticeForm.retentionDays)}
-                    />
-                  </label>
-                  <label className="full">
-                    Mensagem
-                    <textarea
-                      onChange={(event) => setNoticeForm((form) => ({ ...form, body: event.target.value }))}
-                      placeholder="Escreva o comunicado"
-                      value={noticeForm.body}
-                    />
-                  </label>
-                  <button className="primary-action" disabled={!canCreateNotice} onClick={createNotice} type="button">
-                    Criar comunicado
-                  </button>
-                </div>
-              </article>}
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Comunicados</h2>
-                  <span>{activeNotices.length} avisos ativos</span>
-                </div>
-                <div className="row-list">
-                  {activeNotices.map((notice) => (
-                    <div className="data-row access-user-row" key={notice.id}>
-                      <span className="bullet-mark" />
-                      <div>
-                        <strong>{notice.title}</strong>
-                        <small>
-                          {notice.status} - {notice.audience} - {notice.channel}
-                        </small>
-                        <small>Expira em {formatDate(notice.expiresAt)} - {notice.retentionDays} dias no ar</small>
-                        <small>{notice.body}</small>
-                      </div>
-                      {canManageNotices && <div className="row-actions">
-                        <button className="danger-action" onClick={() => deleteNotice(notice)} type="button">
-                          Excluir
-                        </button>
-                      </div>}
-                    </div>
-                  ))}
-                </div>
-              </article>
-            </section>
+            <NoticesPanel
+              activeNotices={activeNotices}
+              canCreateNotice={canCreateNotice}
+              canManageNotices={canManageNotices}
+              createNotice={createNotice}
+              deleteNotice={deleteNotice}
+              noticeForm={noticeForm}
+              setNoticeForm={setNoticeForm}
+            />
           )}
 
           {activeModule === "users" && (
-            <section className="content-grid">
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Novo usuario</h2>
-                  <span>Acesso interno</span>
-                </div>
-                <div className="form-grid">
-                  <label className="full">
-                    Selecionar membro cadastrado
-                    <select onChange={(event) => selectAccessMember(event.target.value)} value={selectedAccessMemberId}>
-                      <option value="">Criar acesso sem vincular membro</option>
-                      {data.members.map((member) => (
-                        <option key={member.id} value={member.id}>
-                          {member.fullName} - {member.email || "sem e-mail"} - {member.memberType}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {selectedAccessMember && (
-                    <div className="selected-member-access full">
-                      <div className="member-avatar">
-                        {selectedAccessMember.fullName.slice(0, 1)}
-                      </div>
-                      <div>
-                        <strong>{selectedAccessMember.fullName}</strong>
-                        <small>
-                          {selectedAccessMember.memberType} - {selectedAccessMember.status} - {selectedAccessMember.phone}
-                        </small>
-                        <small>
-                          {selectedAccessExistingUser
-                            ? `Acesso existente: ${selectedAccessExistingUser.role} - sera atualizado`
-                            : "Pronto para virar acesso administrativo"}
-                        </small>
-                      </div>
-                    </div>
-                  )}
-                  <label className="full">
-                    Nome
-                    <input
-                      onChange={(event) => setUserForm((form) => ({ ...form, name: event.target.value }))}
-                      placeholder="Ex.: Lider de jovens"
-                      value={userForm.name}
-                    />
-                  </label>
-                  <label className="full">
-                    E-mail
-                    <input
-                      onChange={(event) => setUserForm((form) => ({ ...form, email: event.target.value }))}
-                      placeholder="usuario@email.com"
-                      type="email"
-                      value={userForm.email}
-                    />
-                  </label>
-                  <label className="full">
-                    {selectedAccessExistingUser ? "Nova senha (opcional)" : "Senha inicial"}
-                    <input
-                      autoComplete="new-password"
-                      minLength={6}
-                      onChange={(event) => setUserForm((form) => ({ ...form, password: event.target.value }))}
-                      placeholder={selectedAccessExistingUser ? "Preencha somente se quiser trocar" : "Minimo de 6 caracteres"}
-                      type="password"
-                      value={userForm.password}
-                    />
-                  </label>
-                  <label>
-                    Perfil
-                    <select onChange={(event) => setUserForm((form) => ({ ...form, role: event.target.value as AccessUser["role"] }))} value={userForm.role}>
-                      <option>Administrador</option>
-                      <option>Lider</option>
-                      <option>Professor</option>
-                      <option>Secretario</option>
-                      <option>Tesoureiro</option>
-                    </select>
-                  </label>
-                  <label>
-                    Status
-                    <select onChange={(event) => setUserForm((form) => ({ ...form, status: event.target.value as AccessUser["status"] }))} value={userForm.status}>
-                      <option>Ativo</option>
-                      <option>Pendente</option>
-                      <option>Bloqueado</option>
-                    </select>
-                  </label>
-                  <button className="primary-action" disabled={!canCreateUser} onClick={createUser} type="button">
-                    {selectedAccessExistingUser ? "Atualizar acesso" : "Adicionar usuario"}
-                  </button>
-                </div>
-              </article>
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Usuarios cadastrados</h2>
-                  <span>{data.users.length} acessos</span>
-                </div>
-                <div className="row-list">
-                  {data.users.map((user) => (
-                    <div className="data-row access-user-row" key={user.id}>
-                      <span className={user.status === "Bloqueado" ? "bullet-mark danger-mark" : "bullet-mark"} />
-                      <div>
-                        <strong>{user.name}</strong>
-                        <small>{user.role} - {user.status} - {user.email}</small>
-                      </div>
-                      <div className="row-actions">
-                        <button
-                          className={user.status === "Bloqueado" ? "secondary" : "danger-action"}
-                          onClick={() => { void updateAccessUserStatus(user, user.status === "Bloqueado" ? "Ativo" : "Bloqueado"); }}
-                          type="button"
-                        >
-                          {user.status === "Bloqueado" ? "Reativar" : "Cancelar acesso"}
-                        </button>
-                        <button className="danger-action" onClick={() => { void deleteAccessUser(user); }} type="button">
-                          Excluir acesso
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            </section>
+            <UsersAccessPanel
+              canCreateUser={canCreateUser}
+              createUser={createUser}
+              data={data}
+              deleteAccessUser={deleteAccessUser}
+              selectedAccessExistingUser={selectedAccessExistingUser}
+              selectedAccessMember={selectedAccessMember}
+              selectedAccessMemberId={selectedAccessMemberId}
+              selectAccessMember={selectAccessMember}
+              setUserForm={setUserForm}
+              updateAccessUserStatus={updateAccessUserStatus}
+              userForm={userForm}
+            />
           )}
 
           {activeModule === "visitors" && (
@@ -4287,118 +3644,17 @@ export default function Home() {
           )}
 
           {activeModule === "ministries" && (
-            <section className="content-grid">
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>{editingMinistryId ? "Editar grupo" : "Novo grupo"}</h2>
-                  <span>{editingMinistryId ? "Atualizando equipe" : "Equipe"}</span>
-                </div>
-                <div className="form-grid">
-                  <label className="full">
-                    Nome do grupo
-                    <input
-                      onChange={(event) => setMinistryForm((form) => ({ ...form, name: event.target.value }))}
-                      placeholder="Ex.: Recepcao"
-                      value={ministryForm.name}
-                    />
-                  </label>
-                  <label>
-                    Lider
-                    <input
-                      onChange={(event) => setMinistryForm((form) => ({ ...form, leader: event.target.value }))}
-                      placeholder="Nome do lider"
-                      value={ministryForm.leader}
-                    />
-                  </label>
-                  <label>
-                    Auxiliar
-                    <input
-                      onChange={(event) => setMinistryForm((form) => ({ ...form, assistant: event.target.value }))}
-                      placeholder="Opcional"
-                      value={ministryForm.assistant}
-                    />
-                  </label>
-                  <label>
-                    Dia de reuniao
-                    <input
-                      onChange={(event) => setMinistryForm((form) => ({ ...form, meetingDay: event.target.value }))}
-                      placeholder="Ex.: Quinta-feira"
-                      value={ministryForm.meetingDay}
-                    />
-                  </label>
-                  <label>
-                    Voluntarios
-                    <input
-                      min={0}
-                      onChange={(event) => setMinistryForm((form) => ({ ...form, volunteers: Number(event.target.value) }))}
-                      type="number"
-                      value={ministryForm.volunteers}
-                    />
-                  </label>
-                  <label>
-                    Status
-                    <select
-                      onChange={(event) => setMinistryForm((form) => ({ ...form, status: event.target.value as MinistryRecord["status"] }))}
-                      value={ministryForm.status}
-                    >
-                      <option>Ativo</option>
-                      <option>Em formacao</option>
-                      <option>Pausado</option>
-                    </select>
-                  </label>
-                  <label className="full">
-                    Observacoes
-                    <textarea
-                      onChange={(event) => setMinistryForm((form) => ({ ...form, notes: event.target.value }))}
-                      placeholder="Escalas, necessidades ou observacoes"
-                      value={ministryForm.notes}
-                    />
-                  </label>
-                  <div className="form-actions full">
-                    <button className="primary-action" disabled={!canCreateMinistry} onClick={createMinistry} type="button">
-                      {editingMinistryId ? "Atualizar grupo" : "Adicionar grupo"}
-                    </button>
-                    {editingMinistryId && (
-                      <button className="secondary" onClick={cancelMinistryEdit} type="button">
-                        Cancelar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </article>
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Grupos</h2>
-                  <span>{data.ministries.length} grupo{data.ministries.length === 1 ? "" : "s"}</span>
-                </div>
-                <div className="row-list">
-                  {data.ministries.map((ministry) => (
-                    <div className="member-record" key={ministry.id}>
-                      <div className="data-row">
-                        <span className="date-box">{ministry.volunteers}</span>
-                        <div>
-                          <strong>{ministry.name}</strong>
-                          <small>
-                            {ministry.status} - Lider: {ministry.leader}
-                            {ministry.assistant ? ` - Auxiliar: ${ministry.assistant}` : ""}
-                          </small>
-                          <small>{ministry.meetingDay || "Reuniao nao definida"} - {ministry.notes || "Sem observacoes"}</small>
-                        </div>
-                      </div>
-                      <div className="record-actions">
-                        <button className="secondary" onClick={() => editMinistry(ministry)} type="button">
-                          Editar grupo
-                        </button>
-                        <button className="danger-action" onClick={() => deleteMinistry(ministry)} type="button">
-                          Excluir grupo
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            </section>
+            <GroupsPanel
+              canCreateMinistry={canCreateMinistry}
+              cancelMinistryEdit={cancelMinistryEdit}
+              createMinistry={createMinistry}
+              deleteMinistry={deleteMinistry}
+              editMinistry={editMinistry}
+              editingMinistryId={editingMinistryId}
+              ministries={data.ministries}
+              ministryForm={ministryForm}
+              setMinistryForm={setMinistryForm}
+            />
           )}
 
           {activeModule === "school" && (
@@ -4464,328 +3720,56 @@ export default function Home() {
           )}
 
           {activeModule === "finance" && (
-            <section className="content-grid">
-              {canManageFinance && (
-                <article className={editingTransactionId ? "surface editing-surface" : "surface"}>
-                  <div className="panel-heading">
-                    <h2>{editingTransactionId ? "Editar lancamento" : "Novo lancamento"}</h2>
-                    <span>Tesouraria inicial</span>
-                  </div>
-                  <div className="form-grid">
-                    <label>
-                      Data
-                      <input onChange={(event) => setTransactionForm((form) => ({ ...form, date: event.target.value }))} type="date" value={transactionForm.date} />
-                    </label>
-                    <label>
-                      Tipo
-                      <select onChange={(event) => setTransactionForm((form) => ({ ...form, type: event.target.value as TransactionRecord["type"] }))} value={transactionForm.type}>
-                        <option>Entrada</option>
-                        <option>Saida</option>
-                        <option>Dizimo</option>
-                        <option>Oferta</option>
-                      </select>
-                    </label>
-                    <label>
-                      Categoria
-                      <input onChange={(event) => setTransactionForm((form) => ({ ...form, category: event.target.value }))} placeholder="Ex.: Culto, manutencao, missao" value={transactionForm.category} />
-                    </label>
-                    <label>
-                      Valor
-                      <input min={0} onChange={(event) => setTransactionForm((form) => ({ ...form, amount: Number(event.target.value) }))} step="0.01" type="number" value={transactionForm.amount} />
-                    </label>
-                    <label className="full">
-                      Descricao
-                      <input onChange={(event) => setTransactionForm((form) => ({ ...form, description: event.target.value }))} placeholder="Resumo do lancamento" value={transactionForm.description} />
-                    </label>
-                    <label>
-                      Metodo
-                      <select onChange={(event) => setTransactionForm((form) => ({ ...form, method: event.target.value }))} value={transactionForm.method}>
-                        <option>Pix</option>
-                        <option>Dinheiro</option>
-                        <option>Cartao</option>
-                        <option>Transferencia</option>
-                      </select>
-                    </label>
-                    <label>
-                      Status
-                      <select onChange={(event) => setTransactionForm((form) => ({ ...form, status: event.target.value as TransactionRecord["status"] }))} value={transactionForm.status}>
-                        <option>Pendente</option>
-                        <option>Confirmado</option>
-                      </select>
-                    </label>
-                    <label>
-                      Membro vinculado
-                      <select onChange={(event) => setTransactionForm((form) => ({ ...form, memberName: event.target.value }))} value={transactionForm.memberName}>
-                        <option value="">Nao vinculado</option>
-                        {data.members.map((member) => (
-                          <option key={member.id} value={member.fullName}>
-                            {member.fullName}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="full">
-                      Observacoes
-                      <textarea onChange={(event) => setTransactionForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Observacoes internas da tesouraria" value={transactionForm.notes} />
-                    </label>
-                    <div className="form-actions full">
-                      <button className="primary-action" disabled={!canCreateTransaction} onClick={createTransaction} type="button">
-                        {editingTransactionId ? "Atualizar lancamento" : "Salvar lancamento"}
-                      </button>
-                      {editingTransactionId && (
-                        <button className="secondary" onClick={() => { setTransactionForm(blankTransaction); setEditingTransactionId(null); }} type="button">
-                          Cancelar
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </article>
-              )}
-
-              <article className="surface wide">
-                <div className="panel-heading">
-                  <h2>Resumo financeiro</h2>
-                  <span>{filteredTransactions.length} lancamentos</span>
-                </div>
-                <div className="stats-row">
-                  <div className="stat-card">
-                    <small>Entradas</small>
-                    <strong>{data.transactions.filter((item) => item.type !== "Saida").reduce((sum, item) => sum + item.amount, 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>
-                  </div>
-                  <div className="stat-card">
-                    <small>Saidas</small>
-                    <strong>{data.transactions.filter((item) => item.type === "Saida").reduce((sum, item) => sum + item.amount, 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>
-                  </div>
-                </div>
-                <div className="filter-bar">
-                  <label>
-                    Tipo
-                    <select onChange={(event) => setFinanceTypeFilter(event.target.value)} value={financeTypeFilter}>
-                      <option>Todos</option>
-                      <option>Entrada</option>
-                      <option>Saida</option>
-                      <option>Dizimo</option>
-                      <option>Oferta</option>
-                    </select>
-                  </label>
-                  <button className="secondary" onClick={() => exportReport("finance", "pdf")} type="button">
-                    PDF
-                  </button>
-                  <button className="secondary" onClick={() => exportReport("finance", "csv")} type="button">
-                    Excel
-                  </button>
-                </div>
-                <div className="row-list">
-                  {filteredTransactions.map((transaction) => (
-                    <div className="data-row access-user-row" key={transaction.id}>
-                      <span className="date-box">{formatDate(transaction.date)}</span>
-                      <div>
-                        <strong>{transaction.description}</strong>
-                        <small>{transaction.type} - {transaction.category} - {transaction.status}</small>
-                        <small>{transaction.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} - {transaction.method}</small>
-                      </div>
-                      {canManageFinance && (
-                        <div className="row-actions">
-                          <button className="secondary" onClick={() => editTransaction(transaction)} type="button">
-                            Editar
-                          </button>
-                          <button className="danger-action" onClick={() => deleteTransaction(transaction)} type="button">
-                            Excluir
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {!filteredTransactions.length && <p className="empty-state">Nenhum lancamento encontrado para este filtro.</p>}
-                </div>
-              </article>
-            </section>
+            <FinancePanel
+              canCreateTransaction={canCreateTransaction}
+              canManageFinance={canManageFinance}
+              createTransaction={createTransaction}
+              deleteTransaction={deleteTransaction}
+              editTransaction={editTransaction}
+              editingTransactionId={editingTransactionId}
+              exportReport={exportReport}
+              filteredTransactions={filteredTransactions}
+              financeTypeFilter={financeTypeFilter}
+              members={data.members}
+              setEditingTransactionId={setEditingTransactionId}
+              setFinanceTypeFilter={setFinanceTypeFilter}
+              setTransactionForm={setTransactionForm}
+              transactionForm={transactionForm}
+              transactions={data.transactions}
+            />
           )}
 
           {activeModule === "assets" && (
-            <section className="content-grid">
-              {canManageAssets && (
-                <article className={editingAssetId ? "surface editing-surface" : "surface"}>
-                  <div className="panel-heading">
-                    <h2>{editingAssetId ? "Editar patrimonio" : "Novo patrimonio"}</h2>
-                    <span>Equipamentos e bens</span>
-                  </div>
-                  <div className="form-grid">
-                    <label className="full">
-                      Item
-                      <input onChange={(event) => setAssetForm((form) => ({ ...form, name: event.target.value }))} placeholder="Ex.: Teclado, caixa de som, cadeira" value={assetForm.name} />
-                    </label>
-                    <label>
-                      Categoria
-                      <input onChange={(event) => setAssetForm((form) => ({ ...form, category: event.target.value }))} placeholder="Som, musica, moveis" value={assetForm.category} />
-                    </label>
-                    <label>
-                      Local
-                      <input onChange={(event) => setAssetForm((form) => ({ ...form, location: event.target.value }))} placeholder="Templo, sala Kids, secretaria" value={assetForm.location} />
-                    </label>
-                    <label>
-                      Responsavel
-                      <input onChange={(event) => setAssetForm((form) => ({ ...form, responsible: event.target.value }))} placeholder="Pessoa ou equipe" value={assetForm.responsible} />
-                    </label>
-                    <label>
-                      Estado
-                      <select onChange={(event) => setAssetForm((form) => ({ ...form, condition: event.target.value as AssetRecord["condition"] }))} value={assetForm.condition}>
-                        <option>Novo</option>
-                        <option>Bom</option>
-                        <option>Manutencao</option>
-                        <option>Baixado</option>
-                      </select>
-                    </label>
-                    <label>
-                      Ultima manutencao
-                      <input onChange={(event) => setAssetForm((form) => ({ ...form, lastMaintenance: event.target.value }))} type="date" value={assetForm.lastMaintenance} />
-                    </label>
-                    <label className="full">
-                      Observacoes
-                      <textarea onChange={(event) => setAssetForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Estado de conservacao, manutencao, compra ou observacao" value={assetForm.notes} />
-                    </label>
-                    <div className="form-actions full">
-                      <button className="primary-action" disabled={!canCreateAsset} onClick={createAsset} type="button">
-                        {editingAssetId ? "Atualizar patrimonio" : "Salvar patrimonio"}
-                      </button>
-                      {editingAssetId && (
-                        <button className="secondary" onClick={() => { setAssetForm(blankAsset); setEditingAssetId(null); }} type="button">
-                          Cancelar
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </article>
-              )}
-
-              <article className="surface wide">
-                <div className="panel-heading">
-                  <h2>Patrimonio cadastrado</h2>
-                  <span>{filteredAssets.length} itens</span>
-                </div>
-                <div className="filter-bar">
-                  <label>
-                    Estado
-                    <select onChange={(event) => setAssetConditionFilter(event.target.value)} value={assetConditionFilter}>
-                      <option>Todos</option>
-                      <option>Novo</option>
-                      <option>Bom</option>
-                      <option>Manutencao</option>
-                      <option>Baixado</option>
-                    </select>
-                  </label>
-                  <button className="secondary" onClick={() => exportReport("assets", "pdf")} type="button">
-                    PDF
-                  </button>
-                  <button className="secondary" onClick={() => exportReport("assets", "csv")} type="button">
-                    Excel
-                  </button>
-                </div>
-                <div className="row-list">
-                  {filteredAssets.map((asset) => (
-                    <div className="data-row access-user-row" key={asset.id}>
-                      <span className="status-chip">{asset.condition}</span>
-                      <div>
-                        <strong>{asset.name}</strong>
-                        <small>{asset.category} - {asset.location || "Sem local"} - {asset.responsible || "Sem responsavel"}</small>
-                        <small>{asset.lastMaintenance ? `Manutencao: ${formatDate(asset.lastMaintenance)}` : "Sem manutencao registrada"}</small>
-                        {asset.notes && <small>{asset.notes}</small>}
-                      </div>
-                      {canManageAssets && (
-                        <div className="row-actions">
-                          <button className="secondary" onClick={() => editAsset(asset)} type="button">
-                            Editar
-                          </button>
-                          <button className="danger-action" onClick={() => deleteAsset(asset)} type="button">
-                            Excluir
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {!filteredAssets.length && <p className="empty-state">Nenhum item de patrimonio encontrado para este filtro.</p>}
-                </div>
-              </article>
-            </section>
+            <AssetsPanel
+              assetConditionFilter={assetConditionFilter}
+              assetForm={assetForm}
+              canCreateAsset={canCreateAsset}
+              canManageAssets={canManageAssets}
+              createAsset={createAsset}
+              deleteAsset={deleteAsset}
+              editAsset={editAsset}
+              editingAssetId={editingAssetId}
+              exportReport={exportReport}
+              filteredAssets={filteredAssets}
+              setAssetConditionFilter={setAssetConditionFilter}
+              setAssetForm={setAssetForm}
+              setEditingAssetId={setEditingAssetId}
+            />
           )}
 
           {activeModule === "devotional" && (
-            <section className="content-grid">
-              {canManageDevotional && (
-                <article className={editingDevotionalId ? "surface editing-surface" : "surface"}>
-                  <div className="panel-heading">
-                    <h2>{editingDevotionalId ? "Editar devocional" : "Nova palavra"}</h2>
-                    <span>Painel do membro</span>
-                  </div>
-                  <div className="form-grid">
-                    <label className="full">
-                      Titulo
-                      <input onChange={(event) => setDevotionalForm((form) => ({ ...form, title: event.target.value }))} placeholder="Ex.: Palavra do dia" value={devotionalForm.title} />
-                    </label>
-                    <label>
-                      Versiculo
-                      <input onChange={(event) => setDevotionalForm((form) => ({ ...form, verse: event.target.value }))} placeholder="Ex.: Salmo 23:1" value={devotionalForm.verse} />
-                    </label>
-                    <label>
-                      Publicacao
-                      <input onChange={(event) => setDevotionalForm((form) => ({ ...form, publishedAt: event.target.value }))} type="date" value={devotionalForm.publishedAt} />
-                    </label>
-                    <label>
-                      Status
-                      <select onChange={(event) => setDevotionalForm((form) => ({ ...form, status: event.target.value as DevotionalRecord["status"] }))} value={devotionalForm.status}>
-                        <option>Publicado</option>
-                        <option>Rascunho</option>
-                        <option>Arquivado</option>
-                      </select>
-                    </label>
-                    <label className="full">
-                      Mensagem
-                      <textarea onChange={(event) => setDevotionalForm((form) => ({ ...form, body: event.target.value }))} placeholder="Texto que aparece no painel do membro" value={devotionalForm.body} />
-                    </label>
-                    <div className="form-actions full">
-                      <button className="primary-action" disabled={!canCreateDevotional} onClick={createDevotional} type="button">
-                        {editingDevotionalId ? "Atualizar palavra" : "Salvar palavra"}
-                      </button>
-                      {editingDevotionalId && (
-                        <button className="secondary" onClick={() => { setDevotionalForm(blankDevotional); setEditingDevotionalId(null); }} type="button">
-                          Cancelar
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </article>
-              )}
-
-              <article className="surface wide">
-                <div className="panel-heading">
-                  <h2>Devocionais</h2>
-                  <span>{data.devotionals.length} registros</span>
-                </div>
-                <div className="row-list">
-                  {data.devotionals.map((devotional) => (
-                    <div className="data-row access-user-row" key={devotional.id}>
-                      <span className="date-box">{formatDate(devotional.publishedAt)}</span>
-                      <div>
-                        <strong>{devotional.title}</strong>
-                        <small>{devotional.verse || "Sem versiculo"} - {devotional.status}</small>
-                        <small>{devotional.body}</small>
-                      </div>
-                      {canManageDevotional && (
-                        <div className="row-actions">
-                          <button className="secondary" onClick={() => editDevotional(devotional)} type="button">
-                            Editar
-                          </button>
-                          <button className="danger-action" onClick={() => deleteDevotional(devotional)} type="button">
-                            Excluir
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {!data.devotionals.length && <p className="empty-state">Nenhuma palavra cadastrada ainda.</p>}
-                </div>
-              </article>
-            </section>
+            <DevotionalPanel
+              canCreateDevotional={canCreateDevotional}
+              canManageDevotional={canManageDevotional}
+              createDevotional={createDevotional}
+              deleteDevotional={deleteDevotional}
+              devotionalForm={devotionalForm}
+              devotionals={data.devotionals}
+              editDevotional={editDevotional}
+              editingDevotionalId={editingDevotionalId}
+              setDevotionalForm={setDevotionalForm}
+              setEditingDevotionalId={setEditingDevotionalId}
+            />
           )}
 
           {activeModule === "reports" && (
@@ -4803,64 +3787,16 @@ export default function Home() {
           )}
 
           {activeModule === "settings" && (
-            <section className="content-grid">
-              <article className="surface wide">
-                <div className="panel-heading">
-                  <h2>Backup e recuperacao local</h2>
-                  <span>JSON validado</span>
-                </div>
-                <p className="body-copy">
-                  Esta copia roda neste computador. O backup abaixo representa os dados locais do navegador e ajuda a
-                  validar a estrutura antes de conectar novamente ao Supabase.
-                </p>
-                <div className="backup-box">
-                  <strong>Cobertura do backup</strong>
-                  <span>100%</span>
-                  <small>
-                    {data.members.length} membros, {monthlyBirthdays.length} aniversariantes no mes, {data.kids.length} criancas no Kids,
-                    {" "}
-                    {data.visitors.length} visitantes, {data.schedules.length} escalas,
-                    {" "}
-                    {monthlyKidsBirthdays.length} aniversariantes Kids no mes, {data.users.length} usuarios,
-                    {" "}
-                    {data.careRequests.length} atendimentos,
-                    {" "}
-                    {data.events.length} eventos, {data.schoolClasses.length} classes EBD,
-                    {" "}
-                    {data.discipleshipClasses.length} classes Discipulado, {activeNotices.length} comunicados ativos,
-                    {" "}
-                    {data.mural.length} itens de mural, {data.transactions.length} lancamentos financeiros,
-                    {" "}
-                    {data.assets.length} itens de patrimonio, {data.devotionals.length} devocionais e {data.audit.length} auditorias.
-                  </small>
-                </div>
-                <textarea className="backup-json" readOnly value={JSON.stringify(data, null, 2)} />
-                <div className="detail-actions">
-                  <button onClick={() => log("Backup local gerado")} type="button">
-                    Registrar backup
-                  </button>
-                  <button className="secondary" onClick={resetLocalData} type="button">
-                    Restaurar dados exemplo
-                  </button>
-                </div>
-              </article>
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Auditoria</h2>
-                  <span>{data.audit.length} eventos</span>
-                </div>
-                <div className="audit-list">
-                  {data.audit.map((item) => (
-                    <div className="audit-item" key={item.id}>
-                      <strong>{item.action}</strong>
-                      <small>{formatDateTime(item.when)}</small>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            </section>
+            <SettingsPanel
+              activeNotices={activeNotices}
+              data={data}
+              log={log}
+              monthlyBirthdays={monthlyBirthdays}
+              monthlyKidsBirthdays={monthlyKidsBirthdays}
+              resetLocalData={resetLocalData}
+            />
           )}
+
         </section>
       </div>
     </main>

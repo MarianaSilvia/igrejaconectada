@@ -1,11 +1,32 @@
-import { currentDateKey, eventDate } from "./app-helpers";
-import type { AppData, ChurchEvent, MemberRecord, ScheduleRecord, VisitorRecord } from "./types";
+import { currentDateKey, eventDate, isExpiredDate } from "./app-helpers";
+import type {
+  AccessUser,
+  AppData,
+  AssetRecord,
+  CareRequest,
+  ChurchEvent,
+  DevotionalRecord,
+  MemberRecord,
+  MinistryRecord,
+  MuralItem,
+  Notice,
+  ScheduleRecord,
+  TransactionRecord,
+  VisitorRecord,
+} from "./types";
 
 type IdFactory = (prefix: string) => string;
 type MemberForm = Omit<MemberRecord, "id">;
 type VisitorForm = Omit<VisitorRecord, "id">;
 type EventForm = Omit<ChurchEvent, "id">;
 type ScheduleForm = Omit<ScheduleRecord, "id">;
+type CareForm = Omit<CareRequest, "id" | "createdAt" | "updatedAt">;
+type MuralForm = Omit<MuralItem, "id">;
+type NoticeForm = Omit<Notice, "id">;
+type MinistryForm = Omit<MinistryRecord, "id">;
+type TransactionForm = Omit<TransactionRecord, "id">;
+type AssetForm = Omit<AssetRecord, "id">;
+type DevotionalForm = Omit<DevotionalRecord, "id">;
 
 function auditItem(createId: IdFactory, action: string, when = new Date().toISOString()) {
   return { id: createId("audit"), action, when };
@@ -166,5 +187,236 @@ export function deleteScheduleData(data: AppData, schedule: ScheduleRecord, crea
     ...data,
     schedules: data.schedules.filter((item) => item.id !== schedule.id),
     audit: [auditItem(createId, `Escala excluida: ${schedule.serviceType}`), ...data.audit].slice(0, 12),
+  };
+}
+
+export function createCareRequestData(
+  data: AppData,
+  form: CareForm,
+  memberName: string,
+  memberPhone: string,
+  createId: IdFactory,
+): { data: AppData; request: CareRequest } {
+  const now = new Date().toISOString();
+  const request: CareRequest = {
+    ...form,
+    member: memberName,
+    phone: memberPhone,
+    id: createId("care"),
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  return {
+    request,
+    data: {
+      ...data,
+      careRequests: [request, ...data.careRequests],
+      audit: [auditItem(createId, `Pedido pastoral criado para ${request.member}`, now), ...data.audit].slice(0, 12),
+    },
+  };
+}
+
+export function updateCareRequestData(data: AppData, id: string, patch: Partial<CareRequest>, action: string, createId: IdFactory): AppData {
+  const now = new Date().toISOString();
+  return {
+    ...data,
+    careRequests: data.careRequests.map((request) => (request.id === id ? { ...request, ...patch, updatedAt: now } : request)),
+    audit: [auditItem(createId, action, now), ...data.audit].slice(0, 12),
+  };
+}
+
+export function upsertMuralItemData(data: AppData, form: MuralForm, createId: IdFactory): AppData {
+  const item: MuralItem = { ...form, id: createId("mural") };
+  return {
+    ...data,
+    mural: [item, ...data.mural],
+    audit: [auditItem(createId, `Item publicado no mural: ${item.title}`), ...data.audit].slice(0, 12),
+  };
+}
+
+export function toggleMuralItemData(data: AppData, id: string, field: "published" | "featured", createId: IdFactory): AppData {
+  return {
+    ...data,
+    mural: data.mural.map((item) => (item.id === id ? { ...item, [field]: !item[field] } : item)),
+    audit: [auditItem(createId, "Mural atualizado"), ...data.audit].slice(0, 12),
+  };
+}
+
+export function deleteMuralItemData(data: AppData, item: MuralItem, createId: IdFactory): AppData {
+  return {
+    ...data,
+    mural: data.mural.filter((muralItem) => muralItem.id !== item.id),
+    audit: [auditItem(createId, `Item excluido do mural: ${item.title}`), ...data.audit].slice(0, 12),
+  };
+}
+
+export function createNoticeData(data: AppData, form: NoticeForm, expiresAt: string, createId: IdFactory): AppData {
+  const notice: Notice = { ...form, expiresAt, id: createId("notice") };
+  return {
+    ...data,
+    notices: [notice, ...data.notices.filter((item) => !isExpiredDate(item.expiresAt))],
+    audit: [auditItem(createId, `Comunicado criado: ${notice.title}`), ...data.audit].slice(0, 12),
+  };
+}
+
+export function deleteNoticeData(data: AppData, notice: Notice, createId: IdFactory): AppData {
+  return {
+    ...data,
+    notices: data.notices.filter((item) => item.id !== notice.id),
+    audit: [auditItem(createId, `Aviso excluido: ${notice.title}`), ...data.audit].slice(0, 12),
+  };
+}
+
+export function upsertMinistryData(
+  data: AppData,
+  form: MinistryForm,
+  editingMinistryId: string | null,
+  createId: IdFactory,
+): AppData {
+  const previousMinistry = editingMinistryId ? data.ministries.find((ministry) => ministry.id === editingMinistryId) : undefined;
+  const ministry: MinistryRecord = { ...form, id: editingMinistryId ?? createId("ministry") };
+
+  return {
+    ...data,
+    ministries: editingMinistryId ? data.ministries.map((item) => (item.id === editingMinistryId ? ministry : item)) : [ministry, ...data.ministries],
+    members:
+      previousMinistry?.name && previousMinistry.name !== ministry.name
+        ? data.members.map((member) => (member.ministry === previousMinistry.name ? { ...member, ministry: ministry.name } : member))
+        : data.members,
+    events:
+      previousMinistry?.name && previousMinistry.name !== ministry.name
+        ? data.events.map((event) => (event.ministry === previousMinistry.name ? { ...event, ministry: ministry.name } : event))
+        : data.events,
+    audit: [
+      auditItem(createId, editingMinistryId ? `Grupo atualizado: ${ministry.name}` : `Grupo cadastrado: ${ministry.name}`),
+      ...data.audit,
+    ].slice(0, 12),
+  };
+}
+
+export function deleteMinistryData(data: AppData, ministry: MinistryRecord, createId: IdFactory): AppData {
+  return {
+    ...data,
+    ministries: data.ministries.filter((item) => item.id !== ministry.id),
+    members: data.members.map((member) => (member.ministry === ministry.name ? { ...member, ministry: "" } : member)),
+    events: data.events.map((event) => (event.ministry === ministry.name ? { ...event, ministry: "Todos" } : event)),
+    audit: [auditItem(createId, `Grupo excluido: ${ministry.name}`), ...data.audit].slice(0, 12),
+  };
+}
+
+export function upsertTransactionData(
+  data: AppData,
+  form: TransactionForm,
+  editingTransactionId: string | null,
+  createId: IdFactory,
+): AppData {
+  const transaction: TransactionRecord = { ...form, id: editingTransactionId ?? createId("transaction"), amount: Number(form.amount || 0) };
+  return {
+    ...data,
+    transactions: editingTransactionId
+      ? data.transactions.map((item) => (item.id === editingTransactionId ? transaction : item))
+      : [transaction, ...data.transactions],
+    audit: [
+      auditItem(
+        createId,
+        editingTransactionId ? `Lancamento financeiro atualizado: ${transaction.description}` : `Lancamento financeiro criado: ${transaction.description}`,
+      ),
+      ...data.audit,
+    ].slice(0, 12),
+  };
+}
+
+export function deleteTransactionData(data: AppData, transaction: TransactionRecord, createId: IdFactory): AppData {
+  return {
+    ...data,
+    transactions: data.transactions.filter((item) => item.id !== transaction.id),
+    audit: [auditItem(createId, `Lancamento financeiro excluido: ${transaction.description}`), ...data.audit].slice(0, 12),
+  };
+}
+
+export function upsertAssetData(data: AppData, form: AssetForm, editingAssetId: string | null, createId: IdFactory): AppData {
+  const asset: AssetRecord = { ...form, id: editingAssetId ?? createId("asset") };
+  return {
+    ...data,
+    assets: editingAssetId ? data.assets.map((item) => (item.id === editingAssetId ? asset : item)) : [asset, ...data.assets],
+    audit: [auditItem(createId, editingAssetId ? `Patrimonio atualizado: ${asset.name}` : `Patrimonio cadastrado: ${asset.name}`), ...data.audit].slice(0, 12),
+  };
+}
+
+export function deleteAssetData(data: AppData, asset: AssetRecord, createId: IdFactory): AppData {
+  return {
+    ...data,
+    assets: data.assets.filter((item) => item.id !== asset.id),
+    audit: [auditItem(createId, `Patrimonio excluido: ${asset.name}`), ...data.audit].slice(0, 12),
+  };
+}
+
+export function upsertDevotionalData(
+  data: AppData,
+  form: DevotionalForm,
+  editingDevotionalId: string | null,
+  createId: IdFactory,
+): AppData {
+  const devotional: DevotionalRecord = {
+    ...form,
+    id: editingDevotionalId ?? createId("devotional"),
+    publishedAt: form.publishedAt || currentDateKey(),
+  };
+  return {
+    ...data,
+    devotionals: editingDevotionalId
+      ? data.devotionals.map((item) => (item.id === editingDevotionalId ? devotional : item))
+      : [devotional, ...data.devotionals],
+    audit: [
+      auditItem(createId, editingDevotionalId ? `Devocional atualizado: ${devotional.title}` : `Devocional cadastrado: ${devotional.title}`),
+      ...data.audit,
+    ].slice(0, 12),
+  };
+}
+
+export function deleteDevotionalData(data: AppData, devotional: DevotionalRecord, createId: IdFactory): AppData {
+  return {
+    ...data,
+    devotionals: data.devotionals.filter((item) => item.id !== devotional.id),
+    audit: [auditItem(createId, `Devocional excluido: ${devotional.title}`), ...data.audit].slice(0, 12),
+  };
+}
+
+export function upsertAccessUserData(
+  data: AppData,
+  user: AccessUser,
+  selectedAccessMemberId: string,
+  isUpdatingAccess: boolean,
+  createId: IdFactory,
+): AppData {
+  return {
+    ...data,
+    users: isUpdatingAccess ? data.users.map((item) => (item.id === user.id ? user : item)) : [user, ...data.users],
+    members: selectedAccessMemberId
+      ? data.members.map((member) =>
+          member.id === selectedAccessMemberId ? { ...member, email: user.email, authUserId: user.id, role: user.role } : member,
+        )
+      : data.members,
+    audit: [auditItem(createId, isUpdatingAccess ? `Acesso promovido: ${user.name}` : `Usuario criado para ${user.name}`), ...data.audit].slice(0, 12),
+  };
+}
+
+export function updateAccessUserStatusData(data: AppData, user: AccessUser, status: AccessUser["status"], createId: IdFactory): AppData {
+  return {
+    ...data,
+    users: data.users.map((item) => (item.id === user.id ? { ...item, status } : item)),
+    audit: [auditItem(createId, `Acesso ${status.toLowerCase()}: ${user.name}`), ...data.audit].slice(0, 12),
+  };
+}
+
+export function deleteAccessUserData(data: AppData, user: AccessUser, createId: IdFactory): AppData {
+  return {
+    ...data,
+    users: data.users.filter((item) => item.id !== user.id),
+    members: data.members.map((member) =>
+      member.authUserId === user.id || member.email.toLowerCase() === user.email.toLowerCase() ? { ...member, authUserId: "" } : member,
+    ),
+    audit: [auditItem(createId, `Acesso excluido: ${user.name}`), ...data.audit].slice(0, 12),
   };
 }
