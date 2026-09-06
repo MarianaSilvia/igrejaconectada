@@ -19,17 +19,37 @@ import {
   normalizeEmail,
   normalizeSearchText,
   normalizeWhatsappPhone,
-  replaceLegacyMinistryText,
   sortEventsByDate,
   weekRangeWithOffset,
   whatsappUrl,
 } from "./app-helpers";
+import {
+  blankAsset,
+  blankCare,
+  blankDevotional,
+  blankEvent,
+  blankKid,
+  blankMember,
+  blankMemberCredential,
+  blankMinistry,
+  blankMuralItem,
+  blankNotice,
+  blankSchedule,
+  blankSchoolNotice,
+  blankTransaction,
+  blankUser,
+  blankVisitor,
+  createLocalBackupData,
+  hasPersistedPayload,
+  normalizeAppData as normalizeAppDataWithDefaults,
+  normalizeMessageTemplate,
+} from "./data-normalization";
 import { accessRoleFromMetadata, canAccessModule, canManageModule, isAdministrativeRole, modules, type AccessRole, type ModuleKey } from "./permissions";
+import { downloadCsv, escapeHtml, printHtmlReport } from "./report-helpers";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
 import type {
   AccessMode,
   AccessUser,
-  AccessUserForm,
   AppData,
   AssetRecord,
   AttendanceArea,
@@ -479,99 +499,6 @@ const initialData: AppData = {
   notificationReadIds: [],
 };
 
-const blankCare: Omit<CareRequest, "id" | "createdAt" | "updatedAt"> = {
-  member: "",
-  phone: "",
-  category: "Aconselhamento",
-  status: "Pendente",
-  responsible: "",
-  scheduleDate: "",
-  scheduleTime: "",
-  summary: "",
-  returnNote: "",
-};
-
-const blankEvent: Omit<ChurchEvent, "id"> = {
-  title: "",
-  date: "",
-  time: "",
-  ministry: "Todos",
-  location: "",
-  responsible: "",
-  recurrence: "Unico",
-  status: "Programado",
-};
-
-const blankNotice: Omit<Notice, "id"> = {
-  title: "",
-  body: "",
-  status: "Publicado",
-  audience: "Toda igreja",
-  channel: "Todos",
-  retentionDays: 3,
-  expiresAt: "",
-};
-
-const blankMinistry: Omit<MinistryRecord, "id"> = {
-  name: "",
-  leader: "",
-  assistant: "",
-  meetingDay: "",
-  volunteers: 0,
-  status: "Ativo",
-  notes: "",
-};
-
-const blankUser: AccessUserForm = {
-  name: "",
-  email: "",
-  password: "",
-  role: "Lider",
-  status: "Pendente",
-};
-
-const blankMember: Omit<MemberRecord, "id"> = {
-  authUserId: "",
-  fullName: "",
-  fatherName: "",
-  motherName: "",
-  cpf: "",
-  phone: "",
-  email: "",
-  status: "Visitante",
-  memberType: "Visitante",
-  role: "",
-  ministry: "",
-  schoolClassId: "",
-  discipleshipClassId: "",
-  photoDataUrl: "",
-  birthDate: "",
-  maritalStatus: "Solteiro(a)",
-  address: "",
-  congregation: "",
-  previousChurch: "",
-  conversionDate: "",
-  baptismDate: "",
-  registrationSource: "",
-  pastoralStatus: "Sem acompanhamento definido",
-  memberVisibleNotes: "",
-  waterBaptized: false,
-  holySpiritBaptized: false,
-  joinedAt: "",
-  notes: "",
-};
-
-const blankVisitor: Omit<VisitorRecord, "id"> = {
-  fullName: "",
-  phone: "",
-  firstVisitDate: "",
-  returnDate: "",
-  invitedBy: "",
-  contactMade: false,
-  integrationStatus: "Primeira visita",
-  notes: "",
-};
-
 const memberRoleOptions = [
   "Professor",
   "Dirigente",
@@ -598,96 +525,6 @@ function memberRolesFromText(value: string) {
 function memberRolesToText(values: string[]) {
   return values.map((role) => role.trim()).filter(Boolean).join(", ");
 }
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-const blankMemberCredential = {
-  memberId: "",
-  email: "",
-  password: "",
-};
-
-const blankKid: Omit<KidRecord, "id"> = {
-  childName: "",
-  birthDate: "",
-  ageGroup: "Kids",
-  className: "",
-  photoDataUrl: "",
-  allergies: "",
-  notes: "",
-  guardianName: "",
-  guardianPhone: "",
-  guardianEmail: "",
-  relationship: "Responsavel",
-  authorizedPickup: "",
-  consentImage: false,
-  joinedAt: "",
-};
-
-const blankSchedule: Omit<ScheduleRecord, "id"> = {
-  date: "",
-  serviceType: "",
-  group: "",
-  functionName: "",
-  assignedTo: "",
-  phone: "",
-  confirmationStatus: "Pendente",
-  notes: "",
-};
-
-const blankTransaction: Omit<TransactionRecord, "id"> = {
-  date: "",
-  type: "Entrada",
-  category: "",
-  description: "",
-  amount: 0,
-  method: "Pix",
-  status: "Pendente",
-  memberName: "",
-  notes: "",
-};
-
-const blankAsset: Omit<AssetRecord, "id"> = {
-  name: "",
-  category: "",
-  location: "",
-  responsible: "",
-  condition: "Bom",
-  lastMaintenance: "",
-  notes: "",
-};
-
-const blankDevotional: Omit<DevotionalRecord, "id"> = {
-  title: "",
-  verse: "",
-  body: "",
-  status: "Rascunho",
-  publishedAt: "",
-};
-
-const blankMuralItem: Omit<MuralItem, "id"> = {
-  title: "",
-  category: "Secretaria",
-  published: true,
-  featured: false,
-  expiresAt: "",
-  imageDataUrl: "",
-  bannerUrl: "",
-  socialUrl: "",
-};
-
-const blankSchoolNotice = {
-  classId: "class-adults",
-  title: "",
-  body: "",
-};
 
 const messageAudiences: MessageAudience[] = [
   "Todos os membros",
@@ -755,11 +592,6 @@ const messageTemplates: MessageTemplateItem[] = [
     text: "Paz, {nome}! Temos um aviso importante para sua classe. Confira a orientacao e confirme leitura. {igreja}.",
   },
 ];
-
-function hasPersistedPayload(value: Partial<AppData> | null | undefined) {
-  if (!value) return false;
-  return Object.keys(value).some((key) => Array.isArray(value[key as keyof AppData]));
-}
 
 type PhotoCache = {
   members: Record<string, string>;
@@ -829,15 +661,6 @@ function accessRoleForSession(users: AccessUser[], email: string, metadata: Reco
   );
 }
 
-function normalizeMessageTemplate(template: MessageTemplateItem): MessageTemplateItem {
-  return {
-    ...template,
-    label: replaceLegacyMinistryText(template.label),
-    text: replaceLegacyMinistryText(template.text),
-    audience: template.audience ? replaceLegacyMinistryText(template.audience) : template.audience,
-  };
-}
-
 function uid(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -852,156 +675,6 @@ function suggestedNextStep(request: CareRequest) {
   if (request.status === "Em analise") return "Agendar atendimento";
   if (request.status === "Agendado") return "Registrar retorno";
   return "Arquivado no historico";
-}
-
-function normalizeMember(member: Partial<MemberRecord>): MemberRecord {
-  const status = member.status ?? "Visitante";
-  const memberType =
-    member.memberType ?? (status === "Visitante" ? "Visitante" : status === "Membro ativo" ? "Membro" : "Congregado");
-
-  return {
-    ...blankMember,
-    ...member,
-    id: member.id ?? uid("member"),
-    status,
-    memberType,
-    photoDataUrl: "",
-    conversionDate: member.conversionDate ?? "",
-    baptismDate: member.baptismDate ?? "",
-    registrationSource: member.registrationSource ?? "",
-    pastoralStatus: member.pastoralStatus ?? "Sem acompanhamento definido",
-    memberVisibleNotes: member.memberVisibleNotes ?? "",
-  };
-}
-
-function normalizeKid(kid: Partial<KidRecord>): KidRecord {
-  return {
-    ...blankKid,
-    ...kid,
-    id: kid.id ?? uid("kid"),
-  };
-}
-
-function normalizeEvent(event: Partial<ChurchEvent>): ChurchEvent {
-  return {
-    ...blankEvent,
-    ...event,
-    id: event.id ?? uid("event"),
-    recurrence: event.recurrence ?? "Unico",
-  };
-}
-
-function normalizeNotice(notice: Partial<Notice>): Notice {
-  return {
-    ...blankNotice,
-    ...notice,
-    id: notice.id ?? uid("notice"),
-    retentionDays: notice.retentionDays ?? 3,
-    expiresAt: notice.expiresAt ?? dateAfterDays(notice.retentionDays ?? 3),
-  };
-}
-
-function normalizeMinistry(ministry: Partial<MinistryRecord>): MinistryRecord {
-  return {
-    ...blankMinistry,
-    ...ministry,
-    id: ministry.id ?? uid("ministry"),
-  };
-}
-
-function normalizeVisitor(visitor: Partial<VisitorRecord>): VisitorRecord {
-  return {
-    ...blankVisitor,
-    ...visitor,
-    id: visitor.id ?? uid("visitor"),
-  };
-}
-
-function normalizeSchedule(schedule: Partial<ScheduleRecord>): ScheduleRecord {
-  return {
-    ...blankSchedule,
-    ...schedule,
-    id: schedule.id ?? uid("schedule"),
-  };
-}
-
-function normalizeTransaction(transaction: Partial<TransactionRecord>): TransactionRecord {
-  return {
-    ...blankTransaction,
-    ...transaction,
-    id: transaction.id ?? uid("transaction"),
-    amount: Number(transaction.amount ?? 0),
-  };
-}
-
-function normalizeAsset(asset: Partial<AssetRecord>): AssetRecord {
-  return {
-    ...blankAsset,
-    ...asset,
-    id: asset.id ?? uid("asset"),
-  };
-}
-
-function normalizeDevotional(devotional: Partial<DevotionalRecord>): DevotionalRecord {
-  return {
-    ...blankDevotional,
-    ...devotional,
-    id: devotional.id ?? uid("devotional"),
-  };
-}
-
-function visitorsFromMembers(members: MemberRecord[]): VisitorRecord[] {
-  return members
-    .filter((member) => member.memberType === "Visitante" || member.status === "Visitante" || member.status === "Novo convertido")
-    .map((member) => ({
-      id: `visitor-${member.id}`,
-      fullName: member.fullName,
-      phone: member.phone,
-      firstVisitDate: member.joinedAt,
-      returnDate: "",
-      invitedBy: member.registrationSource,
-      contactMade: member.pastoralStatus !== "Precisa de contato",
-      integrationStatus: member.status === "Novo convertido" ? "Em acompanhamento" : "Primeira visita",
-      notes: member.notes,
-    }));
-}
-
-function normalizeMuralItem(item: Partial<MuralItem>): MuralItem {
-  return {
-    ...blankMuralItem,
-    ...item,
-    id: item.id ?? uid("mural"),
-  };
-}
-
-function normalizeAttendanceSession(session: Partial<AttendanceSession>): AttendanceSession {
-  return {
-    id: session.id ?? uid("attendance"),
-    area: session.area ?? "school",
-    classId: session.classId ?? "",
-    eventId: session.eventId ?? "",
-    date: session.date ?? "",
-    title: session.title ?? "",
-    teacher: session.teacher ?? "",
-    records: session.records ?? [],
-    updatedAt: session.updatedAt ?? new Date().toISOString(),
-  };
-}
-
-function normalizeDiscipleshipClasses(classes: SchoolClass[] | undefined) {
-  const currentClasses = classes ?? initialData.discipleshipClasses;
-  const byId = new Map(currentClasses.map((item) => [item.id, item]));
-
-  return initialData.discipleshipClasses.map((template) => {
-    const current = byId.get(template.id);
-    return {
-      ...template,
-      teacher: current?.teacher ?? template.teacher,
-      students: current?.students ?? template.students,
-      nextLesson: current?.nextLesson ?? template.nextLesson,
-      notices: current?.notices ?? template.notices,
-    };
-  });
 }
 
 function readImageFileAsDataUrl(file: File) {
@@ -1095,46 +768,7 @@ async function optimizeProfilePhoto(file: File): Promise<MuralImageResult> {
 }
 
 function normalizeAppData(value: Partial<AppData>): AppData {
-  const normalizedMembers = (value.members ?? initialData.members).map((member) => normalizeMember(member));
-  const normalizedVisitors = value.visitors?.length
-    ? value.visitors.map((visitor) => normalizeVisitor(visitor))
-    : visitorsFromMembers(normalizedMembers);
-
-  return {
-    ...initialData,
-    ...value,
-    careRequests: value.careRequests ?? initialData.careRequests,
-    events: (value.events ?? initialData.events).map((event) => normalizeEvent(event)),
-    notices: (value.notices ?? initialData.notices).map((notice) => normalizeNotice(notice)).filter((notice) => !isExpiredDate(notice.expiresAt)),
-    mural: (value.mural ?? initialData.mural).map((item) => normalizeMuralItem(item)),
-    users: value.users ?? initialData.users,
-    members: normalizedMembers,
-    visitors: normalizedVisitors,
-    kids: (value.kids ?? initialData.kids).map((kid) => normalizeKid(kid)),
-    schoolClasses: value.schoolClasses ?? initialData.schoolClasses,
-    discipleshipClasses: normalizeDiscipleshipClasses(value.discipleshipClasses),
-    ministries: (value.ministries ?? initialData.ministries).map((ministry) => normalizeMinistry(ministry)),
-    schedules: (value.schedules ?? initialData.schedules).map((schedule) => normalizeSchedule(schedule)),
-    attendanceSessions: (value.attendanceSessions ?? initialData.attendanceSessions).map((session) =>
-      normalizeAttendanceSession(session),
-    ),
-    messageTemplates: (value.messageTemplates ?? initialData.messageTemplates).map((template) => normalizeMessageTemplate(template)),
-    messageCampaigns: value.messageCampaigns ?? initialData.messageCampaigns,
-    transactions: (value.transactions ?? initialData.transactions).map((transaction) => normalizeTransaction(transaction)),
-    assets: (value.assets ?? initialData.assets).map((asset) => normalizeAsset(asset)),
-    devotionals: (value.devotionals ?? initialData.devotionals).map((devotional) => normalizeDevotional(devotional)),
-    audit: value.audit ?? initialData.audit,
-    notificationReadIds: value.notificationReadIds ?? initialData.notificationReadIds,
-  };
-}
-
-function createLocalBackupData(data: AppData): AppData {
-  return {
-    ...data,
-    mural: data.mural.map((item) => ({ ...item, imageDataUrl: "" })),
-    members: data.members.map((member) => ({ ...member, photoDataUrl: "" })),
-    kids: data.kids.map((kid) => ({ ...kid, photoDataUrl: "" })),
-  };
+  return normalizeAppDataWithDefaults(value, initialData);
 }
 
 export default function Home() {
@@ -2260,66 +1894,6 @@ export default function Home() {
     setSyncStatus(`Historico em PDF preparado para ${classRecord.name}.`);
   }
 
-  function csvValue(value: unknown) {
-    return `"${String(value ?? "").replaceAll('"', '""')}"`;
-  }
-
-  function downloadCsv(filename: string, headers: string[], rows: unknown[][]) {
-    const content = [headers, ...rows].map((row) => row.map(csvValue).join(";")).join("\n");
-    const blob = new Blob([`\uFEFF${content}`], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function printHtmlReport(title: string, subtitle: string, headers: string[], rows: unknown[][]) {
-    const reportWindow = window.open("", "_blank", "noopener,noreferrer,width=980,height=720");
-
-    if (!reportWindow) {
-      setSyncStatus("Nao foi possivel abrir o relatorio. Libere pop-ups para imprimir ou salvar em PDF.");
-      return;
-    }
-
-    const bodyRows = rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(String(cell ?? ""))}</td>`).join("")}</tr>`).join("");
-    const headRows = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("");
-
-    reportWindow.document.write(`
-      <!doctype html>
-      <html lang="pt-BR">
-        <head>
-          <meta charset="utf-8" />
-          <title>${escapeHtml(title)}</title>
-          <style>
-            body { color: #111827; font-family: Arial, sans-serif; margin: 30px; }
-            header { border-bottom: 3px solid #0f766e; margin-bottom: 20px; padding-bottom: 12px; }
-            h1 { font-size: 24px; margin: 0 0 6px; }
-            p { color: #4b5563; margin: 0; }
-            table { border-collapse: collapse; width: 100%; }
-            th, td { border: 1px solid #d1d5db; font-size: 12px; padding: 8px; text-align: left; vertical-align: top; }
-            th { background: #f3f4f6; }
-            button { margin-bottom: 16px; padding: 10px 14px; }
-            @media print { body { margin: 18mm; } button { display: none; } }
-          </style>
-        </head>
-        <body>
-          <button onclick="window.print()">Salvar em PDF / Imprimir</button>
-          <header>
-            <h1>${escapeHtml(title)}</h1>
-            <p>${escapeHtml(subtitle)}</p>
-          </header>
-          <table>
-            <thead><tr>${headRows}</tr></thead>
-            <tbody>${bodyRows || `<tr><td colspan="${headers.length}">Nenhum registro encontrado.</td></tr>`}</tbody>
-          </table>
-        </body>
-      </html>
-    `);
-    reportWindow.document.close();
-  }
-
   function memberReportRows() {
     return data.members.map((member) => [
       member.fullName,
@@ -2491,7 +2065,10 @@ export default function Home() {
       return;
     }
 
-    printHtmlReport(report.title, subtitle, report.headers, report.rows);
+    if (!printHtmlReport(report.title, subtitle, report.headers, report.rows)) {
+      setSyncStatus("Nao foi possivel abrir o relatorio. Libere pop-ups para imprimir ou salvar em PDF.");
+      return;
+    }
     log(`PDF preparado: ${report.title}`);
   }
 

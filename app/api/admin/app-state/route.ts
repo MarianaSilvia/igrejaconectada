@@ -11,6 +11,14 @@ type AppStatePayload = {
   baseUpdatedAt?: string | null;
 };
 
+const payloadKeysByRole: Record<Exclude<ChurchRole, "MEMBER">, string[]> = {
+  ADMIN: [],
+  SECRETARY: ["members", "visitors", "kids", "events", "notices", "messageTemplates", "messageCampaigns", "mural", "notificationReadIds"],
+  LEADER: ["visitors", "careRequests", "events", "schedules", "ministries", "notices", "messageTemplates", "messageCampaigns", "mural", "devotionals", "notificationReadIds"],
+  PROFESSOR: ["schoolClasses", "discipleshipClasses", "attendanceSessions", "schedules", "messageTemplates", "messageCampaigns", "notificationReadIds"],
+  TREASURER: ["transactions", "notificationReadIds"],
+};
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
@@ -97,8 +105,65 @@ function filterAttendanceForMember(sessions: JsonRecord[], member: JsonRecord | 
     }));
 }
 
-function sanitizeAdministrativePayload(payload: JsonRecord) {
-  return stripMemberPhotos(payload);
+function sanitizedAdministrativePayloadForRole(payload: JsonRecord, role: ChurchRole, user: User) {
+  const strippedPayload = stripMemberPhotos(payload);
+  if (role === "ADMIN") return strippedPayload;
+
+  const hiddenForEveryNonAdmin = {
+    users: [],
+    audit: [],
+  };
+
+  if (role === "SECRETARY") {
+    return { ...strippedPayload, ...hiddenForEveryNonAdmin, transactions: [], assets: [] };
+  }
+
+  if (role === "LEADER") {
+    return { ...strippedPayload, ...hiddenForEveryNonAdmin, transactions: [], assets: [], kids: [] };
+  }
+
+  if (role === "PROFESSOR") {
+    return {
+      ...strippedPayload,
+      ...hiddenForEveryNonAdmin,
+      visitors: [],
+      kids: [],
+      careRequests: [],
+      transactions: [],
+      assets: [],
+      devotionals: recordsFrom(strippedPayload.devotionals).filter((devotional) => textValue(devotional.status) === "Publicado"),
+    };
+  }
+
+  if (role === "TREASURER") {
+    return {
+      ...strippedPayload,
+      ...hiddenForEveryNonAdmin,
+      members: [],
+      visitors: [],
+      kids: [],
+      careRequests: [],
+      schedules: [],
+      attendanceSessions: [],
+      messageCampaigns: [],
+      assets: [],
+      devotionals: recordsFrom(strippedPayload.devotionals).filter((devotional) => textValue(devotional.status) === "Publicado"),
+    };
+  }
+
+  return sanitizeMemberPayloadForResponse(strippedPayload, user);
+}
+
+function mergeAdministrativePayloadByRole(existingPayload: JsonRecord, incomingPayload: JsonRecord, role: ChurchRole) {
+  const incoming = stripMemberPhotos(incomingPayload);
+  if (role === "ADMIN") return incoming;
+
+  const allowedKeys = payloadKeysByRole[role as Exclude<ChurchRole, "MEMBER">] ?? [];
+
+  return allowedKeys.reduce<JsonRecord>(
+    (nextPayload, key) => (key in incoming ? { ...nextPayload, [key]: incoming[key] } : nextPayload),
+    stripMemberPhotos(existingPayload),
+  );
 }
 
 function sanitizeMemberPayloadForResponse(payload: unknown, user: User) {
@@ -125,7 +190,7 @@ function sanitizeMemberPayloadForResponse(payload: unknown, user: User) {
 
 function sanitizePayloadForResponse(payload: unknown, effectiveRole: ChurchRole, user: User) {
   if (!isRecord(payload)) return payload;
-  return administrativeRoles.has(effectiveRole) ? sanitizeAdministrativePayload(payload) : sanitizeMemberPayloadForResponse(payload, user);
+  return administrativeRoles.has(effectiveRole) ? sanitizedAdministrativePayloadForRole(payload, effectiveRole, user) : sanitizeMemberPayloadForResponse(payload, user);
 }
 
 function mergeMemberRecord(existingMember: JsonRecord, incomingMember: JsonRecord) {
@@ -155,7 +220,7 @@ function mergeMemberRecord(existingMember: JsonRecord, incomingMember: JsonRecor
   );
 }
 
-function stripMemberPhotos(payload: JsonRecord) {
+function stripMemberPhotos(payload: JsonRecord): JsonRecord {
   return {
     ...payload,
     members: recordsFrom(payload.members).map((member) => ({ ...member, photoDataUrl: "" })),
@@ -217,7 +282,7 @@ function mergeMemberPayload(existingPayload: JsonRecord, incomingPayload: JsonRe
 
 function sanitizePayloadForSave(existingPayload: JsonRecord, incomingPayload: JsonRecord, effectiveRole: ChurchRole, user: User) {
   return administrativeRoles.has(effectiveRole)
-    ? { payload: sanitizeAdministrativePayload(incomingPayload) }
+    ? { payload: mergeAdministrativePayloadByRole(existingPayload, incomingPayload, effectiveRole) }
     : mergeMemberPayload(existingPayload, incomingPayload, user);
 }
 
