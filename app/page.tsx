@@ -1274,6 +1274,7 @@ function createLocalBackupData(data: AppData): AppData {
 export default function Home() {
   const saveTimerRef = useRef<number | null>(null);
   const lastSavedPayloadRef = useRef("");
+  const logoutInProgressRef = useRef(false);
   const [hasSession, setHasSession] = useState(false);
   const [sessionUserId, setSessionUserId] = useState("");
   const [sessionEmail, setSessionEmail] = useState("");
@@ -1360,7 +1361,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (hasSession || !isSupabaseConfigured()) return;
+    if (hasSession || !isSupabaseConfigured() || logoutInProgressRef.current) return;
 
     let cancelled = false;
 
@@ -2922,17 +2923,16 @@ export default function Home() {
     setHasSession(true);
   }
 
-  async function handleLogout() {
+  function handleLogout() {
+    if (logoutInProgressRef.current) return;
+    logoutInProgressRef.current = true;
+
     if (saveTimerRef.current) {
       window.clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
-    if (hasSession && isSupabaseConfigured()) {
-      await saveRemoteStateNow(data);
-    }
 
-    const supabase = getSupabaseClient();
-    if (supabase) await supabase.auth.signOut();
+    const dataToSave = data;
     setHasSession(false);
     setSessionUserId("");
     setSessionEmail("");
@@ -2940,9 +2940,24 @@ export default function Home() {
     setNotificationsOpen(false);
     setActiveModule("overview");
     setAccessMode("login");
-    setRemoteStateReady(!isSupabaseConfigured());
+    setRemoteStateReady(true);
     lastSavedPayloadRef.current = "";
     setAccessMessage("Voce saiu do sistema com seguranca.");
+
+    void (async () => {
+      try {
+        if (hasSession && isSupabaseConfigured()) {
+          await saveRemoteStateNow(dataToSave);
+        }
+
+        const supabase = getSupabaseClient();
+        if (supabase) await supabase.auth.signOut();
+      } catch {
+        setSyncStatus("Voce saiu do sistema. Se havia alguma alteracao pendente, confira a base no proximo acesso.");
+      } finally {
+        logoutInProgressRef.current = false;
+      }
+    })();
   }
 
   function selectMessageTemplate(templateId: string) {
