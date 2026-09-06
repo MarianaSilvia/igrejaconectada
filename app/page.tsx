@@ -230,6 +230,7 @@ type RemoteAppStateResponse = {
 };
 
 const storageKey = "igreja-gestao-local-v1";
+const photoCacheKey = "igreja-conectada-photo-cache-v1";
 
 const modules: { key: ModuleKey; label: string; short: string }[] = [
   { key: "overview", label: "Visao geral", short: "Painel" },
@@ -784,6 +785,61 @@ function hasPersistedPayload(value: Partial<AppData> | null | undefined) {
   return Object.keys(value).some((key) => Array.isArray(value[key as keyof AppData]));
 }
 
+type PhotoCache = {
+  members: Record<string, string>;
+  kids: Record<string, string>;
+};
+
+function emptyPhotoCache(): PhotoCache {
+  return { members: {}, kids: {} };
+}
+
+function loadPhotoCache(): PhotoCache {
+  if (typeof window === "undefined") return emptyPhotoCache();
+
+  try {
+    const stored = window.localStorage.getItem(photoCacheKey);
+    if (!stored) return emptyPhotoCache();
+    const parsed = JSON.parse(stored) as Partial<PhotoCache>;
+    return {
+      members: parsed.members ?? {},
+      kids: parsed.kids ?? {},
+    };
+  } catch {
+    window.localStorage.removeItem(photoCacheKey);
+    return emptyPhotoCache();
+  }
+}
+
+function savePhotoCache(data: AppData) {
+  if (typeof window === "undefined") return;
+
+  const cache: PhotoCache = {
+    members: Object.fromEntries(data.members.filter((member) => member.photoDataUrl).map((member) => [member.id, member.photoDataUrl])),
+    kids: Object.fromEntries(data.kids.filter((kid) => kid.photoDataUrl).map((kid) => [kid.id, kid.photoDataUrl])),
+  };
+
+  try {
+    window.localStorage.setItem(photoCacheKey, JSON.stringify(cache));
+  } catch {
+    // Se o navegador negar espaco, o salvamento remoto continua sendo a fonte principal.
+  }
+}
+
+function mergePhotoCache(data: AppData, cache: PhotoCache) {
+  return {
+    ...data,
+    members: data.members.map((member) => ({
+      ...member,
+      photoDataUrl: member.photoDataUrl || cache.members[member.id] || "",
+    })),
+    kids: data.kids.map((kid) => ({
+      ...kid,
+      photoDataUrl: kid.photoDataUrl || cache.kids[kid.id] || "",
+    })),
+  };
+}
+
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -1141,7 +1197,7 @@ export default function Home() {
     if (!stored) return initialData;
 
     try {
-      return normalizeAppData(JSON.parse(stored) as Partial<AppData>);
+      return mergePhotoCache(normalizeAppData(JSON.parse(stored) as Partial<AppData>), loadPhotoCache());
     } catch {
       window.localStorage.removeItem(storageKey);
       return initialData;
@@ -1169,6 +1225,38 @@ export default function Home() {
   const [remoteMessageTemplates, setRemoteMessageTemplates] = useState<MessageTemplateItem[]>([]);
   const [remoteStateReady, setRemoteStateReady] = useState(!isSupabaseConfigured());
   const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Modo local: configure o Supabase no Vercel.");
+
+  async function saveRemoteStateNow(payloadData: AppData) {
+    if (!isSupabaseConfigured()) return false;
+
+    const supabase = getSupabaseClient();
+    const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+      setSyncStatus("Sessao expirada. Entre novamente para salvar cadastros na base.");
+      return false;
+    }
+
+    const response = await fetch("/api/admin/app-state", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ payload: payloadData }),
+    });
+    const result = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setSyncStatus(result.error ?? "Nao foi possivel salvar cadastros na base.");
+      return false;
+    }
+
+    lastSavedPayloadRef.current = JSON.stringify(payloadData);
+    setSyncStatus("Cadastros salvos na base Supabase.");
+    return true;
+  }
 
   useEffect(() => {
     if (window.location.search.includes("cadastro=novo")) {
@@ -1224,6 +1312,8 @@ export default function Home() {
   }, [data.users, hasSession]);
 
   useEffect(() => {
+    savePhotoCache(data);
+
     try {
       window.localStorage.setItem(storageKey, JSON.stringify(data));
     } catch {
@@ -1267,8 +1357,9 @@ export default function Home() {
       }
 
       if (hasPersistedPayload(result.payload)) {
-        const remoteData = normalizeAppData(result.payload ?? {});
-        lastSavedPayloadRef.current = JSON.stringify(remoteData);
+        const normalizedRemoteData = normalizeAppData(result.payload ?? {});
+        const remoteData = mergePhotoCache(normalizedRemoteData, loadPhotoCache());
+        lastSavedPayloadRef.current = JSON.stringify(normalizedRemoteData);
         setData(remoteData);
         setSyncStatus("Cadastros carregados da base Supabase.");
       } else {
@@ -1296,32 +1387,7 @@ export default function Home() {
     }
 
     saveTimerRef.current = window.setTimeout(async () => {
-      const supabase = getSupabaseClient();
-      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        setSyncStatus("Sessao expirada. Entre novamente para salvar cadastros na base.");
-        return;
-      }
-
-      const response = await fetch("/api/admin/app-state", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ payload: data }),
-      });
-      const result = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        setSyncStatus(result.error ?? "Nao foi possivel salvar cadastros na base.");
-        return;
-      }
-
-      lastSavedPayloadRef.current = payload;
-      setSyncStatus("Cadastros salvos na base Supabase.");
+      await saveRemoteStateNow(data);
     }, 900);
 
     return () => {
@@ -2491,6 +2557,14 @@ export default function Home() {
   }
 
   async function handleLogout() {
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    if (hasSession && isSupabaseConfigured()) {
+      await saveRemoteStateNow(data);
+    }
+
     const supabase = getSupabaseClient();
     if (supabase) await supabase.auth.signOut();
     setHasSession(false);
