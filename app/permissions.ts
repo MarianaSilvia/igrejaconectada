@@ -49,7 +49,6 @@ export const memberVisibleModuleKeys: ModuleKey[] = [
   "members",
   "events",
   "notices",
-  "messages",
   "mural",
   "pastoral",
   "school",
@@ -96,9 +95,9 @@ const roleByLabel: Record<string, ChurchRole> = {
 export const moduleAccessByRole: Record<AccessRole, ModuleKey[]> = {
   Administrador: modules.map((module) => module.key),
   Lider: ["overview", "members", "visitors", "events", "schedules", "ministries", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports", "devotional"],
-  Professor: ["overview", "members", "events", "schedules", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports"],
-  Secretario: ["overview", "users", "members", "visitors", "kids", "events", "schedules", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports", "settings"],
-  Tesoureiro: ["overview", "events", "schedules", "notices", "messages", "mural", "reports", "finance"],
+  Professor: ["overview", "events", "schedules", "notices", "messages", "mural", "school", "discipleship"],
+  Secretario: ["overview", "members", "visitors", "kids", "events", "notices", "messages", "mural", "reports"],
+  Tesoureiro: ["overview", "reports", "finance"],
   Membro: memberVisibleModuleKeys,
 };
 
@@ -131,9 +130,9 @@ export function canAccessModule(role: AccessRole, moduleKey: ModuleKey) {
 
 export function canManageModule(role: AccessRole, moduleKey: ModuleKey) {
   if (role === "Administrador") return true;
-  if (role === "Secretario") return ["users", "members", "visitors", "kids", "events", "schedules", "notices", "messages", "mural", "reports"].includes(moduleKey);
+  if (role === "Secretario") return ["members", "visitors", "kids", "events", "notices", "messages", "mural", "reports"].includes(moduleKey);
   if (role === "Lider") return ["ministries", "pastoral", "visitors", "events", "schedules", "notices", "messages", "mural", "reports", "devotional"].includes(moduleKey);
-  if (role === "Professor") return ["school", "discipleship", "schedules", "messages", "reports"].includes(moduleKey);
+  if (role === "Professor") return ["school", "discipleship", "schedules", "messages"].includes(moduleKey);
   if (role === "Tesoureiro") return moduleKey === "reports" || moduleKey === "finance";
   return false;
 }

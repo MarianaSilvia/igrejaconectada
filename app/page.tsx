@@ -1,268 +1,63 @@
 "use client";
 
 import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  birthdayDateThisYear,
+  birthdayLabel,
+  classNoticeWhatsappText,
+  comparablePhone,
+  currentDateKey,
+  dateAfterDays,
+  eventDate,
+  formatDate,
+  formatDateTime,
+  isBirthdayThisMonth,
+  isBirthdayThisWeek,
+  isEventInWeek,
+  isExpiredDate,
+  messageFor,
+  normalizeEmail,
+  normalizeSearchText,
+  normalizeWhatsappPhone,
+  replaceLegacyMinistryText,
+  sortEventsByDate,
+  weekRangeWithOffset,
+  whatsappUrl,
+} from "./app-helpers";
 import { accessRoleFromMetadata, canAccessModule, canManageModule, isAdministrativeRole, modules, type AccessRole, type ModuleKey } from "./permissions";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
-import type { AssetRecord, DevotionalRecord, ReportKind, TransactionRecord } from "./types";
-
-type AccessMode = "login" | "recover";
-
-type CareStatus = "Pendente" | "Em analise" | "Agendado" | "Concluido";
-
-type CareRequest = {
-  id: string;
-  member: string;
-  phone: string;
-  category: string;
-  status: CareStatus;
-  responsible: string;
-  scheduleDate: string;
-  scheduleTime: string;
-  summary: string;
-  returnNote: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type ChurchEvent = {
-  id: string;
-  title: string;
-  date: string;
-  time: string;
-  ministry: string;
-  location: string;
-  responsible: string;
-  recurrence: "Unico" | "Semanal" | "Mensal";
-  status: "Programado" | "Confirmado" | "Concluido";
-};
-
-type AttendanceArea = "school" | "discipleship";
-
-type AttendanceStatus = "Presente" | "Falta" | "Justificado" | "Precisa de contato";
-type SaveState = "idle" | "saving" | "saved" | "error";
-type MemberFormTab = "Dados" | "Igreja" | "Classes" | "Observacoes" | "Acesso";
-
-type AttendanceRecord = {
-  memberId: string;
-  status: AttendanceStatus;
-  note: string;
-};
-
-type AttendanceSession = {
-  id: string;
-  area: AttendanceArea;
-  classId: string;
-  eventId: string;
-  date: string;
-  title: string;
-  teacher: string;
-  records: AttendanceRecord[];
-  updatedAt: string;
-};
-
-type Notice = {
-  id: string;
-  title: string;
-  body: string;
-  status: "Publicado" | "Rascunho";
-  audience: string;
-  channel: "App" | "WhatsApp" | "Mural" | "Todos";
-  retentionDays: number;
-  expiresAt: string;
-};
-
-type MuralItem = {
-  id: string;
-  title: string;
-  category: string;
-  published: boolean;
-  featured: boolean;
-  expiresAt: string;
-  imageDataUrl: string;
-  bannerUrl: string;
-  socialUrl: string;
-};
-
-type MuralImageResult = {
-  dataUrl: string;
-  message: string;
-};
-
-type AccessUser = {
-  id: string;
-  name: string;
-  email: string;
-  role: AccessRole;
-  status: "Ativo" | "Pendente" | "Bloqueado";
-};
-
-type AccessUserForm = Omit<AccessUser, "id"> & {
-  password: string;
-};
-
-type MemberRecord = {
-  id: string;
-  authUserId?: string;
-  fullName: string;
-  fatherName: string;
-  motherName: string;
-  cpf: string;
-  phone: string;
-  email: string;
-  status: "Membro ativo" | "Visitante" | "Novo convertido" | "Transferencia";
-  memberType: "Membro" | "Visitante" | "Congregado" | "Lideranca";
-  role: string;
-  ministry: string;
-  schoolClassId: string;
-  discipleshipClassId: string;
-  photoDataUrl: string;
-  birthDate: string;
-  maritalStatus: string;
-  address: string;
-  congregation: string;
-  previousChurch: string;
-  conversionDate: string;
-  baptismDate: string;
-  registrationSource: string;
-  pastoralStatus: string;
-  memberVisibleNotes: string;
-  waterBaptized: boolean;
-  holySpiritBaptized: boolean;
-  joinedAt: string;
-  notes: string;
-};
-
-type VisitorRecord = {
-  id: string;
-  fullName: string;
-  phone: string;
-  firstVisitDate: string;
-  returnDate: string;
-  invitedBy: string;
-  contactMade: boolean;
-  integrationStatus: "Primeira visita" | "Retornou" | "Em acompanhamento" | "Integrado";
-  notes: string;
-};
-
-type KidRecord = {
-  id: string;
-  childName: string;
-  birthDate: string;
-  ageGroup: "Bercario" | "Maternal" | "Kids" | "Juniores";
-  className: string;
-  photoDataUrl: string;
-  allergies: string;
-  notes: string;
-  guardianName: string;
-  guardianPhone: string;
-  guardianEmail: string;
-  relationship: string;
-  authorizedPickup: string;
-  consentImage: boolean;
-  joinedAt: string;
-};
-
-type MessageAudience =
-  | "Todos os membros"
-  | "Aniversariantes da semana"
-  | "Aniversariantes do mes"
-  | "EBD"
-  | "Discipulado"
-  | "Grupos"
-  | "Visitantes"
-  | "Escalas"
-  | "Responsaveis Kids";
-
-type MessageRecipient = {
-  id: string;
-  name: string;
-  phone: string;
-  group: string;
-};
-
-type MessageTemplateItem = {
-  id: string;
-  label: string;
-  text: string;
-  audience?: string;
-  isBirthday?: boolean;
-};
-
-type MessageCampaign = {
-  id: string;
-  audience: MessageAudience;
-  templateId: string;
-  text: string;
-  recipientCount: number;
-  createdAt: string;
-};
-
-type SchoolClass = {
-  id: string;
-  name: string;
-  teacher: string;
-  students: number;
-  nextLesson: string;
-  notices: Notice[];
-};
-
-type MinistryRecord = {
-  id: string;
-  name: string;
-  leader: string;
-  assistant: string;
-  meetingDay: string;
-  volunteers: number;
-  status: "Ativo" | "Em formacao" | "Pausado";
-  notes: string;
-};
-
-type ScheduleRecord = {
-  id: string;
-  date: string;
-  serviceType: string;
-  group: string;
-  functionName: string;
-  assignedTo: string;
-  phone: string;
-  confirmationStatus: "Pendente" | "Confirmado" | "Substituir";
-  notes: string;
-};
-
-type AuditItem = {
-  id: string;
-  action: string;
-  when: string;
-};
-
-type AppData = {
-  careRequests: CareRequest[];
-  events: ChurchEvent[];
-  notices: Notice[];
-  mural: MuralItem[];
-  users: AccessUser[];
-  members: MemberRecord[];
-  visitors: VisitorRecord[];
-  kids: KidRecord[];
-  schoolClasses: SchoolClass[];
-  discipleshipClasses: SchoolClass[];
-  ministries: MinistryRecord[];
-  schedules: ScheduleRecord[];
-  attendanceSessions: AttendanceSession[];
-  messageTemplates: MessageTemplateItem[];
-  messageCampaigns: MessageCampaign[];
-  transactions: TransactionRecord[];
-  assets: AssetRecord[];
-  devotionals: DevotionalRecord[];
-  audit: AuditItem[];
-  notificationReadIds: string[];
-};
-
-type RemoteAppStateResponse = {
-  payload?: Partial<AppData> | null;
-  updatedAt?: string | null;
-  error?: string;
-};
+import type {
+  AccessMode,
+  AccessUser,
+  AccessUserForm,
+  AppData,
+  AssetRecord,
+  AttendanceArea,
+  AttendanceSession,
+  AttendanceStatus,
+  CareRequest,
+  CareStatus,
+  ChurchEvent,
+  DevotionalRecord,
+  KidRecord,
+  MemberFormTab,
+  MemberRecord,
+  MessageAudience,
+  MessageCampaign,
+  MessageRecipient,
+  MessageTemplateItem,
+  MinistryRecord,
+  MuralImageResult,
+  MuralItem,
+  Notice,
+  RemoteAppStateResponse,
+  ReportKind,
+  SaveState,
+  ScheduleRecord,
+  SchoolClass,
+  TransactionRecord,
+  VisitorRecord,
+} from "./types";
 
 const storageKey = "igreja-gestao-local-v1";
 const photoCacheKey = "igreja-conectada-photo-cache-v1";
@@ -961,24 +756,6 @@ const messageTemplates: MessageTemplateItem[] = [
   },
 ];
 
-function formatDate(value: string) {
-  if (!value) return "Sem data";
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(new Date(`${value}T12:00:00`));
-}
-
-function dateAfterDays(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-function isExpiredDate(value: string) {
-  if (!value) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return new Date(`${value}T23:59:59`) < today;
-}
-
 function hasPersistedPayload(value: Partial<AppData> | null | undefined) {
   if (!value) return false;
   return Object.keys(value).some((key) => Array.isArray(value[key as keyof AppData]));
@@ -1039,106 +816,6 @@ function mergePhotoCache(data: AppData, cache: PhotoCache) {
   };
 }
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-function birthdayDateThisYear(value: string) {
-  if (!value) return null;
-  const [, month, day] = value.split("-").map(Number);
-  if (!month || !day) return null;
-
-  const today = new Date();
-  return new Date(today.getFullYear(), month - 1, day);
-}
-
-function birthdayLabel(value: string) {
-  if (!value) return "Sem aniversario";
-  const date = birthdayDateThisYear(value);
-  if (!date) return "Sem aniversario";
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long" }).format(date);
-}
-
-function isBirthdayThisMonth(value: string) {
-  const date = birthdayDateThisYear(value);
-  if (!date) return false;
-  return date.getMonth() === new Date().getMonth();
-}
-
-function isBirthdayThisWeek(value: string) {
-  const date = birthdayDateThisYear(value);
-  if (!date) return false;
-
-  const today = new Date();
-  const start = new Date(today);
-  start.setDate(today.getDate() - today.getDay());
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-
-  return date >= start && date <= end;
-}
-
-function eventDate(value: string) {
-  if (!value) return null;
-  const date = new Date(`${value}T12:00:00`);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function currentWeekRange(now = new Date()) {
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - start.getDay());
-
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
-}
-
-function weekRangeWithOffset(offset: number, now = new Date()) {
-  const base = new Date(now);
-  base.setDate(base.getDate() + offset * 7);
-  return currentWeekRange(base);
-}
-
-function isEventInWeek(event: ChurchEvent, start: Date, end: Date) {
-  const date = eventDate(event.date);
-  if (!date) return false;
-  return date >= start && date <= end;
-}
-
-function sortEventsByDate(first: ChurchEvent, second: ChurchEvent) {
-  return `${first.date} ${first.time}`.localeCompare(`${second.date} ${second.time}`);
-}
-
-function currentDateKey() {
-  return new Date().toLocaleDateString("en-CA");
-}
-
-function normalizeWhatsappPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return "";
-  if (digits.startsWith("55")) return digits;
-  return `55${digits}`;
-}
-
-function normalizeEmail(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function comparablePhone(value: string) {
-  return value.replace(/\D/g, "").replace(/^55/, "");
-}
-
 function isApprovedAccessStatus(value: unknown) {
   if (!value) return true;
   const status = String(value).toLowerCase();
@@ -1152,35 +829,6 @@ function accessRoleForSession(users: AccessUser[], email: string, metadata: Reco
   );
 }
 
-function messageFor(text: string, recipientName: string) {
-  return text.replaceAll("{nome}", recipientName).replaceAll("{igreja}", "Igreja Conectada");
-}
-
-function whatsappUrl(phone: string, text: string, recipientName: string) {
-  const number = normalizeWhatsappPhone(phone);
-  if (!number) return "#";
-  return `https://wa.me/${number}?text=${encodeURIComponent(messageFor(text, recipientName))}`;
-}
-
-function normalizeSearchText(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
-
-function replaceLegacyMinistryText(value: string) {
-  return value
-    .replaceAll("Ministérios", "Grupos")
-    .replaceAll("Ministerios", "Grupos")
-    .replaceAll("ministérios", "grupos")
-    .replaceAll("ministerios", "grupos")
-    .replaceAll("Ministério", "Grupo")
-    .replaceAll("Ministerio", "Grupo")
-    .replaceAll("ministério", "grupo")
-    .replaceAll("ministerio", "grupo");
-}
-
 function normalizeMessageTemplate(template: MessageTemplateItem): MessageTemplateItem {
   return {
     ...template,
@@ -1188,17 +836,6 @@ function normalizeMessageTemplate(template: MessageTemplateItem): MessageTemplat
     text: replaceLegacyMinistryText(template.text),
     audience: template.audience ? replaceLegacyMinistryText(template.audience) : template.audience,
   };
-}
-
-function classNoticeWhatsappText(className: string, title: string, body: string) {
-  return [
-    `Paz, {nome}! Aviso para a classe ${className}.`,
-    title ? `Tema: ${title}.` : "",
-    body,
-    "Igreja Conectada.",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
 }
 
 function uid(prefix: string) {

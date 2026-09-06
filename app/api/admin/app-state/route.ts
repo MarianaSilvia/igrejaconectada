@@ -97,7 +97,11 @@ function filterAttendanceForMember(sessions: JsonRecord[], member: JsonRecord | 
     }));
 }
 
-function filteredPayloadForMember(payload: unknown, user: User) {
+function sanitizeAdministrativePayload(payload: JsonRecord) {
+  return stripMemberPhotos(payload);
+}
+
+function sanitizeMemberPayloadForResponse(payload: unknown, user: User) {
   if (!isRecord(payload)) return payload;
 
   const currentMember = findCurrentMember(payload, user);
@@ -117,6 +121,11 @@ function filteredPayloadForMember(payload: unknown, user: User) {
     devotionals: recordsFrom(payload.devotionals).filter((devotional) => textValue(devotional.status) === "Publicado"),
     audit: [],
   };
+}
+
+function sanitizePayloadForResponse(payload: unknown, effectiveRole: ChurchRole, user: User) {
+  if (!isRecord(payload)) return payload;
+  return administrativeRoles.has(effectiveRole) ? sanitizeAdministrativePayload(payload) : sanitizeMemberPayloadForResponse(payload, user);
 }
 
 function mergeMemberRecord(existingMember: JsonRecord, incomingMember: JsonRecord) {
@@ -206,6 +215,12 @@ function mergeMemberPayload(existingPayload: JsonRecord, incomingPayload: JsonRe
   };
 }
 
+function sanitizePayloadForSave(existingPayload: JsonRecord, incomingPayload: JsonRecord, effectiveRole: ChurchRole, user: User) {
+  return administrativeRoles.has(effectiveRole)
+    ? { payload: sanitizeAdministrativePayload(incomingPayload) }
+    : mergeMemberPayload(existingPayload, incomingPayload, user);
+}
+
 async function readStoredPayload() {
   const client = adminClient();
   if (!client) return { response: NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 }) };
@@ -227,7 +242,7 @@ export async function GET(request: Request) {
   if (stored.response || !stored.client) return stored.response;
 
   const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(stored.payload, session.user);
-  const payload = administrativeRoles.has(effectiveRole) ? stored.payload : filteredPayloadForMember(stored.payload, session.user);
+  const payload = sanitizePayloadForResponse(stored.payload, effectiveRole, session.user);
 
   return NextResponse.json({ payload, updatedAt: stored.updatedAt });
 }
@@ -253,9 +268,7 @@ export async function PUT(request: Request) {
   }
 
   const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(stored.payload, session.user);
-  const mergedPayload = administrativeRoles.has(effectiveRole)
-    ? { payload: stripMemberPhotos(payload) }
-    : mergeMemberPayload(isRecord(stored.payload) ? stored.payload : {}, payload, session.user);
+  const mergedPayload = sanitizePayloadForSave(isRecord(stored.payload) ? stored.payload : {}, payload, effectiveRole, session.user);
 
   if ("response" in mergedPayload) return mergedPayload.response;
 
