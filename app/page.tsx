@@ -923,6 +923,40 @@ function isBirthdayThisWeek(value: string) {
   return date >= start && date <= end;
 }
 
+function eventDate(value: string) {
+  if (!value) return null;
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function currentWeekRange(now = new Date()) {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - start.getDay());
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+}
+
+function isEventThisWeek(event: ChurchEvent, now = new Date()) {
+  const date = eventDate(event.date);
+  if (!date) return false;
+
+  const { start, end } = currentWeekRange(now);
+  return date >= start && date <= end;
+}
+
+function sortEventsByDate(first: ChurchEvent, second: ChurchEvent) {
+  return `${first.date} ${first.time}`.localeCompare(`${second.date} ${second.time}`);
+}
+
+function currentDateKey() {
+  return new Date().toLocaleDateString("en-CA");
+}
+
 function normalizeWhatsappPhone(value: string) {
   const digits = value.replace(/\D/g, "");
   if (!digits) return "";
@@ -1555,6 +1589,16 @@ export default function Home() {
   const selectedRequest = visibleCareRequests.find((request) => request.id === selectedRequestId) ?? visibleCareRequests[0];
   const profileName = currentMember?.fullName ?? currentAccessUser?.name ?? (sessionEmail ? sessionEmail.split("@")[0] : "Usuario");
   const profileInitial = profileName.slice(0, 1).toUpperCase() || "U";
+  const [todayKey, setTodayKey] = useState(currentDateKey);
+  const weekEvents = useMemo(() => {
+    const today = eventDate(todayKey) ?? new Date();
+    return data.events.filter((event) => isEventThisWeek(event, today)).sort(sortEventsByDate);
+  }, [data.events, todayKey]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setTodayKey(currentDateKey()), 60 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const notifications = useMemo(() => {
     const pendingCare = visibleCareRequests
@@ -1566,7 +1610,7 @@ export default function Home() {
         module: "pastoral" as ModuleKey,
       }));
 
-    const upcomingEvents = data.events.slice(0, 3).map((event) => ({
+    const upcomingEvents = weekEvents.slice(0, 3).map((event) => ({
       id: `event-${event.id}`,
       title: event.title,
       body: `${formatDate(event.date)} - ${event.ministry}`,
@@ -1583,7 +1627,7 @@ export default function Home() {
       }));
 
     return [...pendingCare, ...upcomingEvents, ...publishedMural];
-  }, [data.events, data.mural, visibleCareRequests]);
+  }, [data.mural, visibleCareRequests, weekEvents]);
 
   const unreadCount = notifications.filter((notice) => !data.notificationReadIds.includes(notice.id)).length;
   const activeNotices = data.notices.filter((notice) => !isExpiredDate(notice.expiresAt));
@@ -2789,6 +2833,7 @@ export default function Home() {
     setSelectedRequestId("care-1");
     setCareForm(blankCare);
     setEventForm(blankEvent);
+    setEditingEventId(null);
     setNoticeForm(blankNotice);
     setMinistryForm(blankMinistry);
     setUserForm(blankUser);
@@ -2811,8 +2856,8 @@ export default function Home() {
     },
     {
       label: "Agenda da semana",
-      value: data.events.length.toString(),
-      hint: "encontros programados",
+      value: weekEvents.length.toString(),
+      hint: "encontros desta semana",
       module: "events" as ModuleKey,
     },
     {
@@ -3327,13 +3372,13 @@ export default function Home() {
 
               <article className="surface wide">
                 <div className="panel-heading">
-                  <h2>Proximos encontros</h2>
+                  <h2>Agenda da semana</h2>
                   <button onClick={() => setActiveModule("events")} type="button">
                     Ver agenda
                   </button>
                 </div>
                 <div className="row-list">
-                  {data.events.map((event) => (
+                  {weekEvents.map((event) => (
                     <div className="data-row" key={event.id}>
                       <span className="date-box">{formatDate(event.date)}</span>
                       <div>
@@ -3342,6 +3387,7 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
+                  {!weekEvents.length && <p className="empty-state">Nenhum evento cadastrado para esta semana.</p>}
                 </div>
               </article>
 
@@ -3414,13 +3460,13 @@ export default function Home() {
 
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>Proximos encontros</h2>
+                  <h2>Agenda da semana</h2>
                   <button onClick={() => setActiveModule("events")} type="button">
                     Ver agenda
                   </button>
                 </div>
                 <div className="row-list">
-                  {data.events.map((event) => (
+                  {weekEvents.map((event) => (
                     <div className="data-row" key={event.id}>
                       <span className="date-box">{formatDate(event.date)}</span>
                       <div>
@@ -3431,6 +3477,7 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
+                  {!weekEvents.length && <p className="empty-state">Nenhum evento cadastrado para esta semana.</p>}
                 </div>
               </article>
 
@@ -3822,7 +3869,7 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
-                  {!isAdminView && data.events.map((event) => (
+                  {!isAdminView && weekEvents.map((event) => (
                     <div className="table-row" key={`event-${event.id}`}>
                       <span className="date-box">{formatDate(event.date)}</span>
                       <div>
@@ -3837,7 +3884,7 @@ export default function Home() {
                   {!isAdminView &&
                     !data.mural.filter((item) => item.published).length &&
                     !activeNotices.filter((notice) => notice.status === "Publicado").length &&
-                    !data.events.length && (
+                    !weekEvents.length && (
                       <p className="empty-state">Nenhum aviso, banner ou evento publicado no momento.</p>
                     )}
                 </div>
@@ -3916,11 +3963,11 @@ export default function Home() {
 
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>Agenda da igreja</h2>
-                  <span>{data.events.length} eventos</span>
+                  <h2>Agenda da semana</h2>
+                  <span>{weekEvents.length} de {data.events.length} eventos</span>
                 </div>
                 <div className="row-list">
-                  {data.events.map((event) => (
+                  {weekEvents.map((event) => (
                     <div className="data-row access-user-row" key={event.id}>
                       <span className="date-box">{formatDate(event.date)}</span>
                       <div>
@@ -3947,6 +3994,7 @@ export default function Home() {
                       </div>}
                     </div>
                   ))}
+                  {!weekEvents.length && <p className="empty-state">Nenhum evento cadastrado para esta semana.</p>}
                 </div>
               </article>
             </section>
