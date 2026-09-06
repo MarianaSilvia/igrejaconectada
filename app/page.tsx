@@ -164,7 +164,7 @@ type MessageAudience =
   | "Aniversariantes do mes"
   | "EBD"
   | "Discipulado"
-  | "Ministerios"
+  | "Grupos"
   | "Responsaveis Kids";
 
 type MessageRecipient = {
@@ -238,7 +238,7 @@ const modules: { key: ModuleKey; label: string; short: string }[] = [
   { key: "members", label: "Membros", short: "Membros" },
   { key: "kids", label: "Area Kids", short: "Kids" },
   { key: "events", label: "Agenda", short: "Agenda" },
-  { key: "ministries", label: "Ministerios", short: "Ministerios" },
+  { key: "ministries", label: "Grupos", short: "Grupos" },
   { key: "notices", label: "Comunicados", short: "Avisos" },
   { key: "messages", label: "Comunicacao", short: "Mensagens" },
   { key: "mural", label: "Mural", short: "Mural" },
@@ -723,7 +723,7 @@ const messageAudiences: MessageAudience[] = [
   "Aniversariantes do mes",
   "EBD",
   "Discipulado",
-  "Ministerios",
+  "Grupos",
   "Responsaveis Kids",
 ];
 
@@ -747,8 +747,8 @@ const messageTemplates: MessageTemplateItem[] = [
   },
   {
     id: "ministry-call",
-    label: "Ministerio - comunicado",
-    text: "Paz, {nome}! Temos um comunicado importante para o ministerio. Por favor, confirme leitura e disponibilidade. {igreja}.",
+    label: "Grupo - comunicado",
+    text: "Paz, {nome}! Temos um comunicado importante para o seu grupo. Por favor, confirme leitura e disponibilidade. {igreja}.",
   },
   {
     id: "general-invite",
@@ -1583,6 +1583,13 @@ export default function Home() {
   const canCreateNotice = isAdminView && Boolean(noticeForm.title.trim() && noticeForm.body.trim());
   const canCreateMinistry = isAdminView && Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
   const availableMessageTemplates = remoteMessageTemplates.length ? remoteMessageTemplates : messageTemplates;
+  const groupOptions = useMemo(() => {
+    const groups = data.ministries.map((group) => group.name).filter(Boolean);
+    if (memberForm.ministry.trim() && !groups.includes(memberForm.ministry.trim())) {
+      groups.push(memberForm.ministry.trim());
+    }
+    return groups;
+  }, [data.ministries, memberForm.ministry]);
   const birthdaySpotlightPanel = (
     <article className="surface birthday-spotlight wide">
       <div className="panel-heading">
@@ -1642,7 +1649,7 @@ export default function Home() {
     if (messageAudience === "Discipulado") {
       return memberRecipients.filter((recipient) => /discipulado|discipulador|novo convertido|batismo/i.test(recipient.group));
     }
-    if (messageAudience === "Ministerios") {
+    if (messageAudience === "Grupos") {
       return memberRecipients.filter((recipient) => Boolean(recipient.group && recipient.group !== "Visitante"));
     }
     return data.kids
@@ -1691,7 +1698,7 @@ export default function Home() {
     const text = classNoticeWhatsappText(className, title, body);
 
     if (!recipients.length || !text.trim()) {
-      setSyncStatus(`Nenhum contato de WhatsApp encontrado para ${className}. Vincule membros pela funcao, ministerio ou observacoes.`);
+      setSyncStatus(`Nenhum contato de WhatsApp encontrado para ${className}. Vincule membros pela funcao, grupo ou observacoes.`);
       return;
     }
 
@@ -2431,7 +2438,7 @@ export default function Home() {
   }
 
   function createMinistry() {
-    if (!requireAdministrativeAccess("criar ministerios")) return;
+    if (!requireAdministrativeAccess("criar grupos")) return;
     if (!canCreateMinistry) return;
 
     const now = new Date().toISOString();
@@ -2440,7 +2447,7 @@ export default function Home() {
     setData((current) => ({
       ...current,
       ministries: [ministry, ...current.ministries],
-      audit: [{ id: uid("audit"), action: `Ministerio cadastrado: ${ministry.name}`, when: now }, ...current.audit].slice(0, 12),
+      audit: [{ id: uid("audit"), action: `Grupo cadastrado: ${ministry.name}`, when: now }, ...current.audit].slice(0, 12),
     }));
     setMinistryForm(blankMinistry);
   }
@@ -3033,7 +3040,7 @@ export default function Home() {
             <section className="content-grid">
               <div className="hero-panel">
                 <p className="eyebrow">Painel inteligente da igreja</p>
-                <h2>Prioridades, pessoas e ministerios em tempo real.</h2>
+                <h2>Prioridades, pessoas e grupos em tempo real.</h2>
                 <p>
                   Acompanhe pedidos pastorais, eventos, comunicados e a rotina da igreja em uma central viva,
                   pronta para crescer com dados reais.
@@ -3605,7 +3612,7 @@ export default function Home() {
                     <input onChange={(event) => setEventForm((form) => ({ ...form, time: event.target.value }))} type="time" value={eventForm.time} />
                   </label>
                   <label>
-                    Ministerio
+                    Grupo
                     <input
                       onChange={(event) => setEventForm((form) => ({ ...form, ministry: event.target.value }))}
                       placeholder="Ex.: Jovens"
@@ -4003,12 +4010,18 @@ export default function Home() {
                     />
                   </label>}
                   {isAdminView && <label>
-                    Ministerio
-                    <input
+                    Grupo
+                    <select
                       onChange={(event) => setMemberForm((form) => ({ ...form, ministry: event.target.value }))}
-                      placeholder="Ex.: Louvor"
                       value={memberForm.ministry}
-                    />
+                    >
+                      <option value="">Sem grupo definido</option>
+                      {groupOptions.map((group) => (
+                        <option key={group} value={group}>
+                          {group}
+                        </option>
+                      ))}
+                    </select>
                   </label>}
                   <label>
                     Classe EBD
@@ -4182,7 +4195,7 @@ export default function Home() {
                             </small>
                           )}
                           <small>
-                            {member.ministry || "Sem ministerio"} - {member.congregation || "Congregacao nao informada"} - Aniv. {birthdayLabel(member.birthDate)}
+                            {member.ministry || "Sem grupo"} - {member.congregation || "Congregacao nao informada"} - Aniv. {birthdayLabel(member.birthDate)}
                           </small>
                           <small>
                             EBD: {schoolClassName || "Nao matriculado"} - Discipulado: {discipleshipClassName || "Nao matriculado"}
@@ -4433,12 +4446,12 @@ export default function Home() {
             <section className="content-grid">
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>Novo ministerio</h2>
+                  <h2>Novo grupo</h2>
                   <span>Equipe</span>
                 </div>
                 <div className="form-grid">
                   <label className="full">
-                    Nome do ministerio
+                    Nome do grupo
                     <input
                       onChange={(event) => setMinistryForm((form) => ({ ...form, name: event.target.value }))}
                       placeholder="Ex.: Recepcao"
@@ -4498,15 +4511,15 @@ export default function Home() {
                     />
                   </label>
                   <button className="primary-action" disabled={!canCreateMinistry} onClick={createMinistry} type="button">
-                    Adicionar ministerio
+                    Adicionar grupo
                   </button>
                 </div>
               </article>
 
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>Ministerios</h2>
-                  <span>{data.ministries.length} equipes</span>
+                  <h2>Grupos</h2>
+                  <span>{data.ministries.length} grupo{data.ministries.length === 1 ? "" : "s"}</span>
                 </div>
                 <div className="row-list">
                   {data.ministries.map((ministry) => (
@@ -4759,7 +4772,7 @@ export default function Home() {
                       <span className="bullet-mark" />
                       <div>
                         <strong>Nenhum contato encontrado</strong>
-                        <small>Cadastre telefone nos membros, professores, ministerios ou responsaveis Kids.</small>
+                        <small>Cadastre telefone nos membros, professores, grupos ou responsaveis Kids.</small>
                       </div>
                     </div>
                   ) : (
@@ -4898,7 +4911,7 @@ function AccessScreen({
         <div>
           <p className="access-kicker">Cuidar - Servir - Conectar</p>
           <h1>Toda a igreja, mais perto.</h1>
-          <p>Uma plataforma segura para fortalecer o cuidado com pessoas, ministerios e a missao.</p>
+          <p>Uma plataforma segura para fortalecer o cuidado com pessoas, grupos e a missao.</p>
         </div>
         <blockquote>
           <p>&quot;Sirvam uns aos outros, cada um conforme o dom que recebeu.&quot;</p>
