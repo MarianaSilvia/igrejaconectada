@@ -20,8 +20,12 @@ import {
   selectedOrAllRecipients,
 } from "./communication-helpers";
 import { BirthdaySpotlightPanel } from "./components/BirthdaySpotlightPanel";
+import { AgendaPanel } from "./components/AgendaPanel";
+import { ClassModulePanel } from "./components/ClassModulePanel";
 import { CommunicationPanel } from "./components/CommunicationPanel";
 import { ReportsPanel } from "./components/ReportsPanel";
+import { SchedulesPanel } from "./components/SchedulesPanel";
+import { VisitorsPanel } from "./components/VisitorsPanel";
 import {
   birthdayDateThisYear,
   birthdayLabel,
@@ -3917,381 +3921,58 @@ export default function Home() {
           )}
 
           {activeModule === "events" && (
-            <section className="content-grid">
-              {canManageEvents && <article className="surface">
-                <div className="panel-heading">
-                  <h2>{editingEventId ? "Editar evento" : "Novo evento"}</h2>
-                  <span>{editingEventId ? "Atualizando agenda" : "Agenda"}</span>
-                </div>
-                <div className="form-grid">
-                  <label className="full">
-                    Titulo
-                    <input
-                      onChange={(event) => setEventForm((form) => ({ ...form, title: event.target.value }))}
-                      placeholder="Ex.: Culto de ensino"
-                      value={eventForm.title}
-                    />
-                  </label>
-                  <label>
-                    Data
-                    <input onChange={(event) => setEventForm((form) => ({ ...form, date: event.target.value }))} type="date" value={eventForm.date} />
-                  </label>
-                  <label>
-                    Horario
-                    <input onChange={(event) => setEventForm((form) => ({ ...form, time: event.target.value }))} type="time" value={eventForm.time} />
-                  </label>
-                  <label>
-                    Grupo
-                    <input
-                      onChange={(event) => setEventForm((form) => ({ ...form, ministry: event.target.value }))}
-                      placeholder="Ex.: Jovens"
-                      value={eventForm.ministry}
-                    />
-                  </label>
-                  <label>
-                    Status
-                    <select onChange={(event) => setEventForm((form) => ({ ...form, status: event.target.value as ChurchEvent["status"] }))} value={eventForm.status}>
-                      <option>Programado</option>
-                      <option>Confirmado</option>
-                      <option>Concluido</option>
-                    </select>
-                  </label>
-                  <label>
-                    Local
-                    <input
-                      onChange={(event) => setEventForm((form) => ({ ...form, location: event.target.value }))}
-                      placeholder="Ex.: Templo principal"
-                      value={eventForm.location}
-                    />
-                  </label>
-                  <label>
-                    Responsavel
-                    <input
-                      onChange={(event) => setEventForm((form) => ({ ...form, responsible: event.target.value }))}
-                      placeholder="Ex.: Pr. Marcos"
-                      value={eventForm.responsible}
-                    />
-                  </label>
-                  <label>
-                    Repeticao
-                    <select
-                      onChange={(event) => setEventForm((form) => ({ ...form, recurrence: event.target.value as ChurchEvent["recurrence"] }))}
-                      value={eventForm.recurrence}
-                    >
-                      <option>Unico</option>
-                      <option>Semanal</option>
-                      <option>Mensal</option>
-                    </select>
-                  </label>
-                  <div className="form-actions full">
-                    <button className="primary-action" disabled={!canCreateEvent} onClick={createEvent} type="button">
-                      {editingEventId ? "Atualizar evento" : "Adicionar evento"}
-                    </button>
-                    {editingEventId && (
-                      <button className="secondary" onClick={cancelEventEdit} type="button">
-                        Cancelar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </article>}
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Agenda da semana</h2>
-                  <span>{weekEvents.length} de {data.events.length} eventos</span>
-                </div>
-                <div className="filter-bar">
-                  <button className="secondary" onClick={() => setEventWeekOffset((offset) => offset - 1)} type="button">
-                    Semana anterior
-                  </button>
-                  <button className="secondary" onClick={() => setEventWeekOffset(0)} type="button">
-                    Semana atual
-                  </button>
-                  <button className="secondary" onClick={() => setEventWeekOffset((offset) => offset + 1)} type="button">
-                    Proxima semana
-                  </button>
-                  <label>
-                    Grupo
-                    <select onChange={(event) => setEventGroupFilter(event.target.value)} value={eventGroupFilter}>
-                      <option>Todos</option>
-                      {groupOptions.map((group) => (
-                        <option key={group}>{group}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Status
-                    <select onChange={(event) => setEventStatusFilter(event.target.value)} value={eventStatusFilter}>
-                      <option>Todos</option>
-                      <option>Programado</option>
-                      <option>Confirmado</option>
-                      <option>Concluido</option>
-                    </select>
-                  </label>
-                  <button className="secondary" onClick={() => exportReport("agenda", "pdf")} type="button">
-                    Imprimir semana
-                  </button>
-                </div>
-                <div className="row-list">
-                  {weekEvents.map((event) => (
-                    <div className="data-row access-user-row" key={event.id}>
-                      <span className="date-box">{formatDate(event.date)}</span>
-                      <div>
-                        <strong>{event.title}</strong>
-                        <small>
-                          {event.time || "Sem horario"} - {event.ministry} - {event.status}
-                        </small>
-                        <small>{event.location || "Local nao informado"} - {event.responsible || "Sem responsavel"}</small>
-                      </div>
-                      {canManageEvents && <div className="row-actions">
-                        <button className="secondary" onClick={() => editEvent(event)} type="button">
-                          Editar
-                        </button>
-                        <button className="secondary" onClick={() => duplicateEvent(event)} type="button">
-                          Duplicar
-                        </button>
-                        <button
-                          className={event.status === "Concluido" ? "secondary" : "danger-action"}
-                          onClick={() => updateEventStatus(event, event.status === "Concluido" ? "Programado" : "Concluido")}
-                          type="button"
-                        >
-                          {event.status === "Concluido" ? "Reativar" : "Cancelar"}
-                        </button>
-                        <button className="danger-action" onClick={() => deleteEvent(event)} type="button">
-                          Excluir
-                        </button>
-                      </div>}
-                    </div>
-                  ))}
-                  {!weekEvents.length && <p className="empty-state">Nenhum evento cadastrado para esta semana.</p>}
-                </div>
-              </article>
-            </section>
+            <AgendaPanel
+              canCreateEvent={canCreateEvent}
+              canManageEvents={canManageEvents}
+              cancelEventEdit={cancelEventEdit}
+              createEvent={createEvent}
+              deleteEvent={deleteEvent}
+              duplicateEvent={duplicateEvent}
+              editEvent={editEvent}
+              editingEventId={editingEventId}
+              eventForm={eventForm}
+              eventGroupFilter={eventGroupFilter}
+              eventStatusFilter={eventStatusFilter}
+              exportReport={exportReport}
+              groupOptions={groupOptions}
+              setEventForm={setEventForm}
+              setEventGroupFilter={setEventGroupFilter}
+              setEventStatusFilter={setEventStatusFilter}
+              setEventWeekOffset={setEventWeekOffset}
+              totalEvents={data.events.length}
+              updateEventStatus={updateEventStatus}
+              weekEvents={weekEvents}
+            />
           )}
 
           {activeModule === "schedules" && (
-            <section className="content-grid">
-              {canManageSchedules && (
-                <article className={editingScheduleId ? "surface editing-surface" : "surface"}>
-                  <div className="panel-heading">
-                    <h2>{editingScheduleId ? "Editar escala" : "Nova escala"}</h2>
-                    <span>Culto, grupo e funcao</span>
-                  </div>
-                  <div className="form-grid">
-                    <label>
-                      Data
-                      <input
-                        onChange={(event) => setScheduleForm((form) => ({ ...form, date: event.target.value }))}
-                        type="date"
-                        value={scheduleForm.date}
-                      />
-                    </label>
-                    <label>
-                      Culto ou evento
-                      <input
-                        onChange={(event) => setScheduleForm((form) => ({ ...form, serviceType: event.target.value }))}
-                        placeholder="Ex.: Culto da familia"
-                        value={scheduleForm.serviceType}
-                      />
-                    </label>
-                    <label>
-                      Grupo
-                      <select onChange={(event) => setScheduleForm((form) => ({ ...form, group: event.target.value }))} value={scheduleForm.group}>
-                        <option value="">Sem grupo definido</option>
-                        {groupOptions.map((group) => (
-                          <option key={group}>{group}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Funcao
-                      <select
-                        onChange={(event) => setScheduleForm((form) => ({ ...form, functionName: event.target.value }))}
-                        value={scheduleForm.functionName}
-                      >
-                        <option value="">Selecione</option>
-                        {memberRoleOptions.map((role) => (
-                          <option key={role}>{role}</option>
-                        ))}
-                        <option>Recepcao</option>
-                        <option>Pregador</option>
-                        <option>Louvor</option>
-                        <option>Midia</option>
-                      </select>
-                    </label>
-                    <label>
-                      Selecionar membro
-                      <select
-                        onChange={(event) => {
-                          const member = data.members.find((item) => item.id === event.target.value);
-                          if (!member) return;
-                          setScheduleForm((form) => ({
-                            ...form,
-                            assignedTo: member.fullName,
-                            phone: member.phone,
-                            group: form.group || member.ministry,
-                          }));
-                        }}
-                        value={data.members.find((member) => member.fullName === scheduleForm.assignedTo && member.phone === scheduleForm.phone)?.id ?? ""}
-                      >
-                        <option value="">Preencher manualmente</option>
-                        {data.members.map((member) => (
-                          <option key={member.id} value={member.id}>
-                            {member.fullName}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Pessoa escalada
-                      <input
-                        onChange={(event) => setScheduleForm((form) => ({ ...form, assignedTo: event.target.value }))}
-                        placeholder="Nome do membro ou voluntario"
-                        value={scheduleForm.assignedTo}
-                      />
-                    </label>
-                    <label>
-                      WhatsApp
-                      <input
-                        onChange={(event) => setScheduleForm((form) => ({ ...form, phone: event.target.value }))}
-                        placeholder="(00) 00000-0000"
-                        value={scheduleForm.phone}
-                      />
-                    </label>
-                    <label>
-                      Status
-                      <select
-                        onChange={(event) => setScheduleForm((form) => ({ ...form, confirmationStatus: event.target.value as ScheduleRecord["confirmationStatus"] }))}
-                        value={scheduleForm.confirmationStatus}
-                      >
-                        <option>Pendente</option>
-                        <option>Confirmado</option>
-                        <option>Substituir</option>
-                      </select>
-                    </label>
-                    <label className="full">
-                      Observacoes
-                      <textarea
-                        onChange={(event) => setScheduleForm((form) => ({ ...form, notes: event.target.value }))}
-                        placeholder="Horario de chegada, roupa, substituicao ou orientacao"
-                        value={scheduleForm.notes}
-                      />
-                    </label>
-                    <div className="form-actions full">
-                      <button className="primary-action" disabled={!canCreateSchedule} onClick={createSchedule} type="button">
-                        {editingScheduleId ? "Atualizar escala" : "Salvar escala"}
-                      </button>
-                      {editingScheduleId && (
-                        <button
-                          className="secondary"
-                          onClick={() => {
-                            setScheduleForm(blankSchedule);
-                            setEditingScheduleId(null);
-                          }}
-                          type="button"
-                        >
-                          Cancelar
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </article>
-              )}
-
-              <article className="surface wide">
-                <div className="panel-heading">
-                  <h2>Escalas cadastradas</h2>
-                  <span>{filteredSchedules.length} registros</span>
-                </div>
-                <div className="filter-bar">
-                  <div className="week-switcher">
-                    <button className="secondary" onClick={() => setScheduleWeekOffset((offset) => offset - 1)} type="button">
-                      Semana anterior
-                    </button>
-                    <span>{formatDate(selectedScheduleWeekRange.start.toISOString().slice(0, 10))} a {formatDate(selectedScheduleWeekRange.end.toISOString().slice(0, 10))}</span>
-                    <button className="secondary" onClick={() => setScheduleWeekOffset((offset) => offset + 1)} type="button">
-                      Proxima semana
-                    </button>
-                  </div>
-                  <label>
-                    Grupo
-                    <select onChange={(event) => setScheduleGroupFilter(event.target.value)} value={scheduleGroupFilter}>
-                      <option>Todos</option>
-                      {groupOptions.map((group) => (
-                        <option key={group}>{group}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Culto
-                    <select onChange={(event) => setScheduleServiceFilter(event.target.value)} value={scheduleServiceFilter}>
-                      <option>Todos</option>
-                      {Array.from(new Set(data.schedules.map((schedule) => schedule.serviceType).filter(Boolean))).map((serviceType) => (
-                        <option key={serviceType}>{serviceType}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Funcao
-                    <select onChange={(event) => setScheduleFunctionFilter(event.target.value)} value={scheduleFunctionFilter}>
-                      <option>Todos</option>
-                      {Array.from(new Set(data.schedules.map((schedule) => schedule.functionName).filter(Boolean))).map((functionName) => (
-                        <option key={functionName}>{functionName}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Status
-                    <select onChange={(event) => setScheduleStatusFilter(event.target.value)} value={scheduleStatusFilter}>
-                      <option>Todos</option>
-                      <option>Pendente</option>
-                      <option>Confirmado</option>
-                      <option>Substituir</option>
-                    </select>
-                  </label>
-                  <button className="secondary" onClick={() => exportReport("schedules", "pdf")} type="button">
-                    PDF
-                  </button>
-                  <button className="secondary" onClick={() => exportReport("schedules", "csv")} type="button">
-                    Excel
-                  </button>
-                </div>
-                <div className="row-list">
-                  {filteredSchedules.map((schedule) => (
-                    <div className="data-row access-user-row" key={schedule.id}>
-                      <span className="date-box">{formatDate(schedule.date)}</span>
-                      <div>
-                        <strong>{schedule.assignedTo}</strong>
-                        <small>
-                          {schedule.serviceType} - {schedule.functionName || "Funcao nao informada"} - {schedule.group || "Sem grupo"}
-                        </small>
-                        <small>{schedule.confirmationStatus} - {schedule.phone || "Sem WhatsApp"}</small>
-                        {schedule.notes && <small>{schedule.notes}</small>}
-                      </div>
-                      <div className="row-actions">
-                        {schedule.phone && (
-                          <a className="whatsapp-link" href={whatsappUrl(schedule.phone, "Paz, {nome}! Voce esta escalado(a). Por favor confirme sua disponibilidade. {igreja}.", schedule.assignedTo)} rel="noreferrer" target="_blank">
-                            WhatsApp
-                          </a>
-                        )}
-                        {canManageSchedules && (
-                          <button className="secondary" onClick={() => editSchedule(schedule)} type="button">
-                            Editar
-                          </button>
-                        )}
-                        {canManageSchedules && (
-                          <button className="danger-action" onClick={() => deleteSchedule(schedule)} type="button">
-                            Excluir
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {!filteredSchedules.length && <p className="empty-state">Nenhuma escala encontrada para este filtro.</p>}
-                </div>
-              </article>
-            </section>
+            <SchedulesPanel
+              canCreateSchedule={canCreateSchedule}
+              canManageSchedules={canManageSchedules}
+              createSchedule={createSchedule}
+              deleteSchedule={deleteSchedule}
+              editSchedule={editSchedule}
+              editingScheduleId={editingScheduleId}
+              exportReport={exportReport}
+              filteredSchedules={filteredSchedules}
+              groupOptions={groupOptions}
+              memberRoleOptions={memberRoleOptions}
+              members={data.members}
+              scheduleForm={scheduleForm}
+              scheduleFunctionFilter={scheduleFunctionFilter}
+              scheduleGroupFilter={scheduleGroupFilter}
+              scheduleServiceFilter={scheduleServiceFilter}
+              scheduleStatusFilter={scheduleStatusFilter}
+              schedules={data.schedules}
+              selectedScheduleWeekRange={selectedScheduleWeekRange}
+              setEditingScheduleId={setEditingScheduleId}
+              setScheduleForm={setScheduleForm}
+              setScheduleFunctionFilter={setScheduleFunctionFilter}
+              setScheduleGroupFilter={setScheduleGroupFilter}
+              setScheduleServiceFilter={setScheduleServiceFilter}
+              setScheduleStatusFilter={setScheduleStatusFilter}
+              setScheduleWeekOffset={setScheduleWeekOffset}
+            />
           )}
 
           {activeModule === "notices" && (
@@ -4522,172 +4203,25 @@ export default function Home() {
           )}
 
           {activeModule === "visitors" && (
-            <section className="content-grid">
-              {canManageVisitors && (
-                <article className={editingVisitorId ? "surface editing-surface" : "surface"}>
-                  <div className="panel-heading">
-                    <h2>{editingVisitorId ? "Editar visitante" : "Novo visitante"}</h2>
-                    <span>Acompanhamento</span>
-                  </div>
-                  <div className="form-grid">
-                    <label className="full">
-                      Nome completo
-                      <input
-                        onChange={(event) => setVisitorForm((form) => ({ ...form, fullName: event.target.value }))}
-                        placeholder="Ex.: Joao Pereira"
-                        value={visitorForm.fullName}
-                      />
-                    </label>
-                    <label>
-                      WhatsApp
-                      <input
-                        onChange={(event) => setVisitorForm((form) => ({ ...form, phone: event.target.value }))}
-                        placeholder="(00) 00000-0000"
-                        value={visitorForm.phone}
-                      />
-                    </label>
-                    <label>
-                      Primeira visita
-                      <input
-                        onChange={(event) => setVisitorForm((form) => ({ ...form, firstVisitDate: event.target.value }))}
-                        type="date"
-                        value={visitorForm.firstVisitDate}
-                      />
-                    </label>
-                    <label>
-                      Retorno
-                      <input
-                        onChange={(event) => setVisitorForm((form) => ({ ...form, returnDate: event.target.value }))}
-                        type="date"
-                        value={visitorForm.returnDate}
-                      />
-                    </label>
-                    <label>
-                      Convidado por
-                      <input
-                        onChange={(event) => setVisitorForm((form) => ({ ...form, invitedBy: event.target.value }))}
-                        placeholder="Nome, grupo ou evento"
-                        value={visitorForm.invitedBy}
-                      />
-                    </label>
-                    <label>
-                      Integracao
-                      <select
-                        onChange={(event) => setVisitorForm((form) => ({ ...form, integrationStatus: event.target.value as VisitorRecord["integrationStatus"] }))}
-                        value={visitorForm.integrationStatus}
-                      >
-                        <option>Primeira visita</option>
-                        <option>Retornou</option>
-                        <option>Em acompanhamento</option>
-                        <option>Integrado</option>
-                      </select>
-                    </label>
-                    <label className="check-card">
-                      <input
-                        checked={visitorForm.contactMade}
-                        onChange={(event) => setVisitorForm((form) => ({ ...form, contactMade: event.target.checked }))}
-                        type="checkbox"
-                      />
-                      Contato feito
-                    </label>
-                    <label className="full">
-                      Observacoes
-                      <textarea
-                        onChange={(event) => setVisitorForm((form) => ({ ...form, notes: event.target.value }))}
-                        placeholder="Primeira impressao, necessidade pastoral, retorno ou decisao"
-                        value={visitorForm.notes}
-                      />
-                    </label>
-                    <div className="form-actions full">
-                      <button className="primary-action" disabled={!canCreateVisitor} onClick={createVisitor} type="button">
-                        {editingVisitorId ? "Atualizar visitante" : "Salvar visitante"}
-                      </button>
-                      {editingVisitorId && (
-                        <button
-                          className="secondary"
-                          onClick={() => {
-                            setVisitorForm(blankVisitor);
-                            setEditingVisitorId(null);
-                          }}
-                          type="button"
-                        >
-                          Cancelar
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </article>
-              )}
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Visitantes em acompanhamento</h2>
-                  <span>{filteredVisitors.length} registros</span>
-                </div>
-                <div className="filter-bar">
-                  <label>
-                    Status
-                    <select onChange={(event) => setVisitorStatusFilter(event.target.value)} value={visitorStatusFilter}>
-                      <option>Todos</option>
-                      <option>Primeira visita</option>
-                      <option>Retornou</option>
-                      <option>Em acompanhamento</option>
-                      <option>Integrado</option>
-                    </select>
-                  </label>
-                  <label>
-                    Contato
-                    <select onChange={(event) => setVisitorContactFilter(event.target.value)} value={visitorContactFilter}>
-                      <option>Todos</option>
-                      <option>Contato pendente</option>
-                      <option>Contato feito</option>
-                    </select>
-                  </label>
-                  <button className="secondary" onClick={() => exportReport("visitors", "pdf")} type="button">
-                    PDF
-                  </button>
-                  <button className="secondary" onClick={() => exportReport("visitors", "csv")} type="button">
-                    Excel
-                  </button>
-                </div>
-                <div className="row-list">
-                  {filteredVisitors.map((visitor) => (
-                    <div className="data-row access-user-row" key={visitor.id}>
-                      <span className="date-box">{formatDate(visitor.firstVisitDate)}</span>
-                      <div>
-                        <strong>{visitor.fullName}</strong>
-                        <small>
-                          {visitor.integrationStatus} - {visitor.contactMade ? "contato feito" : "contato pendente"} - {visitor.phone}
-                        </small>
-                        <small>Convidado por: {visitor.invitedBy || "Nao informado"}</small>
-                        {visitor.notes && <small>{visitor.notes}</small>}
-                      </div>
-                      <div className="row-actions">
-                        <a className="whatsapp-link" href={whatsappUrl(visitor.phone, "Paz, {nome}! Ficamos felizes com sua visita. Podemos ajudar em algo?", visitor.fullName)} rel="noreferrer" target="_blank">
-                          WhatsApp
-                        </a>
-                        {canManageVisitors && (
-                          <button className="secondary" onClick={() => editVisitor(visitor)} type="button">
-                            Editar
-                          </button>
-                        )}
-                        {canManageMembers && visitor.integrationStatus !== "Integrado" && (
-                          <button className="secondary" onClick={() => convertVisitorToMember(visitor)} type="button">
-                            Integrar
-                          </button>
-                        )}
-                        {canManageVisitors && (
-                          <button className="danger-action" onClick={() => deleteVisitor(visitor)} type="button">
-                            Excluir
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {!filteredVisitors.length && <p className="empty-state">Nenhum visitante encontrado para este filtro.</p>}
-                </div>
-              </article>
-            </section>
+            <VisitorsPanel
+              canCreateVisitor={canCreateVisitor}
+              canManageMembers={canManageMembers}
+              canManageVisitors={canManageVisitors}
+              convertVisitorToMember={convertVisitorToMember}
+              createVisitor={createVisitor}
+              deleteVisitor={deleteVisitor}
+              editVisitor={editVisitor}
+              editingVisitorId={editingVisitorId}
+              exportReport={exportReport}
+              filteredVisitors={filteredVisitors}
+              setEditingVisitorId={setEditingVisitorId}
+              setVisitorContactFilter={setVisitorContactFilter}
+              setVisitorForm={setVisitorForm}
+              setVisitorStatusFilter={setVisitorStatusFilter}
+              visitorContactFilter={visitorContactFilter}
+              visitorForm={visitorForm}
+              visitorStatusFilter={visitorStatusFilter}
+            />
           )}
 
           {activeModule === "members" && (
@@ -5507,177 +5041,39 @@ export default function Home() {
           )}
 
           {activeModule === "school" && (
-            <section className="content-grid">
-              {canManageModule(currentAccessRole, "school") && <article className="surface">
-                <div className="panel-heading">
-                  <h2>Novo aviso da EBD</h2>
-                  <span>Por classe</span>
-                </div>
-                <div className="form-grid">
-                  <label className="full">
-                    Classe
-                    <select
-                      onChange={(event) => setSchoolNoticeForm((form) => ({ ...form, classId: event.target.value }))}
-                      value={schoolNoticeForm.classId}
-                    >
-                      {data.schoolClasses.map((schoolClass) => (
-                        <option key={schoolClass.id} value={schoolClass.id}>
-                          {schoolClass.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="full">
-                    Titulo do aviso
-                    <input
-                      onChange={(event) => setSchoolNoticeForm((form) => ({ ...form, title: event.target.value }))}
-                      placeholder="Ex.: Material da proxima aula"
-                      value={schoolNoticeForm.title}
-                    />
-                  </label>
-                  <label className="full">
-                    Mensagem
-                    <textarea
-                      onChange={(event) => setSchoolNoticeForm((form) => ({ ...form, body: event.target.value }))}
-                      placeholder="Escreva o aviso para a classe selecionada"
-                      value={schoolNoticeForm.body}
-                    />
-                  </label>
-                  <button className="primary-action" disabled={!canCreateSchoolNotice} onClick={createSchoolNotice} type="button">
-                    Gerar aviso para classe
-                  </button>
-                  <button
-                    className="secondary"
-                    disabled={!canCreateSchoolNotice}
-                    onClick={() => {
-                      const selectedClass = data.schoolClasses.find((schoolClass) => schoolClass.id === schoolNoticeForm.classId);
-                      if (selectedClass) openClassWhatsapp(selectedClass, schoolNoticeForm.title, schoolNoticeForm.body, "EBD");
-                    }}
-                    type="button"
-                  >
-                    Enviar via WhatsApp
-                  </button>
-                </div>
-              </article>}
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Classes da EBD</h2>
-                  <span>{data.schoolClasses.length} classes</span>
-                </div>
-                <div className="row-list">
-                  {data.schoolClasses.map((schoolClass) => (
-                    <div className="data-row class-row" key={schoolClass.id}>
-                      <span className="date-box">{schoolClass.students}</span>
-                      <div>
-                        <strong>{schoolClass.name}</strong>
-                        <small>Professor: {schoolClass.teacher} - Proxima aula: {schoolClass.nextLesson}</small>
-                        {canManageModule(currentAccessRole, "school") && <small>{classWhatsappRecipients(data.members, schoolClass, "EBD").length} contatos de WhatsApp encontrados</small>}
-                        <div className="notice-stack">
-                          {schoolClass.notices.length === 0 ? (
-                            <small>Nenhum aviso enviado para esta classe.</small>
-                          ) : (
-                            schoolClass.notices.map((notice) => (
-                              <span className="notice-pill" key={notice.id}>
-                                {notice.title}
-                              </span>
-                            ))
-                          )}
-                        </div>
-                        {renderAttendancePanel("school", schoolClass)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            </section>
+            <ClassModulePanel
+              areaLabel="EBD"
+              canCreateNotice={canCreateSchoolNotice}
+              canManage={canManageModule(currentAccessRole, "school")}
+              classes={data.schoolClasses}
+              createNotice={createSchoolNotice}
+              members={data.members}
+              noticeForm={schoolNoticeForm}
+              noticeTitle="Novo aviso da EBD"
+              openClassWhatsapp={openClassWhatsapp}
+              renderAttendancePanel={(classRecord) => renderAttendancePanel("school", classRecord)}
+              setNoticeForm={setSchoolNoticeForm}
+              title="Classes da EBD"
+              whatsappPlaceholder="Ex.: Material da proxima aula"
+            />
           )}
 
           {activeModule === "discipleship" && (
-            <section className="content-grid">
-              {canManageModule(currentAccessRole, "discipleship") && <article className="surface">
-                <div className="panel-heading">
-                  <h2>Novo aviso do Discipulado</h2>
-                  <span>Por classe</span>
-                </div>
-                <div className="form-grid">
-                  <label className="full">
-                    Classe
-                    <select
-                      onChange={(event) => setDiscipleshipNoticeForm((form) => ({ ...form, classId: event.target.value }))}
-                      value={discipleshipNoticeForm.classId}
-                    >
-                      {data.discipleshipClasses.map((discipleshipClass) => (
-                        <option key={discipleshipClass.id} value={discipleshipClass.id}>
-                          {discipleshipClass.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="full">
-                    Titulo do aviso
-                    <input
-                      onChange={(event) => setDiscipleshipNoticeForm((form) => ({ ...form, title: event.target.value }))}
-                      placeholder="Ex.: Encontro de acompanhamento"
-                      value={discipleshipNoticeForm.title}
-                    />
-                  </label>
-                  <label className="full">
-                    Mensagem
-                    <textarea
-                      onChange={(event) => setDiscipleshipNoticeForm((form) => ({ ...form, body: event.target.value }))}
-                      placeholder="Escreva o aviso para a classe selecionada"
-                      value={discipleshipNoticeForm.body}
-                    />
-                  </label>
-                  <button className="primary-action" disabled={!canCreateDiscipleshipNotice} onClick={createDiscipleshipNotice} type="button">
-                    Gerar aviso para classe
-                  </button>
-                  <button
-                    className="secondary"
-                    disabled={!canCreateDiscipleshipNotice}
-                    onClick={() => {
-                      const selectedClass = data.discipleshipClasses.find((discipleshipClass) => discipleshipClass.id === discipleshipNoticeForm.classId);
-                      if (selectedClass) openClassWhatsapp(selectedClass, discipleshipNoticeForm.title, discipleshipNoticeForm.body, "Discipulado");
-                    }}
-                    type="button"
-                  >
-                    Enviar via WhatsApp
-                  </button>
-                </div>
-              </article>}
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Classes do Discipulado</h2>
-                  <span>{data.discipleshipClasses.length} classes</span>
-                </div>
-                <div className="row-list">
-                  {data.discipleshipClasses.map((discipleshipClass) => (
-                    <div className="data-row class-row" key={discipleshipClass.id}>
-                      <span className="date-box">{discipleshipClass.students}</span>
-                      <div>
-                        <strong>{discipleshipClass.name}</strong>
-                        <small>Professor: {discipleshipClass.teacher} - Proxima aula: {discipleshipClass.nextLesson}</small>
-                        {canManageModule(currentAccessRole, "discipleship") && <small>{classWhatsappRecipients(data.members, discipleshipClass, "Discipulado").length} contatos de WhatsApp encontrados</small>}
-                        <div className="notice-stack">
-                          {discipleshipClass.notices.length === 0 ? (
-                            <small>Nenhum aviso enviado para esta classe.</small>
-                          ) : (
-                            discipleshipClass.notices.map((notice) => (
-                              <span className="notice-pill" key={notice.id}>
-                                {notice.title}
-                              </span>
-                            ))
-                          )}
-                        </div>
-                        {renderAttendancePanel("discipleship", discipleshipClass)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            </section>
+            <ClassModulePanel
+              areaLabel="Discipulado"
+              canCreateNotice={canCreateDiscipleshipNotice}
+              canManage={canManageModule(currentAccessRole, "discipleship")}
+              classes={data.discipleshipClasses}
+              createNotice={createDiscipleshipNotice}
+              members={data.members}
+              noticeForm={discipleshipNoticeForm}
+              noticeTitle="Novo aviso do Discipulado"
+              openClassWhatsapp={openClassWhatsapp}
+              renderAttendancePanel={(classRecord) => renderAttendancePanel("discipleship", classRecord)}
+              setNoticeForm={setDiscipleshipNoticeForm}
+              title="Classes do Discipulado"
+              whatsappPlaceholder="Ex.: Encontro de acompanhamento"
+            />
           )}
 
           {activeModule === "messages" && (
