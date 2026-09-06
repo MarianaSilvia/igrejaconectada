@@ -851,7 +851,7 @@ function savePhotoCache(data: AppData) {
   if (typeof window === "undefined") return;
 
   const cache: PhotoCache = {
-    members: Object.fromEntries(data.members.filter((member) => member.photoDataUrl).map((member) => [member.id, member.photoDataUrl])),
+    members: {},
     kids: Object.fromEntries(data.kids.filter((kid) => kid.photoDataUrl).map((kid) => [kid.id, kid.photoDataUrl])),
   };
 
@@ -867,7 +867,7 @@ function mergePhotoCache(data: AppData, cache: PhotoCache) {
     ...data,
     members: data.members.map((member) => ({
       ...member,
-      photoDataUrl: member.photoDataUrl || cache.members[member.id] || "",
+      photoDataUrl: "",
     })),
     kids: data.kids.map((kid) => ({
       ...kid,
@@ -1074,6 +1074,7 @@ function normalizeMember(member: Partial<MemberRecord>): MemberRecord {
     id: member.id ?? uid("member"),
     status,
     memberType,
+    photoDataUrl: "",
   };
 }
 
@@ -1719,7 +1720,7 @@ export default function Home() {
           {monthlyBirthdays.slice(0, 8).map((member) => (
             <div className="birthday-person-card" key={member.id}>
               <div className="birthday-person-photo">
-                {member.photoDataUrl ? <img alt="" src={member.photoDataUrl} /> : member.fullName.slice(0, 1)}
+                {member.fullName.slice(0, 1)}
               </div>
               <div>
                 <strong>{member.fullName}</strong>
@@ -1729,7 +1730,7 @@ export default function Home() {
           ))}
         </div>
       ) : (
-        <p className="empty-state">Assim que houver aniversariantes cadastrados neste mes, eles aparecem aqui com nome e foto.</p>
+        <p className="empty-state">Assim que houver aniversariantes cadastrados neste mes, eles aparecem aqui com nome em destaque.</p>
       )}
     </article>
   );
@@ -3445,7 +3446,7 @@ export default function Home() {
                 {currentMember ? (
                   <div className="data-row member-row">
                     <div className="member-avatar">
-                      {currentMember.photoDataUrl ? <img alt="" src={currentMember.photoDataUrl} /> : currentMember.fullName.slice(0, 1)}
+                      {currentMember.fullName.slice(0, 1)}
                     </div>
                     <div>
                       <strong>{currentMember.fullName}</strong>
@@ -4128,7 +4129,7 @@ export default function Home() {
                   {selectedAccessMember && (
                     <div className="selected-member-access full">
                       <div className="member-avatar">
-                        {selectedAccessMember.photoDataUrl ? <img alt="" src={selectedAccessMember.photoDataUrl} /> : selectedAccessMember.fullName.slice(0, 1)}
+                        {selectedAccessMember.fullName.slice(0, 1)}
                       </div>
                       <div>
                         <strong>{selectedAccessMember.fullName}</strong>
@@ -4236,15 +4237,6 @@ export default function Home() {
                   <span>{isAdminView ? (editingMemberId ? "Atualizando cadastro" : "Membro ou visitante") : "Meu cadastro"}</span>
                 </div>
                 <div className="form-grid">
-                  <div className="photo-uploader full">
-                    <div className="photo-preview">
-                      {memberForm.photoDataUrl ? <img alt="" src={memberForm.photoDataUrl} /> : <span>Foto</span>}
-                    </div>
-                    <label>
-                      Enviar foto
-                      <input accept="image/*" onChange={(event) => readPhoto(event, (photoDataUrl) => setMemberForm((form) => ({ ...form, photoDataUrl })))} type="file" />
-                    </label>
-                  </div>
                   <label className="full">
                     Nome completo
                     <input
@@ -4511,7 +4503,7 @@ export default function Home() {
                     <div className="member-record" key={member.id}>
                       <div className="data-row member-row">
                         <div className="member-avatar">
-                          {member.photoDataUrl ? <img alt="" src={member.photoDataUrl} /> : member.fullName.slice(0, 1)}
+                          {member.fullName.slice(0, 1)}
                         </div>
                         <div>
                           <strong>{member.fullName}</strong>

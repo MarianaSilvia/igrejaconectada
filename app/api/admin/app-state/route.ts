@@ -122,7 +122,6 @@ function mergeMemberRecord(existingMember: JsonRecord, incomingMember: JsonRecor
     "email",
     "schoolClassId",
     "discipleshipClassId",
-    "photoDataUrl",
     "birthDate",
     "maritalStatus",
     "address",
@@ -135,8 +134,15 @@ function mergeMemberRecord(existingMember: JsonRecord, incomingMember: JsonRecor
 
   return allowedFields.reduce<JsonRecord>(
     (member, field) => (field in incomingMember ? { ...member, [field]: incomingMember[field] } : member),
-    { ...existingMember },
+    { ...existingMember, photoDataUrl: "" },
   );
+}
+
+function stripMemberPhotos(payload: JsonRecord) {
+  return {
+    ...payload,
+    members: recordsFrom(payload.members).map((member) => ({ ...member, photoDataUrl: "" })),
+  };
 }
 
 function mergeCareRequest(existingRequest: JsonRecord | undefined, incomingRequest: JsonRecord) {
@@ -185,7 +191,7 @@ function mergeMemberPayload(existingPayload: JsonRecord, incomingPayload: JsonRe
     payload: {
       ...existingPayload,
       members: recordsFrom(existingPayload.members).map((member) =>
-        textValue(member.id) === currentMemberId && incomingMember ? mergeMemberRecord(member, incomingMember) : member,
+        textValue(member.id) === currentMemberId && incomingMember ? mergeMemberRecord(member, incomingMember) : { ...member, photoDataUrl: "" },
       ),
       careRequests: Array.from(careById.values()),
     },
@@ -233,7 +239,7 @@ export async function PUT(request: Request) {
 
   const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(stored.payload, session.user);
   const mergedPayload = administrativeRoles.has(effectiveRole)
-    ? { payload }
+    ? { payload: stripMemberPhotos(payload) }
     : mergeMemberPayload(isRecord(stored.payload) ? stored.payload : {}, payload, session.user);
 
   if ("response" in mergedPayload) return mergedPayload.response;
