@@ -104,16 +104,25 @@ export type MemberRecord = {
   cpf: string;
   phone: string;
   email: string;
+  ageGroup: string;
+  age: string;
+  gender: string;
   status: "Membro ativo" | "Visitante" | "Novo convertido" | "Transferencia";
   memberType: "Membro" | "Visitante" | "Congregado" | "Lideranca";
   role: string;
+  categories: string;
   ministry: string;
   schoolClassId: string;
   discipleshipClassId: string;
   photoDataUrl: string;
   birthDate: string;
   maritalStatus: string;
+  education: string;
+  spouseName: string;
   address: string;
+  zipCode: string;
+  city: string;
+  neighborhood: string;
   congregation: string;
   previousChurch: string;
   conversionDate: string;
@@ -124,6 +133,7 @@ export type MemberRecord = {
   waterBaptized: boolean;
   holySpiritBaptized: boolean;
   joinedAt: string;
+  createdAt: string;
   notes: string;
 };
 
