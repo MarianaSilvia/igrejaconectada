@@ -105,9 +105,12 @@ function filteredPayloadForMember(payload: unknown, user: User) {
     ...payload,
     users: [],
     members: currentMember ? [currentMember] : [],
+    visitors: [],
     kids: recordsFrom(payload.kids).filter((kid) => kidBelongsToMember(kid, currentMember, user)),
     careRequests: recordsFrom(payload.careRequests).filter((request) => careBelongsToMember(request, currentMember, user)),
+    schedules: [],
     attendanceSessions: filterAttendanceForMember(recordsFrom(payload.attendanceSessions), currentMember),
+    messageCampaigns: [],
     audit: [],
   };
 }

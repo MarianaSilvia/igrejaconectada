@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminClient, churchRoleFromLabel, requireSession } from "../auth";
+import { churchRoleFromAccessRole, type AccessRole } from "../../../permissions";
 
 type AccessUserPayload = {
   userId?: string;
@@ -19,12 +20,7 @@ type DeleteAccessUserPayload = {
 type JsonRecord = Record<string, unknown>;
 
 function toChurchRole(role?: string) {
-  if (role === "Administrador") return "ADMIN";
-  if (role === "Lider") return "LEADER";
-  if (role === "Professor") return "PROFESSOR";
-  if (role === "Secretario") return "SECRETARY";
-  if (role === "Tesoureiro") return "TREASURER";
-  return "MEMBER";
+  return churchRoleFromAccessRole((role ?? "Membro") as AccessRole);
 }
 
 function toChurchAccess(status?: string) {

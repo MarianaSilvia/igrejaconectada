@@ -1,40 +1,13 @@
 import { createClient, type User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { administrativeRoles, churchRoleFromLabel, type ChurchRole } from "../../permissions";
 
-export type ChurchRole = "ADMIN" | "LEADER" | "PROFESSOR" | "SECRETARY" | "TREASURER" | "MEMBER";
+export { administrativeRoles, churchRoleFromLabel };
+export type { ChurchRole };
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const roleByLabel: Record<string, ChurchRole> = {
-  administrador: "ADMIN",
-  admin: "ADMIN",
-  lider: "LEADER",
-  líder: "LEADER",
-  leader: "LEADER",
-  professor: "PROFESSOR",
-  secretario: "SECRETARY",
-  secretário: "SECRETARY",
-  secretary: "SECRETARY",
-  tesoureiro: "TREASURER",
-  treasurer: "TREASURER",
-  membro: "MEMBER",
-  member: "MEMBER",
-};
-
-export const administrativeRoles = new Set<ChurchRole>(["ADMIN", "LEADER", "PROFESSOR", "SECRETARY", "TREASURER"]);
-
-export function churchRoleFromLabel(value: unknown): ChurchRole {
-  const role = String(value ?? "").trim();
-  const normalizedRole = role.toUpperCase();
-
-  if (["ADMIN", "LEADER", "PROFESSOR", "SECRETARY", "TREASURER", "MEMBER"].includes(normalizedRole)) {
-    return normalizedRole as ChurchRole;
-  }
-
-  return roleByLabel[role.toLowerCase()] ?? "MEMBER";
-}
 
 export function unavailableResponse() {
   if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {

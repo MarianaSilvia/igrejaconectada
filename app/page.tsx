@@ -1,23 +1,8 @@
 "use client";
 
 import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import { accessRoleFromMetadata, canAccessModule, canManageModule, isAdministrativeRole, modules, type AccessRole, type ModuleKey } from "./permissions";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
-
-type ModuleKey =
-  | "overview"
-  | "users"
-  | "members"
-  | "kids"
-  | "events"
-  | "ministries"
-  | "notices"
-  | "messages"
-  | "mural"
-  | "pastoral"
-  | "school"
-  | "discipleship"
-  | "reports"
-  | "settings";
 
 type AccessMode = "login" | "recover";
 
@@ -105,11 +90,9 @@ type AccessUser = {
   id: string;
   name: string;
   email: string;
-  role: "Administrador" | "Lider" | "Professor" | "Secretario" | "Tesoureiro" | "Membro";
+  role: AccessRole;
   status: "Ativo" | "Pendente" | "Bloqueado";
 };
-
-type AccessRole = AccessUser["role"];
 
 type AccessUserForm = Omit<AccessUser, "id"> & {
   password: string;
@@ -147,6 +130,18 @@ type MemberRecord = {
   notes: string;
 };
 
+type VisitorRecord = {
+  id: string;
+  fullName: string;
+  phone: string;
+  firstVisitDate: string;
+  returnDate: string;
+  invitedBy: string;
+  contactMade: boolean;
+  integrationStatus: "Primeira visita" | "Retornou" | "Em acompanhamento" | "Integrado";
+  notes: string;
+};
+
 type KidRecord = {
   id: string;
   childName: string;
@@ -172,6 +167,8 @@ type MessageAudience =
   | "EBD"
   | "Discipulado"
   | "Grupos"
+  | "Visitantes"
+  | "Escalas"
   | "Responsaveis Kids";
 
 type MessageRecipient = {
@@ -218,6 +215,18 @@ type MinistryRecord = {
   notes: string;
 };
 
+type ScheduleRecord = {
+  id: string;
+  date: string;
+  serviceType: string;
+  group: string;
+  functionName: string;
+  assignedTo: string;
+  phone: string;
+  confirmationStatus: "Pendente" | "Confirmado" | "Substituir";
+  notes: string;
+};
+
 type AuditItem = {
   id: string;
   action: string;
@@ -231,10 +240,12 @@ type AppData = {
   mural: MuralItem[];
   users: AccessUser[];
   members: MemberRecord[];
+  visitors: VisitorRecord[];
   kids: KidRecord[];
   schoolClasses: SchoolClass[];
   discipleshipClasses: SchoolClass[];
   ministries: MinistryRecord[];
+  schedules: ScheduleRecord[];
   attendanceSessions: AttendanceSession[];
   messageTemplates: MessageTemplateItem[];
   messageCampaigns: MessageCampaign[];
@@ -249,35 +260,6 @@ type RemoteAppStateResponse = {
 
 const storageKey = "igreja-gestao-local-v1";
 const photoCacheKey = "igreja-conectada-photo-cache-v1";
-
-const modules: { key: ModuleKey; label: string; short: string }[] = [
-  { key: "overview", label: "Visao geral", short: "Painel" },
-  { key: "users", label: "Usuarios e acessos", short: "Acessos" },
-  { key: "members", label: "Membros", short: "Membros" },
-  { key: "kids", label: "Area Kids", short: "Kids" },
-  { key: "events", label: "Agenda", short: "Agenda" },
-  { key: "ministries", label: "Grupos", short: "Grupos" },
-  { key: "notices", label: "Comunicados", short: "Avisos" },
-  { key: "messages", label: "Comunicacao", short: "Mensagens" },
-  { key: "mural", label: "Mural", short: "Mural" },
-  { key: "pastoral", label: "Atendimento pastoral", short: "Pastoral" },
-  { key: "school", label: "Escola Biblica", short: "EBD" },
-  { key: "discipleship", label: "Discipulado", short: "Discipulado" },
-  { key: "reports", label: "Relatorios", short: "Relatorios" },
-  { key: "settings", label: "Configuracoes", short: "Config" },
-];
-
-const memberVisibleModuleKeys: ModuleKey[] = [
-  "overview",
-  "members",
-  "kids",
-  "events",
-  "notices",
-  "mural",
-  "pastoral",
-  "school",
-  "discipleship",
-];
 
 const statusFlow: CareStatus[] = ["Pendente", "Em analise", "Agendado", "Concluido"];
 
@@ -482,6 +464,19 @@ const initialData: AppData = {
       notes: "Solicitou visita pastoral para conhecer melhor a igreja.",
     },
   ],
+  visitors: [
+    {
+      id: "visitor-1",
+      fullName: "Carlos Lima",
+      phone: "(21) 97777-5402",
+      firstVisitDate: "2026-08-22",
+      returnDate: "",
+      invitedBy: "Recepcao",
+      contactMade: false,
+      integrationStatus: "Em acompanhamento",
+      notes: "Solicitou visita pastoral para conhecer melhor a igreja.",
+    },
+  ],
   kids: [
     {
       id: "kid-1",
@@ -624,6 +619,19 @@ const initialData: AppData = {
       notes: "Abrir novos horarios de oracao.",
     },
   ],
+  schedules: [
+    {
+      id: "schedule-1",
+      date: "2026-09-06",
+      serviceType: "Culto da familia",
+      group: "Louvor",
+      functionName: "Dirigente",
+      assignedTo: "Ana Ribeiro",
+      phone: "(11) 98888-1201",
+      confirmationStatus: "Confirmado",
+      notes: "Chegar 30 minutos antes para alinhamento.",
+    },
+  ],
   audit: [
     { id: "audit-1", action: "Central de notificacoes criada", when: "2026-09-02T15:10:00.000Z" },
     { id: "audit-2", action: "Modulo de backup validado", when: "2026-09-02T14:42:00.000Z" },
@@ -716,6 +724,17 @@ const blankMember: Omit<MemberRecord, "id"> = {
   notes: "",
 };
 
+const blankVisitor: Omit<VisitorRecord, "id"> = {
+  fullName: "",
+  phone: "",
+  firstVisitDate: "",
+  returnDate: "",
+  invitedBy: "",
+  contactMade: false,
+  integrationStatus: "Primeira visita",
+  notes: "",
+};
+
 const memberRoleOptions = [
   "Professor",
   "Dirigente",
@@ -775,6 +794,17 @@ const blankKid: Omit<KidRecord, "id"> = {
   joinedAt: "",
 };
 
+const blankSchedule: Omit<ScheduleRecord, "id"> = {
+  date: "",
+  serviceType: "",
+  group: "",
+  functionName: "",
+  assignedTo: "",
+  phone: "",
+  confirmationStatus: "Pendente",
+  notes: "",
+};
+
 const blankMuralItem: Omit<MuralItem, "id"> = {
   title: "",
   category: "Secretaria",
@@ -799,6 +829,8 @@ const messageAudiences: MessageAudience[] = [
   "EBD",
   "Discipulado",
   "Grupos",
+  "Visitantes",
+  "Escalas",
   "Responsaveis Kids",
 ];
 
@@ -1015,15 +1047,6 @@ function comparablePhone(value: string) {
   return value.replace(/\D/g, "").replace(/^55/, "");
 }
 
-function accessRoleFromMetadata(value: unknown): AccessRole {
-  if (value === "Administrador" || value === "ADMIN" || value === "admin") return "Administrador";
-  if (value === "Lider" || value === "LEADER" || value === "leader") return "Lider";
-  if (value === "Professor" || value === "PROFESSOR" || value === "teacher") return "Professor";
-  if (value === "Secretario" || value === "SECRETARY" || value === "secretary") return "Secretario";
-  if (value === "Tesoureiro" || value === "TREASURER" || value === "treasurer") return "Tesoureiro";
-  return "Membro";
-}
-
 function isApprovedAccessStatus(value: unknown) {
   if (!value) return true;
   const status = String(value).toLowerCase();
@@ -1035,32 +1058,6 @@ function accessRoleForSession(users: AccessUser[], email: string, metadata: Reco
     users.find((user) => normalizeEmail(user.email) === normalizeEmail(email))?.role ??
     accessRoleFromMetadata(metadata?.church_gp_role ?? metadata?.role)
   );
-}
-
-function isAdministrativeRole(role: AccessRole) {
-  return role === "Administrador" || role === "Lider" || role === "Professor" || role === "Secretario" || role === "Tesoureiro";
-}
-
-const moduleAccessByRole: Record<AccessRole, ModuleKey[]> = {
-  Administrador: modules.map((module) => module.key),
-  Lider: ["overview", "members", "events", "ministries", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports"],
-  Professor: ["overview", "members", "events", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports"],
-  Secretario: ["overview", "users", "members", "kids", "events", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports", "settings"],
-  Tesoureiro: ["overview", "events", "notices", "messages", "mural", "reports"],
-  Membro: memberVisibleModuleKeys,
-};
-
-function canAccessModule(role: AccessRole, moduleKey: ModuleKey) {
-  return moduleAccessByRole[role].includes(moduleKey);
-}
-
-function canManageModule(role: AccessRole, moduleKey: ModuleKey) {
-  if (role === "Administrador") return true;
-  if (role === "Secretario") return ["users", "members", "kids", "events", "notices", "messages", "mural", "reports"].includes(moduleKey);
-  if (role === "Lider") return ["ministries", "pastoral", "events", "notices", "messages", "mural", "reports"].includes(moduleKey);
-  if (role === "Professor") return ["school", "discipleship", "messages", "reports"].includes(moduleKey);
-  if (role === "Tesoureiro") return moduleKey === "reports";
-  return false;
 }
 
 function messageFor(text: string, recipientName: string) {
@@ -1181,6 +1178,38 @@ function normalizeMinistry(ministry: Partial<MinistryRecord>): MinistryRecord {
     ...ministry,
     id: ministry.id ?? uid("ministry"),
   };
+}
+
+function normalizeVisitor(visitor: Partial<VisitorRecord>): VisitorRecord {
+  return {
+    ...blankVisitor,
+    ...visitor,
+    id: visitor.id ?? uid("visitor"),
+  };
+}
+
+function normalizeSchedule(schedule: Partial<ScheduleRecord>): ScheduleRecord {
+  return {
+    ...blankSchedule,
+    ...schedule,
+    id: schedule.id ?? uid("schedule"),
+  };
+}
+
+function visitorsFromMembers(members: MemberRecord[]): VisitorRecord[] {
+  return members
+    .filter((member) => member.memberType === "Visitante" || member.status === "Visitante" || member.status === "Novo convertido")
+    .map((member) => ({
+      id: `visitor-${member.id}`,
+      fullName: member.fullName,
+      phone: member.phone,
+      firstVisitDate: member.joinedAt,
+      returnDate: "",
+      invitedBy: member.registrationSource,
+      contactMade: member.pastoralStatus !== "Precisa de contato",
+      integrationStatus: member.status === "Novo convertido" ? "Em acompanhamento" : "Primeira visita",
+      notes: member.notes,
+    }));
 }
 
 function normalizeMuralItem(item: Partial<MuralItem>): MuralItem {
@@ -1312,6 +1341,11 @@ async function optimizeProfilePhoto(file: File): Promise<MuralImageResult> {
 }
 
 function normalizeAppData(value: Partial<AppData>): AppData {
+  const normalizedMembers = (value.members ?? initialData.members).map((member) => normalizeMember(member));
+  const normalizedVisitors = value.visitors?.length
+    ? value.visitors.map((visitor) => normalizeVisitor(visitor))
+    : visitorsFromMembers(normalizedMembers);
+
   return {
     ...initialData,
     ...value,
@@ -1320,11 +1354,13 @@ function normalizeAppData(value: Partial<AppData>): AppData {
     notices: (value.notices ?? initialData.notices).map((notice) => normalizeNotice(notice)).filter((notice) => !isExpiredDate(notice.expiresAt)),
     mural: (value.mural ?? initialData.mural).map((item) => normalizeMuralItem(item)),
     users: value.users ?? initialData.users,
-    members: (value.members ?? initialData.members).map((member) => normalizeMember(member)),
+    members: normalizedMembers,
+    visitors: normalizedVisitors,
     kids: (value.kids ?? initialData.kids).map((kid) => normalizeKid(kid)),
     schoolClasses: value.schoolClasses ?? initialData.schoolClasses,
     discipleshipClasses: normalizeDiscipleshipClasses(value.discipleshipClasses),
     ministries: (value.ministries ?? initialData.ministries).map((ministry) => normalizeMinistry(ministry)),
+    schedules: (value.schedules ?? initialData.schedules).map((schedule) => normalizeSchedule(schedule)),
     attendanceSessions: (value.attendanceSessions ?? initialData.attendanceSessions).map((session) =>
       normalizeAttendanceSession(session),
     ),
@@ -1379,8 +1415,13 @@ export default function Home() {
   const [selectedAccessMemberId, setSelectedAccessMemberId] = useState("");
   const [memberForm, setMemberForm] = useState(blankMember);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [memberFormTab, setMemberFormTab] = useState<"Dados" | "Igreja" | "Classes" | "Observacoes" | "Acesso">("Dados");
   const [memberCredentialForm, setMemberCredentialForm] = useState(blankMemberCredential);
+  const [visitorForm, setVisitorForm] = useState(blankVisitor);
+  const [editingVisitorId, setEditingVisitorId] = useState<string | null>(null);
   const [kidForm, setKidForm] = useState(blankKid);
+  const [scheduleForm, setScheduleForm] = useState(blankSchedule);
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [muralForm, setMuralForm] = useState(blankMuralItem);
   const [muralImageMessage, setMuralImageMessage] = useState("");
   const [schoolNoticeForm, setSchoolNoticeForm] = useState(blankSchoolNotice);
@@ -1399,11 +1440,13 @@ export default function Home() {
   const [memberStatusFilter, setMemberStatusFilter] = useState("Todos");
   const [memberTypeFilter, setMemberTypeFilter] = useState("Todos");
   const [memberGroupFilter, setMemberGroupFilter] = useState("Todos");
+  const [visitorStatusFilter, setVisitorStatusFilter] = useState("Todos");
   const [careStatusFilter, setCareStatusFilter] = useState("Todos");
   const [kidClassFilter, setKidClassFilter] = useState("Todos");
   const [eventWeekOffset, setEventWeekOffset] = useState(0);
   const [eventGroupFilter, setEventGroupFilter] = useState("Todos");
   const [eventStatusFilter, setEventStatusFilter] = useState("Todos");
+  const [scheduleGroupFilter, setScheduleGroupFilter] = useState("Todos");
   const [remoteMessageTemplates, setRemoteMessageTemplates] = useState<MessageTemplateItem[]>([]);
   const [remoteStateReady, setRemoteStateReady] = useState(!isSupabaseConfigured());
   const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Modo local: configure o Supabase no Vercel.");
@@ -1660,8 +1703,10 @@ export default function Home() {
   const currentMemberPhone = comparablePhone(currentMember?.phone ?? "");
   const canManageUsers = canManageModule(currentAccessRole, "users");
   const canManageMembers = canManageModule(currentAccessRole, "members");
+  const canManageVisitors = canManageModule(currentAccessRole, "visitors");
   const canManageKids = canManageModule(currentAccessRole, "kids");
   const canManageEvents = canManageModule(currentAccessRole, "events");
+  const canManageSchedules = canManageModule(currentAccessRole, "schedules");
   const canManageGroups = canManageModule(currentAccessRole, "ministries");
   const canManageNotices = canManageModule(currentAccessRole, "notices");
   const canManageMessages = canManageModule(currentAccessRole, "messages");
@@ -1804,6 +1849,7 @@ export default function Home() {
       (selectedAccessExistingUser || userForm.password.trim().length >= 6),
   );
   const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim()) && (canManageMembers || editingMemberId === currentMember?.id);
+  const canCreateVisitor = canManageVisitors && Boolean(visitorForm.fullName.trim() && visitorForm.phone.trim());
   const canSaveMemberAccess = Boolean(
     canManageUsers &&
       memberCredentialForm.memberId &&
@@ -1817,6 +1863,7 @@ export default function Home() {
     canManageModule(currentAccessRole, "discipleship") && discipleshipNoticeForm.classId && discipleshipNoticeForm.title.trim() && discipleshipNoticeForm.body.trim(),
   );
   const canCreateEvent = canManageEvents && Boolean(eventForm.title.trim() && eventForm.date);
+  const canCreateSchedule = canManageSchedules && Boolean(scheduleForm.date && scheduleForm.serviceType.trim() && scheduleForm.assignedTo.trim());
   const canCreateNotice = canManageNotices && Boolean(noticeForm.title.trim() && noticeForm.body.trim());
   const canCreateMinistry = canManageGroups && Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
   const availableMessageTemplates = useMemo(() => {
@@ -1873,6 +1920,17 @@ export default function Home() {
         }),
     [data.discipleshipClasses, data.schoolClasses, memberGroupFilter, memberStatusFilter, memberTypeFilter, searchQuery, visibleMembers],
   );
+  const filteredVisitors = useMemo(
+    () =>
+      data.visitors
+        .filter(() => canManageVisitors)
+        .filter((visitor) => visitorStatusFilter === "Todos" || visitor.integrationStatus === visitorStatusFilter)
+        .filter((visitor) => {
+          if (!searchQuery) return true;
+          return normalizeSearchText([visitor.fullName, visitor.phone, visitor.invitedBy, visitor.integrationStatus, visitor.notes].join(" ")).includes(searchQuery);
+        }),
+    [canManageVisitors, data.visitors, searchQuery, visitorStatusFilter],
+  );
   const filteredKids = useMemo(
     () =>
       visibleKids
@@ -1900,6 +1958,18 @@ export default function Home() {
         return normalizeSearchText([item.title, item.category, item.socialUrl].join(" ")).includes(searchQuery);
       }),
     [canManageMural, data.mural, searchQuery],
+  );
+  const filteredSchedules = useMemo(
+    () =>
+      data.schedules
+        .filter(() => canAccessModule(currentAccessRole, "schedules"))
+        .filter((schedule) => scheduleGroupFilter === "Todos" || schedule.group === scheduleGroupFilter)
+        .filter((schedule) => {
+          if (!searchQuery) return true;
+          return normalizeSearchText([schedule.serviceType, schedule.group, schedule.functionName, schedule.assignedTo, schedule.phone, schedule.confirmationStatus].join(" ")).includes(searchQuery);
+        })
+        .sort((first, second) => `${first.date} ${first.serviceType}`.localeCompare(`${second.date} ${second.serviceType}`)),
+    [currentAccessRole, data.schedules, scheduleGroupFilter, searchQuery],
   );
   const birthdaySpotlightPanel = (
     <article className="surface birthday-spotlight wide">
@@ -1967,6 +2037,16 @@ export default function Home() {
     if (messageAudience === "Grupos") {
       return memberRecipients.filter((recipient) => Boolean(recipient.group && recipient.group !== "Visitante"));
     }
+    if (messageAudience === "Visitantes") {
+      return data.visitors
+        .filter((visitor) => normalizeWhatsappPhone(visitor.phone))
+        .map((visitor) => ({ id: visitor.id, name: visitor.fullName, phone: visitor.phone, group: visitor.integrationStatus }));
+    }
+    if (messageAudience === "Escalas") {
+      return data.schedules
+        .filter((schedule) => normalizeWhatsappPhone(schedule.phone))
+        .map((schedule) => ({ id: schedule.id, name: schedule.assignedTo, phone: schedule.phone, group: `${schedule.serviceType} - ${schedule.functionName}` }));
+    }
     return data.kids
       .filter((kid) => normalizeWhatsappPhone(kid.guardianPhone))
       .map((kid) => ({
@@ -1975,7 +2055,7 @@ export default function Home() {
         phone: kid.guardianPhone,
         group: kid.childName,
       }));
-  }, [data.discipleshipClasses, data.kids, data.members, data.schoolClasses, messageAudience, monthlyBirthdays, weeklyBirthdays]);
+  }, [data.discipleshipClasses, data.kids, data.members, data.schedules, data.schoolClasses, data.visitors, messageAudience, monthlyBirthdays, weeklyBirthdays]);
   const selectedMessageRecipients = useMemo(() => {
     const selected = messageRecipients.filter((recipient) => selectedMessageRecipientIds.includes(recipient.id));
     return selected.length ? selected : messageRecipients;
@@ -2389,12 +2469,43 @@ export default function Home() {
     return weekEvents.map((event) => [formatDate(event.date), event.time || "Sem horario", event.title, event.ministry, event.location, event.responsible, event.status]);
   }
 
-  function exportReport(kind: "members" | "birthdays" | "kids" | "agenda" | "attendance" | "absences", format: "pdf" | "csv") {
+  function visitorReportRows() {
+    return data.visitors.map((visitor) => [
+      visitor.fullName,
+      visitor.phone,
+      formatDate(visitor.firstVisitDate),
+      formatDate(visitor.returnDate),
+      visitor.invitedBy || "Nao informado",
+      visitor.contactMade ? "Contato feito" : "Pendente",
+      visitor.integrationStatus,
+      visitor.notes,
+    ]);
+  }
+
+  function scheduleReportRows() {
+    return data.schedules.map((schedule) => [
+      formatDate(schedule.date),
+      schedule.serviceType,
+      schedule.group || "Sem grupo",
+      schedule.functionName,
+      schedule.assignedTo,
+      schedule.phone,
+      schedule.confirmationStatus,
+      schedule.notes,
+    ]);
+  }
+
+  function exportReport(kind: "members" | "visitors" | "birthdays" | "kids" | "agenda" | "schedules" | "attendance" | "absences", format: "pdf" | "csv") {
     const reports = {
       members: {
         title: "Membros por tipo",
         headers: ["Nome", "Tipo", "Status", "Telefone", "E-mail", "Grupo", "EBD", "Discipulado", "Situacao pastoral"],
         rows: memberReportRows(),
+      },
+      visitors: {
+        title: "Visitantes",
+        headers: ["Nome", "Telefone", "Primeira visita", "Retorno", "Convidado por", "Contato", "Integracao", "Observacoes"],
+        rows: visitorReportRows(),
       },
       birthdays: {
         title: "Aniversariantes do mes",
@@ -2410,6 +2521,11 @@ export default function Home() {
         title: "Agenda semanal",
         headers: ["Data", "Horario", "Evento", "Grupo", "Local", "Responsavel", "Status"],
         rows: agendaWeekRows(),
+      },
+      schedules: {
+        title: "Escalas",
+        headers: ["Data", "Culto", "Grupo", "Funcao", "Pessoa", "WhatsApp", "Status", "Observacoes"],
+        rows: scheduleReportRows(),
       },
       attendance: {
         title: "Presenca EBD e Discipulado",
@@ -2743,6 +2859,23 @@ export default function Home() {
       members: editingMemberId
         ? current.members.map((item) => (item.id === editingMemberId ? member : item))
         : [member, ...current.members],
+      visitors:
+        member.memberType === "Visitante" || member.status === "Visitante" || member.status === "Novo convertido"
+          ? [
+              {
+                id: `visitor-${member.id}`,
+                fullName: member.fullName,
+                phone: member.phone,
+                firstVisitDate: member.joinedAt || currentDateKey(),
+                returnDate: "",
+                invitedBy: member.registrationSource,
+                contactMade: member.pastoralStatus !== "Precisa de contato",
+                integrationStatus: member.status === "Novo convertido" ? "Em acompanhamento" : "Primeira visita",
+                notes: member.notes,
+              },
+              ...current.visitors.filter((visitor) => visitor.id !== `visitor-${member.id}`),
+            ]
+          : current.visitors,
       audit: [
         {
           id: uid("audit"),
@@ -2795,6 +2928,79 @@ export default function Home() {
     if (memberCredentialForm.memberId === member.id) {
       setMemberCredentialForm(blankMemberCredential);
     }
+  }
+
+  function createVisitor() {
+    if (!requireModuleAccess("visitors", editingVisitorId ? "editar visitante" : "cadastrar visitante")) return;
+    if (!canCreateVisitor) return;
+
+    const now = new Date().toISOString();
+    const visitor: VisitorRecord = { ...visitorForm, id: editingVisitorId ?? uid("visitor") };
+
+    setData((current) => ({
+      ...current,
+      visitors: editingVisitorId
+        ? current.visitors.map((item) => (item.id === editingVisitorId ? visitor : item))
+        : [visitor, ...current.visitors],
+      audit: [
+        { id: uid("audit"), action: editingVisitorId ? `Visitante atualizado: ${visitor.fullName}` : `Visitante cadastrado: ${visitor.fullName}`, when: now },
+        ...current.audit,
+      ].slice(0, 12),
+    }));
+    setVisitorForm(blankVisitor);
+    setEditingVisitorId(null);
+    setSyncStatus(editingVisitorId ? `Visitante ${visitor.fullName} atualizado.` : `Visitante ${visitor.fullName} cadastrado.`);
+  }
+
+  function editVisitor(visitor: VisitorRecord) {
+    if (!requireModuleAccess("visitors", "editar visitante")) return;
+    const { id, ...form } = visitor;
+    setVisitorForm(form);
+    setEditingVisitorId(id);
+    setSyncStatus(`Editando visitante ${visitor.fullName}.`);
+  }
+
+  function deleteVisitor(visitor: VisitorRecord) {
+    if (!requireModuleAccess("visitors", "excluir visitante")) return;
+    if (!window.confirm(`Excluir o acompanhamento de ${visitor.fullName}?`)) return;
+
+    setData((current) => ({
+      ...current,
+      visitors: current.visitors.filter((item) => item.id !== visitor.id),
+      audit: [{ id: uid("audit"), action: `Visitante excluido: ${visitor.fullName}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
+    if (editingVisitorId === visitor.id) {
+      setVisitorForm(blankVisitor);
+      setEditingVisitorId(null);
+    }
+  }
+
+  function convertVisitorToMember(visitor: VisitorRecord) {
+    if (!requireModuleAccess("members", "converter visitante em membro")) return;
+
+    const now = new Date().toISOString();
+    const member: MemberRecord = {
+      ...blankMember,
+      id: uid("member"),
+      fullName: visitor.fullName,
+      phone: visitor.phone,
+      status: "Membro ativo",
+      memberType: "Membro",
+      registrationSource: "Visitante integrado",
+      pastoralStatus: "Integrado",
+      joinedAt: visitor.returnDate || visitor.firstVisitDate || currentDateKey(),
+      notes: visitor.notes,
+    };
+
+    setData((current) => ({
+      ...current,
+      members: [member, ...current.members],
+      visitors: current.visitors.map((item) =>
+        item.id === visitor.id ? { ...item, integrationStatus: "Integrado", contactMade: true, returnDate: item.returnDate || currentDateKey() } : item,
+      ),
+      audit: [{ id: uid("audit"), action: `Visitante integrado como membro: ${visitor.fullName}`, when: now }, ...current.audit].slice(0, 12),
+    }));
+    setSyncStatus(`${visitor.fullName} foi enviado para o cadastro de membros.`);
   }
 
   function toggleMemberCredentials(member: MemberRecord) {
@@ -3040,6 +3246,51 @@ export default function Home() {
     }
   }
 
+  function createSchedule() {
+    if (!requireModuleAccess("schedules", editingScheduleId ? "editar escala" : "criar escala")) return;
+    if (!canCreateSchedule) return;
+
+    const now = new Date().toISOString();
+    const schedule: ScheduleRecord = { ...scheduleForm, id: editingScheduleId ?? uid("schedule") };
+
+    setData((current) => ({
+      ...current,
+      schedules: editingScheduleId
+        ? current.schedules.map((item) => (item.id === editingScheduleId ? schedule : item))
+        : [schedule, ...current.schedules],
+      audit: [
+        { id: uid("audit"), action: editingScheduleId ? `Escala atualizada: ${schedule.serviceType}` : `Escala criada: ${schedule.serviceType}`, when: now },
+        ...current.audit,
+      ].slice(0, 12),
+    }));
+    setScheduleForm(blankSchedule);
+    setEditingScheduleId(null);
+    setSyncStatus(editingScheduleId ? "Escala atualizada." : "Escala cadastrada.");
+  }
+
+  function editSchedule(schedule: ScheduleRecord) {
+    if (!requireModuleAccess("schedules", "editar escala")) return;
+    const { id, ...form } = schedule;
+    setScheduleForm(form);
+    setEditingScheduleId(id);
+    setSyncStatus(`Editando escala de ${schedule.serviceType}.`);
+  }
+
+  function deleteSchedule(schedule: ScheduleRecord) {
+    if (!requireModuleAccess("schedules", "excluir escala")) return;
+    if (!window.confirm(`Excluir a escala de ${schedule.serviceType} para ${schedule.assignedTo}?`)) return;
+
+    setData((current) => ({
+      ...current,
+      schedules: current.schedules.filter((item) => item.id !== schedule.id),
+      audit: [{ id: uid("audit"), action: `Escala excluida: ${schedule.serviceType}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
+    if (editingScheduleId === schedule.id) {
+      setScheduleForm(blankSchedule);
+      setEditingScheduleId(null);
+    }
+  }
+
   function createNotice() {
     if (!requireModuleAccess("notices", "criar comunicados")) return;
     if (!canCreateNotice) return;
@@ -3226,8 +3477,13 @@ export default function Home() {
     setUserForm(blankUser);
     setMemberForm(blankMember);
     setEditingMemberId(null);
+    setMemberFormTab("Dados");
     setMemberCredentialForm(blankMemberCredential);
+    setVisitorForm(blankVisitor);
+    setEditingVisitorId(null);
     setKidForm(blankKid);
+    setScheduleForm(blankSchedule);
+    setEditingScheduleId(null);
     setMuralForm(blankMuralItem);
     setSchoolNoticeForm(blankSchoolNotice);
     setDiscipleshipNoticeForm({ ...blankSchoolNotice, classId: "discipleship-new" });
@@ -3246,6 +3502,18 @@ export default function Home() {
       value: weekEvents.length.toString(),
       hint: "encontros desta semana",
       module: "events" as ModuleKey,
+    },
+    {
+      label: "Visitantes",
+      value: data.visitors.filter((visitor) => visitor.integrationStatus !== "Integrado").length.toString(),
+      hint: "em acompanhamento",
+      module: "visitors" as ModuleKey,
+    },
+    {
+      label: "Escalas",
+      value: data.schedules.length.toString(),
+      hint: "pessoas escaladas",
+      module: "schedules" as ModuleKey,
     },
     {
       label: "Comunicados ativos",
@@ -3695,6 +3963,20 @@ export default function Home() {
             type="button"
           >
             Agenda
+          </button>}
+          {canAccessModule(currentAccessRole, "visitors") && <button
+            className={activeModule === "visitors" ? "active" : ""}
+            onClick={() => setActiveModule("visitors")}
+            type="button"
+          >
+            Visitas
+          </button>}
+          {canAccessModule(currentAccessRole, "schedules") && <button
+            className={activeModule === "schedules" ? "active" : ""}
+            onClick={() => setActiveModule("schedules")}
+            type="button"
+          >
+            Escalas
           </button>}
           <button className={notificationsOpen ? "active" : ""} onClick={() => setNotificationsOpen((open) => !open)} type="button">
             Acoes
@@ -4501,6 +4783,171 @@ export default function Home() {
             </section>
           )}
 
+          {activeModule === "schedules" && (
+            <section className="content-grid">
+              {canManageSchedules && (
+                <article className={editingScheduleId ? "surface editing-surface" : "surface"}>
+                  <div className="panel-heading">
+                    <h2>{editingScheduleId ? "Editar escala" : "Nova escala"}</h2>
+                    <span>Culto, grupo e funcao</span>
+                  </div>
+                  <div className="form-grid">
+                    <label>
+                      Data
+                      <input
+                        onChange={(event) => setScheduleForm((form) => ({ ...form, date: event.target.value }))}
+                        type="date"
+                        value={scheduleForm.date}
+                      />
+                    </label>
+                    <label>
+                      Culto ou evento
+                      <input
+                        onChange={(event) => setScheduleForm((form) => ({ ...form, serviceType: event.target.value }))}
+                        placeholder="Ex.: Culto da familia"
+                        value={scheduleForm.serviceType}
+                      />
+                    </label>
+                    <label>
+                      Grupo
+                      <select onChange={(event) => setScheduleForm((form) => ({ ...form, group: event.target.value }))} value={scheduleForm.group}>
+                        <option value="">Sem grupo definido</option>
+                        {groupOptions.map((group) => (
+                          <option key={group}>{group}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Funcao
+                      <select
+                        onChange={(event) => setScheduleForm((form) => ({ ...form, functionName: event.target.value }))}
+                        value={scheduleForm.functionName}
+                      >
+                        <option value="">Selecione</option>
+                        {memberRoleOptions.map((role) => (
+                          <option key={role}>{role}</option>
+                        ))}
+                        <option>Recepcao</option>
+                        <option>Pregador</option>
+                        <option>Louvor</option>
+                        <option>Midia</option>
+                      </select>
+                    </label>
+                    <label>
+                      Pessoa escalada
+                      <input
+                        onChange={(event) => setScheduleForm((form) => ({ ...form, assignedTo: event.target.value }))}
+                        placeholder="Nome do membro ou voluntario"
+                        value={scheduleForm.assignedTo}
+                      />
+                    </label>
+                    <label>
+                      WhatsApp
+                      <input
+                        onChange={(event) => setScheduleForm((form) => ({ ...form, phone: event.target.value }))}
+                        placeholder="(00) 00000-0000"
+                        value={scheduleForm.phone}
+                      />
+                    </label>
+                    <label>
+                      Status
+                      <select
+                        onChange={(event) => setScheduleForm((form) => ({ ...form, confirmationStatus: event.target.value as ScheduleRecord["confirmationStatus"] }))}
+                        value={scheduleForm.confirmationStatus}
+                      >
+                        <option>Pendente</option>
+                        <option>Confirmado</option>
+                        <option>Substituir</option>
+                      </select>
+                    </label>
+                    <label className="full">
+                      Observacoes
+                      <textarea
+                        onChange={(event) => setScheduleForm((form) => ({ ...form, notes: event.target.value }))}
+                        placeholder="Horario de chegada, roupa, substituicao ou orientacao"
+                        value={scheduleForm.notes}
+                      />
+                    </label>
+                    <div className="form-actions full">
+                      <button className="primary-action" disabled={!canCreateSchedule} onClick={createSchedule} type="button">
+                        {editingScheduleId ? "Atualizar escala" : "Salvar escala"}
+                      </button>
+                      {editingScheduleId && (
+                        <button
+                          className="secondary"
+                          onClick={() => {
+                            setScheduleForm(blankSchedule);
+                            setEditingScheduleId(null);
+                          }}
+                          type="button"
+                        >
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              )}
+
+              <article className="surface wide">
+                <div className="panel-heading">
+                  <h2>Escalas cadastradas</h2>
+                  <span>{filteredSchedules.length} registros</span>
+                </div>
+                <div className="filter-bar">
+                  <label>
+                    Grupo
+                    <select onChange={(event) => setScheduleGroupFilter(event.target.value)} value={scheduleGroupFilter}>
+                      <option>Todos</option>
+                      {groupOptions.map((group) => (
+                        <option key={group}>{group}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button className="secondary" onClick={() => exportReport("schedules", "pdf")} type="button">
+                    PDF
+                  </button>
+                  <button className="secondary" onClick={() => exportReport("schedules", "csv")} type="button">
+                    Excel
+                  </button>
+                </div>
+                <div className="row-list">
+                  {filteredSchedules.map((schedule) => (
+                    <div className="data-row access-user-row" key={schedule.id}>
+                      <span className="date-box">{formatDate(schedule.date)}</span>
+                      <div>
+                        <strong>{schedule.assignedTo}</strong>
+                        <small>
+                          {schedule.serviceType} - {schedule.functionName || "Funcao nao informada"} - {schedule.group || "Sem grupo"}
+                        </small>
+                        <small>{schedule.confirmationStatus} - {schedule.phone || "Sem WhatsApp"}</small>
+                        {schedule.notes && <small>{schedule.notes}</small>}
+                      </div>
+                      <div className="row-actions">
+                        {schedule.phone && (
+                          <a className="whatsapp-link" href={whatsappUrl(schedule.phone, "Paz, {nome}! Voce esta escalado(a). Por favor confirme sua disponibilidade. {igreja}.", schedule.assignedTo)} rel="noreferrer" target="_blank">
+                            WhatsApp
+                          </a>
+                        )}
+                        {canManageSchedules && (
+                          <button className="secondary" onClick={() => editSchedule(schedule)} type="button">
+                            Editar
+                          </button>
+                        )}
+                        {canManageSchedules && (
+                          <button className="danger-action" onClick={() => deleteSchedule(schedule)} type="button">
+                            Excluir
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {!filteredSchedules.length && <p className="empty-state">Nenhuma escala encontrada para este filtro.</p>}
+                </div>
+              </article>
+            </section>
+          )}
+
           {activeModule === "notices" && (
             <section className="content-grid">
               {canManageNotices && <article className="surface">
@@ -4728,6 +5175,167 @@ export default function Home() {
             </section>
           )}
 
+          {activeModule === "visitors" && (
+            <section className="content-grid">
+              {canManageVisitors && (
+                <article className={editingVisitorId ? "surface editing-surface" : "surface"}>
+                  <div className="panel-heading">
+                    <h2>{editingVisitorId ? "Editar visitante" : "Novo visitante"}</h2>
+                    <span>Acompanhamento</span>
+                  </div>
+                  <div className="form-grid">
+                    <label className="full">
+                      Nome completo
+                      <input
+                        onChange={(event) => setVisitorForm((form) => ({ ...form, fullName: event.target.value }))}
+                        placeholder="Ex.: Joao Pereira"
+                        value={visitorForm.fullName}
+                      />
+                    </label>
+                    <label>
+                      WhatsApp
+                      <input
+                        onChange={(event) => setVisitorForm((form) => ({ ...form, phone: event.target.value }))}
+                        placeholder="(00) 00000-0000"
+                        value={visitorForm.phone}
+                      />
+                    </label>
+                    <label>
+                      Primeira visita
+                      <input
+                        onChange={(event) => setVisitorForm((form) => ({ ...form, firstVisitDate: event.target.value }))}
+                        type="date"
+                        value={visitorForm.firstVisitDate}
+                      />
+                    </label>
+                    <label>
+                      Retorno
+                      <input
+                        onChange={(event) => setVisitorForm((form) => ({ ...form, returnDate: event.target.value }))}
+                        type="date"
+                        value={visitorForm.returnDate}
+                      />
+                    </label>
+                    <label>
+                      Convidado por
+                      <input
+                        onChange={(event) => setVisitorForm((form) => ({ ...form, invitedBy: event.target.value }))}
+                        placeholder="Nome, grupo ou evento"
+                        value={visitorForm.invitedBy}
+                      />
+                    </label>
+                    <label>
+                      Integracao
+                      <select
+                        onChange={(event) => setVisitorForm((form) => ({ ...form, integrationStatus: event.target.value as VisitorRecord["integrationStatus"] }))}
+                        value={visitorForm.integrationStatus}
+                      >
+                        <option>Primeira visita</option>
+                        <option>Retornou</option>
+                        <option>Em acompanhamento</option>
+                        <option>Integrado</option>
+                      </select>
+                    </label>
+                    <label className="check-card">
+                      <input
+                        checked={visitorForm.contactMade}
+                        onChange={(event) => setVisitorForm((form) => ({ ...form, contactMade: event.target.checked }))}
+                        type="checkbox"
+                      />
+                      Contato feito
+                    </label>
+                    <label className="full">
+                      Observacoes
+                      <textarea
+                        onChange={(event) => setVisitorForm((form) => ({ ...form, notes: event.target.value }))}
+                        placeholder="Primeira impressao, necessidade pastoral, retorno ou decisao"
+                        value={visitorForm.notes}
+                      />
+                    </label>
+                    <div className="form-actions full">
+                      <button className="primary-action" disabled={!canCreateVisitor} onClick={createVisitor} type="button">
+                        {editingVisitorId ? "Atualizar visitante" : "Salvar visitante"}
+                      </button>
+                      {editingVisitorId && (
+                        <button
+                          className="secondary"
+                          onClick={() => {
+                            setVisitorForm(blankVisitor);
+                            setEditingVisitorId(null);
+                          }}
+                          type="button"
+                        >
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              )}
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Visitantes em acompanhamento</h2>
+                  <span>{filteredVisitors.length} registros</span>
+                </div>
+                <div className="filter-bar">
+                  <label>
+                    Status
+                    <select onChange={(event) => setVisitorStatusFilter(event.target.value)} value={visitorStatusFilter}>
+                      <option>Todos</option>
+                      <option>Primeira visita</option>
+                      <option>Retornou</option>
+                      <option>Em acompanhamento</option>
+                      <option>Integrado</option>
+                    </select>
+                  </label>
+                  <button className="secondary" onClick={() => exportReport("visitors", "pdf")} type="button">
+                    PDF
+                  </button>
+                  <button className="secondary" onClick={() => exportReport("visitors", "csv")} type="button">
+                    Excel
+                  </button>
+                </div>
+                <div className="row-list">
+                  {filteredVisitors.map((visitor) => (
+                    <div className="data-row access-user-row" key={visitor.id}>
+                      <span className="date-box">{formatDate(visitor.firstVisitDate)}</span>
+                      <div>
+                        <strong>{visitor.fullName}</strong>
+                        <small>
+                          {visitor.integrationStatus} - {visitor.contactMade ? "contato feito" : "contato pendente"} - {visitor.phone}
+                        </small>
+                        <small>Convidado por: {visitor.invitedBy || "Nao informado"}</small>
+                        {visitor.notes && <small>{visitor.notes}</small>}
+                      </div>
+                      <div className="row-actions">
+                        <a className="whatsapp-link" href={whatsappUrl(visitor.phone, "Paz, {nome}! Ficamos felizes com sua visita. Podemos ajudar em algo?", visitor.fullName)} rel="noreferrer" target="_blank">
+                          WhatsApp
+                        </a>
+                        {canManageVisitors && (
+                          <button className="secondary" onClick={() => editVisitor(visitor)} type="button">
+                            Editar
+                          </button>
+                        )}
+                        {canManageMembers && visitor.integrationStatus !== "Integrado" && (
+                          <button className="secondary" onClick={() => convertVisitorToMember(visitor)} type="button">
+                            Integrar
+                          </button>
+                        )}
+                        {canManageVisitors && (
+                          <button className="danger-action" onClick={() => deleteVisitor(visitor)} type="button">
+                            Excluir
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {!filteredVisitors.length && <p className="empty-state">Nenhum visitante encontrado para este filtro.</p>}
+                </div>
+              </article>
+            </section>
+          )}
+
           {activeModule === "members" && (
             <section className="content-grid">
               {canManageMembers || editingMemberId === currentMember?.id ? (
@@ -4737,6 +5345,28 @@ export default function Home() {
                   <span>{canManageMembers ? (editingMemberId ? "Atualizando cadastro" : "Membro ou visitante") : "Meu cadastro"}</span>
                 </div>
                 <div className="form-grid">
+                  <div className="member-form-tabs full" role="tablist" aria-label="Secoes do cadastro">
+                    {(["Dados", "Igreja", "Classes", "Observacoes", "Acesso"] as const).map((tab) => (
+                      <button
+                        className={memberFormTab === tab ? "active" : ""}
+                        key={tab}
+                        onClick={() => setMemberFormTab(tab)}
+                        type="button"
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="member-section-banner full">
+                    <strong>{memberFormTab}</strong>
+                    <small>
+                      {memberFormTab === "Dados" && "Revise nome, filiacao, CPF, contato, nascimento e endereco."}
+                      {memberFormTab === "Igreja" && "Revise tipo, status, funcoes, grupo, congregacao, datas espirituais e batismos."}
+                      {memberFormTab === "Classes" && "Revise matricula na EBD e no Discipulado."}
+                      {memberFormTab === "Observacoes" && "Revise observacoes visiveis ao membro e registros internos."}
+                      {memberFormTab === "Acesso" && "O login e senha sao enviados pelo card do membro ja salvo."}
+                    </small>
+                  </div>
                   <label className="full">
                     Nome completo
                     <input
@@ -5817,9 +6447,11 @@ export default function Home() {
                 <div className="report-grid">
                   {[
                     ["members", "Membros por tipo", `${data.members.length} cadastros`],
+                    ["visitors", "Visitantes", `${data.visitors.length} acompanhamentos`],
                     ["birthdays", "Aniversariantes", `${monthlyBirthdays.length} no mes`],
                     ["kids", "Area Kids", `${data.kids.length} criancas`],
                     ["agenda", "Agenda semanal", `${weekEvents.length} eventos na semana`],
+                    ["schedules", "Escalas", `${data.schedules.length} pessoas escaladas`],
                     ["attendance", "Presenca EBD/Discipulado", `${data.attendanceSessions.length} chamadas`],
                     ["absences", "Faltosos recentes", `${absentStudentRows().length} alertas`],
                   ].map(([kind, title, count]) => (
@@ -5827,10 +6459,10 @@ export default function Home() {
                       <strong>{title}</strong>
                       <small>{count}</small>
                       <div className="row-actions">
-                        <button className="secondary" onClick={() => exportReport(kind as "members" | "birthdays" | "kids" | "agenda" | "attendance" | "absences", "pdf")} type="button">
+                        <button className="secondary" onClick={() => exportReport(kind as "members" | "visitors" | "birthdays" | "kids" | "agenda" | "schedules" | "attendance" | "absences", "pdf")} type="button">
                           PDF
                         </button>
-                        <button className="secondary" onClick={() => exportReport(kind as "members" | "birthdays" | "kids" | "agenda" | "attendance" | "absences", "csv")} type="button">
+                        <button className="secondary" onClick={() => exportReport(kind as "members" | "visitors" | "birthdays" | "kids" | "agenda" | "schedules" | "attendance" | "absences", "csv")} type="button">
                           Excel
                         </button>
                       </div>
@@ -5879,6 +6511,8 @@ export default function Home() {
                   <span>100%</span>
                   <small>
                     {data.members.length} membros, {monthlyBirthdays.length} aniversariantes no mes, {data.kids.length} criancas no Kids,
+                    {" "}
+                    {data.visitors.length} visitantes, {data.schedules.length} escalas,
                     {" "}
                     {monthlyKidsBirthdays.length} aniversariantes Kids no mes, {data.users.length} usuarios,
                     {" "}
