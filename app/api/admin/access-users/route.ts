@@ -1,9 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import { adminClient, requireSession } from "../auth";
 
 type AccessUserPayload = {
   userId?: string;
@@ -33,44 +29,6 @@ function toChurchAccess(status?: string) {
   return status === "Ativo" ? "approved" : "pending";
 }
 
-function unavailableResponse() {
-  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
-    return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
-  }
-
-  return null;
-}
-
-async function getSessionUser(request: Request) {
-  const unavailable = unavailableResponse();
-  if (unavailable) return { response: unavailable };
-
-  const authorization = request.headers.get("authorization");
-  const token = authorization?.replace(/^Bearer\s+/i, "");
-
-  if (!token) {
-    return { response: NextResponse.json({ error: "Sessao obrigatoria para gerenciar usuarios." }, { status: 401 }) };
-  }
-
-  const sessionClient = createClient(supabaseUrl!, supabaseAnonKey!, {
-    auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false },
-  });
-  const { data: sessionData, error: sessionError } = await sessionClient.auth.getUser(token);
-
-  if (sessionError || !sessionData.user) {
-    return { response: NextResponse.json({ error: "Sessao invalida ou expirada." }, { status: 401 }) };
-  }
-
-  return { user: sessionData.user };
-}
-
-function adminClient() {
-  if (!supabaseUrl || !supabaseServiceRoleKey) return null;
-  return createClient(supabaseUrl, supabaseServiceRoleKey, {
-    auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false },
-  });
-}
-
 async function findUserIdByEmail(client: NonNullable<ReturnType<typeof adminClient>>, email?: string) {
   if (!email) return null;
 
@@ -82,7 +40,7 @@ async function findUserIdByEmail(client: NonNullable<ReturnType<typeof adminClie
 }
 
 export async function POST(request: Request) {
-  const session = await getSessionUser(request);
+  const session = await requireSession(request, ["ADMIN"]);
   if (session.response || !session.user) return session.response;
 
   const payload = (await request.json()) as AccessUserPayload;
@@ -119,7 +77,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const session = await getSessionUser(request);
+  const session = await requireSession(request, ["ADMIN"]);
   if (session.response || !session.user) return session.response;
 
   const payload = (await request.json()) as AccessUserPayload;
@@ -191,7 +149,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const session = await getSessionUser(request);
+  const session = await requireSession(request, ["ADMIN"]);
   if (session.response || !session.user) return session.response;
 
   const payload = (await request.json()) as DeleteAccessUserPayload;

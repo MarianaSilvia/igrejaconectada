@@ -856,7 +856,7 @@ function accessRoleFromMetadata(value: unknown): AccessRole {
 }
 
 function isAdministrativeRole(role: AccessRole) {
-  return role === "Administrador" || role === "Lider" || role === "Secretario" || role === "Tesoureiro";
+  return role === "Administrador" || role === "Lider" || role === "Professor" || role === "Secretario" || role === "Tesoureiro";
 }
 
 function messageFor(text: string, recipientName: string) {
@@ -1588,7 +1588,7 @@ export default function Home() {
 
   function canManageAttendanceClass(classRecord: SchoolClass) {
     if (isAdminView) return true;
-    const hasTeacherAccess = currentAccessRole === "Professor" || /professor/i.test(currentMember?.role ?? "");
+    const hasTeacherAccess = /professor/i.test(currentMember?.role ?? "");
     if (!hasTeacherAccess) return false;
 
     const teacherText = normalizeSearchText(classRecord.teacher);

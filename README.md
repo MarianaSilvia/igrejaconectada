@@ -1,13 +1,12 @@
 # Igreja Conectada
 
-Sistema administrativo para igreja com painel local, cadastro de membros e visitantes, Area Kids, EBD, ministerios, agenda, mural, comunicacao por WhatsApp, aniversariantes e carteirinhas digitais.
+Sistema administrativo para igreja com painel local, cadastro de membros e visitantes, Area Kids, EBD, ministerios, agenda, mural, comunicacao por WhatsApp e aniversariantes.
 
 ## Recursos principais
 
 - Painel administrativo com prioridades e atalhos.
 - Cadastro completo de membros, visitantes e novos convertidos.
-- Area Kids com cadastro da crianca, responsavel, autorizacoes e carteirinha Kids.
-- Carteirinhas digitais com opcao de imprimir/salvar em PDF e baixar imagem.
+- Area Kids com cadastro da crianca, responsavel e autorizacoes.
 - Modulos de agenda, ministerios, comunicados, mural e atendimento pastoral.
 - EBD com avisos por classe.
 - Comunicacao por WhatsApp com modelos prontos, aniversariantes, EBD, ministerios e responsaveis Kids.
