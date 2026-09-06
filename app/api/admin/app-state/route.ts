@@ -8,6 +8,7 @@ type JsonRecord = Record<string, unknown>;
 
 type AppStatePayload = {
   payload?: unknown;
+  baseUpdatedAt?: string | null;
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -132,12 +133,8 @@ function mergeMemberRecord(existingMember: JsonRecord, incomingMember: JsonRecor
     "previousChurch",
     "conversionDate",
     "baptismDate",
-    "registrationSource",
-    "pastoralStatus",
-    "memberVisibleNotes",
     "waterBaptized",
     "holySpiritBaptized",
-    "notes",
   ];
 
   return allowedFields.reduce<JsonRecord>(
@@ -236,7 +233,7 @@ export async function PUT(request: Request) {
   const session = await requireSession(request);
   if (session.response || !session.user) return session.response;
 
-  const { payload } = (await request.json()) as AppStatePayload;
+  const { payload, baseUpdatedAt } = (await request.json()) as AppStatePayload;
 
   if (!payload || !isRecord(payload)) {
     return NextResponse.json({ error: "Estado invalido para salvar na base." }, { status: 400 });
@@ -244,6 +241,13 @@ export async function PUT(request: Request) {
 
   const stored = await readStoredPayload();
   if (stored.response || !stored.client) return stored.response;
+
+  if (baseUpdatedAt && stored.updatedAt && baseUpdatedAt !== stored.updatedAt) {
+    return NextResponse.json(
+      { error: "Existe uma versao mais recente salva na base. Atualize a pagina antes de salvar novamente.", updatedAt: stored.updatedAt },
+      { status: 409 },
+    );
+  }
 
   const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(stored.payload, session.user);
   const mergedPayload = administrativeRoles.has(effectiveRole)

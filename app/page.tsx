@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { accessRoleFromMetadata, canAccessModule, canManageModule, isAdministrativeRole, modules, type AccessRole, type ModuleKey } from "./permissions";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
 
@@ -39,6 +39,8 @@ type AttendanceArea = "school" | "discipleship";
 
 type AttendanceStatus = "Presente" | "Falta" | "Justificado" | "Precisa de contato";
 type SaveState = "idle" | "saving" | "saved" | "error";
+type MemberFormTab = "Dados" | "Igreja" | "Classes" | "Observacoes" | "Acesso";
+type ReportKind = "members" | "visitors" | "birthdays" | "kids" | "agenda" | "schedules" | "attendance" | "absences";
 
 type AttendanceRecord = {
   memberId: string;
@@ -255,6 +257,7 @@ type AppData = {
 
 type RemoteAppStateResponse = {
   payload?: Partial<AppData> | null;
+  updatedAt?: string | null;
   error?: string;
 };
 
@@ -1415,7 +1418,7 @@ export default function Home() {
   const [selectedAccessMemberId, setSelectedAccessMemberId] = useState("");
   const [memberForm, setMemberForm] = useState(blankMember);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
-  const [memberFormTab, setMemberFormTab] = useState<"Dados" | "Igreja" | "Classes" | "Observacoes" | "Acesso">("Dados");
+  const [memberFormTab, setMemberFormTab] = useState<MemberFormTab>("Dados");
   const [memberCredentialForm, setMemberCredentialForm] = useState(blankMemberCredential);
   const [visitorForm, setVisitorForm] = useState(blankVisitor);
   const [editingVisitorId, setEditingVisitorId] = useState<string | null>(null);
@@ -1452,8 +1455,10 @@ export default function Home() {
   const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Modo local: configure o Supabase no Vercel.");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState("");
+  const [remoteUpdatedAt, setRemoteUpdatedAt] = useState<string | null>(null);
+  const [reportPreviewKind, setReportPreviewKind] = useState<ReportKind>("members");
 
-  async function saveRemoteStateNow(payloadData: AppData) {
+  const saveRemoteStateNow = useCallback(async (payloadData: AppData) => {
     if (!isSupabaseConfigured()) return false;
 
     setSaveState("saving");
@@ -1474,23 +1479,28 @@ export default function Home() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ payload: payloadData }),
+      body: JSON.stringify({ payload: payloadData, baseUpdatedAt: remoteUpdatedAt }),
     });
-    const result = (await response.json()) as { error?: string };
+    const result = (await response.json()) as { error?: string; updatedAt?: string };
 
     if (!response.ok) {
       setSaveState("error");
-      setSyncStatus(result.error ?? "Nao foi possivel salvar cadastros na base.");
+      setSyncStatus(
+        response.status === 409
+          ? "Outra pessoa salvou alteracoes antes de voce. Atualize a pagina para carregar a versao mais recente antes de continuar."
+          : result.error ?? "Nao foi possivel salvar cadastros na base.",
+      );
       return false;
     }
 
     lastSavedPayloadRef.current = JSON.stringify(payloadData);
     const savedAt = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    setRemoteUpdatedAt(result.updatedAt ?? new Date().toISOString());
     setLastSavedAt(savedAt);
     setSaveState("saved");
     setSyncStatus(`Salvo agora as ${savedAt}.`);
     return true;
-  }
+  }, [remoteUpdatedAt]);
 
   useEffect(() => {
     if (window.location.search.includes("cadastro=novo")) {
@@ -1595,10 +1605,12 @@ export default function Home() {
         const remoteData = mergePhotoCache(normalizedRemoteData, loadPhotoCache());
         lastSavedPayloadRef.current = JSON.stringify(normalizedRemoteData);
         setLastSavedAt(new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
+        setRemoteUpdatedAt(result.updatedAt ?? null);
         setSaveState("saved");
         setData(remoteData);
         setSyncStatus("Cadastros carregados da base Supabase.");
       } else {
+        setRemoteUpdatedAt(result.updatedAt ?? null);
         setSyncStatus("Base pronta. Cadastros deste painel serao preservados no Supabase.");
       }
 
@@ -1634,7 +1646,7 @@ export default function Home() {
         window.clearTimeout(saveTimerRef.current);
       }
     };
-  }, [data, hasSession, remoteStateReady]);
+  }, [data, hasSession, remoteStateReady, saveRemoteStateNow]);
 
   useEffect(() => {
     const cleanup = window.setTimeout(() => {
@@ -1866,6 +1878,22 @@ export default function Home() {
   const canCreateSchedule = canManageSchedules && Boolean(scheduleForm.date && scheduleForm.serviceType.trim() && scheduleForm.assignedTo.trim());
   const canCreateNotice = canManageNotices && Boolean(noticeForm.title.trim() && noticeForm.body.trim());
   const canCreateMinistry = canManageGroups && Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
+  const availableMemberFormTabs = useMemo<MemberFormTab[]>(
+    () => [
+      "Dados",
+      "Igreja",
+      "Classes",
+      ...(canManageMembers ? (["Observacoes"] as MemberFormTab[]) : []),
+      ...(canManageUsers ? (["Acesso"] as MemberFormTab[]) : []),
+    ],
+    [canManageMembers, canManageUsers],
+  );
+  useEffect(() => {
+    if (!availableMemberFormTabs.includes(memberFormTab)) {
+      const timer = window.setTimeout(() => setMemberFormTab("Dados"), 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [availableMemberFormTabs, memberFormTab]);
   const availableMessageTemplates = useMemo(() => {
     const templates = [
       ...data.messageTemplates,
@@ -1875,6 +1903,7 @@ export default function Home() {
 
     return templates.filter((template, index, list) => list.findIndex((item) => item.id === template.id) === index);
   }, [data.messageTemplates, remoteMessageTemplates]);
+  const selectedReportPreview = reportDefinition(reportPreviewKind);
   const roleOptions = useMemo(() => {
     const roles = [...memberRoleOptions];
     memberRolesFromText(memberForm.role).forEach((role) => {
@@ -2495,8 +2524,8 @@ export default function Home() {
     ]);
   }
 
-  function exportReport(kind: "members" | "visitors" | "birthdays" | "kids" | "agenda" | "schedules" | "attendance" | "absences", format: "pdf" | "csv") {
-    const reports = {
+  function reportDefinition(kind: ReportKind) {
+    const reports: Record<ReportKind, { title: string; headers: string[]; rows: unknown[][] }> = {
       members: {
         title: "Membros por tipo",
         headers: ["Nome", "Tipo", "Status", "Telefone", "E-mail", "Grupo", "EBD", "Discipulado", "Situacao pastoral"],
@@ -2552,7 +2581,12 @@ export default function Home() {
         rows: absentStudentRows(),
       },
     };
-    const report = reports[kind];
+
+    return reports[kind];
+  }
+
+  function exportReport(kind: ReportKind, format: "pdf" | "csv") {
+    const report = reportDefinition(kind);
     const subtitle = `Igreja Conectada - gerado em ${new Date().toLocaleString("pt-BR")}`;
 
     if (format === "csv") {
@@ -3215,6 +3249,23 @@ export default function Home() {
     });
     setEditingEventId(event.id);
     setSyncStatus(`Evento selecionado para edicao: ${event.title}.`);
+  }
+
+  function duplicateEvent(event: ChurchEvent) {
+    if (!requireModuleAccess("events", "duplicar eventos")) return;
+    setEventForm({
+      title: `${event.title} - copia`,
+      date: event.date,
+      time: event.time,
+      ministry: event.ministry,
+      location: event.location,
+      responsible: event.responsible,
+      recurrence: "Unico",
+      status: "Programado",
+    });
+    setEditingEventId(null);
+    setSyncStatus(`Evento duplicado no formulario: ${event.title}. Ajuste a data e salve.`);
+    window.setTimeout(() => document.querySelector(".editing-surface, .surface")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
   }
 
   function cancelEventEdit() {
@@ -4299,7 +4350,7 @@ export default function Home() {
                   <h2>{canManagePastoral ? "Novo pedido pastoral" : "Solicitar atendimento ou oracao"}</h2>
                   <span>{canManagePastoral ? "Fluxo real" : "Pedido pessoal"}</span>
                 </div>
-                <div className="form-grid">
+                <div className="form-grid" data-current-member-tab={memberFormTab}>
                   <label>
                     Nome do membro
                     <input
@@ -4764,6 +4815,9 @@ export default function Home() {
                         <button className="secondary" onClick={() => editEvent(event)} type="button">
                           Editar
                         </button>
+                        <button className="secondary" onClick={() => duplicateEvent(event)} type="button">
+                          Duplicar
+                        </button>
                         <button
                           className={event.status === "Concluido" ? "secondary" : "danger-action"}
                           onClick={() => updateEventStatus(event, event.status === "Concluido" ? "Programado" : "Concluido")}
@@ -4831,6 +4885,29 @@ export default function Home() {
                         <option>Pregador</option>
                         <option>Louvor</option>
                         <option>Midia</option>
+                      </select>
+                    </label>
+                    <label>
+                      Selecionar membro
+                      <select
+                        onChange={(event) => {
+                          const member = data.members.find((item) => item.id === event.target.value);
+                          if (!member) return;
+                          setScheduleForm((form) => ({
+                            ...form,
+                            assignedTo: member.fullName,
+                            phone: member.phone,
+                            group: form.group || member.ministry,
+                          }));
+                        }}
+                        value={data.members.find((member) => member.fullName === scheduleForm.assignedTo && member.phone === scheduleForm.phone)?.id ?? ""}
+                      >
+                        <option value="">Preencher manualmente</option>
+                        {data.members.map((member) => (
+                          <option key={member.id} value={member.id}>
+                            {member.fullName}
+                          </option>
+                        ))}
                       </select>
                     </label>
                     <label>
@@ -5346,7 +5423,7 @@ export default function Home() {
                 </div>
                 <div className="form-grid">
                   <div className="member-form-tabs full" role="tablist" aria-label="Secoes do cadastro">
-                    {(["Dados", "Igreja", "Classes", "Observacoes", "Acesso"] as const).map((tab) => (
+                    {availableMemberFormTabs.map((tab) => (
                       <button
                         className={memberFormTab === tab ? "active" : ""}
                         key={tab}
@@ -5367,7 +5444,11 @@ export default function Home() {
                       {memberFormTab === "Acesso" && "O login e senha sao enviados pelo card do membro ja salvo."}
                     </small>
                   </div>
-                  <label className="full">
+                  <div className="member-access-note full" data-member-section="Acesso">
+                    <strong>Acesso do membro</strong>
+                    <small>O login e a senha ficam no card do cadastro ja salvo, com envio pelo WhatsApp e link do sistema.</small>
+                  </div>
+                  <label className="full" data-member-section="Dados">
                     Nome completo
                     <input
                       id="member-full-name"
@@ -5376,7 +5457,7 @@ export default function Home() {
                       value={memberForm.fullName}
                     />
                   </label>
-                  <label>
+                  <label data-member-section="Dados">
                     Nome do pai
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, fatherName: event.target.value }))}
@@ -5384,7 +5465,7 @@ export default function Home() {
                       value={memberForm.fatherName}
                     />
                   </label>
-                  <label>
+                  <label data-member-section="Dados">
                     Nome da mae
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, motherName: event.target.value }))}
@@ -5392,7 +5473,7 @@ export default function Home() {
                       value={memberForm.motherName}
                     />
                   </label>
-                  <label>
+                  <label data-member-section="Dados">
                     CPF
                     <input
                       inputMode="numeric"
@@ -5401,7 +5482,7 @@ export default function Home() {
                       value={memberForm.cpf}
                     />
                   </label>
-                  <label>
+                  <label data-member-section="Dados">
                     Telefone
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, phone: event.target.value }))}
@@ -5409,7 +5490,7 @@ export default function Home() {
                       value={memberForm.phone}
                     />
                   </label>
-                  <label>
+                  <label data-member-section="Dados">
                     E-mail
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, email: event.target.value }))}
@@ -5418,7 +5499,7 @@ export default function Home() {
                       value={memberForm.email}
                     />
                   </label>
-                  {canManageMembers && <label>
+                  {canManageMembers && <label data-member-section="Igreja">
                     Tipo de pessoa
                     <select
                       onChange={(event) => setMemberForm((form) => ({ ...form, memberType: event.target.value as MemberRecord["memberType"] }))}
@@ -5430,7 +5511,7 @@ export default function Home() {
                       <option>Lideranca</option>
                     </select>
                   </label>}
-                  {canManageMembers && <label>
+                  {canManageMembers && <label data-member-section="Igreja">
                     Status
                     <select onChange={(event) => setMemberForm((form) => ({ ...form, status: event.target.value as MemberRecord["status"] }))} value={memberForm.status}>
                       <option>Membro ativo</option>
@@ -5439,7 +5520,7 @@ export default function Home() {
                       <option>Transferencia</option>
                     </select>
                   </label>}
-                  {canManageMembers && <label>
+                  {canManageMembers && <label data-member-section="Igreja">
                     Funcao na igreja
                     <select
                       className="multi-select"
@@ -5461,7 +5542,7 @@ export default function Home() {
                     </select>
                     <small className="form-hint">No computador, segure Ctrl para marcar mais de uma funcao; no celular, toque nas funcoes desejadas.</small>
                   </label>}
-                  {canManageMembers && <label>
+                  {canManageMembers && <label data-member-section="Igreja">
                     Grupo
                     <select
                       onChange={(event) => setMemberForm((form) => ({ ...form, ministry: event.target.value }))}
@@ -5475,7 +5556,7 @@ export default function Home() {
                       ))}
                     </select>
                   </label>}
-                  <label>
+                  <label data-member-section="Classes">
                     Classe EBD
                     <select onChange={(event) => setMemberForm((form) => ({ ...form, schoolClassId: event.target.value }))} value={memberForm.schoolClassId}>
                       <option value="">Nao matriculado</option>
@@ -5486,7 +5567,7 @@ export default function Home() {
                       ))}
                     </select>
                   </label>
-                  <label>
+                  <label data-member-section="Classes">
                     Classe Discipulado
                     <select
                       onChange={(event) => setMemberForm((form) => ({ ...form, discipleshipClassId: event.target.value }))}
@@ -5500,7 +5581,7 @@ export default function Home() {
                       ))}
                     </select>
                   </label>
-                  <label>
+                  <label data-member-section="Dados">
                     Nascimento
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, birthDate: event.target.value }))}
@@ -5508,7 +5589,7 @@ export default function Home() {
                       value={memberForm.birthDate}
                     />
                   </label>
-                  <label>
+                  <label data-member-section="Dados">
                     Estado civil
                     <select onChange={(event) => setMemberForm((form) => ({ ...form, maritalStatus: event.target.value }))} value={memberForm.maritalStatus}>
                       <option>Solteiro(a)</option>
@@ -5517,7 +5598,7 @@ export default function Home() {
                       <option>Divorciado(a)</option>
                     </select>
                   </label>
-                  <label>
+                  <label data-member-section="Igreja">
                     Congregacao
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, congregation: event.target.value }))}
@@ -5525,7 +5606,7 @@ export default function Home() {
                       value={memberForm.congregation}
                     />
                   </label>
-                  <label>
+                  <label data-member-section="Igreja">
                     Desde
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, joinedAt: event.target.value }))}
@@ -5533,7 +5614,7 @@ export default function Home() {
                       value={memberForm.joinedAt}
                     />
                   </label>
-                  <label className="full">
+                  <label className="full" data-member-section="Dados">
                     Endereco
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, address: event.target.value }))}
@@ -5541,7 +5622,7 @@ export default function Home() {
                       value={memberForm.address}
                     />
                   </label>
-                  <label className="full">
+                  <label className="full" data-member-section="Igreja">
                     Igreja anterior
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, previousChurch: event.target.value }))}
@@ -5549,7 +5630,7 @@ export default function Home() {
                       value={memberForm.previousChurch}
                     />
                   </label>
-                  <label>
+                  <label data-member-section="Igreja">
                     Data de conversao
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, conversionDate: event.target.value }))}
@@ -5557,7 +5638,7 @@ export default function Home() {
                       value={memberForm.conversionDate}
                     />
                   </label>
-                  <label>
+                  <label data-member-section="Igreja">
                     Data de batismo
                     <input
                       onChange={(event) => setMemberForm((form) => ({ ...form, baptismDate: event.target.value }))}
@@ -5565,7 +5646,7 @@ export default function Home() {
                       value={memberForm.baptismDate}
                     />
                   </label>
-                  <label>
+                  <label data-member-section="Igreja">
                     Origem do cadastro
                     <select
                       onChange={(event) => setMemberForm((form) => ({ ...form, registrationSource: event.target.value }))}
@@ -5579,7 +5660,7 @@ export default function Home() {
                       <option>Transferencia</option>
                     </select>
                   </label>
-                  {canManageMembers && <label>
+                  {canManageMembers && <label data-member-section="Igreja">
                     Situacao pastoral
                     <select
                       onChange={(event) => setMemberForm((form) => ({ ...form, pastoralStatus: event.target.value }))}
@@ -5592,7 +5673,7 @@ export default function Home() {
                       <option>Integrado</option>
                     </select>
                   </label>}
-                  <label className="full">
+                  <label className="full" data-member-section="Observacoes">
                     Observacao visivel ao membro
                     <textarea
                       onChange={(event) => setMemberForm((form) => ({ ...form, memberVisibleNotes: event.target.value }))}
@@ -5600,7 +5681,7 @@ export default function Home() {
                       value={memberForm.memberVisibleNotes}
                     />
                   </label>
-                  <label className="check-card">
+                  <label className="check-card" data-member-section="Igreja">
                     <input
                       checked={memberForm.waterBaptized}
                       onChange={(event) => setMemberForm((form) => ({ ...form, waterBaptized: event.target.checked }))}
@@ -5608,7 +5689,7 @@ export default function Home() {
                     />
                     Batizado em aguas
                   </label>
-                  <label className="check-card">
+                  <label className="check-card" data-member-section="Igreja">
                     <input
                       checked={memberForm.holySpiritBaptized}
                       onChange={(event) => setMemberForm((form) => ({ ...form, holySpiritBaptized: event.target.checked }))}
@@ -5616,7 +5697,7 @@ export default function Home() {
                     />
                     Batizado no Espirito Santo
                   </label>
-                  {canManageMembers && <label className="full">
+                  {canManageMembers && <label className="full" data-member-section="Observacoes">
                     Observacoes internas
                     <textarea
                       onChange={(event) => setMemberForm((form) => ({ ...form, notes: event.target.value }))}
@@ -6459,15 +6540,40 @@ export default function Home() {
                       <strong>{title}</strong>
                       <small>{count}</small>
                       <div className="row-actions">
-                        <button className="secondary" onClick={() => exportReport(kind as "members" | "visitors" | "birthdays" | "kids" | "agenda" | "schedules" | "attendance" | "absences", "pdf")} type="button">
+                        <button className="secondary" onClick={() => setReportPreviewKind(kind as ReportKind)} type="button">
+                          Previa
+                        </button>
+                        <button className="secondary" onClick={() => exportReport(kind as ReportKind, "pdf")} type="button">
                           PDF
                         </button>
-                        <button className="secondary" onClick={() => exportReport(kind as "members" | "visitors" | "birthdays" | "kids" | "agenda" | "schedules" | "attendance" | "absences", "csv")} type="button">
+                        <button className="secondary" onClick={() => exportReport(kind as ReportKind, "csv")} type="button">
                           Excel
                         </button>
                       </div>
                     </div>
                   ))}
+                </div>
+              </article>
+
+              <article className="surface wide">
+                <div className="panel-heading">
+                  <h2>Previa do relatorio</h2>
+                  <span>{selectedReportPreview.title}</span>
+                </div>
+                <div className="preview-table">
+                  <div className="preview-row preview-head" style={{ gridTemplateColumns: `repeat(${selectedReportPreview.headers.length}, minmax(120px, 1fr))` }}>
+                    {selectedReportPreview.headers.map((header) => (
+                      <strong key={header}>{header}</strong>
+                    ))}
+                  </div>
+                  {selectedReportPreview.rows.slice(0, 6).map((row, index) => (
+                    <div className="preview-row" key={`${reportPreviewKind}-${index}`} style={{ gridTemplateColumns: `repeat(${selectedReportPreview.headers.length}, minmax(120px, 1fr))` }}>
+                      {row.map((cell, cellIndex) => (
+                        <span key={`${reportPreviewKind}-${index}-${cellIndex}`}>{String(cell ?? "")}</span>
+                      ))}
+                    </div>
+                  ))}
+                  {!selectedReportPreview.rows.length && <p className="empty-state">Nenhum dado encontrado para este relatorio.</p>}
                 </div>
               </article>
 

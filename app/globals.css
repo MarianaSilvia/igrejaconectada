@@ -1074,6 +1074,37 @@ button.secondary.full {
   color: var(--muted);
 }
 
+.preview-table {
+  display: grid;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.preview-row {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
+  display: grid;
+  gap: 8px;
+  min-width: max-content;
+  padding: 8px 0;
+}
+
+.preview-row strong {
+  color: #e0f2fe;
+  font-size: 12px;
+}
+
+.preview-row span {
+  font-size: 12px;
+  min-width: 0;
+}
+
+.preview-head {
+  background: rgba(34, 211, 238, 0.08);
+  border-radius: 8px;
+  padding: 10px;
+}
+
 input,
 select,
 textarea {
@@ -1182,6 +1213,14 @@ textarea:focus {
 .member-section-banner small,
 .member-access-note small {
   color: #94a3b8;
+}
+
+.form-grid[data-current-member-tab="Dados"] [data-member-section]:not([data-member-section~="Dados"]),
+.form-grid[data-current-member-tab="Igreja"] [data-member-section]:not([data-member-section~="Igreja"]),
+.form-grid[data-current-member-tab="Classes"] [data-member-section]:not([data-member-section~="Classes"]),
+.form-grid[data-current-member-tab="Observacoes"] [data-member-section]:not([data-member-section~="Observacoes"]),
+.form-grid[data-current-member-tab="Acesso"] [data-member-section]:not([data-member-section~="Acesso"]) {
+  display: none;
 }
 
 .photo-uploader {
