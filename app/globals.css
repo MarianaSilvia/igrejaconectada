@@ -1029,6 +1029,16 @@ textarea {
   resize: vertical;
 }
 
+select.multi-select {
+  min-height: 190px;
+  padding: 8px;
+}
+
+select.multi-select option {
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
 input:focus,
 select:focus,
 textarea:focus {

@@ -693,6 +693,17 @@ const memberRoleOptions = [
   "Vice-maestro",
 ];
 
+function memberRolesFromText(value: string) {
+  return value
+    .split(",")
+    .map((role) => role.trim())
+    .filter(Boolean);
+}
+
+function memberRolesToText(values: string[]) {
+  return values.map((role) => role.trim()).filter(Boolean).join(", ");
+}
+
 const blankMemberCredential = {
   memberId: "",
   email: "",
@@ -1623,11 +1634,12 @@ export default function Home() {
   const availableMessageTemplates = remoteMessageTemplates.length ? remoteMessageTemplates : messageTemplates.map(normalizeMessageTemplate);
   const roleOptions = useMemo(() => {
     const roles = [...memberRoleOptions];
-    if (memberForm.role.trim() && !roles.includes(memberForm.role.trim())) {
-      roles.push(memberForm.role.trim());
-    }
+    memberRolesFromText(memberForm.role).forEach((role) => {
+      if (!roles.includes(role)) roles.push(role);
+    });
     return roles;
   }, [memberForm.role]);
+  const selectedMemberRoles = useMemo(() => memberRolesFromText(memberForm.role), [memberForm.role]);
   const groupOptions = useMemo(() => {
     const groups = data.ministries.map((group) => group.name).filter(Boolean);
     if (memberForm.ministry.trim() && !groups.includes(memberForm.ministry.trim())) {
@@ -4103,16 +4115,24 @@ export default function Home() {
                   {isAdminView && <label>
                     Funcao na igreja
                     <select
-                      onChange={(event) => setMemberForm((form) => ({ ...form, role: event.target.value }))}
-                      value={memberForm.role}
+                      className="multi-select"
+                      multiple
+                      onChange={(event) =>
+                        setMemberForm((form) => ({
+                          ...form,
+                          role: memberRolesToText(Array.from(event.target.selectedOptions, (option) => option.value)),
+                        }))
+                      }
+                      size={7}
+                      value={selectedMemberRoles}
                     >
-                      <option value="">Sem funcao definida</option>
                       {roleOptions.map((role) => (
                         <option key={role} value={role}>
                           {role}
                         </option>
                       ))}
                     </select>
+                    <small className="form-hint">No computador, segure Ctrl para marcar mais de uma funcao; no celular, toque nas funcoes desejadas.</small>
                   </label>}
                   {isAdminView && <label>
                     Grupo
