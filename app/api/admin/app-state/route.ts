@@ -292,7 +292,11 @@ export async function PUT(request: Request) {
 
   if (baseUpdatedAt && stored.updatedAt && baseUpdatedAt !== stored.updatedAt) {
     return NextResponse.json(
-      { error: "Existe uma versao mais recente salva na base. Atualize a pagina antes de salvar novamente.", updatedAt: stored.updatedAt },
+      {
+        error:
+          "Existe uma versao mais recente salva na base. Suas alteracoes locais nao foram gravadas para evitar perda de dados. Use Recarregar dados da base antes de salvar novamente.",
+        updatedAt: stored.updatedAt,
+      },
       { status: 409 },
     );
   }

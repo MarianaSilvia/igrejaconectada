@@ -20,6 +20,8 @@ import {
   selectedOrAllRecipients,
 } from "./communication-helpers";
 import { BirthdaySpotlightPanel } from "./components/BirthdaySpotlightPanel";
+import { CommunicationPanel } from "./components/CommunicationPanel";
+import { ReportsPanel } from "./components/ReportsPanel";
 import {
   birthdayDateThisYear,
   birthdayLabel,
@@ -34,7 +36,6 @@ import {
   isBirthdayThisWeek,
   isEventInWeek,
   isExpiredDate,
-  messageFor,
   normalizeEmail,
   normalizeSearchText,
   normalizeWhatsappPhone,
@@ -64,6 +65,7 @@ import {
   normalizeMessageTemplate,
 } from "./data-normalization";
 import { accessRoleFromMetadata, canAccessModule, canManageModule, isAdministrativeRole, modules, type AccessRole, type ModuleKey } from "./permissions";
+import { buildReportDefinition } from "./report-builders";
 import { downloadCsv, escapeHtml, printHtmlReport } from "./report-helpers";
 import {
   convertVisitorToMemberData,
@@ -922,7 +924,7 @@ export default function Home() {
       setSaveState("error");
       setSyncStatus(
         response.status === 409
-          ? "Outra pessoa salvou alteracoes antes de voce. Atualize a pagina para carregar a versao mais recente antes de continuar."
+          ? "Outra pessoa salvou alteracoes antes de voce. Suas mudancas nao foram gravadas; clique em Recarregar dados da base antes de continuar."
           : result.error ?? "Nao foi possivel salvar cadastros na base.",
       );
       return false;
@@ -1388,7 +1390,7 @@ export default function Home() {
 
     return templates.filter((template, index, list) => list.findIndex((item) => item.id === template.id) === index);
   }, [data.messageTemplates, remoteMessageTemplates]);
-  const selectedReportPreview = reportDefinition(reportPreviewKind);
+  const selectedReportPreview = buildReportDefinition({ data, kind: reportPreviewKind, weekEvents, monthlyBirthdays, absentRows });
   const roleOptions = useMemo(() => {
     const roles = [...memberRoleOptions];
     memberRolesFromText(memberForm.role).forEach((role) => {
@@ -1766,149 +1768,8 @@ export default function Home() {
     setSyncStatus(`Historico em PDF preparado para ${classRecord.name}.`);
   }
 
-  function memberReportRows() {
-    return data.members.map((member) => [
-      member.fullName,
-      member.memberType,
-      member.status,
-      member.phone,
-      member.email,
-      member.ministry || "Sem grupo",
-      classNameById(data.schoolClasses, member.schoolClassId) || "Nao matriculado",
-      classNameById(data.discipleshipClasses, member.discipleshipClassId) || "Nao matriculado",
-      member.pastoralStatus || "Sem acompanhamento definido",
-    ]);
-  }
-
-  function agendaWeekRows() {
-    return weekEvents.map((event) => [formatDate(event.date), event.time || "Sem horario", event.title, event.ministry, event.location, event.responsible, event.status]);
-  }
-
-  function visitorReportRows() {
-    return data.visitors.map((visitor) => [
-      visitor.fullName,
-      visitor.phone,
-      formatDate(visitor.firstVisitDate),
-      formatDate(visitor.returnDate),
-      visitor.invitedBy || "Nao informado",
-      visitor.contactMade ? "Contato feito" : "Pendente",
-      visitor.integrationStatus,
-      visitor.notes,
-    ]);
-  }
-
-  function scheduleReportRows() {
-    return data.schedules.map((schedule) => [
-      formatDate(schedule.date),
-      schedule.serviceType,
-      schedule.group || "Sem grupo",
-      schedule.functionName,
-      schedule.assignedTo,
-      schedule.phone,
-      schedule.confirmationStatus,
-      schedule.notes,
-    ]);
-  }
-
-  function financeReportRows() {
-    return data.transactions.map((transaction) => [
-      formatDate(transaction.date),
-      transaction.type,
-      transaction.category,
-      transaction.description,
-      transaction.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
-      transaction.method,
-      transaction.status,
-      transaction.memberName || "Nao vinculado",
-      transaction.notes,
-    ]);
-  }
-
-  function assetReportRows() {
-    return data.assets.map((asset) => [
-      asset.name,
-      asset.category,
-      asset.location || "Sem local",
-      asset.responsible || "Sem responsavel",
-      asset.condition,
-      formatDate(asset.lastMaintenance),
-      asset.notes,
-    ]);
-  }
-
-  function reportDefinition(kind: ReportKind) {
-    const reports: Record<ReportKind, { title: string; headers: string[]; rows: unknown[][] }> = {
-      members: {
-        title: "Membros por tipo",
-        headers: ["Nome", "Tipo", "Status", "Telefone", "E-mail", "Grupo", "EBD", "Discipulado", "Situacao pastoral"],
-        rows: memberReportRows(),
-      },
-      visitors: {
-        title: "Visitantes",
-        headers: ["Nome", "Telefone", "Primeira visita", "Retorno", "Convidado por", "Contato", "Integracao", "Observacoes"],
-        rows: visitorReportRows(),
-      },
-      birthdays: {
-        title: "Aniversariantes do mes",
-        headers: ["Nome", "Data", "Telefone", "Grupo"],
-        rows: monthlyBirthdays.map((member) => [member.fullName, birthdayLabel(member.birthDate), member.phone, member.ministry || "Sem grupo"]),
-      },
-      kids: {
-        title: "Criancas cadastradas",
-        headers: ["Crianca", "Nascimento", "Faixa", "Turma", "Responsavel", "Telefone"],
-        rows: data.kids.map((kid) => [kid.childName, formatDate(kid.birthDate), kid.ageGroup, kid.className, kid.guardianName, kid.guardianPhone]),
-      },
-      agenda: {
-        title: "Agenda semanal",
-        headers: ["Data", "Horario", "Evento", "Grupo", "Local", "Responsavel", "Status"],
-        rows: agendaWeekRows(),
-      },
-      schedules: {
-        title: "Escalas",
-        headers: ["Data", "Culto", "Grupo", "Funcao", "Pessoa", "WhatsApp", "Status", "Observacoes"],
-        rows: scheduleReportRows(),
-      },
-      attendance: {
-        title: "Presenca EBD e Discipulado",
-        headers: ["Data", "Area", "Classe", "Aula", "Aluno", "Status", "Observacao"],
-        rows: data.attendanceSessions.flatMap((session) =>
-          session.records.map((record) => {
-            const member = data.members.find((item) => item.id === record.memberId);
-            const classes = session.area === "school" ? data.schoolClasses : data.discipleshipClasses;
-            return [
-              formatDate(session.date),
-              session.area === "school" ? "EBD" : "Discipulado",
-              classNameById(classes, session.classId),
-              session.title,
-              member?.fullName ?? record.memberId,
-              record.status,
-              record.note,
-            ];
-          }),
-        ),
-      },
-      absences: {
-        title: "Faltosos recentes",
-        headers: ["Nome", "WhatsApp", "Ultimo status", "Faltas recentes", "Faltas no mes"],
-        rows: absentRows,
-      },
-      finance: {
-        title: "Financeiro",
-        headers: ["Data", "Tipo", "Categoria", "Descricao", "Valor", "Metodo", "Status", "Membro", "Observacoes"],
-        rows: financeReportRows(),
-      },
-      assets: {
-        title: "Patrimonio",
-        headers: ["Item", "Categoria", "Local", "Responsavel", "Estado", "Ultima manutencao", "Observacoes"],
-        rows: assetReportRows(),
-      },
-    };
-
-    return reports[kind];
-  }
-
   function exportReport(kind: ReportKind, format: "pdf" | "csv") {
-    const report = reportDefinition(kind);
+    const report = buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays, absentRows });
     const subtitle = `Igreja Conectada - gerado em ${new Date().toLocaleString("pt-BR")}`;
 
     if (format === "csv") {
@@ -5820,152 +5681,29 @@ export default function Home() {
           )}
 
           {activeModule === "messages" && (
-            <section className="content-grid">
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Comunicacao por WhatsApp</h2>
-                  <span>{messageRecipients.length} contatos</span>
-                </div>
-                <div className="form-grid">
-                  <label>
-                    Publico
-                    <select
-                      onChange={(event) => {
-                        setMessageAudience(event.target.value as MessageAudience);
-                        setSelectedMessageRecipientIds([]);
-                      }}
-                      value={messageAudience}
-                    >
-                      {messageAudiences.map((audience) => (
-                        <option key={audience}>{audience}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Modelo pronto
-                    <select onChange={(event) => selectMessageTemplate(event.target.value)} value={messageTemplateId}>
-                      {availableMessageTemplates.map((template) => (
-                        <option key={template.id} value={template.id}>
-                          {template.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Limite por lote
-                    <input
-                      min={1}
-                      max={20}
-                      onChange={(event) => setMessageBatchLimit(Number(event.target.value))}
-                      type="number"
-                      value={messageBatchLimit}
-                    />
-                  </label>
-                  <label className="full">
-                    Mensagem
-                    <textarea
-                      onChange={(event) => setMessageText(event.target.value)}
-                      placeholder="Use {nome} para personalizar com o nome de cada pessoa."
-                      value={messageText}
-                    />
-                  </label>
-                  <div className="message-preview full">
-                    <strong>Previa individual</strong>
-                    <small>{selectedMessageRecipients.length} selecionado{selectedMessageRecipients.length === 1 ? "" : "s"} de {messageRecipients.length} contato{messageRecipients.length === 1 ? "" : "s"}</small>
-                    <span>{selectedMessageRecipients[0] ? messageFor(messageText, selectedMessageRecipients[0].name) : "Nenhum contato encontrado para este publico."}</span>
-                  </div>
-                  <div className="form-actions full">
-                    <button className="primary-action" disabled={!selectedMessageRecipients.length || !messageText.trim()} onClick={openBulkWhatsapp} type="button">
-                      Abrir lote selecionado
-                    </button>
-                    <button className="secondary" onClick={() => setSelectedMessageRecipientIds(messageRecipients.map((recipient) => recipient.id))} type="button">
-                      Selecionar todos
-                    </button>
-                  </div>
-                  <label className="full">
-                    Nome do novo modelo
-                    <input
-                      onChange={(event) => setCustomTemplateLabel(event.target.value)}
-                      placeholder="Ex.: Convite culto de domingo"
-                      value={customTemplateLabel}
-                    />
-                  </label>
-                  <label className="full">
-                    Texto do novo modelo
-                    <textarea
-                      onChange={(event) => setCustomTemplateText(event.target.value)}
-                      placeholder="Use {nome} para personalizar."
-                      value={customTemplateText}
-                    />
-                  </label>
-                  <button className="secondary full" disabled={!customTemplateLabel.trim() || !customTemplateText.trim()} onClick={saveCustomMessageTemplate} type="button">
-                    Salvar modelo
-                  </button>
-                </div>
-              </article>
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Lista de envio</h2>
-                  <span>{selectedMessageRecipients.length} no lote atual</span>
-                </div>
-                <p className="body-copy">
-                  O WhatsApp pode bloquear muitas abas ao mesmo tempo. Se necessario, envie pela lista individual abaixo.
-                </p>
-                <div className="row-list">
-                  {messageRecipients.length === 0 ? (
-                    <div className="data-row">
-                      <span className="bullet-mark" />
-                      <div>
-                        <strong>Nenhum contato encontrado</strong>
-                        <small>Cadastre telefone nos membros, professores, grupos ou responsaveis Kids.</small>
-                      </div>
-                    </div>
-                  ) : (
-                    messageRecipients.map((recipient) => (
-                      <div className="data-row message-row" key={`${recipient.id}-${recipient.phone}`}>
-                        <input
-                          checked={selectedMessageRecipientIds.includes(recipient.id)}
-                          onChange={(event) =>
-                            setSelectedMessageRecipientIds((current) =>
-                              event.target.checked ? Array.from(new Set([...current, recipient.id])) : current.filter((id) => id !== recipient.id),
-                            )
-                          }
-                          type="checkbox"
-                        />
-                        <div>
-                          <strong>{recipient.name}</strong>
-                          <small>{recipient.group} - {recipient.phone}</small>
-                        </div>
-                        <a className="whatsapp-link" href={whatsappUrl(recipient.phone, messageText, recipient.name)} rel="noreferrer" target="_blank">
-                          Enviar
-                        </a>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </article>
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Historico de campanhas</h2>
-                  <span>{data.messageCampaigns.length} registros</span>
-                </div>
-                <div className="row-list">
-                  {data.messageCampaigns.map((campaign) => (
-                    <div className="data-row" key={campaign.id}>
-                      <span className="date-box">{campaign.recipientCount}</span>
-                      <div>
-                        <strong>{campaign.audience}</strong>
-                        <small>{formatDateTime(campaign.createdAt)} - modelo {campaign.templateId}</small>
-                        <small>{campaign.text.slice(0, 120)}</small>
-                      </div>
-                    </div>
-                  ))}
-                  {!data.messageCampaigns.length && <p className="empty-state">Nenhuma campanha registrada ainda.</p>}
-                </div>
-              </article>
-            </section>
+            <CommunicationPanel
+              availableMessageTemplates={availableMessageTemplates}
+              customTemplateLabel={customTemplateLabel}
+              customTemplateText={customTemplateText}
+              data={data}
+              messageAudience={messageAudience}
+              messageAudiences={messageAudiences}
+              messageBatchLimit={messageBatchLimit}
+              messageRecipients={messageRecipients}
+              messageTemplateId={messageTemplateId}
+              messageText={messageText}
+              openBulkWhatsapp={openBulkWhatsapp}
+              saveCustomMessageTemplate={saveCustomMessageTemplate}
+              selectMessageTemplate={selectMessageTemplate}
+              selectedMessageRecipientIds={selectedMessageRecipientIds}
+              selectedMessageRecipients={selectedMessageRecipients}
+              setCustomTemplateLabel={setCustomTemplateLabel}
+              setCustomTemplateText={setCustomTemplateText}
+              setMessageAudience={setMessageAudience}
+              setMessageBatchLimit={setMessageBatchLimit}
+              setMessageText={setMessageText}
+              setSelectedMessageRecipientIds={setSelectedMessageRecipientIds}
+            />
           )}
 
           {activeModule === "finance" && (
@@ -6294,92 +6032,17 @@ export default function Home() {
           )}
 
           {activeModule === "reports" && (
-            <section className="content-grid">
-              <article className="surface wide">
-                <div className="panel-heading">
-                  <h2>Relatorios operacionais</h2>
-                  <span>PDF e Excel/CSV</span>
-                </div>
-                <div className="report-grid">
-                  {[
-                    ["members", "Membros por tipo", `${data.members.length} cadastros`],
-                    ["visitors", "Visitantes", `${data.visitors.length} acompanhamentos`],
-                    ["birthdays", "Aniversariantes", `${monthlyBirthdays.length} no mes`],
-                    ["kids", "Area Kids", `${data.kids.length} criancas`],
-                    ["agenda", "Agenda semanal", `${weekEvents.length} eventos na semana`],
-                    ["schedules", "Escalas", `${data.schedules.length} pessoas escaladas`],
-                    ["attendance", "Presenca EBD/Discipulado", `${data.attendanceSessions.length} chamadas`],
-                    ["absences", "Faltosos recentes", `${absentRows.length} alertas`],
-                    ["finance", "Financeiro", `${data.transactions.length} lancamentos`],
-                    ["assets", "Patrimonio", `${data.assets.length} itens`],
-                  ].filter(([kind]) => {
-                    if (kind === "finance") return canAccessModule(currentAccessRole, "finance");
-                    if (kind === "assets") return canAccessModule(currentAccessRole, "assets");
-                    return true;
-                  }).map(([kind, title, count]) => (
-                    <div className="report-card" key={kind}>
-                      <strong>{title}</strong>
-                      <small>{count}</small>
-                      <div className="row-actions">
-                        <button className="secondary" onClick={() => setReportPreviewKind(kind as ReportKind)} type="button">
-                          Previa
-                        </button>
-                        <button className="secondary" onClick={() => exportReport(kind as ReportKind, "pdf")} type="button">
-                          PDF
-                        </button>
-                        <button className="secondary" onClick={() => exportReport(kind as ReportKind, "csv")} type="button">
-                          Excel
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="surface wide">
-                <div className="panel-heading">
-                  <h2>Previa do relatorio</h2>
-                  <span>{selectedReportPreview.title}</span>
-                </div>
-                <div className="preview-table">
-                  <div className="preview-row preview-head" style={{ gridTemplateColumns: `repeat(${selectedReportPreview.headers.length}, minmax(120px, 1fr))` }}>
-                    {selectedReportPreview.headers.map((header) => (
-                      <strong key={header}>{header}</strong>
-                    ))}
-                  </div>
-                  {selectedReportPreview.rows.slice(0, 6).map((row, index) => (
-                    <div className="preview-row" key={`${reportPreviewKind}-${index}`} style={{ gridTemplateColumns: `repeat(${selectedReportPreview.headers.length}, minmax(120px, 1fr))` }}>
-                      {row.map((cell, cellIndex) => (
-                        <span key={`${reportPreviewKind}-${index}-${cellIndex}`}>{String(cell ?? "")}</span>
-                      ))}
-                    </div>
-                  ))}
-                  {!selectedReportPreview.rows.length && <p className="empty-state">Nenhum dado encontrado para este relatorio.</p>}
-                </div>
-              </article>
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>Previa de faltosos</h2>
-                  <span>{absentRows.length} alertas</span>
-                </div>
-                <div className="row-list">
-                  {absentRows.map(([name, phone, status, recent, month]) => (
-                    <div className="data-row" key={`${name}-${phone}`}>
-                      <span className="date-box">{month}</span>
-                      <div>
-                        <strong>{name}</strong>
-                        <small>{status} - {recent} faltas recentes - {month} no mes</small>
-                      </div>
-                      <a className="whatsapp-link" href={whatsappUrl(String(phone), "Ola, {nome}! Sentimos sua falta na aula. Podemos ajudar em algo?", String(name))} rel="noreferrer" target="_blank">
-                        WhatsApp
-                      </a>
-                    </div>
-                  ))}
-                  {!absentRows.length && <p className="empty-state">Nenhum aluno em alerta de falta no momento.</p>}
-                </div>
-              </article>
-            </section>
+            <ReportsPanel
+              absentRows={absentRows}
+              currentAccessRole={currentAccessRole}
+              data={data}
+              exportReport={exportReport}
+              monthlyBirthdays={monthlyBirthdays}
+              reportPreviewKind={reportPreviewKind}
+              selectedReportPreview={selectedReportPreview}
+              setReportPreviewKind={setReportPreviewKind}
+              weekEvents={weekEvents}
+            />
           )}
 
           {activeModule === "settings" && (
