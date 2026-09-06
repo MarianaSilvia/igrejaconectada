@@ -46,12 +46,14 @@ type ChurchEvent = {
   ministry: string;
   location: string;
   responsible: string;
+  recurrence: "Unico" | "Semanal" | "Mensal";
   status: "Programado" | "Confirmado" | "Concluido";
 };
 
 type AttendanceArea = "school" | "discipleship";
 
-type AttendanceStatus = "Presente" | "Falta" | "Justificado";
+type AttendanceStatus = "Presente" | "Falta" | "Justificado" | "Precisa de contato";
+type SaveState = "idle" | "saving" | "saved" | "error";
 
 type AttendanceRecord = {
   memberId: string;
@@ -134,6 +136,11 @@ type MemberRecord = {
   address: string;
   congregation: string;
   previousChurch: string;
+  conversionDate: string;
+  baptismDate: string;
+  registrationSource: string;
+  pastoralStatus: string;
+  memberVisibleNotes: string;
   waterBaptized: boolean;
   holySpiritBaptized: boolean;
   joinedAt: string;
@@ -182,6 +189,15 @@ type MessageTemplateItem = {
   isBirthday?: boolean;
 };
 
+type MessageCampaign = {
+  id: string;
+  audience: MessageAudience;
+  templateId: string;
+  text: string;
+  recipientCount: number;
+  createdAt: string;
+};
+
 type SchoolClass = {
   id: string;
   name: string;
@@ -220,6 +236,8 @@ type AppData = {
   discipleshipClasses: SchoolClass[];
   ministries: MinistryRecord[];
   attendanceSessions: AttendanceSession[];
+  messageTemplates: MessageTemplateItem[];
+  messageCampaigns: MessageCampaign[];
   audit: AuditItem[];
   notificationReadIds: string[];
 };
@@ -303,6 +321,7 @@ const initialData: AppData = {
       ministry: "Todos",
       location: "Templo principal",
       responsible: "Pr. Marcos",
+      recurrence: "Unico",
       status: "Confirmado",
     },
     {
@@ -313,6 +332,7 @@ const initialData: AppData = {
       ministry: "Jovens",
       location: "Auditorio",
       responsible: "Lider Ana",
+      recurrence: "Unico",
       status: "Programado",
     },
     {
@@ -323,6 +343,7 @@ const initialData: AppData = {
       ministry: "EBD",
       location: "Salas de ensino",
       responsible: "Coord. EBD",
+      recurrence: "Unico",
       status: "Programado",
     },
   ],
@@ -420,6 +441,11 @@ const initialData: AppData = {
       address: "Rua das Flores, 120",
       congregation: "Sede",
       previousChurch: "",
+      conversionDate: "",
+      baptismDate: "",
+      registrationSource: "Cadastro interno",
+      pastoralStatus: "Acompanhamento regular",
+      memberVisibleNotes: "Participa da classe de adultos.",
       waterBaptized: true,
       holySpiritBaptized: true,
       joinedAt: "2021-03-14",
@@ -445,6 +471,11 @@ const initialData: AppData = {
       address: "Av. Central, 900",
       congregation: "Sede",
       previousChurch: "",
+      conversionDate: "",
+      baptismDate: "",
+      registrationSource: "Visita presencial",
+      pastoralStatus: "Precisa de contato",
+      memberVisibleNotes: "Bem-vindo ao acompanhamento da igreja.",
       waterBaptized: false,
       holySpiritBaptized: false,
       joinedAt: "2026-08-22",
@@ -598,6 +629,8 @@ const initialData: AppData = {
     { id: "audit-2", action: "Modulo de backup validado", when: "2026-09-02T14:42:00.000Z" },
   ],
   attendanceSessions: [],
+  messageTemplates: [],
+  messageCampaigns: [],
   notificationReadIds: [],
 };
 
@@ -620,6 +653,7 @@ const blankEvent: Omit<ChurchEvent, "id"> = {
   ministry: "Todos",
   location: "",
   responsible: "",
+  recurrence: "Unico",
   status: "Programado",
 };
 
@@ -671,6 +705,11 @@ const blankMember: Omit<MemberRecord, "id"> = {
   address: "",
   congregation: "",
   previousChurch: "",
+  conversionDate: "",
+  baptismDate: "",
+  registrationSource: "",
+  pastoralStatus: "Sem acompanhamento definido",
+  memberVisibleNotes: "",
   waterBaptized: false,
   holySpiritBaptized: false,
   joinedAt: "",
@@ -941,11 +980,15 @@ function currentWeekRange(now = new Date()) {
   return { start, end };
 }
 
-function isEventThisWeek(event: ChurchEvent, now = new Date()) {
+function weekRangeWithOffset(offset: number, now = new Date()) {
+  const base = new Date(now);
+  base.setDate(base.getDate() + offset * 7);
+  return currentWeekRange(base);
+}
+
+function isEventInWeek(event: ChurchEvent, start: Date, end: Date) {
   const date = eventDate(event.date);
   if (!date) return false;
-
-  const { start, end } = currentWeekRange(now);
   return date >= start && date <= end;
 }
 
@@ -996,6 +1039,28 @@ function accessRoleForSession(users: AccessUser[], email: string, metadata: Reco
 
 function isAdministrativeRole(role: AccessRole) {
   return role === "Administrador" || role === "Lider" || role === "Professor" || role === "Secretario" || role === "Tesoureiro";
+}
+
+const moduleAccessByRole: Record<AccessRole, ModuleKey[]> = {
+  Administrador: modules.map((module) => module.key),
+  Lider: ["overview", "members", "events", "ministries", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports"],
+  Professor: ["overview", "members", "events", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports"],
+  Secretario: ["overview", "users", "members", "kids", "events", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports", "settings"],
+  Tesoureiro: ["overview", "events", "notices", "messages", "mural", "reports"],
+  Membro: memberVisibleModuleKeys,
+};
+
+function canAccessModule(role: AccessRole, moduleKey: ModuleKey) {
+  return moduleAccessByRole[role].includes(moduleKey);
+}
+
+function canManageModule(role: AccessRole, moduleKey: ModuleKey) {
+  if (role === "Administrador") return true;
+  if (role === "Secretario") return ["users", "members", "kids", "events", "notices", "messages", "mural", "reports"].includes(moduleKey);
+  if (role === "Lider") return ["ministries", "pastoral", "events", "notices", "messages", "mural", "reports"].includes(moduleKey);
+  if (role === "Professor") return ["school", "discipleship", "messages", "reports"].includes(moduleKey);
+  if (role === "Tesoureiro") return moduleKey === "reports";
+  return false;
 }
 
 function messageFor(text: string, recipientName: string) {
@@ -1075,6 +1140,11 @@ function normalizeMember(member: Partial<MemberRecord>): MemberRecord {
     status,
     memberType,
     photoDataUrl: "",
+    conversionDate: member.conversionDate ?? "",
+    baptismDate: member.baptismDate ?? "",
+    registrationSource: member.registrationSource ?? "",
+    pastoralStatus: member.pastoralStatus ?? "Sem acompanhamento definido",
+    memberVisibleNotes: member.memberVisibleNotes ?? "",
   };
 }
 
@@ -1091,6 +1161,7 @@ function normalizeEvent(event: Partial<ChurchEvent>): ChurchEvent {
     ...blankEvent,
     ...event,
     id: event.id ?? uid("event"),
+    recurrence: event.recurrence ?? "Unico",
   };
 }
 
@@ -1257,6 +1328,8 @@ function normalizeAppData(value: Partial<AppData>): AppData {
     attendanceSessions: (value.attendanceSessions ?? initialData.attendanceSessions).map((session) =>
       normalizeAttendanceSession(session),
     ),
+    messageTemplates: (value.messageTemplates ?? initialData.messageTemplates).map((template) => normalizeMessageTemplate(template)),
+    messageCampaigns: value.messageCampaigns ?? initialData.messageCampaigns,
     audit: value.audit ?? initialData.audit,
     notificationReadIds: value.notificationReadIds ?? initialData.notificationReadIds,
   };
@@ -1318,18 +1391,36 @@ export default function Home() {
   const [messageAudience, setMessageAudience] = useState<MessageAudience>("Todos os membros");
   const [messageTemplateId, setMessageTemplateId] = useState("general-invite");
   const [messageText, setMessageText] = useState(messageTemplates[4].text);
+  const [selectedMessageRecipientIds, setSelectedMessageRecipientIds] = useState<string[]>([]);
+  const [messageBatchLimit, setMessageBatchLimit] = useState(8);
+  const [customTemplateLabel, setCustomTemplateLabel] = useState("");
+  const [customTemplateText, setCustomTemplateText] = useState("");
+  const [globalSearch, setGlobalSearch] = useState("");
+  const [memberStatusFilter, setMemberStatusFilter] = useState("Todos");
+  const [memberTypeFilter, setMemberTypeFilter] = useState("Todos");
+  const [memberGroupFilter, setMemberGroupFilter] = useState("Todos");
+  const [careStatusFilter, setCareStatusFilter] = useState("Todos");
+  const [kidClassFilter, setKidClassFilter] = useState("Todos");
+  const [eventWeekOffset, setEventWeekOffset] = useState(0);
+  const [eventGroupFilter, setEventGroupFilter] = useState("Todos");
+  const [eventStatusFilter, setEventStatusFilter] = useState("Todos");
   const [remoteMessageTemplates, setRemoteMessageTemplates] = useState<MessageTemplateItem[]>([]);
   const [remoteStateReady, setRemoteStateReady] = useState(!isSupabaseConfigured());
   const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Modo local: configure o Supabase no Vercel.");
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState("");
 
   async function saveRemoteStateNow(payloadData: AppData) {
     if (!isSupabaseConfigured()) return false;
 
+    setSaveState("saving");
+    setSyncStatus("Salvando alteracoes na Supabase...");
     const supabase = getSupabaseClient();
     const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
     const token = sessionData.session?.access_token;
 
     if (!token) {
+      setSaveState("error");
       setSyncStatus("Sessao expirada. Entre novamente para salvar cadastros na base.");
       return false;
     }
@@ -1345,12 +1436,16 @@ export default function Home() {
     const result = (await response.json()) as { error?: string };
 
     if (!response.ok) {
+      setSaveState("error");
       setSyncStatus(result.error ?? "Nao foi possivel salvar cadastros na base.");
       return false;
     }
 
     lastSavedPayloadRef.current = JSON.stringify(payloadData);
-    setSyncStatus("Cadastros salvos na base Supabase.");
+    const savedAt = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    setLastSavedAt(savedAt);
+    setSaveState("saved");
+    setSyncStatus(`Salvo agora as ${savedAt}.`);
     return true;
   }
 
@@ -1456,6 +1551,8 @@ export default function Home() {
         const normalizedRemoteData = normalizeAppData(result.payload ?? {});
         const remoteData = mergePhotoCache(normalizedRemoteData, loadPhotoCache());
         lastSavedPayloadRef.current = JSON.stringify(normalizedRemoteData);
+        setLastSavedAt(new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
+        setSaveState("saved");
         setData(remoteData);
         setSyncStatus("Cadastros carregados da base Supabase.");
       } else {
@@ -1477,6 +1574,9 @@ export default function Home() {
 
     const payload = JSON.stringify(data);
     if (payload === lastSavedPayloadRef.current) return;
+
+    setSaveState("saving");
+    setSyncStatus("Salvando alteracoes...");
 
     if (saveTimerRef.current) {
       window.clearTimeout(saveTimerRef.current);
@@ -1558,13 +1658,22 @@ export default function Home() {
     [data.members, normalizedSessionEmail, sessionUserId],
   );
   const currentMemberPhone = comparablePhone(currentMember?.phone ?? "");
+  const canManageUsers = canManageModule(currentAccessRole, "users");
+  const canManageMembers = canManageModule(currentAccessRole, "members");
+  const canManageKids = canManageModule(currentAccessRole, "kids");
+  const canManageEvents = canManageModule(currentAccessRole, "events");
+  const canManageGroups = canManageModule(currentAccessRole, "ministries");
+  const canManageNotices = canManageModule(currentAccessRole, "notices");
+  const canManageMessages = canManageModule(currentAccessRole, "messages");
+  const canManageMural = canManageModule(currentAccessRole, "mural");
+  const canManagePastoral = canManageModule(currentAccessRole, "pastoral");
   const visibleModules = useMemo(
-    () => (isAdminView ? modules : modules.filter((module) => memberVisibleModuleKeys.includes(module.key))),
-    [isAdminView],
+    () => modules.filter((module) => canAccessModule(currentAccessRole, module.key)),
+    [currentAccessRole],
   );
   const visibleMembers = useMemo(
-    () => (isAdminView ? data.members : currentMember ? [currentMember] : []),
-    [currentMember, data.members, isAdminView],
+    () => (canManageMembers ? data.members : currentMember ? [currentMember] : []),
+    [canManageMembers, currentMember, data.members],
   );
   const visibleKids = useMemo(
     () =>
@@ -1592,15 +1701,38 @@ export default function Home() {
   const profileName = currentMember?.fullName ?? currentAccessUser?.name ?? (sessionEmail ? sessionEmail.split("@")[0] : "Usuario");
   const profileInitial = profileName.slice(0, 1).toUpperCase() || "U";
   const [todayKey, setTodayKey] = useState(currentDateKey);
-  const weekEvents = useMemo(() => {
+  const currentLongDate = useMemo(
+    () => new Intl.DateTimeFormat("pt-BR", { dateStyle: "full" }).format(eventDate(todayKey) ?? new Date()),
+    [todayKey],
+  );
+  const selectedWeekRange = useMemo(() => {
     const today = eventDate(todayKey) ?? new Date();
-    return data.events.filter((event) => isEventThisWeek(event, today)).sort(sortEventsByDate);
-  }, [data.events, todayKey]);
+    return weekRangeWithOffset(eventWeekOffset, today);
+  }, [eventWeekOffset, todayKey]);
+  const weekEvents = useMemo(() => {
+    return data.events
+      .filter((event) => isEventInWeek(event, selectedWeekRange.start, selectedWeekRange.end))
+      .filter((event) => eventGroupFilter === "Todos" || event.ministry === eventGroupFilter)
+      .filter((event) => eventStatusFilter === "Todos" || event.status === eventStatusFilter)
+      .filter((event) => {
+        const query = normalizeSearchText(globalSearch);
+        if (!query) return true;
+        return normalizeSearchText([event.title, event.ministry, event.location, event.responsible, event.status].join(" ")).includes(query);
+      })
+      .sort(sortEventsByDate);
+  }, [data.events, eventGroupFilter, eventStatusFilter, globalSearch, selectedWeekRange]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setTodayKey(currentDateKey()), 60 * 60 * 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!canAccessModule(currentAccessRole, activeModule)) {
+      const timer = window.setTimeout(() => setActiveModule("overview"), 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [activeModule, currentAccessRole]);
 
   const notifications = useMemo(() => {
     const pendingCare = visibleCareRequests
@@ -1666,28 +1798,36 @@ export default function Home() {
     [data.users, selectedAccessMember],
   );
   const canCreateUser = Boolean(
-    isAdminView &&
+    canManageUsers &&
       userForm.name.trim() &&
       userForm.email.trim() &&
       (selectedAccessExistingUser || userForm.password.trim().length >= 6),
   );
-  const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim()) && (isAdminView || editingMemberId === currentMember?.id);
+  const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim()) && (canManageMembers || editingMemberId === currentMember?.id);
   const canSaveMemberAccess = Boolean(
-    isAdminView &&
+    canManageUsers &&
       memberCredentialForm.memberId &&
       memberCredentialForm.email.trim() &&
       (!memberCredentialForm.password.trim() || memberCredentialForm.password.trim().length >= 6),
   );
-  const canCreateKid = isAdminView && Boolean(kidForm.childName.trim() && kidForm.guardianName.trim() && kidForm.guardianPhone.trim());
-  const canCreateMuralItem = isAdminView && Boolean(muralForm.title.trim() && muralForm.expiresAt);
-  const canCreateSchoolNotice = isAdminView && Boolean(schoolNoticeForm.classId && schoolNoticeForm.title.trim() && schoolNoticeForm.body.trim());
+  const canCreateKid = canManageKids && Boolean(kidForm.childName.trim() && kidForm.guardianName.trim() && kidForm.guardianPhone.trim());
+  const canCreateMuralItem = canManageMural && Boolean(muralForm.title.trim() && muralForm.expiresAt);
+  const canCreateSchoolNotice = canManageModule(currentAccessRole, "school") && Boolean(schoolNoticeForm.classId && schoolNoticeForm.title.trim() && schoolNoticeForm.body.trim());
   const canCreateDiscipleshipNotice = Boolean(
-    isAdminView && discipleshipNoticeForm.classId && discipleshipNoticeForm.title.trim() && discipleshipNoticeForm.body.trim(),
+    canManageModule(currentAccessRole, "discipleship") && discipleshipNoticeForm.classId && discipleshipNoticeForm.title.trim() && discipleshipNoticeForm.body.trim(),
   );
-  const canCreateEvent = isAdminView && Boolean(eventForm.title.trim() && eventForm.date);
-  const canCreateNotice = isAdminView && Boolean(noticeForm.title.trim() && noticeForm.body.trim());
-  const canCreateMinistry = isAdminView && Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
-  const availableMessageTemplates = remoteMessageTemplates.length ? remoteMessageTemplates : messageTemplates.map(normalizeMessageTemplate);
+  const canCreateEvent = canManageEvents && Boolean(eventForm.title.trim() && eventForm.date);
+  const canCreateNotice = canManageNotices && Boolean(noticeForm.title.trim() && noticeForm.body.trim());
+  const canCreateMinistry = canManageGroups && Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
+  const availableMessageTemplates = useMemo(() => {
+    const templates = [
+      ...data.messageTemplates,
+      ...remoteMessageTemplates,
+      ...messageTemplates.map(normalizeMessageTemplate),
+    ];
+
+    return templates.filter((template, index, list) => list.findIndex((item) => item.id === template.id) === index);
+  }, [data.messageTemplates, remoteMessageTemplates]);
   const roleOptions = useMemo(() => {
     const roles = [...memberRoleOptions];
     memberRolesFromText(memberForm.role).forEach((role) => {
@@ -1703,6 +1843,64 @@ export default function Home() {
     }
     return groups;
   }, [data.ministries, memberForm.ministry]);
+  const searchQuery = normalizeSearchText(globalSearch);
+  const filteredMembers = useMemo(
+    () =>
+      visibleMembers
+        .filter((member) => memberStatusFilter === "Todos" || member.status === memberStatusFilter)
+        .filter((member) => memberTypeFilter === "Todos" || member.memberType === memberTypeFilter)
+        .filter((member) => memberGroupFilter === "Todos" || member.ministry === memberGroupFilter)
+        .filter((member) => {
+          if (!searchQuery) return true;
+          const schoolClassName = classNameById(data.schoolClasses, member.schoolClassId);
+          const discipleshipClassName = classNameById(data.discipleshipClasses, member.discipleshipClassId);
+          return normalizeSearchText(
+            [
+              member.fullName,
+              member.phone,
+              member.email,
+              member.cpf,
+              member.status,
+              member.memberType,
+              member.role,
+              member.ministry,
+              schoolClassName,
+              discipleshipClassName,
+              member.pastoralStatus,
+              member.registrationSource,
+            ].join(" "),
+          ).includes(searchQuery);
+        }),
+    [data.discipleshipClasses, data.schoolClasses, memberGroupFilter, memberStatusFilter, memberTypeFilter, searchQuery, visibleMembers],
+  );
+  const filteredKids = useMemo(
+    () =>
+      visibleKids
+        .filter((kid) => kidClassFilter === "Todos" || kid.className === kidClassFilter || kid.ageGroup === kidClassFilter)
+        .filter((kid) => {
+          if (!searchQuery) return true;
+          return normalizeSearchText([kid.childName, kid.className, kid.ageGroup, kid.guardianName, kid.guardianPhone, kid.guardianEmail].join(" ")).includes(searchQuery);
+        }),
+    [kidClassFilter, searchQuery, visibleKids],
+  );
+  const filteredCareRequests = useMemo(
+    () =>
+      visibleCareRequests
+        .filter((request) => careStatusFilter === "Todos" || request.status === careStatusFilter)
+        .filter((request) => {
+          if (!searchQuery) return true;
+          return normalizeSearchText([request.member, request.phone, request.category, request.status, request.responsible, request.summary].join(" ")).includes(searchQuery);
+        }),
+    [careStatusFilter, searchQuery, visibleCareRequests],
+  );
+  const filteredMuralItems = useMemo(
+    () =>
+      (canManageMural ? data.mural : data.mural.filter((item) => item.published)).filter((item) => {
+        if (!searchQuery) return true;
+        return normalizeSearchText([item.title, item.category, item.socialUrl].join(" ")).includes(searchQuery);
+      }),
+    [canManageMural, data.mural, searchQuery],
+  );
   const birthdaySpotlightPanel = (
     <article className="surface birthday-spotlight wide">
       <div className="panel-heading">
@@ -1710,7 +1908,7 @@ export default function Home() {
           <h2>Aniversariantes do mes</h2>
           <span>{monthlyBirthdays.length ? `${monthlyBirthdays.length} pessoas para celebrar` : "Nenhum aniversario neste mes"}</span>
         </div>
-        {isAdminView && (
+        {canManageMessages && (
           <button onClick={() => setActiveModule("messages")} type="button">
             Enviar mensagem
           </button>
@@ -1757,10 +1955,14 @@ export default function Home() {
         .map((member) => ({ id: member.id, name: member.fullName, phone: member.phone, group: birthdayLabel(member.birthDate) }));
     }
     if (messageAudience === "EBD") {
-      return memberRecipients.filter((recipient) => /ebd|biblica|professor/i.test(recipient.group));
+      return data.members
+        .filter((member) => member.schoolClassId && normalizeWhatsappPhone(member.phone))
+        .map((member) => ({ id: member.id, name: member.fullName, phone: member.phone, group: classNameById(data.schoolClasses, member.schoolClassId) }));
     }
     if (messageAudience === "Discipulado") {
-      return memberRecipients.filter((recipient) => /discipulado|discipulador|novo convertido|batismo/i.test(recipient.group));
+      return data.members
+        .filter((member) => member.discipleshipClassId && normalizeWhatsappPhone(member.phone))
+        .map((member) => ({ id: member.id, name: member.fullName, phone: member.phone, group: classNameById(data.discipleshipClasses, member.discipleshipClassId) }));
     }
     if (messageAudience === "Grupos") {
       return memberRecipients.filter((recipient) => Boolean(recipient.group && recipient.group !== "Visitante"));
@@ -1773,7 +1975,11 @@ export default function Home() {
         phone: kid.guardianPhone,
         group: kid.childName,
       }));
-  }, [data.kids, data.members, messageAudience, monthlyBirthdays, weeklyBirthdays]);
+  }, [data.discipleshipClasses, data.kids, data.members, data.schoolClasses, messageAudience, monthlyBirthdays, weeklyBirthdays]);
+  const selectedMessageRecipients = useMemo(() => {
+    const selected = messageRecipients.filter((recipient) => selectedMessageRecipientIds.includes(recipient.id));
+    return selected.length ? selected : messageRecipients;
+  }, [messageRecipients, selectedMessageRecipientIds]);
 
   function classWhatsappRecipients(classRecord: SchoolClass, area: "EBD" | "Discipulado") {
     const className = classRecord.name;
@@ -1804,7 +2010,7 @@ export default function Home() {
   }
 
   function openClassWhatsapp(classRecord: SchoolClass, title: string, body: string, area: "EBD" | "Discipulado") {
-    if (!requireAdministrativeAccess(`enviar WhatsApp da ${area}`)) return;
+    if (!requireModuleAccess(area === "EBD" ? "school" : "discipleship", `enviar WhatsApp da ${area}`)) return;
 
     const recipients = classWhatsappRecipients(classRecord, area);
     const className = classRecord.name;
@@ -1873,21 +2079,23 @@ export default function Home() {
   }
 
   function attendanceSummary(session: AttendanceSession | undefined, members: MemberRecord[]) {
-    if (!session) return { present: 0, absent: 0, justified: 0, total: members.length, percent: 0 };
+    if (!session) return { present: 0, absent: 0, justified: 0, contact: 0, total: members.length, percent: 0 };
 
     const records = members.map((member) => attendanceStatusForMember(session, member.id));
     const present = records.filter((status) => status === "Presente").length;
     const absent = records.filter((status) => status === "Falta").length;
     const justified = records.filter((status) => status === "Justificado").length;
+    const contact = records.filter((status) => status === "Precisa de contato").length;
     const percent = members.length ? Math.round(((present + justified) / members.length) * 100) : 0;
 
-    return { present, absent, justified, total: members.length, percent };
+    return { present, absent, justified, contact, total: members.length, percent };
   }
 
   function canManageAttendanceClass(classRecord: SchoolClass) {
-    if (isAdminView) return true;
+    if (currentAccessRole === "Administrador" || currentAccessRole === "Secretario") return true;
+    if (currentAccessRole === "Lider") return true;
     const hasTeacherAccess = /professor/i.test(currentMember?.role ?? "");
-    if (!hasTeacherAccess) return false;
+    if (currentAccessRole !== "Professor" && !hasTeacherAccess) return false;
 
     const teacherText = normalizeSearchText(classRecord.teacher);
     const memberName = normalizeSearchText(currentMember?.fullName ?? "");
@@ -2083,6 +2291,164 @@ export default function Home() {
     setSyncStatus(`Historico em PDF preparado para ${classRecord.name}.`);
   }
 
+  function csvValue(value: unknown) {
+    return `"${String(value ?? "").replaceAll('"', '""')}"`;
+  }
+
+  function downloadCsv(filename: string, headers: string[], rows: unknown[][]) {
+    const content = [headers, ...rows].map((row) => row.map(csvValue).join(";")).join("\n");
+    const blob = new Blob([`\uFEFF${content}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function printHtmlReport(title: string, subtitle: string, headers: string[], rows: unknown[][]) {
+    const reportWindow = window.open("", "_blank", "noopener,noreferrer,width=980,height=720");
+
+    if (!reportWindow) {
+      setSyncStatus("Nao foi possivel abrir o relatorio. Libere pop-ups para imprimir ou salvar em PDF.");
+      return;
+    }
+
+    const bodyRows = rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(String(cell ?? ""))}</td>`).join("")}</tr>`).join("");
+    const headRows = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("");
+
+    reportWindow.document.write(`
+      <!doctype html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8" />
+          <title>${escapeHtml(title)}</title>
+          <style>
+            body { color: #111827; font-family: Arial, sans-serif; margin: 30px; }
+            header { border-bottom: 3px solid #0f766e; margin-bottom: 20px; padding-bottom: 12px; }
+            h1 { font-size: 24px; margin: 0 0 6px; }
+            p { color: #4b5563; margin: 0; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #d1d5db; font-size: 12px; padding: 8px; text-align: left; vertical-align: top; }
+            th { background: #f3f4f6; }
+            button { margin-bottom: 16px; padding: 10px 14px; }
+            @media print { body { margin: 18mm; } button { display: none; } }
+          </style>
+        </head>
+        <body>
+          <button onclick="window.print()">Salvar em PDF / Imprimir</button>
+          <header>
+            <h1>${escapeHtml(title)}</h1>
+            <p>${escapeHtml(subtitle)}</p>
+          </header>
+          <table>
+            <thead><tr>${headRows}</tr></thead>
+            <tbody>${bodyRows || `<tr><td colspan="${headers.length}">Nenhum registro encontrado.</td></tr>`}</tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    reportWindow.document.close();
+  }
+
+  function memberReportRows() {
+    return data.members.map((member) => [
+      member.fullName,
+      member.memberType,
+      member.status,
+      member.phone,
+      member.email,
+      member.ministry || "Sem grupo",
+      classNameById(data.schoolClasses, member.schoolClassId) || "Nao matriculado",
+      classNameById(data.discipleshipClasses, member.discipleshipClassId) || "Nao matriculado",
+      member.pastoralStatus || "Sem acompanhamento definido",
+    ]);
+  }
+
+  function absentStudentRows() {
+    return data.members
+      .map((member) => {
+        const records = data.attendanceSessions
+          .flatMap((session) => session.records.map((record) => ({ session, record })))
+          .filter(({ record }) => record.memberId === member.id)
+          .sort((first, second) => second.session.date.localeCompare(first.session.date));
+        const recentMisses = records.slice(0, 3).filter(({ record }) => record.status === "Falta" || record.status === "Precisa de contato").length;
+        const monthMisses = records.filter(({ session, record }) => {
+          const date = eventDate(session.date);
+          const now = new Date();
+          return Boolean(date && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear() && (record.status === "Falta" || record.status === "Precisa de contato"));
+        }).length;
+
+        return { member, recentMisses, monthMisses, lastStatus: records[0]?.record.status ?? "Sem chamada" };
+      })
+      .filter((item) => item.recentMisses >= 2 || item.monthMisses >= 3 || item.lastStatus === "Precisa de contato")
+      .map(({ member, recentMisses, monthMisses, lastStatus }) => [member.fullName, member.phone, lastStatus, recentMisses, monthMisses]);
+  }
+
+  function agendaWeekRows() {
+    return weekEvents.map((event) => [formatDate(event.date), event.time || "Sem horario", event.title, event.ministry, event.location, event.responsible, event.status]);
+  }
+
+  function exportReport(kind: "members" | "birthdays" | "kids" | "agenda" | "attendance" | "absences", format: "pdf" | "csv") {
+    const reports = {
+      members: {
+        title: "Membros por tipo",
+        headers: ["Nome", "Tipo", "Status", "Telefone", "E-mail", "Grupo", "EBD", "Discipulado", "Situacao pastoral"],
+        rows: memberReportRows(),
+      },
+      birthdays: {
+        title: "Aniversariantes do mes",
+        headers: ["Nome", "Data", "Telefone", "Grupo"],
+        rows: monthlyBirthdays.map((member) => [member.fullName, birthdayLabel(member.birthDate), member.phone, member.ministry || "Sem grupo"]),
+      },
+      kids: {
+        title: "Criancas cadastradas",
+        headers: ["Crianca", "Nascimento", "Faixa", "Turma", "Responsavel", "Telefone"],
+        rows: data.kids.map((kid) => [kid.childName, formatDate(kid.birthDate), kid.ageGroup, kid.className, kid.guardianName, kid.guardianPhone]),
+      },
+      agenda: {
+        title: "Agenda semanal",
+        headers: ["Data", "Horario", "Evento", "Grupo", "Local", "Responsavel", "Status"],
+        rows: agendaWeekRows(),
+      },
+      attendance: {
+        title: "Presenca EBD e Discipulado",
+        headers: ["Data", "Area", "Classe", "Aula", "Aluno", "Status", "Observacao"],
+        rows: data.attendanceSessions.flatMap((session) =>
+          session.records.map((record) => {
+            const member = data.members.find((item) => item.id === record.memberId);
+            const classes = session.area === "school" ? data.schoolClasses : data.discipleshipClasses;
+            return [
+              formatDate(session.date),
+              session.area === "school" ? "EBD" : "Discipulado",
+              classNameById(classes, session.classId),
+              session.title,
+              member?.fullName ?? record.memberId,
+              record.status,
+              record.note,
+            ];
+          }),
+        ),
+      },
+      absences: {
+        title: "Faltosos recentes",
+        headers: ["Nome", "WhatsApp", "Ultimo status", "Faltas recentes", "Faltas no mes"],
+        rows: absentStudentRows(),
+      },
+    };
+    const report = reports[kind];
+    const subtitle = `Igreja Conectada - gerado em ${new Date().toLocaleString("pt-BR")}`;
+
+    if (format === "csv") {
+      downloadCsv(`${report.title.toLowerCase().replaceAll(" ", "-")}.csv`, report.headers, report.rows);
+      log(`CSV gerado: ${report.title}`);
+      return;
+    }
+
+    printHtmlReport(report.title, subtitle, report.headers, report.rows);
+    log(`PDF preparado: ${report.title}`);
+  }
+
   function readPhoto(event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -2123,9 +2489,9 @@ export default function Home() {
     }));
   }
 
-  function requireAdministrativeAccess(action: string) {
-    if (isAdminView) return true;
-    setSyncStatus(`Acesso de membro: ${action} esta disponivel apenas para administradores e lideres.`);
+  function requireModuleAccess(moduleKey: ModuleKey, action: string) {
+    if (canManageModule(currentAccessRole, moduleKey)) return true;
+    setSyncStatus(`${currentAccessRole}: ${action} nao esta liberado para este perfil.`);
     return false;
   }
 
@@ -2152,8 +2518,8 @@ export default function Home() {
   }
 
   function createCareRequest() {
-    const memberName = isAdminView ? careForm.member.trim() : currentMember?.fullName ?? profileName;
-    const memberPhone = isAdminView ? careForm.phone.trim() : currentMember?.phone ?? careForm.phone.trim();
+    const memberName = canManagePastoral ? careForm.member.trim() : currentMember?.fullName ?? profileName;
+    const memberPhone = canManagePastoral ? careForm.phone.trim() : currentMember?.phone ?? careForm.phone.trim();
     if (!memberName || !careForm.summary.trim()) return;
 
     const now = new Date().toISOString();
@@ -2172,12 +2538,12 @@ export default function Home() {
       audit: [{ id: uid("audit"), action: `Pedido pastoral criado para ${request.member}`, when: now }, ...current.audit],
     }));
     setSelectedRequestId(request.id);
-    setCareForm(isAdminView ? blankCare : { ...blankCare, member: memberName, phone: memberPhone });
+    setCareForm(canManagePastoral ? blankCare : { ...blankCare, member: memberName, phone: memberPhone });
     setActiveModule("pastoral");
   }
 
   function updateCareRequest(id: string, patch: Partial<CareRequest>, action: string) {
-    if (!requireAdministrativeAccess(action)) return;
+    if (!requireModuleAccess("pastoral", action)) return;
 
     const now = new Date().toISOString();
     setData((current) => ({
@@ -2190,7 +2556,7 @@ export default function Home() {
   }
 
   function toggleMural(id: string, field: "published" | "featured") {
-    if (!requireAdministrativeAccess("alterar mural")) return;
+    if (!requireModuleAccess("mural", "alterar mural")) return;
 
     setData((current) => ({
       ...current,
@@ -2200,7 +2566,7 @@ export default function Home() {
   }
 
   async function createUser() {
-    if (!requireAdministrativeAccess("criar usuarios")) return;
+    if (!requireModuleAccess("users", "criar usuarios")) return;
     if (!userForm.name.trim() || !userForm.email.trim()) return;
     if (!selectedAccessExistingUser && userForm.password.trim().length < 6) {
       setSyncStatus("Informe uma senha inicial com pelo menos 6 caracteres.");
@@ -2269,7 +2635,7 @@ export default function Home() {
   }
 
   async function updateAccessUserStatus(user: AccessUser, status: AccessUser["status"]) {
-    if (!requireAdministrativeAccess("alterar acessos")) return;
+    if (!requireModuleAccess("users", "alterar acessos")) return;
     const now = new Date().toISOString();
 
     if (isSupabaseConfigured()) {
@@ -2314,7 +2680,7 @@ export default function Home() {
   }
 
   async function deleteAccessUser(user: AccessUser) {
-    if (!requireAdministrativeAccess("excluir acessos")) return;
+    if (!requireModuleAccess("users", "excluir acessos")) return;
     if (!window.confirm(`Excluir definitivamente o acesso de ${user.name}?`)) return;
 
     const now = new Date().toISOString();
@@ -2363,7 +2729,7 @@ export default function Home() {
 
   function createMember() {
     if (!memberForm.fullName.trim() || !memberForm.phone.trim()) return;
-    if (!isAdminView && editingMemberId !== currentMember?.id) {
+    if (!canManageMembers && editingMemberId !== currentMember?.id) {
       setSyncStatus("Acesso de membro: voce pode atualizar apenas o seu proprio cadastro.");
       return;
     }
@@ -2392,7 +2758,7 @@ export default function Home() {
   }
 
   function editMember(member: MemberRecord) {
-    if (!isAdminView && member.id !== currentMember?.id) {
+    if (!canManageMembers && member.id !== currentMember?.id) {
       setSyncStatus("Acesso de membro: somente o proprio cadastro pode ser editado.");
       return;
     }
@@ -2413,7 +2779,7 @@ export default function Home() {
   }
 
   function deleteMember(member: MemberRecord) {
-    if (!requireAdministrativeAccess("excluir fichas de membros")) return;
+    if (!requireModuleAccess("members", "excluir fichas de membros")) return;
     if (!window.confirm(`Excluir a ficha de ${member.fullName}?`)) return;
 
     setData((current) => ({
@@ -2432,7 +2798,7 @@ export default function Home() {
   }
 
   function toggleMemberCredentials(member: MemberRecord) {
-    if (!requireAdministrativeAccess("alterar login e senha de membros")) return;
+    if (!requireModuleAccess("users", "alterar login e senha de membros")) return;
     setMemberCredentialForm((form) =>
       form.memberId === member.id
         ? blankMemberCredential
@@ -2455,7 +2821,7 @@ export default function Home() {
   }
 
   async function saveMemberAccess(member: MemberRecord) {
-    if (!requireAdministrativeAccess("criar ou alterar login de membros")) return;
+    if (!requireModuleAccess("users", "criar ou alterar login de membros")) return;
     if (!canSaveMemberAccess) return;
 
     const email = memberCredentialForm.email.trim().toLowerCase();
@@ -2525,7 +2891,7 @@ export default function Home() {
   }
 
   function createKid() {
-    if (!requireAdministrativeAccess("cadastrar Kids")) return;
+    if (!requireModuleAccess("kids", "cadastrar Kids")) return;
     if (!canCreateKid) return;
 
     const now = new Date().toISOString();
@@ -2541,7 +2907,7 @@ export default function Home() {
   }
 
   function deleteKid(kid: KidRecord) {
-    if (!requireAdministrativeAccess("excluir cadastro Kids")) return;
+    if (!requireModuleAccess("kids", "excluir cadastro Kids")) return;
     if (!window.confirm(`Excluir o cadastro Kids de ${kid.childName}?`)) return;
 
     setData((current) => ({
@@ -2553,7 +2919,7 @@ export default function Home() {
   }
 
   function createMuralItem() {
-    if (!requireAdministrativeAccess("criar itens do mural")) return;
+    if (!requireModuleAccess("mural", "criar itens do mural")) return;
     if (!muralForm.title.trim() || !muralForm.expiresAt) return;
 
     const now = new Date().toISOString();
@@ -2569,7 +2935,7 @@ export default function Home() {
   }
 
   function deleteMuralItem(item: MuralItem) {
-    if (!requireAdministrativeAccess("excluir itens do mural")) return;
+    if (!requireModuleAccess("mural", "excluir itens do mural")) return;
     if (!window.confirm(`Excluir o item do mural "${item.title}"?`)) return;
 
     setData((current) => ({
@@ -2579,18 +2945,36 @@ export default function Home() {
     }));
   }
 
+  function recurringEventsFrom(event: ChurchEvent) {
+    if (event.recurrence === "Unico" || !event.date) return [event];
+
+    const total = event.recurrence === "Semanal" ? 4 : 3;
+    return Array.from({ length: total }, (_, index) => {
+      const date = eventDate(event.date);
+      if (!date) return event;
+      if (event.recurrence === "Semanal") date.setDate(date.getDate() + index * 7);
+      if (event.recurrence === "Mensal") date.setMonth(date.getMonth() + index);
+      return {
+        ...event,
+        id: index === 0 ? event.id : uid("event"),
+        date: date.toISOString().slice(0, 10),
+      };
+    });
+  }
+
   function createEvent() {
-    if (!requireAdministrativeAccess(editingEventId ? "editar eventos" : "adicionar eventos")) return;
+    if (!requireModuleAccess("events", editingEventId ? "editar eventos" : "adicionar eventos")) return;
     if (!canCreateEvent) return;
 
     const now = new Date().toISOString();
     const event: ChurchEvent = { ...eventForm, id: editingEventId ?? uid("event") };
+    const eventsToAdd = editingEventId ? [event] : recurringEventsFrom(event);
 
     setData((current) => ({
       ...current,
       events: editingEventId
         ? current.events.map((item) => (item.id === editingEventId ? event : item))
-        : [event, ...current.events],
+        : [...eventsToAdd, ...current.events],
       attendanceSessions: editingEventId
         ? current.attendanceSessions.map((session) =>
             session.eventId === editingEventId
@@ -2612,7 +2996,7 @@ export default function Home() {
   }
 
   function editEvent(event: ChurchEvent) {
-    if (!requireAdministrativeAccess("editar eventos")) return;
+    if (!requireModuleAccess("events", "editar eventos")) return;
     setEventForm({
       title: event.title,
       date: event.date,
@@ -2620,6 +3004,7 @@ export default function Home() {
       ministry: event.ministry,
       location: event.location,
       responsible: event.responsible,
+      recurrence: event.recurrence,
       status: event.status,
     });
     setEditingEventId(event.id);
@@ -2632,7 +3017,7 @@ export default function Home() {
   }
 
   function updateEventStatus(event: ChurchEvent, status: ChurchEvent["status"]) {
-    if (!requireAdministrativeAccess("alterar eventos")) return;
+    if (!requireModuleAccess("events", "alterar eventos")) return;
     setData((current) => ({
       ...current,
       events: current.events.map((item) => (item.id === event.id ? { ...item, status } : item)),
@@ -2641,7 +3026,7 @@ export default function Home() {
   }
 
   function deleteEvent(event: ChurchEvent) {
-    if (!requireAdministrativeAccess("excluir eventos")) return;
+    if (!requireModuleAccess("events", "excluir eventos")) return;
     if (!window.confirm(`Excluir o evento "${event.title}" da agenda?`)) return;
 
     setData((current) => ({
@@ -2656,7 +3041,7 @@ export default function Home() {
   }
 
   function createNotice() {
-    if (!requireAdministrativeAccess("criar comunicados")) return;
+    if (!requireModuleAccess("notices", "criar comunicados")) return;
     if (!canCreateNotice) return;
 
     const now = new Date().toISOString();
@@ -2672,7 +3057,7 @@ export default function Home() {
   }
 
   function deleteNotice(notice: Notice) {
-    if (!requireAdministrativeAccess("excluir comunicados")) return;
+    if (!requireModuleAccess("notices", "excluir comunicados")) return;
     if (!window.confirm(`Excluir o aviso "${notice.title}"?`)) return;
 
     setData((current) => ({
@@ -2683,7 +3068,7 @@ export default function Home() {
   }
 
   function createMinistry() {
-    if (!requireAdministrativeAccess("criar grupos")) return;
+    if (!requireModuleAccess("ministries", "criar grupos")) return;
     if (!canCreateMinistry) return;
 
     const now = new Date().toISOString();
@@ -2715,7 +3100,7 @@ export default function Home() {
   }
 
   function editMinistry(ministry: MinistryRecord) {
-    if (!requireAdministrativeAccess("editar grupos")) return;
+    if (!requireModuleAccess("ministries", "editar grupos")) return;
     setMinistryForm({
       name: ministry.name,
       leader: ministry.leader,
@@ -2735,7 +3120,7 @@ export default function Home() {
   }
 
   function deleteMinistry(ministry: MinistryRecord) {
-    if (!requireAdministrativeAccess("excluir grupos")) return;
+    if (!requireModuleAccess("ministries", "excluir grupos")) return;
     if (!window.confirm(`Excluir o grupo "${ministry.name}"? Os membros vinculados ficarao sem grupo definido.`)) return;
 
     setData((current) => ({
@@ -2752,7 +3137,7 @@ export default function Home() {
   }
 
   function createSchoolNotice() {
-    if (!requireAdministrativeAccess("enviar avisos da EBD")) return;
+    if (!requireModuleAccess("school", "enviar avisos da EBD")) return;
     if (!canCreateSchoolNotice) return;
 
     const now = new Date().toISOString();
@@ -2788,7 +3173,7 @@ export default function Home() {
   }
 
   function createDiscipleshipNotice() {
-    if (!requireAdministrativeAccess("enviar avisos do discipulado")) return;
+    if (!requireModuleAccess("discipleship", "enviar avisos do discipulado")) return;
     if (!canCreateDiscipleshipNotice) return;
 
     const now = new Date().toISOString();
@@ -2966,16 +3351,53 @@ export default function Home() {
     if (template) setMessageText(template.text);
   }
 
-  function openBulkWhatsapp() {
-    if (!requireAdministrativeAccess("enviar mensagens em massa")) return;
+  function saveCustomMessageTemplate() {
+    if (!canManageMessages || !customTemplateLabel.trim() || !customTemplateText.trim()) return;
 
-    messageRecipients.slice(0, 12).forEach((recipient, index) => {
+    const template: MessageTemplateItem = {
+      id: uid("template"),
+      label: customTemplateLabel.trim(),
+      text: customTemplateText.trim(),
+      audience: messageAudience,
+    };
+
+    setData((current) => ({
+      ...current,
+      messageTemplates: [template, ...current.messageTemplates].slice(0, 30),
+      audit: [{ id: uid("audit"), action: `Modelo WhatsApp criado: ${template.label}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
+    setMessageTemplateId(template.id);
+    setMessageText(template.text);
+    setCustomTemplateLabel("");
+    setCustomTemplateText("");
+    setSyncStatus(`Modelo "${template.label}" salvo para uso nesta comunicacao.`);
+  }
+
+  function openBulkWhatsapp() {
+    if (!requireModuleAccess("messages", "enviar mensagens em massa")) return;
+
+    const recipients = selectedMessageRecipients.slice(0, messageBatchLimit);
+
+    recipients.forEach((recipient, index) => {
       window.setTimeout(() => {
         window.open(whatsappUrl(recipient.phone, messageText, recipient.name), "_blank", "noopener,noreferrer");
       }, index * 450);
     });
-    void saveMessageCampaignToSupabase();
-    log(`Mensagens preparadas para ${Math.min(messageRecipients.length, 12)} contatos`);
+    const campaign: MessageCampaign = {
+      id: uid("campaign"),
+      audience: messageAudience,
+      templateId: messageTemplateId,
+      text: messageText,
+      recipientCount: recipients.length,
+      createdAt: new Date().toISOString(),
+    };
+    setData((current) => ({
+      ...current,
+      messageCampaigns: [campaign, ...current.messageCampaigns].slice(0, 20),
+      audit: [{ id: uid("audit"), action: `Campanha WhatsApp aberta para ${recipients.length} contatos`, when: campaign.createdAt }, ...current.audit].slice(0, 12),
+    }));
+    void saveMessageCampaignToSupabase(recipients);
+    setSyncStatus(`Lote WhatsApp preparado para ${recipients.length} contatos selecionados.`);
   }
 
   function renderAttendancePanel(area: AttendanceArea, classRecord: SchoolClass) {
@@ -3057,10 +3479,11 @@ export default function Home() {
                       }
                       value={attendanceStatusForMember(session, member.id)}
                     >
-                      <option>Presente</option>
-                      <option>Falta</option>
-                      <option>Justificado</option>
-                    </select>
+                        <option>Presente</option>
+                        <option>Falta</option>
+                        <option>Justificado</option>
+                        <option>Precisa de contato</option>
+                      </select>
                     <input
                       onChange={(event) => updateAttendanceNote(area, classRecord, selectedEvent, member, event.target.value)}
                       placeholder="Justificativa ou observacao"
@@ -3145,9 +3568,9 @@ export default function Home() {
     setSyncStatus(error ? "Kids salvo localmente; faca login Supabase para sincronizar." : "Cadastro Kids sincronizado com Supabase.");
   }
 
-  async function saveMessageCampaignToSupabase() {
+  async function saveMessageCampaignToSupabase(recipients: MessageRecipient[]) {
     const supabase = getSupabaseClient();
-    if (!supabase || !messageRecipients.length) return;
+    if (!supabase || !recipients.length) return;
 
     const {
       data: { user },
@@ -3165,7 +3588,7 @@ export default function Home() {
       body: messageText,
       channel: "whatsapp_manual",
       status: "prepared",
-      recipient_count: messageRecipients.length,
+      recipient_count: recipients.length,
       created_by: user.id,
     });
 
@@ -3175,7 +3598,7 @@ export default function Home() {
     }
 
     const { error: recipientsError } = await supabase.from("message_recipients").insert(
-      messageRecipients.map((recipient) => ({
+      recipients.map((recipient) => ({
         campaign_id: campaignId,
         recipient_type: messageAudience === "Responsaveis Kids" ? "kid_guardian" : "member",
         recipient_id: recipient.id,
@@ -3235,10 +3658,11 @@ export default function Home() {
           </nav>
 
           <div className="connection-card">
-            <span className="status-dot" />
+            <span className={`status-dot ${saveState}`} />
             <div>
               <strong>{isSupabaseConfigured() ? "Supabase preparado" : "Modo local ativo"}</strong>
               <span>{syncStatus}</span>
+              {lastSavedAt && <small>Ultimo salvamento: {lastSavedAt}</small>}
             </div>
           </div>
         </aside>
@@ -3251,27 +3675,27 @@ export default function Home() {
           >
             Painel
           </button>
-          <button
+          {canAccessModule(currentAccessRole, "pastoral") && <button
             className={activeModule === "pastoral" ? "active" : ""}
             onClick={() => setActiveModule("pastoral")}
             type="button"
           >
             Pastoral
-          </button>
-          <button
+          </button>}
+          {canAccessModule(currentAccessRole, "members") && <button
             className={activeModule === "members" ? "active" : ""}
             onClick={() => setActiveModule("members")}
             type="button"
           >
             Membros
-          </button>
-          <button
+          </button>}
+          {canAccessModule(currentAccessRole, "events") && <button
             className={activeModule === "events" ? "active" : ""}
             onClick={() => setActiveModule("events")}
             type="button"
           >
             Agenda
-          </button>
+          </button>}
           <button className={notificationsOpen ? "active" : ""} onClick={() => setNotificationsOpen((open) => !open)} type="button">
             Acoes
           </button>
@@ -3283,7 +3707,7 @@ export default function Home() {
         <section className="workspace">
           <header className="topbar">
             <div>
-              <p className="eyebrow">Quarta-feira, 2 de setembro</p>
+              <p className="eyebrow">{currentLongDate}</p>
               <h1>{visibleModules.find((module) => module.key === activeModule)?.label}</h1>
               <label className="mobile-module-picker">
                 Ir para modulo
@@ -3300,7 +3724,12 @@ export default function Home() {
             <div className="topbar-actions">
               <label className="command-search">
                 <span>Busca global</span>
-                <input placeholder="Buscar membro, evento ou pedido" type="search" />
+                <input
+                  onChange={(event) => setGlobalSearch(event.target.value)}
+                  placeholder="Buscar membro, evento ou pedido"
+                  type="search"
+                  value={globalSearch}
+                />
               </label>
               <button
                 aria-expanded={notificationsOpen}
@@ -3375,7 +3804,7 @@ export default function Home() {
               </div>
 
               <div className="action-strip">
-                {actionHighlights.map((item) => (
+                {actionHighlights.filter((item) => canAccessModule(currentAccessRole, item.module)).map((item) => (
                   <button className="action-tile" key={item.label} onClick={() => setActiveModule(item.module)} type="button">
                     <span>{item.label}</span>
                     <strong>{item.value}</strong>
@@ -3560,11 +3989,11 @@ export default function Home() {
               <article className="surface">
                 <div className="panel-heading">
                   <h2>Meus pedidos</h2>
-                  <span>{visibleCareRequests.length} registros</span>
+                  <span>{filteredCareRequests.length} registros</span>
                 </div>
                 <div className="row-list">
-                  {visibleCareRequests.length ? (
-                    visibleCareRequests.map((request) => (
+                  {filteredCareRequests.length ? (
+                    filteredCareRequests.map((request) => (
                       <div className="data-row" key={request.id}>
                         <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>{request.status}</span>
                         <div>
@@ -3585,26 +4014,26 @@ export default function Home() {
             <section className="pastoral-layout">
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>{isAdminView ? "Novo pedido pastoral" : "Solicitar atendimento ou oracao"}</h2>
-                  <span>{isAdminView ? "Fluxo real" : "Pedido pessoal"}</span>
+                  <h2>{canManagePastoral ? "Novo pedido pastoral" : "Solicitar atendimento ou oracao"}</h2>
+                  <span>{canManagePastoral ? "Fluxo real" : "Pedido pessoal"}</span>
                 </div>
                 <div className="form-grid">
                   <label>
                     Nome do membro
                     <input
-                      disabled={!isAdminView}
+                      disabled={!canManagePastoral}
                       onChange={(event) => setCareForm((form) => ({ ...form, member: event.target.value }))}
                       placeholder="Ex.: Maria Oliveira"
-                      value={isAdminView ? careForm.member : currentMember?.fullName ?? profileName}
+                      value={canManagePastoral ? careForm.member : currentMember?.fullName ?? profileName}
                     />
                   </label>
                   <label>
                     Telefone
                     <input
-                      disabled={!isAdminView}
+                      disabled={!canManagePastoral}
                       onChange={(event) => setCareForm((form) => ({ ...form, phone: event.target.value }))}
                       placeholder="(00) 00000-0000"
-                      value={isAdminView ? careForm.phone : currentMember?.phone ?? careForm.phone}
+                      value={canManagePastoral ? careForm.phone : currentMember?.phone ?? careForm.phone}
                     />
                   </label>
                   <label>
@@ -3629,18 +4058,31 @@ export default function Home() {
                     />
                   </label>
                   <button className="primary-action" onClick={createCareRequest} type="button">
-                    {isAdminView ? "Criar atendimento" : "Enviar pedido"}
+                    {canManagePastoral ? "Criar atendimento" : "Enviar pedido"}
                   </button>
                 </div>
               </article>
 
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>{isAdminView ? "Fila pastoral" : "Meus pedidos"}</h2>
-                  <span>{visibleCareRequests.length} registros</span>
+                  <h2>{canManagePastoral ? "Fila pastoral" : "Meus pedidos"}</h2>
+                  <span>{filteredCareRequests.length} registros</span>
                 </div>
+                {canManagePastoral && (
+                  <div className="filter-bar">
+                    <label>
+                      Status
+                      <select onChange={(event) => setCareStatusFilter(event.target.value)} value={careStatusFilter}>
+                        <option>Todos</option>
+                        {statusFlow.map((status) => (
+                          <option key={status}>{status}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                )}
                 <div className="care-list">
-                  {visibleCareRequests.map((request) => (
+                  {filteredCareRequests.map((request) => (
                     <button
                       className={request.id === selectedRequest?.id ? "care-list-item selected" : "care-list-item"}
                       key={request.id}
@@ -3654,11 +4096,11 @@ export default function Home() {
                       <small>{suggestedNextStep(request)}</small>
                     </button>
                   ))}
-                  {!visibleCareRequests.length && <p className="empty-state">Nenhum pedido registrado para este acesso.</p>}
+                  {!filteredCareRequests.length && <p className="empty-state">Nenhum pedido registrado para este filtro.</p>}
                 </div>
               </article>
 
-              {isAdminView && selectedRequest && <article className="surface care-detail">
+              {canManagePastoral && selectedRequest && <article className="surface care-detail">
                 <div className="panel-heading">
                   <h2>{selectedRequest.member}</h2>
                   <span>{selectedRequest.category}</span>
@@ -3748,7 +4190,7 @@ export default function Home() {
 
           {activeModule === "mural" && (
             <section className="content-grid">
-              {isAdminView && <article className="surface">
+              {canManageMural && <article className="surface">
                 <div className="panel-heading">
                   <h2>Novo item do mural</h2>
                   <span>Publicacao</span>
@@ -3830,15 +4272,15 @@ export default function Home() {
 
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>{isAdminView ? "Administrar mural" : "Mural da igreja"}</h2>
+                  <h2>{canManageMural ? "Administrar mural" : "Mural da igreja"}</h2>
                   <span>
-                    {isAdminView
+                    {canManageMural
                       ? `${data.mural.filter((item) => item.published).length} publicados`
                       : `${data.mural.filter((item) => item.published).length + activeNotices.filter((notice) => notice.status === "Publicado").length + data.events.length} itens gerais`}
                   </span>
                 </div>
                 <div className="table-like">
-                  {(isAdminView ? data.mural : data.mural.filter((item) => item.published)).map((item) => (
+                  {filteredMuralItems.map((item) => (
                     <div className="table-row" key={item.id}>
                       <div>
                         {(item.imageDataUrl || item.bannerUrl) && (
@@ -3854,20 +4296,20 @@ export default function Home() {
                           </a>
                         )}
                       </div>
-                      {isAdminView && <label className="switch">
+                      {canManageMural && <label className="switch">
                         Publicado
                         <input checked={item.published} onChange={() => toggleMural(item.id, "published")} type="checkbox" />
                       </label>}
-                      {isAdminView && <label className="switch">
+                      {canManageMural && <label className="switch">
                         Destaque
                         <input checked={item.featured} onChange={() => toggleMural(item.id, "featured")} type="checkbox" />
                       </label>}
-                      {isAdminView && <button className="danger-action" onClick={() => deleteMuralItem(item)} type="button">
+                      {canManageMural && <button className="danger-action" onClick={() => deleteMuralItem(item)} type="button">
                         Excluir
                       </button>}
                     </div>
                   ))}
-                  {!isAdminView && !data.mural.filter((item) => item.published).length && (
+                  {!canManageMural && !filteredMuralItems.length && (
                     <div className="data-row">
                       <span className="bullet-mark" />
                       <div>
@@ -3876,7 +4318,7 @@ export default function Home() {
                       </div>
                     </div>
                   )}
-                  {!isAdminView && activeNotices.filter((notice) => notice.status === "Publicado").map((notice) => (
+                  {!canManageMural && activeNotices.filter((notice) => notice.status === "Publicado").map((notice) => (
                     <div className="table-row" key={`notice-${notice.id}`}>
                       <div>
                         <strong>{notice.title}</strong>
@@ -3885,7 +4327,7 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
-                  {!isAdminView && weekEvents.map((event) => (
+                  {!canManageMural && weekEvents.map((event) => (
                     <div className="table-row" key={`event-${event.id}`}>
                       <span className="date-box">{formatDate(event.date)}</span>
                       <div>
@@ -3897,7 +4339,7 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
-                  {!isAdminView &&
+                  {!canManageMural &&
                     !data.mural.filter((item) => item.published).length &&
                     !activeNotices.filter((notice) => notice.status === "Publicado").length &&
                     !weekEvents.length && (
@@ -3910,7 +4352,7 @@ export default function Home() {
 
           {activeModule === "events" && (
             <section className="content-grid">
-              {isAdminView && <article className="surface">
+              {canManageEvents && <article className="surface">
                 <div className="panel-heading">
                   <h2>{editingEventId ? "Editar evento" : "Novo evento"}</h2>
                   <span>{editingEventId ? "Atualizando agenda" : "Agenda"}</span>
@@ -3964,6 +4406,17 @@ export default function Home() {
                       value={eventForm.responsible}
                     />
                   </label>
+                  <label>
+                    Repeticao
+                    <select
+                      onChange={(event) => setEventForm((form) => ({ ...form, recurrence: event.target.value as ChurchEvent["recurrence"] }))}
+                      value={eventForm.recurrence}
+                    >
+                      <option>Unico</option>
+                      <option>Semanal</option>
+                      <option>Mensal</option>
+                    </select>
+                  </label>
                   <div className="form-actions full">
                     <button className="primary-action" disabled={!canCreateEvent} onClick={createEvent} type="button">
                       {editingEventId ? "Atualizar evento" : "Adicionar evento"}
@@ -3982,6 +4435,38 @@ export default function Home() {
                   <h2>Agenda da semana</h2>
                   <span>{weekEvents.length} de {data.events.length} eventos</span>
                 </div>
+                <div className="filter-bar">
+                  <button className="secondary" onClick={() => setEventWeekOffset((offset) => offset - 1)} type="button">
+                    Semana anterior
+                  </button>
+                  <button className="secondary" onClick={() => setEventWeekOffset(0)} type="button">
+                    Semana atual
+                  </button>
+                  <button className="secondary" onClick={() => setEventWeekOffset((offset) => offset + 1)} type="button">
+                    Proxima semana
+                  </button>
+                  <label>
+                    Grupo
+                    <select onChange={(event) => setEventGroupFilter(event.target.value)} value={eventGroupFilter}>
+                      <option>Todos</option>
+                      {groupOptions.map((group) => (
+                        <option key={group}>{group}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Status
+                    <select onChange={(event) => setEventStatusFilter(event.target.value)} value={eventStatusFilter}>
+                      <option>Todos</option>
+                      <option>Programado</option>
+                      <option>Confirmado</option>
+                      <option>Concluido</option>
+                    </select>
+                  </label>
+                  <button className="secondary" onClick={() => exportReport("agenda", "pdf")} type="button">
+                    Imprimir semana
+                  </button>
+                </div>
                 <div className="row-list">
                   {weekEvents.map((event) => (
                     <div className="data-row access-user-row" key={event.id}>
@@ -3993,7 +4478,7 @@ export default function Home() {
                         </small>
                         <small>{event.location || "Local nao informado"} - {event.responsible || "Sem responsavel"}</small>
                       </div>
-                      {isAdminView && <div className="row-actions">
+                      {canManageEvents && <div className="row-actions">
                         <button className="secondary" onClick={() => editEvent(event)} type="button">
                           Editar
                         </button>
@@ -4018,7 +4503,7 @@ export default function Home() {
 
           {activeModule === "notices" && (
             <section className="content-grid">
-              {isAdminView && <article className="surface">
+              {canManageNotices && <article className="surface">
                 <div className="panel-heading">
                   <h2>Novo comunicado</h2>
                   <span>Avisos</span>
@@ -4110,7 +4595,7 @@ export default function Home() {
                         <small>Expira em {formatDate(notice.expiresAt)} - {notice.retentionDays} dias no ar</small>
                         <small>{notice.body}</small>
                       </div>
-                      {isAdminView && <div className="row-actions">
+                      {canManageNotices && <div className="row-actions">
                         <button className="danger-action" onClick={() => deleteNotice(notice)} type="button">
                           Excluir
                         </button>
@@ -4245,11 +4730,11 @@ export default function Home() {
 
           {activeModule === "members" && (
             <section className="content-grid">
-              {isAdminView || editingMemberId === currentMember?.id ? (
+              {canManageMembers || editingMemberId === currentMember?.id ? (
               <article className={editingMemberId ? "surface editing-surface" : "surface"} id="member-form-panel">
                 <div className="panel-heading">
                   <h2>{editingMemberId ? "Editar ficha" : "Ficha completa"}</h2>
-                  <span>{isAdminView ? (editingMemberId ? "Atualizando cadastro" : "Membro ou visitante") : "Meu cadastro"}</span>
+                  <span>{canManageMembers ? (editingMemberId ? "Atualizando cadastro" : "Membro ou visitante") : "Meu cadastro"}</span>
                 </div>
                 <div className="form-grid">
                   <label className="full">
@@ -4303,7 +4788,7 @@ export default function Home() {
                       value={memberForm.email}
                     />
                   </label>
-                  {isAdminView && <label>
+                  {canManageMembers && <label>
                     Tipo de pessoa
                     <select
                       onChange={(event) => setMemberForm((form) => ({ ...form, memberType: event.target.value as MemberRecord["memberType"] }))}
@@ -4315,7 +4800,7 @@ export default function Home() {
                       <option>Lideranca</option>
                     </select>
                   </label>}
-                  {isAdminView && <label>
+                  {canManageMembers && <label>
                     Status
                     <select onChange={(event) => setMemberForm((form) => ({ ...form, status: event.target.value as MemberRecord["status"] }))} value={memberForm.status}>
                       <option>Membro ativo</option>
@@ -4324,7 +4809,7 @@ export default function Home() {
                       <option>Transferencia</option>
                     </select>
                   </label>}
-                  {isAdminView && <label>
+                  {canManageMembers && <label>
                     Funcao na igreja
                     <select
                       className="multi-select"
@@ -4346,7 +4831,7 @@ export default function Home() {
                     </select>
                     <small className="form-hint">No computador, segure Ctrl para marcar mais de uma funcao; no celular, toque nas funcoes desejadas.</small>
                   </label>}
-                  {isAdminView && <label>
+                  {canManageMembers && <label>
                     Grupo
                     <select
                       onChange={(event) => setMemberForm((form) => ({ ...form, ministry: event.target.value }))}
@@ -4434,6 +4919,57 @@ export default function Home() {
                       value={memberForm.previousChurch}
                     />
                   </label>
+                  <label>
+                    Data de conversao
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, conversionDate: event.target.value }))}
+                      type="date"
+                      value={memberForm.conversionDate}
+                    />
+                  </label>
+                  <label>
+                    Data de batismo
+                    <input
+                      onChange={(event) => setMemberForm((form) => ({ ...form, baptismDate: event.target.value }))}
+                      type="date"
+                      value={memberForm.baptismDate}
+                    />
+                  </label>
+                  <label>
+                    Origem do cadastro
+                    <select
+                      onChange={(event) => setMemberForm((form) => ({ ...form, registrationSource: event.target.value }))}
+                      value={memberForm.registrationSource}
+                    >
+                      <option value="">Nao informado</option>
+                      <option>Cadastro interno</option>
+                      <option>Visita presencial</option>
+                      <option>Indicacao</option>
+                      <option>Evento</option>
+                      <option>Transferencia</option>
+                    </select>
+                  </label>
+                  {canManageMembers && <label>
+                    Situacao pastoral
+                    <select
+                      onChange={(event) => setMemberForm((form) => ({ ...form, pastoralStatus: event.target.value }))}
+                      value={memberForm.pastoralStatus}
+                    >
+                      <option>Sem acompanhamento definido</option>
+                      <option>Acompanhamento regular</option>
+                      <option>Precisa de contato</option>
+                      <option>Em discipulado</option>
+                      <option>Integrado</option>
+                    </select>
+                  </label>}
+                  <label className="full">
+                    Observacao visivel ao membro
+                    <textarea
+                      onChange={(event) => setMemberForm((form) => ({ ...form, memberVisibleNotes: event.target.value }))}
+                      placeholder="Mensagem ou orientacao que o membro pode visualizar"
+                      value={memberForm.memberVisibleNotes}
+                    />
+                  </label>
                   <label className="check-card">
                     <input
                       checked={memberForm.waterBaptized}
@@ -4450,8 +4986,8 @@ export default function Home() {
                     />
                     Batizado no Espirito Santo
                   </label>
-                  {isAdminView && <label className="full">
-                    Observacoes
+                  {canManageMembers && <label className="full">
+                    Observacoes internas
                     <textarea
                       onChange={(event) => setMemberForm((form) => ({ ...form, notes: event.target.value }))}
                       placeholder="Historico, acompanhamento, restricoes ou observacoes pastorais"
@@ -4486,10 +5022,43 @@ export default function Home() {
 
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>{isAdminView ? "Membros cadastrados" : "Meu cadastro"}</h2>
-                  <span>{visibleMembers.length} registro{visibleMembers.length === 1 ? "" : "s"}</span>
+                  <h2>{canManageMembers ? "Membros cadastrados" : "Meu cadastro"}</h2>
+                  <span>{filteredMembers.length} registro{filteredMembers.length === 1 ? "" : "s"}</span>
                 </div>
-                {isAdminView && <div className="birthday-grid">
+                {canManageMembers && (
+                  <div className="filter-bar">
+                    <label>
+                      Status
+                      <select onChange={(event) => setMemberStatusFilter(event.target.value)} value={memberStatusFilter}>
+                        <option>Todos</option>
+                        <option>Membro ativo</option>
+                        <option>Visitante</option>
+                        <option>Novo convertido</option>
+                        <option>Transferencia</option>
+                      </select>
+                    </label>
+                    <label>
+                      Tipo
+                      <select onChange={(event) => setMemberTypeFilter(event.target.value)} value={memberTypeFilter}>
+                        <option>Todos</option>
+                        <option>Membro</option>
+                        <option>Visitante</option>
+                        <option>Congregado</option>
+                        <option>Lideranca</option>
+                      </select>
+                    </label>
+                    <label>
+                      Grupo
+                      <select onChange={(event) => setMemberGroupFilter(event.target.value)} value={memberGroupFilter}>
+                        <option>Todos</option>
+                        {groupOptions.map((group) => (
+                          <option key={group}>{group}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                )}
+                {canManageMembers && <div className="birthday-grid">
                   <div className="birthday-card">
                     <strong>Aniversariantes da semana</strong>
                     <span>{weeklyBirthdays.length}</span>
@@ -4510,7 +5079,7 @@ export default function Home() {
                   </div>
                 </div>}
                 <div className="row-list">
-                  {visibleMembers.map((member) => {
+                  {filteredMembers.map((member) => {
                     const schoolClassName = classNameById(data.schoolClasses, member.schoolClassId);
                     const discipleshipClassName = classNameById(data.discipleshipClasses, member.discipleshipClassId);
 
@@ -4537,20 +5106,29 @@ export default function Home() {
                           <small>
                             EBD: {schoolClassName || "Nao matriculado"} - Discipulado: {discipleshipClassName || "Nao matriculado"}
                           </small>
+                          <small>
+                            Origem: {member.registrationSource || "Nao informada"} - Situacao: {member.pastoralStatus || "Sem acompanhamento definido"}
+                          </small>
+                          {(member.conversionDate || member.baptismDate) && (
+                            <small>
+                              Conversao: {formatDate(member.conversionDate)} - Batismo: {formatDate(member.baptismDate)}
+                            </small>
+                          )}
+                          {member.memberVisibleNotes && <small>Nota ao membro: {member.memberVisibleNotes}</small>}
                         </div>
                       </div>
                       <div className="record-actions">
                         <button className="secondary" onClick={() => editMember(member)} type="button">
                           Editar ficha
                         </button>
-                        {isAdminView && <button className="secondary" onClick={() => toggleMemberCredentials(member)} type="button">
+                        {canManageUsers && <button className="secondary" onClick={() => toggleMemberCredentials(member)} type="button">
                           Login e senha
                         </button>}
-                        {isAdminView && <button className="danger-action" onClick={() => deleteMember(member)} type="button">
+                        {canManageMembers && <button className="danger-action" onClick={() => deleteMember(member)} type="button">
                           Excluir ficha
                         </button>}
                       </div>
-                      {isAdminView && memberCredentialForm.memberId === member.id && (
+                      {canManageUsers && memberCredentialForm.memberId === member.id && (
                         <div className="credential-panel">
                           <div className="panel-heading compact-heading">
                             <h2>Acesso do membro</h2>
@@ -4593,7 +5171,7 @@ export default function Home() {
                     </div>
                     );
                   })}
-                  {!visibleMembers.length && <p className="empty-state">Nenhuma ficha vinculada a este acesso.</p>}
+                  {!filteredMembers.length && <p className="empty-state">Nenhuma ficha encontrada para este filtro.</p>}
                 </div>
               </article>
             </section>
@@ -4601,7 +5179,7 @@ export default function Home() {
 
           {activeModule === "kids" && (
             <section className="content-grid">
-              {isAdminView && <article className="surface">
+              {canManageKids && <article className="surface">
                 <div className="panel-heading">
                   <h2>Cadastro Kids</h2>
                   <span>Crianca e responsavel</span>
@@ -4730,10 +5308,23 @@ export default function Home() {
 
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>{isAdminView ? "Kids cadastrados" : "Area Kids vinculada"}</h2>
-                  <span>{visibleKids.length} crianca{visibleKids.length === 1 ? "" : "s"}</span>
+                  <h2>{canManageKids ? "Kids cadastrados" : "Area Kids vinculada"}</h2>
+                  <span>{filteredKids.length} crianca{filteredKids.length === 1 ? "" : "s"}</span>
                 </div>
-                {isAdminView && <div className="birthday-grid">
+                {canManageKids && (
+                  <div className="filter-bar">
+                    <label>
+                      Turma ou faixa
+                      <select onChange={(event) => setKidClassFilter(event.target.value)} value={kidClassFilter}>
+                        <option>Todos</option>
+                        {Array.from(new Set(data.kids.flatMap((kid) => [kid.ageGroup, kid.className]).filter(Boolean))).map((item) => (
+                          <option key={item}>{item}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                )}
+                {canManageKids && <div className="birthday-grid">
                   <div className="birthday-card kids-birthday">
                     <strong>Aniversariantes Kids do mes</strong>
                     <span>{monthlyKidsBirthdays.length}</span>
@@ -4750,7 +5341,7 @@ export default function Home() {
                   </div>
                 </div>}
                 <div className="row-list">
-                  {visibleKids.map((kid) => (
+                  {filteredKids.map((kid) => (
                     <div className="member-record kids-record" key={kid.id}>
                       <div className="data-row member-row">
                         <div className="member-avatar kids-avatar">
@@ -4767,13 +5358,13 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="record-actions">
-                        {isAdminView && <button className="danger-action" onClick={() => deleteKid(kid)} type="button">
+                        {canManageKids && <button className="danger-action" onClick={() => deleteKid(kid)} type="button">
                           Excluir cadastro
                         </button>}
                       </div>
                     </div>
                   ))}
-                  {!visibleKids.length && <p className="empty-state">Nenhum cadastro Kids vinculado a este acesso.</p>}
+                  {!filteredKids.length && <p className="empty-state">Nenhum cadastro Kids encontrado para este filtro.</p>}
                 </div>
               </article>
             </section>
@@ -4896,7 +5487,7 @@ export default function Home() {
 
           {activeModule === "school" && (
             <section className="content-grid">
-              {isAdminView && <article className="surface">
+              {canManageModule(currentAccessRole, "school") && <article className="surface">
                 <div className="panel-heading">
                   <h2>Novo aviso da EBD</h2>
                   <span>Por classe</span>
@@ -4960,7 +5551,7 @@ export default function Home() {
                       <div>
                         <strong>{schoolClass.name}</strong>
                         <small>Professor: {schoolClass.teacher} - Proxima aula: {schoolClass.nextLesson}</small>
-                        {isAdminView && <small>{classWhatsappRecipients(schoolClass, "EBD").length} contatos de WhatsApp encontrados</small>}
+                        {canManageModule(currentAccessRole, "school") && <small>{classWhatsappRecipients(schoolClass, "EBD").length} contatos de WhatsApp encontrados</small>}
                         <div className="notice-stack">
                           {schoolClass.notices.length === 0 ? (
                             <small>Nenhum aviso enviado para esta classe.</small>
@@ -4983,7 +5574,7 @@ export default function Home() {
 
           {activeModule === "discipleship" && (
             <section className="content-grid">
-              {isAdminView && <article className="surface">
+              {canManageModule(currentAccessRole, "discipleship") && <article className="surface">
                 <div className="panel-heading">
                   <h2>Novo aviso do Discipulado</h2>
                   <span>Por classe</span>
@@ -5047,7 +5638,7 @@ export default function Home() {
                       <div>
                         <strong>{discipleshipClass.name}</strong>
                         <small>Professor: {discipleshipClass.teacher} - Proxima aula: {discipleshipClass.nextLesson}</small>
-                        {isAdminView && <small>{classWhatsappRecipients(discipleshipClass, "Discipulado").length} contatos de WhatsApp encontrados</small>}
+                        {canManageModule(currentAccessRole, "discipleship") && <small>{classWhatsappRecipients(discipleshipClass, "Discipulado").length} contatos de WhatsApp encontrados</small>}
                         <div className="notice-stack">
                           {discipleshipClass.notices.length === 0 ? (
                             <small>Nenhum aviso enviado para esta classe.</small>
@@ -5078,7 +5669,13 @@ export default function Home() {
                 <div className="form-grid">
                   <label>
                     Publico
-                    <select onChange={(event) => setMessageAudience(event.target.value as MessageAudience)} value={messageAudience}>
+                    <select
+                      onChange={(event) => {
+                        setMessageAudience(event.target.value as MessageAudience);
+                        setSelectedMessageRecipientIds([]);
+                      }}
+                      value={messageAudience}
+                    >
                       {messageAudiences.map((audience) => (
                         <option key={audience}>{audience}</option>
                       ))}
@@ -5094,6 +5691,16 @@ export default function Home() {
                       ))}
                     </select>
                   </label>
+                  <label>
+                    Limite por lote
+                    <input
+                      min={1}
+                      max={20}
+                      onChange={(event) => setMessageBatchLimit(Number(event.target.value))}
+                      type="number"
+                      value={messageBatchLimit}
+                    />
+                  </label>
                   <label className="full">
                     Mensagem
                     <textarea
@@ -5104,10 +5711,34 @@ export default function Home() {
                   </label>
                   <div className="message-preview full">
                     <strong>Previa</strong>
-                    <span>{messageRecipients[0] ? messageFor(messageText, messageRecipients[0].name) : "Nenhum contato encontrado para este publico."}</span>
+                    <span>{selectedMessageRecipients[0] ? messageFor(messageText, selectedMessageRecipients[0].name) : "Nenhum contato encontrado para este publico."}</span>
                   </div>
-                  <button className="primary-action" disabled={!messageRecipients.length || !messageText.trim()} onClick={openBulkWhatsapp} type="button">
-                    Abrir envio em massa
+                  <div className="form-actions full">
+                    <button className="primary-action" disabled={!selectedMessageRecipients.length || !messageText.trim()} onClick={openBulkWhatsapp} type="button">
+                      Abrir lote selecionado
+                    </button>
+                    <button className="secondary" onClick={() => setSelectedMessageRecipientIds(messageRecipients.map((recipient) => recipient.id))} type="button">
+                      Selecionar todos
+                    </button>
+                  </div>
+                  <label className="full">
+                    Nome do novo modelo
+                    <input
+                      onChange={(event) => setCustomTemplateLabel(event.target.value)}
+                      placeholder="Ex.: Convite culto de domingo"
+                      value={customTemplateLabel}
+                    />
+                  </label>
+                  <label className="full">
+                    Texto do novo modelo
+                    <textarea
+                      onChange={(event) => setCustomTemplateText(event.target.value)}
+                      placeholder="Use {nome} para personalizar."
+                      value={customTemplateText}
+                    />
+                  </label>
+                  <button className="secondary full" disabled={!customTemplateLabel.trim() || !customTemplateText.trim()} onClick={saveCustomMessageTemplate} type="button">
+                    Salvar modelo
                   </button>
                 </div>
               </article>
@@ -5132,7 +5763,15 @@ export default function Home() {
                   ) : (
                     messageRecipients.map((recipient) => (
                       <div className="data-row message-row" key={`${recipient.id}-${recipient.phone}`}>
-                        <span className="bullet-mark" />
+                        <input
+                          checked={selectedMessageRecipientIds.includes(recipient.id)}
+                          onChange={(event) =>
+                            setSelectedMessageRecipientIds((current) =>
+                              event.target.checked ? Array.from(new Set([...current, recipient.id])) : current.filter((id) => id !== recipient.id),
+                            )
+                          }
+                          type="checkbox"
+                        />
                         <div>
                           <strong>{recipient.name}</strong>
                           <small>{recipient.group} - {recipient.phone}</small>
@@ -5145,29 +5784,83 @@ export default function Home() {
                   )}
                 </div>
               </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Historico de campanhas</h2>
+                  <span>{data.messageCampaigns.length} registros</span>
+                </div>
+                <div className="row-list">
+                  {data.messageCampaigns.map((campaign) => (
+                    <div className="data-row" key={campaign.id}>
+                      <span className="date-box">{campaign.recipientCount}</span>
+                      <div>
+                        <strong>{campaign.audience}</strong>
+                        <small>{formatDateTime(campaign.createdAt)} - modelo {campaign.templateId}</small>
+                        <small>{campaign.text.slice(0, 120)}</small>
+                      </div>
+                    </div>
+                  ))}
+                  {!data.messageCampaigns.length && <p className="empty-state">Nenhuma campanha registrada ainda.</p>}
+                </div>
+              </article>
             </section>
           )}
 
           {activeModule === "reports" && (
-            <SimpleModule
-              action={() => log("Relatorio operacional gerado")}
-              button="Gerar registro"
-              description="Resumo local para acompanhar operacao antes da integracao final."
-              rows={[
-                `${data.careRequests.length} atendimentos pastorais`,
-                `${data.members.length} membros cadastrados`,
-                `${monthlyBirthdays.length} aniversariantes no mes`,
-                `${data.kids.length} criancas no Kids`,
-                `${monthlyKidsBirthdays.length} aniversariantes Kids no mes`,
-                `${data.users.length} usuarios com acesso`,
-                `${data.schoolClasses.length} classes EBD`,
-                `${data.discipleshipClasses.length} classes Discipulado`,
-                `${messageRecipients.length} contatos no envio atual`,
-                `${data.events.length} eventos cadastrados`,
-                `${unreadCount} notificacoes nao lidas`,
-              ]}
-              title="Relatorios"
-            />
+            <section className="content-grid">
+              <article className="surface wide">
+                <div className="panel-heading">
+                  <h2>Relatorios operacionais</h2>
+                  <span>PDF e Excel/CSV</span>
+                </div>
+                <div className="report-grid">
+                  {[
+                    ["members", "Membros por tipo", `${data.members.length} cadastros`],
+                    ["birthdays", "Aniversariantes", `${monthlyBirthdays.length} no mes`],
+                    ["kids", "Area Kids", `${data.kids.length} criancas`],
+                    ["agenda", "Agenda semanal", `${weekEvents.length} eventos na semana`],
+                    ["attendance", "Presenca EBD/Discipulado", `${data.attendanceSessions.length} chamadas`],
+                    ["absences", "Faltosos recentes", `${absentStudentRows().length} alertas`],
+                  ].map(([kind, title, count]) => (
+                    <div className="report-card" key={kind}>
+                      <strong>{title}</strong>
+                      <small>{count}</small>
+                      <div className="row-actions">
+                        <button className="secondary" onClick={() => exportReport(kind as "members" | "birthdays" | "kids" | "agenda" | "attendance" | "absences", "pdf")} type="button">
+                          PDF
+                        </button>
+                        <button className="secondary" onClick={() => exportReport(kind as "members" | "birthdays" | "kids" | "agenda" | "attendance" | "absences", "csv")} type="button">
+                          Excel
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <article className="surface">
+                <div className="panel-heading">
+                  <h2>Previa de faltosos</h2>
+                  <span>{absentStudentRows().length} alertas</span>
+                </div>
+                <div className="row-list">
+                  {absentStudentRows().map(([name, phone, status, recent, month]) => (
+                    <div className="data-row" key={`${name}-${phone}`}>
+                      <span className="date-box">{month}</span>
+                      <div>
+                        <strong>{name}</strong>
+                        <small>{status} - {recent} faltas recentes - {month} no mes</small>
+                      </div>
+                      <a className="whatsapp-link" href={whatsappUrl(String(phone), "Ola, {nome}! Sentimos sua falta na aula. Podemos ajudar em algo?", String(name))} rel="noreferrer" target="_blank">
+                        WhatsApp
+                      </a>
+                    </div>
+                  ))}
+                  {!absentStudentRows().length && <p className="empty-state">Nenhum aluno em alerta de falta no momento.</p>}
+                </div>
+              </article>
+            </section>
           )}
 
           {activeModule === "settings" && (
@@ -5348,51 +6041,5 @@ function AccessScreen({
         </div>
       </section>
     </main>
-  );
-}
-
-function SimpleModule({
-  action,
-  button,
-  description,
-  rows,
-  title,
-}: {
-  action: () => void;
-  button: string;
-  description: string;
-  rows: string[];
-  title: string;
-}) {
-  const [feedback, setFeedback] = useState("");
-
-  function handleAction() {
-    action();
-    setFeedback(`${button} concluido agora.`);
-  }
-
-  return (
-    <section className="content-grid">
-      <article className="surface wide">
-        <div className="panel-heading">
-          <h2>{title}</h2>
-          <button onClick={handleAction} type="button">
-            {button}
-          </button>
-        </div>
-        <p className="body-copy">{description}</p>
-        {feedback && <div className="action-feedback">{feedback}</div>}
-        <div className="row-list">
-          {rows.map((row) => (
-            <div className="data-row" key={row}>
-              <span className="bullet-mark" />
-              <div>
-                <strong>{row}</strong>
-              </div>
-            </div>
-          ))}
-        </div>
-      </article>
-    </section>
   );
 }

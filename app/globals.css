@@ -449,12 +449,30 @@ button:disabled {
   margin-top: 2px;
 }
 
+.connection-card small {
+  color: #8fb4cf;
+  display: block;
+  font-size: 11px;
+  font-weight: 750;
+  margin-top: 4px;
+}
+
 .status-dot {
   background: var(--accent);
   border-radius: 999px;
   box-shadow: 0 0 0 5px rgba(47, 209, 124, 0.12);
   height: 10px;
   width: 10px;
+}
+
+.status-dot.saving {
+  background: var(--gold);
+  box-shadow: 0 0 18px rgba(241, 199, 91, 0.6);
+}
+
+.status-dot.error {
+  background: var(--danger);
+  box-shadow: 0 0 18px rgba(255, 93, 112, 0.55);
 }
 
 .workspace {
@@ -1009,6 +1027,51 @@ label {
 
 label.full {
   grid-column: 1 / -1;
+}
+
+.filter-bar {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  margin-bottom: 14px;
+}
+
+.filter-bar button,
+button.secondary.full {
+  background: rgba(72, 184, 255, 0.1);
+  border: 1px solid rgba(72, 184, 255, 0.28);
+  border-radius: 8px;
+  color: #9bd7ff;
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.report-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.report-card {
+  background: rgba(18, 45, 76, 0.62);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  min-height: 130px;
+  padding: 14px;
+}
+
+.report-card strong,
+.report-card small {
+  display: block;
+}
+
+.report-card small {
+  color: var(--muted);
 }
 
 input,
@@ -1716,6 +1779,8 @@ textarea:focus {
   .stats-grid,
   .birthday-grid,
   .birthday-spotlight-list,
+  .report-grid,
+  .filter-bar,
   .record-actions,
   .form-grid,
   .detail-grid,
