@@ -23,12 +23,13 @@ import { BirthdaySpotlightPanel } from "./components/BirthdaySpotlightPanel";
 import { AgendaPanel } from "./components/AgendaPanel";
 import { ClassModulePanel } from "./components/ClassModulePanel";
 import { CommunicationPanel } from "./components/CommunicationPanel";
+import { KidsPanel } from "./components/KidsPanel";
+import { MembersPanel } from "./components/MembersPanel";
 import { ReportsPanel } from "./components/ReportsPanel";
 import { SchedulesPanel } from "./components/SchedulesPanel";
 import { VisitorsPanel } from "./components/VisitorsPanel";
 import {
   birthdayDateThisYear,
-  birthdayLabel,
   classNoticeWhatsappText,
   comparablePhone,
   currentDateKey,
@@ -42,7 +43,6 @@ import {
   isExpiredDate,
   normalizeEmail,
   normalizeSearchText,
-  normalizeWhatsappPhone,
   sortEventsByDate,
   weekRangeWithOffset,
   whatsappUrl,
@@ -4225,704 +4225,65 @@ export default function Home() {
           )}
 
           {activeModule === "members" && (
-            <section className="content-grid">
-              {canManageMembers || editingMemberId === currentMember?.id ? (
-              <article className={editingMemberId ? "surface editing-surface" : "surface"} id="member-form-panel">
-                <div className="panel-heading">
-                  <h2>{editingMemberId ? "Editar ficha" : "Ficha completa"}</h2>
-                  <span>{canManageMembers ? (editingMemberId ? "Atualizando cadastro" : "Membro ou visitante") : "Meu cadastro"}</span>
-                </div>
-                <div className="form-grid">
-                  <div className="member-form-tabs full" role="tablist" aria-label="Secoes do cadastro">
-                    {availableMemberFormTabs.map((tab) => (
-                      <button
-                        className={memberFormTab === tab ? "active" : ""}
-                        key={tab}
-                        onClick={() => setMemberFormTab(tab)}
-                        type="button"
-                      >
-                        {tab}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="member-section-banner full">
-                    <strong>{memberFormTab}</strong>
-                    <small>
-                      {memberFormTab === "Dados" && "Revise nome, filiacao, CPF, contato, nascimento e endereco."}
-                      {memberFormTab === "Igreja" && "Revise tipo, status, funcoes, grupo, congregacao, datas espirituais e batismos."}
-                      {memberFormTab === "Classes" && "Revise matricula na EBD e no Discipulado."}
-                      {memberFormTab === "Observacoes" && "Revise observacoes visiveis ao membro e registros internos."}
-                      {memberFormTab === "Acesso" && "O login e senha sao enviados pelo card do membro ja salvo."}
-                    </small>
-                  </div>
-                  <div className="member-access-note full" data-member-section="Acesso">
-                    <strong>Acesso do membro</strong>
-                    <small>O login e a senha ficam no card do cadastro ja salvo, com envio pelo WhatsApp e link do sistema.</small>
-                  </div>
-                  <label className="full" data-member-section="Dados">
-                    Nome completo
-                    <input
-                      id="member-full-name"
-                      onChange={(event) => setMemberForm((form) => ({ ...form, fullName: event.target.value }))}
-                      placeholder="Ex.: Maria Oliveira"
-                      value={memberForm.fullName}
-                    />
-                  </label>
-                  <label data-member-section="Dados">
-                    Nome do pai
-                    <input
-                      onChange={(event) => setMemberForm((form) => ({ ...form, fatherName: event.target.value }))}
-                      placeholder="Nome completo do pai"
-                      value={memberForm.fatherName}
-                    />
-                  </label>
-                  <label data-member-section="Dados">
-                    Nome da mae
-                    <input
-                      onChange={(event) => setMemberForm((form) => ({ ...form, motherName: event.target.value }))}
-                      placeholder="Nome completo da mae"
-                      value={memberForm.motherName}
-                    />
-                  </label>
-                  <label data-member-section="Dados">
-                    CPF
-                    <input
-                      inputMode="numeric"
-                      onChange={(event) => setMemberForm((form) => ({ ...form, cpf: event.target.value }))}
-                      placeholder="000.000.000-00"
-                      value={memberForm.cpf}
-                    />
-                  </label>
-                  <label data-member-section="Dados">
-                    Telefone
-                    <input
-                      onChange={(event) => setMemberForm((form) => ({ ...form, phone: event.target.value }))}
-                      placeholder="(00) 00000-0000"
-                      value={memberForm.phone}
-                    />
-                  </label>
-                  <label data-member-section="Dados">
-                    E-mail
-                    <input
-                      onChange={(event) => setMemberForm((form) => ({ ...form, email: event.target.value }))}
-                      placeholder="membro@email.com"
-                      type="email"
-                      value={memberForm.email}
-                    />
-                  </label>
-                  {canManageMembers && <label data-member-section="Igreja">
-                    Tipo de pessoa
-                    <select
-                      onChange={(event) => setMemberForm((form) => ({ ...form, memberType: event.target.value as MemberRecord["memberType"] }))}
-                      value={memberForm.memberType}
-                    >
-                      <option>Membro</option>
-                      <option>Visitante</option>
-                      <option>Congregado</option>
-                      <option>Lideranca</option>
-                    </select>
-                  </label>}
-                  {canManageMembers && <label data-member-section="Igreja">
-                    Status
-                    <select onChange={(event) => setMemberForm((form) => ({ ...form, status: event.target.value as MemberRecord["status"] }))} value={memberForm.status}>
-                      <option>Membro ativo</option>
-                      <option>Visitante</option>
-                      <option>Novo convertido</option>
-                      <option>Transferencia</option>
-                    </select>
-                  </label>}
-                  {canManageMembers && <label data-member-section="Igreja">
-                    Funcao na igreja
-                    <select
-                      className="multi-select"
-                      multiple
-                      onChange={(event) =>
-                        setMemberForm((form) => ({
-                          ...form,
-                          role: memberRolesToText(Array.from(event.target.selectedOptions, (option) => option.value)),
-                        }))
-                      }
-                      size={7}
-                      value={selectedMemberRoles}
-                    >
-                      {roleOptions.map((role) => (
-                        <option key={role} value={role}>
-                          {role}
-                        </option>
-                      ))}
-                    </select>
-                    <small className="form-hint">No computador, segure Ctrl para marcar mais de uma funcao; no celular, toque nas funcoes desejadas.</small>
-                  </label>}
-                  {canManageMembers && <label data-member-section="Igreja">
-                    Grupo
-                    <select
-                      onChange={(event) => setMemberForm((form) => ({ ...form, ministry: event.target.value }))}
-                      value={memberForm.ministry}
-                    >
-                      <option value="">Sem grupo definido</option>
-                      {groupOptions.map((group) => (
-                        <option key={group} value={group}>
-                          {group}
-                        </option>
-                      ))}
-                    </select>
-                  </label>}
-                  <label data-member-section="Classes">
-                    Classe EBD
-                    <select onChange={(event) => setMemberForm((form) => ({ ...form, schoolClassId: event.target.value }))} value={memberForm.schoolClassId}>
-                      <option value="">Nao matriculado</option>
-                      {data.schoolClasses.map((schoolClass) => (
-                        <option key={schoolClass.id} value={schoolClass.id}>
-                          {schoolClass.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label data-member-section="Classes">
-                    Classe Discipulado
-                    <select
-                      onChange={(event) => setMemberForm((form) => ({ ...form, discipleshipClassId: event.target.value }))}
-                      value={memberForm.discipleshipClassId}
-                    >
-                      <option value="">Nao matriculado</option>
-                      {data.discipleshipClasses.map((discipleshipClass) => (
-                        <option key={discipleshipClass.id} value={discipleshipClass.id}>
-                          {discipleshipClass.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label data-member-section="Dados">
-                    Nascimento
-                    <input
-                      onChange={(event) => setMemberForm((form) => ({ ...form, birthDate: event.target.value }))}
-                      type="date"
-                      value={memberForm.birthDate}
-                    />
-                  </label>
-                  <label data-member-section="Dados">
-                    Estado civil
-                    <select onChange={(event) => setMemberForm((form) => ({ ...form, maritalStatus: event.target.value }))} value={memberForm.maritalStatus}>
-                      <option>Solteiro(a)</option>
-                      <option>Casado(a)</option>
-                      <option>Viuvo(a)</option>
-                      <option>Divorciado(a)</option>
-                    </select>
-                  </label>
-                  <label data-member-section="Igreja">
-                    Congregacao
-                    <input
-                      onChange={(event) => setMemberForm((form) => ({ ...form, congregation: event.target.value }))}
-                      placeholder="Ex.: Sede"
-                      value={memberForm.congregation}
-                    />
-                  </label>
-                  <label data-member-section="Igreja">
-                    Desde
-                    <input
-                      onChange={(event) => setMemberForm((form) => ({ ...form, joinedAt: event.target.value }))}
-                      type="date"
-                      value={memberForm.joinedAt}
-                    />
-                  </label>
-                  <label className="full" data-member-section="Dados">
-                    Endereco
-                    <input
-                      onChange={(event) => setMemberForm((form) => ({ ...form, address: event.target.value }))}
-                      placeholder="Rua, numero, bairro e cidade"
-                      value={memberForm.address}
-                    />
-                  </label>
-                  <label className="full" data-member-section="Igreja">
-                    Igreja anterior
-                    <input
-                      onChange={(event) => setMemberForm((form) => ({ ...form, previousChurch: event.target.value }))}
-                      placeholder="Opcional"
-                      value={memberForm.previousChurch}
-                    />
-                  </label>
-                  <label data-member-section="Igreja">
-                    Data de conversao
-                    <input
-                      onChange={(event) => setMemberForm((form) => ({ ...form, conversionDate: event.target.value }))}
-                      type="date"
-                      value={memberForm.conversionDate}
-                    />
-                  </label>
-                  <label data-member-section="Igreja">
-                    Data de batismo
-                    <input
-                      onChange={(event) => setMemberForm((form) => ({ ...form, baptismDate: event.target.value }))}
-                      type="date"
-                      value={memberForm.baptismDate}
-                    />
-                  </label>
-                  <label data-member-section="Igreja">
-                    Origem do cadastro
-                    <select
-                      onChange={(event) => setMemberForm((form) => ({ ...form, registrationSource: event.target.value }))}
-                      value={memberForm.registrationSource}
-                    >
-                      <option value="">Nao informado</option>
-                      <option>Cadastro interno</option>
-                      <option>Visita presencial</option>
-                      <option>Indicacao</option>
-                      <option>Evento</option>
-                      <option>Transferencia</option>
-                    </select>
-                  </label>
-                  {canManageMembers && <label data-member-section="Igreja">
-                    Situacao pastoral
-                    <select
-                      onChange={(event) => setMemberForm((form) => ({ ...form, pastoralStatus: event.target.value }))}
-                      value={memberForm.pastoralStatus}
-                    >
-                      <option>Sem acompanhamento definido</option>
-                      <option>Acompanhamento regular</option>
-                      <option>Precisa de contato</option>
-                      <option>Em discipulado</option>
-                      <option>Integrado</option>
-                    </select>
-                  </label>}
-                  <label className="full" data-member-section="Observacoes">
-                    Observacao visivel ao membro
-                    <textarea
-                      onChange={(event) => setMemberForm((form) => ({ ...form, memberVisibleNotes: event.target.value }))}
-                      placeholder="Mensagem ou orientacao que o membro pode visualizar"
-                      value={memberForm.memberVisibleNotes}
-                    />
-                  </label>
-                  <label className="check-card" data-member-section="Igreja">
-                    <input
-                      checked={memberForm.waterBaptized}
-                      onChange={(event) => setMemberForm((form) => ({ ...form, waterBaptized: event.target.checked }))}
-                      type="checkbox"
-                    />
-                    Batizado em aguas
-                  </label>
-                  <label className="check-card" data-member-section="Igreja">
-                    <input
-                      checked={memberForm.holySpiritBaptized}
-                      onChange={(event) => setMemberForm((form) => ({ ...form, holySpiritBaptized: event.target.checked }))}
-                      type="checkbox"
-                    />
-                    Batizado no Espirito Santo
-                  </label>
-                  {canManageMembers && <label className="full" data-member-section="Observacoes">
-                    Observacoes internas
-                    <textarea
-                      onChange={(event) => setMemberForm((form) => ({ ...form, notes: event.target.value }))}
-                      placeholder="Historico, acompanhamento, restricoes ou observacoes pastorais"
-                      value={memberForm.notes}
-                    />
-                  </label>}
-                  <div className="form-actions full">
-                    <button className="primary-action" disabled={!canCreateMember} onClick={createMember} type="button">
-                      {editingMemberId ? "Atualizar ficha" : "Salvar ficha"}
-                    </button>
-                    {editingMemberId && (
-                      <button className="secondary" onClick={cancelMemberEdit} type="button">
-                        Cancelar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </article>
-              ) : (
-              <article className="surface" id="member-form-panel">
-                <div className="panel-heading">
-                  <h2>Meu cadastro</h2>
-                  <span>{currentMember ? "Visualizacao pessoal" : "Nao vinculado"}</span>
-                </div>
-                <p className="empty-state">
-                  {currentMember
-                    ? "Use o botao Editar ficha no seu cadastro para atualizar seus dados pessoais."
-                    : "Nao encontramos uma ficha vinculada a este login. Fale com a secretaria para revisar o acesso."}
-                </p>
-              </article>
-              )}
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>{canManageMembers ? "Membros cadastrados" : "Meu cadastro"}</h2>
-                  <span>{filteredMembers.length} registro{filteredMembers.length === 1 ? "" : "s"}</span>
-                </div>
-                {canManageMembers && (
-                  <div className="filter-bar">
-                    <label>
-                      Status
-                      <select onChange={(event) => setMemberStatusFilter(event.target.value)} value={memberStatusFilter}>
-                        <option>Todos</option>
-                        <option>Membro ativo</option>
-                        <option>Visitante</option>
-                        <option>Novo convertido</option>
-                        <option>Transferencia</option>
-                      </select>
-                    </label>
-                    <label>
-                      Tipo
-                      <select onChange={(event) => setMemberTypeFilter(event.target.value)} value={memberTypeFilter}>
-                        <option>Todos</option>
-                        <option>Membro</option>
-                        <option>Visitante</option>
-                        <option>Congregado</option>
-                        <option>Lideranca</option>
-                      </select>
-                    </label>
-                    <label>
-                      Grupo
-                      <select onChange={(event) => setMemberGroupFilter(event.target.value)} value={memberGroupFilter}>
-                        <option>Todos</option>
-                        {groupOptions.map((group) => (
-                          <option key={group}>{group}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Classe EBD
-                      <select onChange={(event) => setMemberSchoolFilter(event.target.value)} value={memberSchoolFilter}>
-                        <option>Todos</option>
-                        {data.schoolClasses.map((schoolClass) => (
-                          <option key={schoolClass.id} value={schoolClass.id}>
-                            {schoolClass.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Discipulado
-                      <select onChange={(event) => setMemberDiscipleshipFilter(event.target.value)} value={memberDiscipleshipFilter}>
-                        <option>Todos</option>
-                        {data.discipleshipClasses.map((discipleshipClass) => (
-                          <option key={discipleshipClass.id} value={discipleshipClass.id}>
-                            {discipleshipClass.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Situacao pastoral
-                      <select onChange={(event) => setMemberPastoralFilter(event.target.value)} value={memberPastoralFilter}>
-                        <option>Todos</option>
-                        <option>Sem acompanhamento definido</option>
-                        <option>Acompanhamento regular</option>
-                        <option>Precisa de contato</option>
-                        <option>Em discipulado</option>
-                        <option>Integrado</option>
-                      </select>
-                    </label>
-                  </div>
-                )}
-                {canManageMembers && <div className="birthday-grid">
-                  <div className="birthday-card">
-                    <strong>Aniversariantes da semana</strong>
-                    <span>{weeklyBirthdays.length}</span>
-                    <small>
-                      {weeklyBirthdays.length
-                        ? weeklyBirthdays.map((member) => `${member.fullName} (${birthdayLabel(member.birthDate)})`).join(", ")
-                        : "Nenhum aniversario nesta semana."}
-                    </small>
-                  </div>
-                  <div className="birthday-card">
-                    <strong>Aniversariantes do mes</strong>
-                    <span>{monthlyBirthdays.length}</span>
-                    <small>
-                      {monthlyBirthdays.length
-                        ? monthlyBirthdays.map((member) => `${member.fullName} (${birthdayLabel(member.birthDate)})`).join(", ")
-                      : "Nenhum aniversario neste mes."}
-                    </small>
-                  </div>
-                </div>}
-                <div className="row-list">
-                  {filteredMembers.map((member) => {
-                    const schoolClassName = classNameById(data.schoolClasses, member.schoolClassId);
-                    const discipleshipClassName = classNameById(data.discipleshipClasses, member.discipleshipClassId);
-
-                    return (
-                    <div className="member-record" key={member.id}>
-                      <div className="data-row member-row">
-                        <div className="member-avatar">
-                          {member.fullName.slice(0, 1)}
-                        </div>
-                        <div>
-                          <strong>{member.fullName}</strong>
-                          <small>
-                            {member.memberType} - {member.status} - {member.role || "Sem funcao"} - {member.phone}
-                          </small>
-                          <small>CPF: {member.cpf || "Nao informado"}</small>
-                          {(member.fatherName || member.motherName) && (
-                            <small>
-                              Filiacao: {member.fatherName || "Pai nao informado"} / {member.motherName || "Mae nao informada"}
-                            </small>
-                          )}
-                          <small>
-                            {member.ministry || "Sem grupo"} - {member.congregation || "Congregacao nao informada"} - Aniv. {birthdayLabel(member.birthDate)}
-                          </small>
-                          <small>
-                            EBD: {schoolClassName || "Nao matriculado"} - Discipulado: {discipleshipClassName || "Nao matriculado"}
-                          </small>
-                          <small>
-                            Origem: {member.registrationSource || "Nao informada"} - Situacao: {member.pastoralStatus || "Sem acompanhamento definido"}
-                          </small>
-                          {(member.conversionDate || member.baptismDate) && (
-                            <small>
-                              Conversao: {formatDate(member.conversionDate)} - Batismo: {formatDate(member.baptismDate)}
-                            </small>
-                          )}
-                          {member.memberVisibleNotes && <small>Nota ao membro: {member.memberVisibleNotes}</small>}
-                        </div>
-                      </div>
-                      <div className="record-actions">
-                        <button className="secondary" onClick={() => editMember(member)} type="button">
-                          Editar ficha
-                        </button>
-                        {canManageUsers && <button className="secondary" onClick={() => toggleMemberCredentials(member)} type="button">
-                          Login e senha
-                        </button>}
-                        {canManageMembers && <button className="danger-action" onClick={() => deleteMember(member)} type="button">
-                          Excluir ficha
-                        </button>}
-                      </div>
-                      {canManageUsers && memberCredentialForm.memberId === member.id && (
-                        <div className="credential-panel">
-                          <div className="panel-heading compact-heading">
-                            <h2>Acesso do membro</h2>
-                            <span>{member.authUserId ? "Login vinculado" : "Novo login"}</span>
-                          </div>
-                          <div className="form-grid">
-                            <label>
-                              Login / e-mail
-                              <input
-                                onChange={(event) => setMemberCredentialForm((form) => ({ ...form, email: event.target.value }))}
-                                placeholder="membro@email.com"
-                                type="email"
-                                value={memberCredentialForm.email}
-                              />
-                            </label>
-                            <label>
-                              Senha
-                              <input
-                                onChange={(event) => setMemberCredentialForm((form) => ({ ...form, password: event.target.value }))}
-                                placeholder="Minimo 6 caracteres"
-                                type="password"
-                                value={memberCredentialForm.password}
-                              />
-                            </label>
-                            <button className="primary-action" disabled={!canSaveMemberAccess} onClick={() => { void saveMemberAccess(member); }} type="button">
-                              Criar ou atualizar login
-                            </button>
-                            <a
-                              aria-disabled={!normalizeWhatsappPhone(member.phone) || !memberCredentialForm.email.trim()}
-                              className={!normalizeWhatsappPhone(member.phone) || !memberCredentialForm.email.trim() ? "whatsapp-link full disabled" : "whatsapp-link full"}
-                              href={whatsappUrl(member.phone, memberAccessMessage(member), member.fullName)}
-                              rel="noreferrer"
-                              target="_blank"
-                            >
-                              Enviar login pelo WhatsApp
-                            </a>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    );
-                  })}
-                  {!filteredMembers.length && <p className="empty-state">Nenhuma ficha encontrada para este filtro.</p>}
-                </div>
-              </article>
-            </section>
+            <MembersPanel
+              availableMemberFormTabs={availableMemberFormTabs}
+              canCreateMember={canCreateMember}
+              canManageMembers={canManageMembers}
+              canManageUsers={canManageUsers}
+              canSaveMemberAccess={canSaveMemberAccess}
+              cancelMemberEdit={cancelMemberEdit}
+              createMember={createMember}
+              currentMember={currentMember}
+              data={data}
+              deleteMember={deleteMember}
+              editMember={editMember}
+              editingMemberId={editingMemberId}
+              filteredMembers={filteredMembers}
+              groupOptions={groupOptions}
+              memberAccessMessage={memberAccessMessage}
+              memberCredentialForm={memberCredentialForm}
+              memberDiscipleshipFilter={memberDiscipleshipFilter}
+              memberForm={memberForm}
+              memberFormTab={memberFormTab}
+              memberGroupFilter={memberGroupFilter}
+              memberPastoralFilter={memberPastoralFilter}
+              memberRolesToText={memberRolesToText}
+              memberSchoolFilter={memberSchoolFilter}
+              memberStatusFilter={memberStatusFilter}
+              memberTypeFilter={memberTypeFilter}
+              monthlyBirthdays={monthlyBirthdays}
+              roleOptions={roleOptions}
+              saveMemberAccess={saveMemberAccess}
+              selectedMemberRoles={selectedMemberRoles}
+              setMemberCredentialForm={setMemberCredentialForm}
+              setMemberDiscipleshipFilter={setMemberDiscipleshipFilter}
+              setMemberForm={setMemberForm}
+              setMemberFormTab={setMemberFormTab}
+              setMemberGroupFilter={setMemberGroupFilter}
+              setMemberPastoralFilter={setMemberPastoralFilter}
+              setMemberSchoolFilter={setMemberSchoolFilter}
+              setMemberStatusFilter={setMemberStatusFilter}
+              setMemberTypeFilter={setMemberTypeFilter}
+              toggleMemberCredentials={toggleMemberCredentials}
+              weeklyBirthdays={weeklyBirthdays}
+            />
           )}
 
           {activeModule === "kids" && (
-            <section className="content-grid">
-              {canManageKids && <article className="surface">
-                <div className="panel-heading">
-                  <h2>Cadastro Kids</h2>
-                  <span>Crianca e responsavel</span>
-                </div>
-                <div className="form-grid">
-                  <div className="photo-uploader full">
-                    <div className="photo-preview kids-preview">
-                      {kidForm.photoDataUrl ? <img alt="" src={kidForm.photoDataUrl} /> : <span>Kids</span>}
-                    </div>
-                    <label>
-                      Foto da crianca
-                      <input accept="image/*" onChange={(event) => readPhoto(event, (photoDataUrl) => setKidForm((form) => ({ ...form, photoDataUrl })))} type="file" />
-                    </label>
-                  </div>
-                  <label className="full">
-                    Nome da crianca
-                    <input
-                      onChange={(event) => setKidForm((form) => ({ ...form, childName: event.target.value }))}
-                      placeholder="Ex.: Julia Santos"
-                      value={kidForm.childName}
-                    />
-                  </label>
-                  <label>
-                    Nascimento
-                    <input
-                      onChange={(event) => setKidForm((form) => ({ ...form, birthDate: event.target.value }))}
-                      type="date"
-                      value={kidForm.birthDate}
-                    />
-                  </label>
-                  <label>
-                    Faixa
-                    <select onChange={(event) => setKidForm((form) => ({ ...form, ageGroup: event.target.value as KidRecord["ageGroup"] }))} value={kidForm.ageGroup}>
-                      <option>Bercario</option>
-                      <option>Maternal</option>
-                      <option>Kids</option>
-                      <option>Juniores</option>
-                    </select>
-                  </label>
-                  <label>
-                    Turma
-                    <input
-                      onChange={(event) => setKidForm((form) => ({ ...form, className: event.target.value }))}
-                      placeholder="Ex.: Kids 6 a 8"
-                      value={kidForm.className}
-                    />
-                  </label>
-                  <label>
-                    Desde
-                    <input
-                      onChange={(event) => setKidForm((form) => ({ ...form, joinedAt: event.target.value }))}
-                      type="date"
-                      value={kidForm.joinedAt}
-                    />
-                  </label>
-                  <label className="full">
-                    Alergias ou cuidados
-                    <input
-                      onChange={(event) => setKidForm((form) => ({ ...form, allergies: event.target.value }))}
-                      placeholder="Ex.: alergia alimentar, medicamento, observacao medica"
-                      value={kidForm.allergies}
-                    />
-                  </label>
-                  <label>
-                    Responsavel
-                    <input
-                      onChange={(event) => setKidForm((form) => ({ ...form, guardianName: event.target.value }))}
-                      placeholder="Nome do responsavel"
-                      value={kidForm.guardianName}
-                    />
-                  </label>
-                  <label>
-                    Parentesco
-                    <input
-                      onChange={(event) => setKidForm((form) => ({ ...form, relationship: event.target.value }))}
-                      placeholder="Mae, pai, avo, tutor"
-                      value={kidForm.relationship}
-                    />
-                  </label>
-                  <label>
-                    Telefone do responsavel
-                    <input
-                      onChange={(event) => setKidForm((form) => ({ ...form, guardianPhone: event.target.value }))}
-                      placeholder="(00) 00000-0000"
-                      value={kidForm.guardianPhone}
-                    />
-                  </label>
-                  <label>
-                    E-mail do responsavel
-                    <input
-                      onChange={(event) => setKidForm((form) => ({ ...form, guardianEmail: event.target.value }))}
-                      placeholder="responsavel@email.com"
-                      type="email"
-                      value={kidForm.guardianEmail}
-                    />
-                  </label>
-                  <label className="full">
-                    Pessoas autorizadas a buscar
-                    <input
-                      onChange={(event) => setKidForm((form) => ({ ...form, authorizedPickup: event.target.value }))}
-                      placeholder="Informe quem pode retirar a crianca"
-                      value={kidForm.authorizedPickup}
-                    />
-                  </label>
-                  <label className="check-card full">
-                    <input
-                      checked={kidForm.consentImage}
-                      onChange={(event) => setKidForm((form) => ({ ...form, consentImage: event.target.checked }))}
-                      type="checkbox"
-                    />
-                    Responsavel autorizou uso de imagem
-                  </label>
-                  <label className="full">
-                    Observacoes
-                    <textarea
-                      onChange={(event) => setKidForm((form) => ({ ...form, notes: event.target.value }))}
-                      placeholder="Rotina, restricoes, acompanhamento ou informacoes para professores"
-                      value={kidForm.notes}
-                    />
-                  </label>
-                  <button className="primary-action" disabled={!canCreateKid} onClick={createKid} type="button">
-                    Salvar Kids
-                  </button>
-                </div>
-              </article>}
-
-              <article className="surface">
-                <div className="panel-heading">
-                  <h2>{canManageKids ? "Kids cadastrados" : "Area Kids vinculada"}</h2>
-                  <span>{filteredKids.length} crianca{filteredKids.length === 1 ? "" : "s"}</span>
-                </div>
-                {canManageKids && (
-                  <div className="filter-bar">
-                    <label>
-                      Turma ou faixa
-                      <select onChange={(event) => setKidClassFilter(event.target.value)} value={kidClassFilter}>
-                        <option>Todos</option>
-                        {Array.from(new Set(data.kids.flatMap((kid) => [kid.ageGroup, kid.className]).filter(Boolean))).map((item) => (
-                          <option key={item}>{item}</option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                )}
-                {canManageKids && <div className="birthday-grid">
-                  <div className="birthday-card kids-birthday">
-                    <strong>Aniversariantes Kids do mes</strong>
-                    <span>{monthlyKidsBirthdays.length}</span>
-                    <small>
-                      {monthlyKidsBirthdays.length
-                        ? monthlyKidsBirthdays.map((kid) => `${kid.childName} (${birthdayLabel(kid.birthDate)})`).join(", ")
-                        : "Nenhum aniversario Kids neste mes."}
-                    </small>
-                  </div>
-                  <div className="birthday-card kids-birthday">
-                    <strong>Responsaveis</strong>
-                    <span>{new Set(data.kids.map((kid) => kid.guardianPhone)).size}</span>
-                    <small>Contatos para check-in, retirada e avisos do departamento.</small>
-                  </div>
-                </div>}
-                <div className="row-list">
-                  {filteredKids.map((kid) => (
-                    <div className="member-record kids-record" key={kid.id}>
-                      <div className="data-row member-row">
-                        <div className="member-avatar kids-avatar">
-                          {kid.photoDataUrl ? <img alt="" src={kid.photoDataUrl} /> : kid.childName.slice(0, 1)}
-                        </div>
-                        <div>
-                          <strong>{kid.childName}</strong>
-                          <small>
-                            {kid.ageGroup} - {kid.className || "Turma nao informada"} - Aniv. {birthdayLabel(kid.birthDate)}
-                          </small>
-                          <small>
-                            Resp. {kid.guardianName} - {kid.guardianPhone} - Retirada: {kid.authorizedPickup || "nao informada"}
-                          </small>
-                        </div>
-                      </div>
-                      <div className="record-actions">
-                        {canManageKids && <button className="danger-action" onClick={() => deleteKid(kid)} type="button">
-                          Excluir cadastro
-                        </button>}
-                      </div>
-                    </div>
-                  ))}
-                  {!filteredKids.length && <p className="empty-state">Nenhum cadastro Kids encontrado para este filtro.</p>}
-                </div>
-              </article>
-            </section>
+            <KidsPanel
+              canCreateKid={canCreateKid}
+              canManageKids={canManageKids}
+              createKid={createKid}
+              deleteKid={deleteKid}
+              filteredKids={filteredKids}
+              kidClassFilter={kidClassFilter}
+              kidForm={kidForm}
+              kids={data.kids}
+              monthlyKidsBirthdays={monthlyKidsBirthdays}
+              readPhoto={readPhoto}
+              setKidClassFilter={setKidClassFilter}
+              setKidForm={setKidForm}
+            />
           )}
 
           {activeModule === "ministries" && (
