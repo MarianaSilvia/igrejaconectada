@@ -1228,6 +1228,7 @@ export default function Home() {
   const [eventForm, setEventForm] = useState(blankEvent);
   const [noticeForm, setNoticeForm] = useState(blankNotice);
   const [ministryForm, setMinistryForm] = useState(blankMinistry);
+  const [editingMinistryId, setEditingMinistryId] = useState<string | null>(null);
   const [userForm, setUserForm] = useState(blankUser);
   const [selectedAccessMemberId, setSelectedAccessMemberId] = useState("");
   const [memberForm, setMemberForm] = useState(blankMember);
@@ -2463,14 +2464,68 @@ export default function Home() {
     if (!canCreateMinistry) return;
 
     const now = new Date().toISOString();
-    const ministry: MinistryRecord = { ...ministryForm, id: uid("ministry") };
+    const previousMinistry = editingMinistryId ? data.ministries.find((ministry) => ministry.id === editingMinistryId) : undefined;
+    const ministry: MinistryRecord = { ...ministryForm, id: editingMinistryId ?? uid("ministry") };
 
     setData((current) => ({
       ...current,
-      ministries: [ministry, ...current.ministries],
-      audit: [{ id: uid("audit"), action: `Grupo cadastrado: ${ministry.name}`, when: now }, ...current.audit].slice(0, 12),
+      ministries: editingMinistryId
+        ? current.ministries.map((item) => (item.id === editingMinistryId ? ministry : item))
+        : [ministry, ...current.ministries],
+      members: previousMinistry?.name && previousMinistry.name !== ministry.name
+        ? current.members.map((member) => (member.ministry === previousMinistry.name ? { ...member, ministry: ministry.name } : member))
+        : current.members,
+      events: previousMinistry?.name && previousMinistry.name !== ministry.name
+        ? current.events.map((event) => (event.ministry === previousMinistry.name ? { ...event, ministry: ministry.name } : event))
+        : current.events,
+      audit: [
+        {
+          id: uid("audit"),
+          action: editingMinistryId ? `Grupo atualizado: ${ministry.name}` : `Grupo cadastrado: ${ministry.name}`,
+          when: now,
+        },
+        ...current.audit,
+      ].slice(0, 12),
     }));
     setMinistryForm(blankMinistry);
+    setEditingMinistryId(null);
+  }
+
+  function editMinistry(ministry: MinistryRecord) {
+    if (!requireAdministrativeAccess("editar grupos")) return;
+    setMinistryForm({
+      name: ministry.name,
+      leader: ministry.leader,
+      assistant: ministry.assistant,
+      meetingDay: ministry.meetingDay,
+      volunteers: ministry.volunteers,
+      status: ministry.status,
+      notes: ministry.notes,
+    });
+    setEditingMinistryId(ministry.id);
+    setSyncStatus(`Grupo selecionado para edicao: ${ministry.name}.`);
+  }
+
+  function cancelMinistryEdit() {
+    setMinistryForm(blankMinistry);
+    setEditingMinistryId(null);
+  }
+
+  function deleteMinistry(ministry: MinistryRecord) {
+    if (!requireAdministrativeAccess("excluir grupos")) return;
+    if (!window.confirm(`Excluir o grupo "${ministry.name}"? Os membros vinculados ficarao sem grupo definido.`)) return;
+
+    setData((current) => ({
+      ...current,
+      ministries: current.ministries.filter((item) => item.id !== ministry.id),
+      members: current.members.map((member) => (member.ministry === ministry.name ? { ...member, ministry: "" } : member)),
+      events: current.events.map((event) => (event.ministry === ministry.name ? { ...event, ministry: "Todos" } : event)),
+      audit: [{ id: uid("audit"), action: `Grupo excluido: ${ministry.name}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+    }));
+
+    if (editingMinistryId === ministry.id) {
+      cancelMinistryEdit();
+    }
   }
 
   function createSchoolNotice() {
@@ -4467,8 +4522,8 @@ export default function Home() {
             <section className="content-grid">
               <article className="surface">
                 <div className="panel-heading">
-                  <h2>Novo grupo</h2>
-                  <span>Equipe</span>
+                  <h2>{editingMinistryId ? "Editar grupo" : "Novo grupo"}</h2>
+                  <span>{editingMinistryId ? "Atualizando equipe" : "Equipe"}</span>
                 </div>
                 <div className="form-grid">
                   <label className="full">
@@ -4531,9 +4586,16 @@ export default function Home() {
                       value={ministryForm.notes}
                     />
                   </label>
-                  <button className="primary-action" disabled={!canCreateMinistry} onClick={createMinistry} type="button">
-                    Adicionar grupo
-                  </button>
+                  <div className="form-actions full">
+                    <button className="primary-action" disabled={!canCreateMinistry} onClick={createMinistry} type="button">
+                      {editingMinistryId ? "Atualizar grupo" : "Adicionar grupo"}
+                    </button>
+                    {editingMinistryId && (
+                      <button className="secondary" onClick={cancelMinistryEdit} type="button">
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
                 </div>
               </article>
 
@@ -4544,15 +4606,25 @@ export default function Home() {
                 </div>
                 <div className="row-list">
                   {data.ministries.map((ministry) => (
-                    <div className="data-row" key={ministry.id}>
-                      <span className="date-box">{ministry.volunteers}</span>
-                      <div>
-                        <strong>{ministry.name}</strong>
-                        <small>
-                          {ministry.status} - Lider: {ministry.leader}
-                          {ministry.assistant ? ` - Auxiliar: ${ministry.assistant}` : ""}
-                        </small>
-                        <small>{ministry.meetingDay || "Reuniao nao definida"} - {ministry.notes || "Sem observacoes"}</small>
+                    <div className="member-record" key={ministry.id}>
+                      <div className="data-row">
+                        <span className="date-box">{ministry.volunteers}</span>
+                        <div>
+                          <strong>{ministry.name}</strong>
+                          <small>
+                            {ministry.status} - Lider: {ministry.leader}
+                            {ministry.assistant ? ` - Auxiliar: ${ministry.assistant}` : ""}
+                          </small>
+                          <small>{ministry.meetingDay || "Reuniao nao definida"} - {ministry.notes || "Sem observacoes"}</small>
+                        </div>
+                      </div>
+                      <div className="record-actions">
+                        <button className="secondary" onClick={() => editMinistry(ministry)} type="button">
+                          Editar grupo
+                        </button>
+                        <button className="danger-action" onClick={() => deleteMinistry(ministry)} type="button">
+                          Excluir grupo
+                        </button>
                       </div>
                     </div>
                   ))}
