@@ -1,4 +1,5 @@
 import { currentDateKey, eventDate, isExpiredDate } from "./app-helpers";
+import { nextMemberCode } from "./data-normalization";
 import type {
   AccessUser,
   AppData,
@@ -48,7 +49,13 @@ function visitorFromMember(member: MemberRecord, today: string): VisitorRecord {
 
 export function upsertMemberData(data: AppData, form: MemberForm, editingMemberId: string | null, createId: IdFactory): AppData {
   const now = new Date().toISOString();
-  const member: MemberRecord = { ...form, id: editingMemberId ?? createId("member"), createdAt: form.createdAt || now };
+  const existingMember = editingMemberId ? data.members.find((item) => item.id === editingMemberId) : undefined;
+  const member: MemberRecord = {
+    ...form,
+    id: editingMemberId ?? createId("member"),
+    memberCode: form.memberCode || existingMember?.memberCode || nextMemberCode(data.members),
+    createdAt: form.createdAt || now,
+  };
   const shouldTrackAsVisitor = member.memberType === "Visitante" || member.status === "Visitante" || member.status === "Novo convertido";
 
   return {
@@ -97,6 +104,7 @@ export function convertVisitorToMemberData(data: AppData, visitor: VisitorRecord
   const member: MemberRecord = {
     ...blankMember,
     id: createId("member"),
+    memberCode: nextMemberCode(data.members),
     fullName: visitor.fullName,
     phone: visitor.phone,
     status: "Membro ativo",

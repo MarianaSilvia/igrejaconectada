@@ -184,6 +184,11 @@ export function MembersPanel({
               <input id="member-full-name" onChange={(event) => updateMemberName(event.target.value)} placeholder="Ex.: Maria Oliveira" value={memberForm.fullName} />
             </label>
             <label data-member-section="Dados">
+              Codigo de membro
+              <input readOnly value={memberForm.memberCode || "Gerado automaticamente ao salvar"} />
+              <small className="form-hint">Sequencia padrao CDG0001, CDG0002, CDG0003...</small>
+            </label>
+            <label data-member-section="Dados">
               Data de nascimento
               <input onChange={(event) => setMemberForm((form) => ({ ...form, birthDate: event.target.value }))} type="date" value={memberForm.birthDate} />
             </label>
@@ -566,6 +571,7 @@ export function MembersPanel({
                   <div className="member-avatar">{member.fullName.slice(0, 1)}</div>
                   <div>
                     <strong>{member.fullName}</strong>
+                    <small className="member-code-line">Codigo: {member.memberCode || "Aguardando codigo"}</small>
                     <small>
                       {member.memberType} - {member.status} - {member.role || "Sem funcao"} - {member.phone}
                     </small>
@@ -636,7 +642,8 @@ export function MembersPanel({
                       </label>
                       <label>
                         Senha
-                        <input onChange={(event) => setMemberCredentialForm((form) => ({ ...form, password: event.target.value }))} placeholder="Minimo 6 caracteres" type="password" value={memberCredentialForm.password} />
+                        <input onChange={(event) => setMemberCredentialForm((form) => ({ ...form, password: event.target.value }))} placeholder="123456" type="text" value={memberCredentialForm.password} />
+                        <small className="form-hint">Senha inicial padrao para o primeiro envio.</small>
                       </label>
                       <button className="primary-action" disabled={!canSaveMemberAccess} onClick={() => { void saveMemberAccess(member); }} type="button">
                         Criar ou atualizar login

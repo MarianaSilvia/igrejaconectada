@@ -289,6 +289,7 @@ const initialData: AppData = {
   members: [
     {
       id: "member-1",
+      memberCode: "CDG0001",
       fullName: "Ana Ribeiro",
       fatherName: "",
       motherName: "",
@@ -329,6 +330,7 @@ const initialData: AppData = {
     },
     {
       id: "member-2",
+      memberCode: "CDG0002",
       fullName: "Carlos Lima",
       fatherName: "",
       motherName: "",
@@ -2168,7 +2170,7 @@ export default function Home() {
         : {
             memberId: member.id,
             email: member.email,
-            password: "",
+            password: "123456",
           },
     );
   }
@@ -2178,7 +2180,7 @@ export default function Home() {
       "Ola, {nome}! Seu acesso ao Igreja Conectada foi preparado.",
       "Acesse: https://igrejaconectada-kappa.vercel.app",
       `Login: ${memberCredentialForm.email.trim() || member.email}`,
-      `Senha: ${memberCredentialForm.password.trim() || "senha ja cadastrada"}`,
+      `Senha inicial: ${memberCredentialForm.password.trim() || "123456"}`,
       "Acesse o sistema e altere sua senha se solicitado pela secretaria.",
     ].join("\n");
   }
@@ -2250,7 +2252,7 @@ export default function Home() {
       };
     });
 
-    setMemberCredentialForm((form) => ({ ...form, password: "" }));
+    setMemberCredentialForm((form) => ({ ...form, password: "123456" }));
   }
 
   function createKid() {

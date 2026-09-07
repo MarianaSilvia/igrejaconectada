@@ -21,6 +21,7 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
     members: {
       title: "Membros por tipo",
       headers: [
+        "Codigo",
         "Nome completo",
         "Data de nascimento",
         "Telefones",
@@ -47,6 +48,7 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
         "Situacao pastoral",
       ],
       rows: data.members.map((member) => [
+        member.memberCode,
         member.fullName,
         formatDate(member.birthDate),
         member.phone,

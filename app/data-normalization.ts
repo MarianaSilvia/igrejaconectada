@@ -65,13 +65,14 @@ export const blankMinistry: Omit<MinistryRecord, "id"> = {
 export const blankUser: AccessUserForm = {
   name: "",
   email: "",
-  password: "",
+  password: "123456",
   role: "Lider",
   status: "Pendente",
 };
 
 export const blankMember: Omit<MemberRecord, "id"> = {
   authUserId: "",
+  memberCode: "",
   fullName: "",
   fatherName: "",
   motherName: "",
@@ -125,7 +126,7 @@ export const blankVisitor: Omit<VisitorRecord, "id"> = {
 export const blankMemberCredential = {
   memberId: "",
   email: "",
-  password: "",
+  password: "123456",
 };
 
 export const blankKid: Omit<KidRecord, "id"> = {
@@ -207,6 +208,33 @@ function uid(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+const memberCodePrefix = "CDG";
+
+function memberCodeNumber(memberCode: string | undefined) {
+  const match = memberCode?.trim().toUpperCase().match(/^CDG(\d+)$/);
+  return match ? Number.parseInt(match[1] ?? "0", 10) : 0;
+}
+
+function formatMemberCode(sequence: number) {
+  return `${memberCodePrefix}${String(sequence).padStart(4, "0")}`;
+}
+
+export function nextMemberCode(members: Pick<MemberRecord, "memberCode">[]) {
+  const lastSequence = members.reduce((highest, member) => Math.max(highest, memberCodeNumber(member.memberCode)), 0);
+  return formatMemberCode(lastSequence + 1);
+}
+
+function ensureMemberCodes(members: MemberRecord[]) {
+  let nextSequence = members.reduce((highest, member) => Math.max(highest, memberCodeNumber(member.memberCode)), 0) + 1;
+
+  return members.map((member) => {
+    if (member.memberCode?.trim()) return member;
+    const memberCode = formatMemberCode(nextSequence);
+    nextSequence += 1;
+    return { ...member, memberCode };
+  });
+}
+
 export function normalizeMessageTemplate(template: MessageTemplateItem): MessageTemplateItem {
   return {
     ...template,
@@ -225,6 +253,7 @@ export function normalizeMember(member: Partial<MemberRecord>): MemberRecord {
     ...blankMember,
     ...member,
     id: member.id ?? uid("member"),
+    memberCode: member.memberCode ?? "",
     status,
     memberType,
     photoDataUrl: "",
@@ -377,7 +406,7 @@ export function normalizeDiscipleshipClasses(classes: SchoolClass[] | undefined,
 }
 
 export function normalizeAppData(value: Partial<AppData>, initialData: AppData): AppData {
-  const normalizedMembers = (value.members ?? initialData.members).map((member) => normalizeMember(member));
+  const normalizedMembers = ensureMemberCodes((value.members ?? initialData.members).map((member) => normalizeMember(member)));
   const normalizedVisitors = value.visitors?.length
     ? value.visitors.map((visitor) => normalizeVisitor(visitor))
     : visitorsFromMembers(normalizedMembers);

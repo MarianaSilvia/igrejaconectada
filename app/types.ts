@@ -98,6 +98,7 @@ export type AccessUserForm = Omit<AccessUser, "id"> & {
 export type MemberRecord = {
   id: string;
   authUserId?: string;
+  memberCode: string;
   fullName: string;
   fatherName: string;
   motherName: string;
