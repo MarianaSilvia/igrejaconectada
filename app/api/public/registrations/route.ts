@@ -27,7 +27,6 @@ function comparableCpf(value: unknown) {
 
 function hasDuplicate(payload: JsonRecord, cpf: string, phone: string) {
   const allRecords = [
-    ...recordsFrom(payload.members),
     ...recordsFrom(payload.visitors),
     ...recordsFrom(payload.registrationRequests),
   ];
@@ -61,6 +60,23 @@ export async function POST(request: Request) {
 
   if (!fullName || cleanPhone.length < 8) {
     return NextResponse.json({ error: "Informe nome completo e telefone para enviar o cadastro." }, { status: 400 });
+  }
+
+  const { data: memberMatches, error: memberMatchError } = await client
+    .from("members")
+    .select("id")
+    .or(`cpf_digits.eq.${cleanCpf || "__empty__"},phone_digits.eq.${cleanPhone}`)
+    .limit(1);
+
+  if (memberMatchError) {
+    return NextResponse.json({ error: "Nao foi possivel conferir membros cadastrados." }, { status: 400 });
+  }
+
+  if (memberMatches?.length) {
+    return NextResponse.json(
+      { error: "Cadastro ja recebido. Procure a secretaria para atualizar seus dados." },
+      { status: 409 },
+    );
   }
 
   const { data: stored, error: readError } = await client.from("church_app_state").select("payload").eq("id", "main").maybeSingle();

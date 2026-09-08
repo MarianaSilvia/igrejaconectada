@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { adminClient, administrativeRoles, churchRoleFromLabel, requireSession, type ChurchRole } from "../auth";
+import { syncMembersTable } from "../../../member-table-sync";
 import { hiddenPayloadKeysByRole, payloadKeysByRole, visiblePublishedOnlyKeys } from "../../../state-access-policy";
 
 const stateId = "main";
@@ -372,5 +373,11 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true, updatedAt: data.updated_at });
+  const memberSync = await syncMembersTable(stored.client, mergedPayload.payload);
+
+  return NextResponse.json({
+    ok: true,
+    updatedAt: data.updated_at,
+    memberSyncWarning: "error" in memberSync ? memberSync.error : undefined,
+  });
 }

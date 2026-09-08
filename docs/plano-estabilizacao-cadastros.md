@@ -6,6 +6,7 @@ Este documento registra a estrategia atual para preparar o Igreja Conectada para
 
 - O estado principal continua em `church_app_state`.
 - Pre-cadastros publicos ja usam a tabela `registration_requests`.
+- Membros tambem sao espelhados na tabela `members`, mantendo o JSON como fonte principal nesta fase.
 - `church_app_state` deve ser acessado somente pelas rotas server-side do sistema.
 - Fotos de membros continuam removidas.
 - Fotos permanecem permitidas apenas no Kids.
@@ -16,15 +17,18 @@ Este documento registra a estrategia atual para preparar o Igreja Conectada para
 - A fila principal carrega apenas pre-cadastros ativos: `Aguardando aprovacao` e `Em analise`.
 - A administracao pode marcar um pre-cadastro como `Em analise` antes de aprovar ou recusar.
 - Indices foram adicionados para chaves estrangeiras que apareciam nos avisos de performance.
+- A tabela `members` recebeu campos auxiliares, indices por CPF/telefone e acesso direto fechado para `anon` e `authenticated`.
+- Cada salvamento do estado principal sincroniza um espelho dos membros na tabela `members`.
+- O cadastro publico consulta primeiro a tabela `members` para encontrar CPF/telefone duplicado.
 
 ## Proxima migracao recomendada
 
-1. Criar tabelas normalizadas para membros, usuarios internos, visitantes, grupos, classes e presencas.
-2. Fazer um script de leitura do `church_app_state` e gravacao controlada nas tabelas novas.
-3. Comparar totais antes e depois da migracao.
-4. Manter o `church_app_state` como backup temporario.
-5. Trocar primeiro a leitura dos membros para as tabelas novas.
-6. Trocar depois escrita, edicao e exclusao.
+1. Manter a sincronizacao do espelho de membros por alguns ciclos de uso real.
+2. Comparar totais entre `church_app_state.payload.members` e `members` antes de qualquer troca de leitura.
+3. Criar tabelas normalizadas para usuarios internos, visitantes, grupos, classes e presencas.
+4. Trocar primeiro buscas e verificacoes de duplicidade para as tabelas novas.
+5. Trocar depois escrita, edicao e exclusao por modulo.
+6. Manter o `church_app_state` como backup temporario.
 7. Remover a dependencia do JSON unico somente depois de validacao completa.
 
 ## Cuidados
