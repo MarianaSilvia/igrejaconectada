@@ -1,6 +1,7 @@
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { birthdayLabel } from "../app-helpers";
 import type { KidRecord } from "../types";
+import { ResponsiveImage } from "./ResponsiveImage";
 
 type KidForm = Omit<KidRecord, "id">;
 
@@ -46,7 +47,7 @@ export function KidsPanel({
           </div>
           <div className="form-grid">
             <div className="photo-uploader full">
-              <div className="photo-preview kids-preview">{kidForm.photoDataUrl ? <img alt="" src={kidForm.photoDataUrl} /> : <span>Kids</span>}</div>
+              <div className="photo-preview kids-preview">{kidForm.photoDataUrl ? <ResponsiveImage sizes="76px" src={kidForm.photoDataUrl} /> : <span>Kids</span>}</div>
               <label>
                 Foto da crianca
                 <input accept="image/*" onChange={(event) => readPhoto(event, (photoDataUrl) => setKidForm((form) => ({ ...form, photoDataUrl })))} type="file" />
@@ -156,7 +157,7 @@ export function KidsPanel({
           {filteredKids.map((kid) => (
             <div className="member-record kids-record" key={kid.id}>
               <div className="data-row member-row">
-                <div className="member-avatar kids-avatar">{kid.photoDataUrl ? <img alt="" src={kid.photoDataUrl} /> : kid.childName.slice(0, 1)}</div>
+                <div className="member-avatar kids-avatar">{kid.photoDataUrl ? <ResponsiveImage sizes="76px" src={kid.photoDataUrl} /> : kid.childName.slice(0, 1)}</div>
                 <div>
                   <strong>{kid.childName}</strong>
                   <small>

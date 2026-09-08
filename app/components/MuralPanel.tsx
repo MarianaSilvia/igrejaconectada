@@ -1,6 +1,7 @@
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import { formatDate } from "../app-helpers";
 import type { ChurchEvent, MuralItem, Notice } from "../types";
+import { ResponsiveImage } from "./ResponsiveImage";
 
 type MuralForm = Omit<MuralItem, "id">;
 
@@ -56,7 +57,7 @@ export function MuralPanel({
               <input onChange={(event) => setMuralForm((form) => ({ ...form, category: event.target.value }))} placeholder="Ex.: Jovens" value={muralForm.category} />
             </label>
             <div className="photo-uploader full">
-              <div className="photo-preview mural-preview">{muralForm.imageDataUrl ? <img alt="" src={muralForm.imageDataUrl} /> : <span>Banner</span>}</div>
+              <div className="photo-preview mural-preview">{muralForm.imageDataUrl ? <ResponsiveImage sizes="76px" src={muralForm.imageDataUrl} /> : <span>Banner</span>}</div>
               <label>
                 Foto, imagem ou banner
                 <input accept="image/*" onChange={readMuralImage} type="file" />
@@ -101,7 +102,7 @@ export function MuralPanel({
               <div>
                 {(item.imageDataUrl || item.bannerUrl) && (
                   <div className="mural-media">
-                    <img alt="" src={item.imageDataUrl || item.bannerUrl} />
+                    <ResponsiveImage src={item.imageDataUrl || item.bannerUrl} />
                   </div>
                 )}
                 <strong>{item.title}</strong>

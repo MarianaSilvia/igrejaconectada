@@ -1299,9 +1299,11 @@ button.data-row.active {
   border-radius: 8px;
   margin-bottom: 10px;
   overflow: hidden;
+  position: relative;
 }
 
-.mural-card-media img {
+.mural-card-media img,
+.responsive-image {
   height: 100%;
   object-fit: cover;
   width: 100%;
@@ -1595,11 +1597,14 @@ textarea:focus {
   height: 76px;
   justify-content: center;
   overflow: hidden;
+  position: relative;
   width: 76px;
 }
 
 .photo-preview img,
-.member-avatar img {
+.member-avatar img,
+.photo-preview .responsive-image,
+.member-avatar .responsive-image {
   height: 100%;
   object-fit: cover;
   width: 100%;
@@ -1807,9 +1812,11 @@ textarea:focus {
   margin-bottom: 10px;
   max-width: 420px;
   overflow: hidden;
+  position: relative;
 }
 
-.mural-media img {
+.mural-media img,
+.mural-media .responsive-image {
   height: 100%;
   object-fit: cover;
   width: 100%;

@@ -33,6 +33,7 @@ import { MuralPanel } from "./components/MuralPanel";
 import { NoticesPanel } from "./components/NoticesPanel";
 import { PastoralPanel } from "./components/PastoralPanel";
 import { ReportsPanel } from "./components/ReportsPanel";
+import { ResponsiveImage } from "./components/ResponsiveImage";
 import { SchedulesPanel } from "./components/SchedulesPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { UsersAccessPanel } from "./components/UsersAccessPanel";
@@ -3605,7 +3606,7 @@ export default function Home() {
                       <div className={item.featured ? "mural-card featured" : "mural-card"} key={item.id}>
                         {(item.imageDataUrl || item.bannerUrl) && (
                           <div className="mural-card-media">
-                            <img alt="" src={item.imageDataUrl || item.bannerUrl} />
+                            <ResponsiveImage src={item.imageDataUrl || item.bannerUrl} />
                           </div>
                         )}
                         <strong>{item.title}</strong>
@@ -3736,7 +3737,7 @@ export default function Home() {
                       <div className={item.featured ? "mural-card featured" : "mural-card"} key={item.id}>
                         {(item.imageDataUrl || item.bannerUrl) && (
                           <div className="mural-card-media">
-                            <img alt="" src={item.imageDataUrl || item.bannerUrl} />
+                            <ResponsiveImage src={item.imageDataUrl || item.bannerUrl} />
                           </div>
                         )}
                         <strong>{item.title}</strong>
