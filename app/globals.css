@@ -1,20 +1,22 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #07111f;
-  --foreground: #eef7ff;
-  --muted: #8ea8c6;
-  --line: rgba(130, 198, 255, 0.18);
-  --panel: rgba(13, 28, 49, 0.88);
-  --panel-soft: rgba(18, 45, 76, 0.78);
-  --nav: #08101f;
-  --nav-soft: #101f36;
-  --accent: #14d9c4;
-  --accent-strong: #55f2df;
-  --gold: #f1c75b;
-  --danger: #ff5d70;
-  --cyan: #48b8ff;
+  --background: #07080d;
+  --foreground: #f7fbff;
+  --muted: #a8b0c2;
+  --line: rgba(255, 255, 255, 0.12);
+  --panel: rgba(19, 20, 28, 0.9);
+  --panel-soft: rgba(33, 34, 46, 0.84);
+  --nav: #080910;
+  --nav-soft: #171821;
+  --accent: #e83a4f;
+  --accent-strong: #ff6374;
+  --gold: #f6c65b;
+  --danger: #ff5266;
+  --cyan: #25c7ff;
   --violet: #8f7cff;
+  --card-highlight: rgba(232, 58, 79, 0.24);
+  --glass: rgba(255, 255, 255, 0.055);
   --font-app-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-app-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
@@ -36,10 +38,9 @@ html {
 
 body {
   background:
-    linear-gradient(90deg, rgba(72, 184, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(72, 184, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(135deg, #07111f 0%, #0a1728 45%, #08101f 100%);
-  background-size: 44px 44px, 44px 44px, auto;
+    linear-gradient(180deg, rgba(232, 58, 79, 0.14) 0%, transparent 24%),
+    linear-gradient(135deg, #07080d 0%, #14121a 44%, #080910 100%);
+  background-size: auto;
   color: var(--foreground);
   font-family: var(--font-app-sans);
   min-width: 320px;
@@ -1454,7 +1455,7 @@ textarea:focus {
 }
 
 .birthday-person-card strong {
-  color: var(--text);
+  color: var(--foreground);
   font-size: 14px;
 }
 
@@ -1786,6 +1787,308 @@ textarea:focus {
 .audit-item {
   background: rgba(18, 45, 76, 0.62);
   padding: 12px;
+}
+
+.access-page {
+  background:
+    linear-gradient(120deg, rgba(232, 58, 79, 0.22), transparent 36%),
+    linear-gradient(180deg, #080910, #15131d 52%, #07080d);
+}
+
+.access-intro {
+  background:
+    linear-gradient(115deg, rgba(232, 58, 79, 0.28), transparent 42%),
+    linear-gradient(145deg, #090a12, #1d1620 55%, #07080d);
+}
+
+.access-panel,
+.notifications-panel {
+  backdrop-filter: blur(18px);
+}
+
+.access-primary,
+.hero-actions button,
+.primary-action,
+.detail-actions button,
+.panel-heading button {
+  background: linear-gradient(135deg, var(--accent), #ff7b4f);
+  box-shadow: 0 16px 38px rgba(232, 58, 79, 0.24);
+}
+
+.access-primary:hover,
+.hero-actions button:hover,
+.primary-action:hover,
+.detail-actions button:hover,
+.panel-heading button:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.app-shell {
+  background:
+    linear-gradient(90deg, rgba(232, 58, 79, 0.16), transparent 18%),
+    linear-gradient(180deg, rgba(37, 199, 255, 0.08), transparent 35%);
+}
+
+.sidebar {
+  background:
+    linear-gradient(180deg, rgba(232, 58, 79, 0.18), transparent 28%),
+    linear-gradient(180deg, #080910 0%, #0d0e16 100%);
+  border-right-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 28px 0 70px rgba(0, 0, 0, 0.38);
+}
+
+.brand-mark {
+  background: linear-gradient(135deg, var(--accent), var(--gold));
+  box-shadow: 0 16px 34px rgba(232, 58, 79, 0.32);
+  color: #fff;
+}
+
+.brand-caption,
+.module-button span,
+.eyebrow {
+  color: var(--accent-strong);
+}
+
+.module-list::-webkit-scrollbar-thumb {
+  background: rgba(232, 58, 79, 0.72);
+}
+
+.module-button {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: #cfd6e6;
+  overflow: hidden;
+  position: relative;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.module-button::after {
+  background: linear-gradient(90deg, var(--accent), transparent);
+  bottom: 0;
+  content: "";
+  height: 2px;
+  left: 0;
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  transition: opacity 160ms ease;
+}
+
+.module-button:hover,
+.module-button.active {
+  background: linear-gradient(135deg, rgba(232, 58, 79, 0.22), rgba(255, 255, 255, 0.06));
+  border-color: rgba(255, 99, 116, 0.42);
+  box-shadow: inset 4px 0 0 var(--accent), 0 18px 38px rgba(0, 0, 0, 0.28);
+  transform: translateX(2px);
+}
+
+.module-button:hover::after,
+.module-button.active::after {
+  opacity: 1;
+}
+
+.connection-card,
+.command-search input,
+.notification-button,
+.profile-pill,
+input,
+select,
+textarea {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.connection-card {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.topbar h1 {
+  text-shadow: 0 14px 34px rgba(0, 0, 0, 0.48);
+}
+
+.notification-button:hover,
+.logout-button:hover,
+.record-actions button:hover,
+.row-actions button:hover,
+.filter-bar button:hover,
+button.secondary.full:hover {
+  transform: translateY(-1px);
+}
+
+.logout-button,
+.danger-action {
+  background: rgba(232, 58, 79, 0.14);
+  border-color: rgba(232, 58, 79, 0.34);
+  color: #ffc1c8;
+}
+
+.profile-pill span {
+  background: linear-gradient(135deg, var(--accent), var(--cyan));
+  color: #fff;
+}
+
+.hero-panel,
+.surface,
+.stat-card,
+.action-tile,
+.report-card,
+.mural-card,
+.birthday-card,
+.birthday-person-card,
+.data-row,
+.care-list-item,
+.table-row,
+.audit-item,
+.credential-panel,
+.selected-member-access,
+.photo-uploader {
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.hero-panel {
+  background:
+    linear-gradient(110deg, rgba(232, 58, 79, 0.38) 0%, rgba(232, 58, 79, 0.16) 34%, transparent 70%),
+    linear-gradient(135deg, rgba(34, 35, 48, 0.98), rgba(7, 8, 13, 0.98) 62%);
+  border-color: rgba(255, 99, 116, 0.36);
+  min-height: 310px;
+  overflow: hidden;
+  position: relative;
+}
+
+.hero-panel::after {
+  background:
+    linear-gradient(90deg, transparent 0 7%, rgba(255, 255, 255, 0.08) 7% 8%, transparent 8% 14%),
+    linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.28));
+  content: "";
+  inset: 0;
+  opacity: 0.45;
+  pointer-events: none;
+  position: absolute;
+}
+
+.hero-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-panel h2 {
+  max-width: 880px;
+}
+
+.surface,
+.stat-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035)), var(--panel);
+}
+
+.surface:hover,
+.stat-card:hover,
+.action-tile:hover,
+.report-card:hover,
+.mural-card:hover,
+.birthday-person-card:hover {
+  border-color: rgba(255, 99, 116, 0.32);
+}
+
+.action-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.action-tile {
+  background:
+    linear-gradient(145deg, rgba(232, 58, 79, 0.16), transparent 52%),
+    rgba(24, 25, 35, 0.88);
+  min-height: 142px;
+}
+
+.action-tile strong,
+.stat-card strong,
+.birthday-card span {
+  color: #fff;
+  text-shadow: 0 0 28px rgba(255, 99, 116, 0.34);
+}
+
+.signal-line {
+  background: linear-gradient(90deg, var(--accent), var(--gold), var(--cyan));
+}
+
+.panel-heading {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+}
+
+.panel-heading h2 {
+  color: #fff;
+}
+
+.data-row,
+.mural-card,
+.report-card,
+.audit-item {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+button.data-row:hover,
+button.data-row.active {
+  border-color: rgba(255, 99, 116, 0.62);
+  box-shadow: 0 0 0 1px rgba(255, 99, 116, 0.18), 0 18px 42px rgba(0, 0, 0, 0.3);
+}
+
+.date-box,
+.bullet-mark,
+.member-avatar,
+.photo-preview {
+  background: linear-gradient(135deg, rgba(232, 58, 79, 0.26), rgba(37, 199, 255, 0.16));
+  border-color: rgba(255, 99, 116, 0.3);
+  color: #fff;
+}
+
+.mural-card-media,
+.mural-media {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 34px rgba(0, 0, 0, 0.28);
+}
+
+.mural-card.featured {
+  border-color: rgba(246, 198, 91, 0.58);
+  box-shadow: inset 4px 0 0 var(--gold), 0 18px 54px rgba(246, 198, 91, 0.08);
+}
+
+.devotional-card,
+.birthday-spotlight {
+  background:
+    linear-gradient(135deg, rgba(232, 58, 79, 0.2), rgba(246, 198, 91, 0.1) 52%, rgba(37, 199, 255, 0.08)),
+    rgba(19, 20, 28, 0.92);
+}
+
+.birthday-person-photo {
+  background: linear-gradient(135deg, var(--accent), var(--gold));
+  color: #fff;
+}
+
+.member-form-tabs {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.member-form-tabs button.active {
+  background: linear-gradient(135deg, var(--accent), var(--gold));
+  color: #fff;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px rgba(232, 58, 79, 0.18), 0 0 28px rgba(232, 58, 79, 0.12);
+}
+
+.mobile-tabbar {
+  background: rgba(7, 8, 13, 0.96);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 @media (max-width: 1100px) {
