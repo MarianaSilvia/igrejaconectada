@@ -72,6 +72,35 @@ export const visitors = sqliteTable("visitors", {
   createdAt: text("created_at").notNull(),
 });
 
+export const registrationRequests = sqliteTable("registration_requests", {
+  id: text("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  fatherName: text("father_name").notNull().default(""),
+  motherName: text("mother_name").notNull().default(""),
+  cpf: text("cpf").notNull().default(""),
+  cpfDigits: text("cpf_digits").notNull().default(""),
+  phone: text("phone").notNull(),
+  phoneDigits: text("phone_digits").notNull(),
+  email: text("email").notNull().default(""),
+  birthDate: text("birth_date").notNull().default(""),
+  gender: text("gender").notNull().default(""),
+  address: text("address").notNull().default(""),
+  zipCode: text("zip_code").notNull().default(""),
+  city: text("city").notNull().default(""),
+  neighborhood: text("neighborhood").notNull().default(""),
+  maritalStatus: text("marital_status").notNull().default("Solteiro(a)"),
+  education: text("education").notNull().default(""),
+  spouseName: text("spouse_name").notNull().default(""),
+  requestedStatus: text("requested_status", { enum: ["Visitante", "Novo convertido", "Membro ativo"] }).notNull(),
+  registrationSource: text("registration_source").notNull().default("Cadastro via link WhatsApp"),
+  notes: text("notes").notNull().default(""),
+  status: text("status", { enum: ["Aguardando aprovacao", "Em analise", "Aprovado", "Recusado"] }).notNull(),
+  reviewedAt: text("reviewed_at").notNull().default(""),
+  reviewNote: text("review_note").notNull().default(""),
+  reviewedBy: text("reviewed_by").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+});
+
 export const kids = sqliteTable("kids", {
   id: text("id").primaryKey(),
   churchId: text("church_id").notNull().references(() => churches.id),

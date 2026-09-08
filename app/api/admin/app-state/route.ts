@@ -190,7 +190,49 @@ function stripMemberPhotos(payload: JsonRecord): JsonRecord {
   return {
     ...payload,
     members: recordsFrom(payload.members).map((member) => ({ ...member, photoDataUrl: "" })),
+    registrationRequests: [],
   };
+}
+
+function toRegistrationRequest(row: JsonRecord) {
+  return {
+    id: textValue(row.id),
+    fullName: textValue(row.full_name),
+    fatherName: textValue(row.father_name),
+    motherName: textValue(row.mother_name),
+    cpf: textValue(row.cpf),
+    phone: textValue(row.phone),
+    email: textValue(row.email),
+    birthDate: textValue(row.birth_date),
+    gender: textValue(row.gender),
+    address: textValue(row.address),
+    zipCode: textValue(row.zip_code),
+    city: textValue(row.city),
+    neighborhood: textValue(row.neighborhood),
+    maritalStatus: textValue(row.marital_status) || "Solteiro(a)",
+    education: textValue(row.education),
+    spouseName: textValue(row.spouse_name),
+    requestedStatus: textValue(row.requested_status) || "Visitante",
+    registrationSource: textValue(row.registration_source) || "Cadastro via link WhatsApp",
+    notes: textValue(row.notes),
+    status: textValue(row.status) || "Aguardando aprovacao",
+    createdAt: textValue(row.created_at),
+    reviewedAt: textValue(row.reviewed_at),
+    reviewNote: textValue(row.review_note),
+  };
+}
+
+async function readRegistrationRequests(client: NonNullable<ReturnType<typeof adminClient>>, role: ChurchRole) {
+  if (role !== "ADMIN" && role !== "SECRETARY") return [];
+
+  const { data, error } = await client
+    .from("registration_requests")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+
+  return recordsFrom(data).map(toRegistrationRequest);
 }
 
 function mergeCareRequest(existingRequest: JsonRecord | undefined, incomingRequest: JsonRecord) {
@@ -274,8 +316,12 @@ export async function GET(request: Request) {
 
   const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(stored.payload, session.user);
   const payload = sanitizePayloadForResponse(stored.payload, effectiveRole, session.user);
+  const registrationRequests = await readRegistrationRequests(stored.client, effectiveRole);
 
-  return NextResponse.json({ payload, updatedAt: stored.updatedAt });
+  return NextResponse.json({
+    payload: isRecord(payload) ? { ...payload, registrationRequests } : payload,
+    updatedAt: stored.updatedAt,
+  });
 }
 
 export async function PUT(request: Request) {

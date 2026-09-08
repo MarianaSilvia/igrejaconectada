@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminClient } from "../../admin/auth";
 
-const stateId = "main";
-
 type JsonRecord = Record<string, unknown>;
 
 const allowedStatuses = new Set(["Visitante", "Novo convertido", "Membro ativo"]);
@@ -65,11 +63,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Informe nome completo e telefone para enviar o cadastro." }, { status: 400 });
   }
 
-  const { data: stored, error: readError } = await client
-    .from("church_app_state")
-    .select("payload")
-    .eq("id", stateId)
-    .maybeSingle();
+  const { data: stored, error: readError } = await client.from("church_app_state").select("payload").eq("id", "main").maybeSingle();
 
   if (readError) {
     return NextResponse.json({ error: "Nao foi possivel conferir a base antes de cadastrar." }, { status: 400 });
@@ -83,46 +77,62 @@ export async function POST(request: Request) {
     );
   }
 
+  const { data: pendingMatches, error: matchError } = await client
+    .from("registration_requests")
+    .select("id")
+    .or(`cpf_digits.eq.${cleanCpf || "__empty__"},phone_digits.eq.${cleanPhone}`)
+    .in("status", ["Aguardando aprovacao", "Em analise"])
+    .limit(1);
+
+  if (matchError) {
+    return NextResponse.json({ error: "Nao foi possivel conferir pre-cadastros pendentes." }, { status: 400 });
+  }
+
+  if (pendingMatches?.length) {
+    return NextResponse.json(
+      { error: "Cadastro ja recebido. Procure a secretaria para atualizar seus dados." },
+      { status: 409 },
+    );
+  }
+
   const now = new Date().toISOString();
   const requestedStatus = allowedStatuses.has(textValue(body.requestedStatus)) ? textValue(body.requestedStatus) : "Visitante";
   const registrationRequest = {
     id: `registration-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    fullName,
-    fatherName: textValue(body.fatherName),
-    motherName: textValue(body.motherName),
+    full_name: fullName,
+    father_name: textValue(body.fatherName),
+    mother_name: textValue(body.motherName),
     cpf: textValue(body.cpf, 20),
+    cpf_digits: cleanCpf,
     phone,
+    phone_digits: cleanPhone,
     email: textValue(body.email, 140).toLowerCase(),
-    birthDate: textValue(body.birthDate, 20),
+    birth_date: textValue(body.birthDate, 20),
     gender: textValue(body.gender, 40),
     address: textValue(body.address, 220),
-    zipCode: textValue(body.zipCode, 20),
+    zip_code: textValue(body.zipCode, 20),
     city: textValue(body.city, 80),
     neighborhood: textValue(body.neighborhood, 80),
-    maritalStatus: textValue(body.maritalStatus, 60) || "Solteiro(a)",
+    marital_status: textValue(body.maritalStatus, 60) || "Solteiro(a)",
     education: textValue(body.education, 80),
-    spouseName: textValue(body.spouseName, 140),
-    requestedStatus,
-    registrationSource: "Cadastro via link WhatsApp",
+    spouse_name: textValue(body.spouseName, 140),
+    requested_status: requestedStatus,
+    registration_source: "Cadastro via link WhatsApp",
     notes: textValue(body.notes, 600),
     status: "Aguardando aprovacao",
-    createdAt: now,
-    reviewedAt: "",
-    reviewNote: "",
+    created_at: now,
   };
 
-  const nextPayload = {
-    ...payload,
-    registrationRequests: [registrationRequest, ...recordsFrom(payload.registrationRequests)],
-  };
-
-  const { error: saveError } = await client.from("church_app_state").upsert({
-    id: stateId,
-    payload: nextPayload,
-    updated_at: now,
-  });
+  const { error: saveError } = await client.from("registration_requests").insert(registrationRequest);
 
   if (saveError) {
+    if (saveError.code === "23505") {
+      return NextResponse.json(
+        { error: "Cadastro ja recebido. Procure a secretaria para atualizar seus dados." },
+        { status: 409 },
+      );
+    }
+
     return NextResponse.json({ error: "Nao foi possivel salvar o pre-cadastro." }, { status: 400 });
   }
 

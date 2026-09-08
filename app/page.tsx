@@ -2093,7 +2093,7 @@ export default function Home() {
     setSyncStatus(`Acesso de ${user.name} excluido.`);
   }
 
-  function createMember() {
+  async function createMember() {
     if (!memberForm.fullName.trim() || !memberForm.phone.trim()) return;
     if (!canManageMembers && editingMemberId !== currentMember?.id) {
       setSyncStatus("Acesso de membro: voce pode atualizar apenas o seu proprio cadastro.");
@@ -2102,15 +2102,21 @@ export default function Home() {
 
     const isEditing = Boolean(editingMemberId);
     const member: MemberRecord = { ...memberForm, id: editingMemberId ?? uid("member") };
+    const reviewedRegistrationId = memberFormRegistrationId;
+
+    if (reviewedRegistrationId) {
+      const updated = await updateRegistrationRequestStatus(reviewedRegistrationId, "Aprovado", "Aprovado com edicao da ficha");
+      if (!updated) return;
+    }
 
     setData((current) => {
       const nextData = upsertMemberData(current, memberForm, editingMemberId, uid);
-      if (!memberFormRegistrationId) return nextData;
+      if (!reviewedRegistrationId) return nextData;
 
       return {
         ...nextData,
         registrationRequests: current.registrationRequests.map((request) =>
-          request.id === memberFormRegistrationId
+          request.id === reviewedRegistrationId
             ? {
                 ...request,
                 status: "Aprovado",
@@ -2147,6 +2153,36 @@ export default function Home() {
     setMemberForm(blankMember);
     setEditingMemberId(null);
     setMemberFormRegistrationId(null);
+  }
+
+  async function updateRegistrationRequestStatus(id: string, status: RegistrationRequest["status"], reviewNote: string) {
+    if (!isSupabaseConfigured()) return true;
+
+    const supabase = getSupabaseClient();
+    const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+      setSyncStatus("Entre com uma conta Supabase antes de revisar pre-cadastros.");
+      return false;
+    }
+
+    const response = await fetch("/api/admin/registration-requests", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ id, status, reviewNote }),
+    });
+    const result = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setSyncStatus(result.error ?? "Nao foi possivel atualizar o pre-cadastro.");
+      return false;
+    }
+
+    return true;
   }
 
   function memberFormFromRegistration(request: RegistrationRequest, memberType: MemberRecord["memberType"] = "Membro"): Omit<MemberRecord, "id"> {
@@ -2195,21 +2231,27 @@ export default function Home() {
     }, 0);
   }
 
-  function approveRegistrationAsMember(request: RegistrationRequest) {
+  async function approveRegistrationAsMember(request: RegistrationRequest) {
     if (!canManageRegistrationRequests) return;
+    const updated = await updateRegistrationRequestStatus(request.id, "Aprovado", "Aprovado como membro");
+    if (!updated) return;
     setData((current) => approveRegistrationAsMemberData(current, request, blankMember, uid, "Membro"));
     setSyncStatus(`Pre-cadastro de ${request.fullName} aprovado como membro.`);
   }
 
-  function approveRegistrationAsVisitor(request: RegistrationRequest) {
+  async function approveRegistrationAsVisitor(request: RegistrationRequest) {
     if (!canManageRegistrationRequests) return;
+    const updated = await updateRegistrationRequestStatus(request.id, "Aprovado", "Aprovado como visitante");
+    if (!updated) return;
     setData((current) => approveRegistrationAsVisitorData(current, request, uid));
     setSyncStatus(`Pre-cadastro de ${request.fullName} aprovado como visitante.`);
   }
 
-  function declineRegistrationRequest(request: RegistrationRequest) {
+  async function declineRegistrationRequest(request: RegistrationRequest) {
     if (!canManageRegistrationRequests) return;
     if (!window.confirm(`Recusar o pre-cadastro de ${request.fullName}?`)) return;
+    const updated = await updateRegistrationRequestStatus(request.id, "Recusado", "Recusado pela administracao");
+    if (!updated) return;
     setData((current) => declineRegistrationRequestData(current, request, uid));
     setSyncStatus(`Pre-cadastro de ${request.fullName} recusado.`);
   }
