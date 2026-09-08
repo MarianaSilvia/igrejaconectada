@@ -1,9 +1,6 @@
 const STATIC_CACHE = "igreja-conectada-static-v1";
 const STATIC_ASSETS = [
-  "/favicon.svg",
-  "/icon.svg",
-  "/maskable-icon.svg",
-  "/apple-touch-icon.svg",
+  "/favicon.png",
   "/icon-192.png",
   "/icon-512.png",
   "/apple-touch-icon.png",
