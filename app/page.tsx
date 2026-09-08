@@ -949,6 +949,34 @@ export default function Home() {
   const [remoteUpdatedAt, setRemoteUpdatedAt] = useState<string | null>(null);
   const [reportPreviewKind, setReportPreviewKind] = useState<ReportKind>("members");
 
+  const forceAccessLogout = useCallback(async (message: string) => {
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
+    logoutInProgressRef.current = true;
+    setHasSession(false);
+    setSessionUserId("");
+    setSessionEmail("");
+    setSessionRole("Administrador");
+    setNotificationsOpen(false);
+    setActiveModule("overview");
+    setAccessMode("login");
+    setRemoteStateReady(true);
+    setSaveState("error");
+    setAccessMessage(message);
+    setSyncStatus(message);
+    lastSavedPayloadRef.current = "";
+
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase) await supabase.auth.signOut();
+    } finally {
+      logoutInProgressRef.current = false;
+    }
+  }, []);
+
   const saveRemoteStateNow = useCallback(async (payloadData: AppData) => {
     if (!isSupabaseConfigured()) return false;
 
@@ -975,6 +1003,11 @@ export default function Home() {
     const result = (await response.json()) as { error?: string; updatedAt?: string };
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        await forceAccessLogout(result.error ?? "Sua sessao expirou ou seu acesso foi alterado. Entre novamente.");
+        return false;
+      }
+
       setSaveState("error");
       setSyncStatus(
         response.status === 409
@@ -991,7 +1024,7 @@ export default function Home() {
     setSaveState("saved");
     setSyncStatus(`Salvo agora as ${savedAt}.`);
     return true;
-  }, [remoteUpdatedAt]);
+  }, [forceAccessLogout, remoteUpdatedAt]);
 
   const reloadRemoteStateNow = useCallback(async () => {
     if (!hasSession || !isSupabaseConfigured()) return false;
@@ -1014,6 +1047,11 @@ export default function Home() {
     const result = (await response.json()) as RemoteAppStateResponse;
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        await forceAccessLogout(result.error ?? "Sua sessao expirou ou seu acesso foi alterado. Entre novamente.");
+        return false;
+      }
+
       setSaveState("error");
       setSyncStatus(result.error ?? "Nao foi possivel recarregar cadastros da base.");
       return false;
@@ -1030,7 +1068,7 @@ export default function Home() {
     setRemoteStateReady(true);
     setSyncStatus("Dados mais recentes carregados da base Supabase.");
     return true;
-  }, [hasSession]);
+  }, [forceAccessLogout, hasSession]);
 
   useEffect(() => {
     if (window.location.search.includes("cadastro=novo")) {
@@ -1125,6 +1163,11 @@ export default function Home() {
       if (cancelled) return;
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          await forceAccessLogout(result.error ?? "Sua sessao expirou ou seu acesso foi alterado. Entre novamente.");
+          return;
+        }
+
         setRemoteStateReady(true);
         setSyncStatus(result.error ?? "Nao foi possivel carregar cadastros da base.");
         return;
@@ -1152,7 +1195,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [hasSession]);
+  }, [forceAccessLogout, hasSession]);
 
   useEffect(() => {
     if (!hasSession || !isSupabaseConfigured() || !remoteStateReady) return;

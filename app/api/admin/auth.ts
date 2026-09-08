@@ -59,7 +59,18 @@ export async function requireSession(request: Request, allowedRoles?: Iterable<C
     return { response: NextResponse.json({ error: "Sessao invalida ou expirada." }, { status: 401 }) };
   }
 
-  const user = sessionData.user;
+  const admin = adminClient();
+  if (!admin) {
+    return { response: NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 }) };
+  }
+
+  const { data: freshUserData, error: freshUserError } = await admin.auth.admin.getUserById(sessionData.user.id);
+
+  if (freshUserError || !freshUserData.user) {
+    return { response: NextResponse.json({ error: "Sessao invalida ou acesso removido." }, { status: 401 }) };
+  }
+
+  const user = freshUserData.user;
   const role = churchRoleFromUser(user);
 
   if (!hasApprovedAccess(user)) {
