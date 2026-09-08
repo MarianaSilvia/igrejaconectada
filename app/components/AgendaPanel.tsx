@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { formatDate } from "../app-helpers";
 import type { ChurchEvent, ReportKind } from "../types";
+import { agendaThemeClass } from "../visual-covers";
 
 type EventForm = Omit<ChurchEvent, "id">;
 
@@ -153,7 +154,7 @@ export function AgendaPanel({
         </div>
         <div className="row-list">
           {weekEvents.map((event) => (
-            <div className="data-row access-user-row" key={event.id}>
+            <div className={`data-row access-user-row ${agendaThemeClass(event)}`} key={event.id}>
               <span className="date-box">{formatDate(event.date)}</span>
               <div>
                 <strong>{event.title}</strong>

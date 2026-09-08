@@ -113,6 +113,7 @@ import {
   upsertVisitorData,
 } from "./system-actions";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
+import { agendaThemeClass, moduleCoverClass, type ModuleCoverKey } from "./visual-covers";
 import type {
   AccessMode,
   AccessUser,
@@ -2813,48 +2814,105 @@ export default function Home() {
       value: pendingRegistrationRequests.length.toString(),
       hint: "aguardando analise",
       module: "overview" as ModuleKey,
+      cover: "registrations" as ModuleCoverKey,
     },
     {
       label: "Atencao pastoral",
       value: data.careRequests.filter((request) => !request.responsible && request.status !== "Concluido").length.toString(),
       hint: "sem responsavel",
       module: "pastoral" as ModuleKey,
+      cover: "pastoral" as ModuleCoverKey,
     },
     {
       label: "Agenda da semana",
       value: weekEvents.length.toString(),
       hint: "encontros desta semana",
       module: "events" as ModuleKey,
+      cover: "agenda" as ModuleCoverKey,
     },
     {
       label: "Visitantes",
       value: data.visitors.filter((visitor) => visitor.integrationStatus !== "Integrado").length.toString(),
       hint: "em acompanhamento",
       module: "visitors" as ModuleKey,
+      cover: "visitors" as ModuleCoverKey,
     },
     {
       label: "Escalas",
       value: data.schedules.length.toString(),
       hint: "pessoas escaladas",
       module: "schedules" as ModuleKey,
+      cover: "schedules" as ModuleCoverKey,
     },
     {
       label: "Comunicados ativos",
       value: activeNotices.filter((notice) => notice.status === "Publicado").length.toString(),
       hint: "publicados",
       module: "notices" as ModuleKey,
+      cover: "notices" as ModuleCoverKey,
     },
     {
       label: "Area Kids",
       value: data.kids.length.toString(),
       hint: "criancas cadastradas",
       module: "kids" as ModuleKey,
+      cover: "kids" as ModuleCoverKey,
+    },
+    {
+      label: "Membros",
+      value: data.members.length.toString(),
+      hint: "cadastros ativos",
+      module: "members" as ModuleKey,
+      cover: "members" as ModuleCoverKey,
+    },
+    {
+      label: "EBD",
+      value: data.schoolClasses.length.toString(),
+      hint: "classes organizadas",
+      module: "school" as ModuleKey,
+      cover: "school" as ModuleCoverKey,
+    },
+    {
+      label: "Discipulado",
+      value: data.discipleshipClasses.length.toString(),
+      hint: "turmas ativas",
+      module: "discipleship" as ModuleKey,
+      cover: "discipleship" as ModuleCoverKey,
+    },
+    {
+      label: "Grupos",
+      value: data.ministries.length.toString(),
+      hint: "grupos cadastrados",
+      module: "ministries" as ModuleKey,
+      cover: "groups" as ModuleCoverKey,
+    },
+    {
+      label: "Mural",
+      value: data.mural.filter((item) => item.published).length.toString(),
+      hint: "destaques publicados",
+      module: "mural" as ModuleKey,
+      cover: "mural" as ModuleCoverKey,
+    },
+    {
+      label: "Comunicacao",
+      value: data.messageCampaigns.length.toString(),
+      hint: "campanhas registradas",
+      module: "messages" as ModuleKey,
+      cover: "messages" as ModuleCoverKey,
+    },
+    {
+      label: "Relatorios",
+      value: "8",
+      hint: "modelos disponiveis",
+      module: "reports" as ModuleKey,
+      cover: "reports" as ModuleCoverKey,
     },
     {
       label: "Atendimentos",
       value: data.careRequests.filter((request) => request.status !== "Concluido").length.toString(),
       hint: "em acompanhamento",
       module: "pastoral" as ModuleKey,
+      cover: "pastoral" as ModuleCoverKey,
     },
   ];
 
@@ -3415,7 +3473,7 @@ export default function Home() {
 
               <div className="action-strip streaming-rail">
                 {actionHighlights.filter((item) => canAccessModule(currentAccessRole, item.module)).map((item) => (
-                  <button className="action-tile" key={item.label} onClick={() => setActiveModule(item.module)} type="button">
+                  <button className={`action-tile ${moduleCoverClass(item.cover)}`} key={item.label} onClick={() => setActiveModule(item.module)} type="button">
                     <span>{item.label}</span>
                     <strong>{item.value}</strong>
                     <small>{item.hint}</small>
@@ -3462,7 +3520,7 @@ export default function Home() {
                 </div>
                 <div className="row-list">
                   {weekEvents.map((event) => (
-                    <div className="data-row" key={event.id}>
+                    <div className={`data-row ${agendaThemeClass(event)}`} key={event.id}>
                       <span className="date-box">{formatDate(event.date)}</span>
                       <div>
                         <strong>{event.title}</strong>
@@ -3561,7 +3619,7 @@ export default function Home() {
                 </div>
                 <div className="row-list">
                   {weekEvents.map((event) => (
-                    <div className="data-row" key={event.id}>
+                    <div className={`data-row ${agendaThemeClass(event)}`} key={event.id}>
                       <span className="date-box">{formatDate(event.date)}</span>
                       <div>
                         <strong>{event.title}</strong>

@@ -798,6 +798,130 @@ button:disabled {
   line-height: 1;
 }
 
+.module-cover {
+  isolation: isolate;
+  overflow: hidden;
+  position: relative;
+}
+
+.module-cover::after {
+  align-items: center;
+  background:
+    radial-gradient(circle at 42% 38%, rgba(255, 255, 255, 0.15), transparent 0 16%, transparent 17%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), transparent 42%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.22);
+  content: "";
+  display: flex;
+  font-size: 64px;
+  font-weight: 950;
+  height: 118px;
+  justify-content: center;
+  line-height: 1;
+  position: absolute;
+  right: -22px;
+  top: 18px;
+  transform: rotate(-8deg);
+  width: 118px;
+  z-index: 0;
+}
+
+.module-cover::before {
+  background:
+    radial-gradient(circle at 78% 16%, var(--cover-glow, rgba(246, 198, 91, 0.34)), transparent 0 24%, transparent 25%),
+    radial-gradient(circle at 18% 88%, var(--cover-low, rgba(72, 184, 255, 0.16)), transparent 0 32%, transparent 33%),
+    linear-gradient(155deg, var(--cover-a, rgba(232, 58, 79, 0.28)), transparent 54%),
+    linear-gradient(145deg, var(--cover-b, rgba(16, 17, 26, 0.86)), rgba(7, 8, 13, 0.96));
+  content: "";
+  inset: 0;
+  position: absolute;
+  z-index: 0;
+}
+
+.module-cover-registrations {
+  --cover-a: rgba(246, 198, 91, 0.28);
+  --cover-b: rgba(70, 38, 32, 0.9);
+  --cover-glow: rgba(246, 198, 91, 0.42);
+  --cover-low: rgba(232, 58, 79, 0.18);
+}
+
+.module-cover-registrations::after { content: "+"; }
+.module-cover-pastoral::after { content: "P"; }
+.module-cover-agenda::after { content: "7"; }
+.module-cover-visitors::after { content: "V"; }
+.module-cover-schedules::after { content: "OK"; font-size: 38px; }
+.module-cover-notices::after { content: "!"; }
+.module-cover-kids::after { content: "*"; }
+.module-cover-members::after { content: "ID"; font-size: 42px; }
+.module-cover-school::after { content: "A"; }
+.module-cover-discipleship::after { content: "D"; }
+.module-cover-groups::after { content: "G"; }
+.module-cover-mural::after { content: "M"; }
+.module-cover-messages::after { content: "@"; }
+.module-cover-reports::after { content: "%"; }
+
+.module-cover-pastoral {
+  --cover-a: rgba(232, 58, 79, 0.26);
+  --cover-b: rgba(45, 18, 35, 0.92);
+  --cover-glow: rgba(255, 151, 169, 0.36);
+  --cover-low: rgba(246, 198, 91, 0.16);
+}
+
+.module-cover-agenda {
+  --cover-a: rgba(72, 184, 255, 0.25);
+  --cover-b: rgba(13, 28, 49, 0.94);
+  --cover-glow: rgba(72, 184, 255, 0.4);
+  --cover-low: rgba(20, 217, 196, 0.18);
+}
+
+.module-cover-visitors {
+  --cover-a: rgba(20, 217, 196, 0.22);
+  --cover-b: rgba(12, 46, 50, 0.9);
+  --cover-glow: rgba(20, 217, 196, 0.34);
+  --cover-low: rgba(143, 124, 255, 0.18);
+}
+
+.module-cover-schedules,
+.module-cover-groups {
+  --cover-a: rgba(143, 124, 255, 0.27);
+  --cover-b: rgba(30, 24, 58, 0.93);
+  --cover-glow: rgba(143, 124, 255, 0.4);
+  --cover-low: rgba(72, 184, 255, 0.16);
+}
+
+.module-cover-notices,
+.module-cover-mural,
+.module-cover-messages {
+  --cover-a: rgba(255, 98, 128, 0.26);
+  --cover-b: rgba(48, 17, 31, 0.94);
+  --cover-glow: rgba(255, 98, 128, 0.38);
+  --cover-low: rgba(246, 198, 91, 0.16);
+}
+
+.module-cover-kids {
+  --cover-a: rgba(20, 217, 196, 0.25);
+  --cover-b: rgba(21, 40, 48, 0.92);
+  --cover-glow: rgba(246, 198, 91, 0.42);
+  --cover-low: rgba(255, 98, 128, 0.18);
+}
+
+.module-cover-school,
+.module-cover-discipleship {
+  --cover-a: rgba(246, 198, 91, 0.24);
+  --cover-b: rgba(34, 31, 21, 0.94);
+  --cover-glow: rgba(246, 198, 91, 0.38);
+  --cover-low: rgba(20, 217, 196, 0.14);
+}
+
+.module-cover-reports,
+.module-cover-members {
+  --cover-a: rgba(72, 184, 255, 0.22);
+  --cover-b: rgba(17, 25, 45, 0.95);
+  --cover-glow: rgba(72, 184, 255, 0.34);
+  --cover-low: rgba(232, 58, 79, 0.16);
+}
+
 .stats-grid {
   display: grid;
   gap: 16px;
@@ -939,6 +1063,111 @@ button.data-row.active {
   color: var(--muted);
   font-size: 13px;
   margin-top: 3px;
+}
+
+.agenda-cover {
+  isolation: isolate;
+  overflow: hidden;
+  position: relative;
+}
+
+.agenda-cover::before {
+  background:
+    radial-gradient(circle at 82% 18%, var(--agenda-glow, rgba(72, 184, 255, 0.26)), transparent 0 24%, transparent 25%),
+    linear-gradient(145deg, var(--agenda-a, rgba(72, 184, 255, 0.16)), transparent 58%),
+    linear-gradient(135deg, var(--agenda-b, rgba(18, 45, 76, 0.76)), rgba(7, 8, 13, 0.82));
+  content: "";
+  inset: 0;
+  position: absolute;
+  z-index: 0;
+}
+
+.agenda-cover::after {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.2);
+  content: var(--agenda-symbol, "AD");
+  font-size: 32px;
+  font-weight: 950;
+  height: 86px;
+  line-height: 86px;
+  position: absolute;
+  right: -16px;
+  text-align: center;
+  top: 50%;
+  transform: translateY(-50%) rotate(-8deg);
+  width: 86px;
+  z-index: 0;
+}
+
+.agenda-cover > * {
+  position: relative;
+  z-index: 1;
+}
+
+.agenda-theme-worship {
+  --agenda-a: rgba(232, 58, 79, 0.22);
+  --agenda-b: rgba(47, 19, 33, 0.85);
+  --agenda-glow: rgba(246, 198, 91, 0.34);
+  --agenda-symbol: "CUL";
+}
+
+.agenda-theme-teaching,
+.agenda-theme-school,
+.agenda-theme-discipleship {
+  --agenda-a: rgba(246, 198, 91, 0.2);
+  --agenda-b: rgba(42, 35, 19, 0.86);
+  --agenda-glow: rgba(20, 217, 196, 0.22);
+  --agenda-symbol: "BIB";
+}
+
+.agenda-theme-communion {
+  --agenda-a: rgba(143, 124, 255, 0.23);
+  --agenda-b: rgba(30, 23, 48, 0.88);
+  --agenda-glow: rgba(255, 255, 255, 0.22);
+  --agenda-symbol: "CEI";
+}
+
+.agenda-theme-meeting {
+  --agenda-a: rgba(72, 184, 255, 0.2);
+  --agenda-b: rgba(14, 34, 58, 0.88);
+  --agenda-glow: rgba(72, 184, 255, 0.32);
+  --agenda-symbol: "REU";
+}
+
+.agenda-theme-rehearsal {
+  --agenda-a: rgba(20, 217, 196, 0.2);
+  --agenda-b: rgba(10, 44, 48, 0.86);
+  --agenda-glow: rgba(20, 217, 196, 0.32);
+  --agenda-symbol: "MUS";
+}
+
+.agenda-theme-conference {
+  --agenda-a: rgba(255, 98, 128, 0.22);
+  --agenda-b: rgba(48, 17, 31, 0.88);
+  --agenda-glow: rgba(246, 198, 91, 0.28);
+  --agenda-symbol: "TOP";
+}
+
+.agenda-theme-campaign {
+  --agenda-a: rgba(246, 198, 91, 0.24);
+  --agenda-b: rgba(58, 37, 17, 0.88);
+  --agenda-glow: rgba(232, 58, 79, 0.24);
+  --agenda-symbol: "ORA";
+}
+
+.agenda-theme-kids {
+  --agenda-a: rgba(20, 217, 196, 0.24);
+  --agenda-b: rgba(22, 42, 50, 0.86);
+  --agenda-glow: rgba(246, 198, 91, 0.32);
+  --agenda-symbol: "KID";
+}
+
+.agenda-theme-pastoral {
+  --agenda-a: rgba(232, 58, 79, 0.18);
+  --agenda-b: rgba(44, 20, 35, 0.88);
+  --agenda-glow: rgba(255, 151, 169, 0.26);
+  --agenda-symbol: "PAS";
 }
 
 .date-box,
@@ -2190,7 +2419,7 @@ textarea:focus {
   scroll-snap-align: start;
 }
 
-.overview-streaming .action-tile::before {
+.overview-streaming .action-tile:not(.module-cover)::before {
   background:
     radial-gradient(circle at 78% 14%, rgba(246, 198, 91, 0.3), transparent 22%),
     linear-gradient(145deg, rgba(232, 58, 79, 0.28), transparent 58%);
