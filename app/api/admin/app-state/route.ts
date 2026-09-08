@@ -79,10 +79,14 @@ function findCurrentMember(payload: JsonRecord, user: User) {
   return recordsFrom(payload.members).find((member) => memberBelongsToUser(member, user));
 }
 
+function findAccessUser(payload: JsonRecord, user: User) {
+  return recordsFrom(payload.users).find((item) => textValue(item.email).toLowerCase() === userEmail(user));
+}
+
 function roleFromPayload(payload: unknown, user: User): ChurchRole {
   if (!isRecord(payload)) return "MEMBER";
 
-  const accessUser = recordsFrom(payload.users).find((item) => textValue(item.email).toLowerCase() === userEmail(user));
+  const accessUser = findAccessUser(payload, user);
   return accessUser ? churchRoleFromLabel(accessUser.role) : "MEMBER";
 }
 
@@ -143,14 +147,69 @@ function sanitizeMemberDirectoryForRole(members: JsonRecord[], role: ChurchRole)
   }));
 }
 
-function payloadWithVisibleKeys(payload: JsonRecord, role: ChurchRole) {
+function classBelongsToProfessor(schoolClass: JsonRecord, payload: JsonRecord, user: User) {
+  const accessUser = findAccessUser(payload, user);
+  const teacherName = normalizeText(schoolClass.teacher);
+  const profileName = normalizeText(accessUser?.name);
+  const emailName = normalizeText(userEmail(user).split("@")[0]);
+  const nameMatches = Boolean(
+    teacherName &&
+      profileName &&
+      (teacherName === profileName || (profileName.length > 3 && teacherName.includes(profileName)) || (teacherName.length > 3 && profileName.includes(teacherName))),
+  );
+
+  return Boolean(nameMatches || (teacherName && emailName && teacherName === emailName));
+}
+
+function professorClassIds(payload: JsonRecord, user: User) {
+  return new Set(
+    [...recordsFrom(payload.schoolClasses), ...recordsFrom(payload.discipleshipClasses)]
+      .filter((schoolClass) => classBelongsToProfessor(schoolClass, payload, user))
+      .map((schoolClass) => textValue(schoolClass.id))
+      .filter(Boolean),
+  );
+}
+
+function filterProfessorOwnedClasses(classes: JsonRecord[], payload: JsonRecord, user: User) {
+  return classes.filter((schoolClass) => classBelongsToProfessor(schoolClass, payload, user));
+}
+
+function filterSessionsByClassIds(sessions: JsonRecord[], classIds: Set<string>) {
+  return sessions.filter((session) => classIds.has(textValue(session.classId)));
+}
+
+function mergeRecordsByAllowedIds(existingRecords: JsonRecord[], incomingRecords: JsonRecord[], allowedIds: Set<string>, ownershipKey = "id") {
+  if (!allowedIds.size) return existingRecords;
+
+  const incomingAllowed = incomingRecords.filter((record) => allowedIds.has(textValue(record[ownershipKey])));
+  const incomingById = new Map(incomingAllowed.map((record) => [textValue(record.id), record]));
+  const existingIds = new Set(existingRecords.map((record) => textValue(record.id)));
+
+  return [
+    ...existingRecords.map((record) =>
+      allowedIds.has(textValue(record[ownershipKey])) && incomingById.has(textValue(record.id)) ? incomingById.get(textValue(record.id)) ?? record : record,
+    ),
+    ...incomingAllowed.filter((record) => !existingIds.has(textValue(record.id))),
+  ];
+}
+
+function payloadWithVisibleKeys(payload: JsonRecord, role: ChurchRole, user: User) {
   const visibleKeys = visiblePayloadKeysByRole[role as Exclude<ChurchRole, "ADMIN" | "MEMBER">] ?? [];
+  const professorOwnedClassIds = role === "PROFESSOR" ? professorClassIds(payload, user) : new Set<string>();
 
   return visibleKeys.reduce<JsonRecord>((nextPayload, key) => {
     if (!(key in payload)) return nextPayload;
 
     if (key === "members") {
       return { ...nextPayload, members: sanitizeMemberDirectoryForRole(recordsFrom(payload.members), role) };
+    }
+
+    if (role === "PROFESSOR" && (key === "schoolClasses" || key === "discipleshipClasses")) {
+      return { ...nextPayload, [key]: filterProfessorOwnedClasses(recordsFrom(payload[key]), payload, user) };
+    }
+
+    if (role === "PROFESSOR" && key === "attendanceSessions") {
+      return { ...nextPayload, attendanceSessions: filterSessionsByClassIds(recordsFrom(payload.attendanceSessions), professorOwnedClassIds) };
     }
 
     if (role === "PROFESSOR" && key === "notices") {
@@ -169,16 +228,32 @@ function payloadWithVisibleKeys(payload: JsonRecord, role: ChurchRole) {
   }, emptyPayloadCollections());
 }
 
-function sanitizedAdministrativePayloadForRole(payload: JsonRecord, role: ChurchRole) {
+function sanitizedAdministrativePayloadForRole(payload: JsonRecord, role: ChurchRole, user: User) {
   const strippedPayload = normalizeStatePayloadForStorage(payload);
   if (role === "ADMIN") return strippedPayload;
 
-  return payloadWithVisibleKeys(strippedPayload, role);
+  return payloadWithVisibleKeys(strippedPayload, role, user);
 }
 
-function mergeAdministrativePayloadByRole(existingPayload: JsonRecord, incomingPayload: JsonRecord, role: ChurchRole) {
+function mergeProfessorPayload(existingPayload: JsonRecord, incomingPayload: JsonRecord, user: User) {
+  const existing = normalizeStatePayloadForStorage(existingPayload);
+  const incoming = normalizeStatePayloadForStorage(incomingPayload);
+  const classIds = professorClassIds(existing, user);
+
+  return {
+    ...existing,
+    schoolClasses: mergeRecordsByAllowedIds(recordsFrom(existing.schoolClasses), recordsFrom(incoming.schoolClasses), classIds),
+    discipleshipClasses: mergeRecordsByAllowedIds(recordsFrom(existing.discipleshipClasses), recordsFrom(incoming.discipleshipClasses), classIds),
+    attendanceSessions: mergeRecordsByAllowedIds(recordsFrom(existing.attendanceSessions), recordsFrom(incoming.attendanceSessions), classIds, "classId"),
+    schedules: Array.isArray(incoming.schedules) ? incoming.schedules : existing.schedules,
+    notificationReadIds: Array.isArray(incoming.notificationReadIds) ? incoming.notificationReadIds : existing.notificationReadIds,
+  };
+}
+
+function mergeAdministrativePayloadByRole(existingPayload: JsonRecord, incomingPayload: JsonRecord, role: ChurchRole, user: User) {
   const incoming = normalizeStatePayloadForStorage(incomingPayload);
   if (role === "ADMIN") return incoming;
+  if (role === "PROFESSOR") return mergeProfessorPayload(existingPayload, incomingPayload, user);
 
   const allowedKeys = payloadKeysByRole[role as Exclude<ChurchRole, "MEMBER">] ?? [];
 
@@ -212,7 +287,7 @@ function sanitizeMemberPayloadForResponse(payload: unknown, user: User) {
 
 function sanitizePayloadForResponse(payload: unknown, effectiveRole: ChurchRole, user: User) {
   if (!isRecord(payload)) return payload;
-  return administrativeRoles.has(effectiveRole) ? sanitizedAdministrativePayloadForRole(payload, effectiveRole) : sanitizeMemberPayloadForResponse(payload, user);
+  return administrativeRoles.has(effectiveRole) ? sanitizedAdministrativePayloadForRole(payload, effectiveRole, user) : sanitizeMemberPayloadForResponse(payload, user);
 }
 
 function mergeMemberRecord(existingMember: JsonRecord, incomingMember: JsonRecord) {
@@ -357,7 +432,7 @@ function mergeMemberPayload(existingPayload: JsonRecord, incomingPayload: JsonRe
 
 function sanitizePayloadForSave(existingPayload: JsonRecord, incomingPayload: JsonRecord, effectiveRole: ChurchRole, user: User) {
   return administrativeRoles.has(effectiveRole)
-    ? { payload: mergeAdministrativePayloadByRole(existingPayload, incomingPayload, effectiveRole) }
+    ? { payload: mergeAdministrativePayloadByRole(existingPayload, incomingPayload, effectiveRole, user) }
     : mergeMemberPayload(existingPayload, incomingPayload, user);
 }
 
