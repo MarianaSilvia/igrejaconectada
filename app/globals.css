@@ -501,6 +501,11 @@ button:disabled {
   box-shadow: 0 0 18px rgba(255, 93, 112, 0.55);
 }
 
+.status-dot.conflict {
+  background: var(--gold);
+  box-shadow: 0 0 18px rgba(246, 198, 91, 0.65);
+}
+
 .workspace {
   min-width: 0;
   padding: 24px;

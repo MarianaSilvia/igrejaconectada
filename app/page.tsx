@@ -1008,12 +1008,15 @@ export default function Home() {
         return false;
       }
 
+      if (response.status === 409) {
+        setSaveState("conflict");
+        setRemoteUpdatedAt(result.updatedAt ?? remoteUpdatedAt);
+        setSyncStatus("Existe uma versao mais recente na base. Recarregue os dados antes de continuar editando.");
+        return false;
+      }
+
       setSaveState("error");
-      setSyncStatus(
-        response.status === 409
-          ? "Outra pessoa salvou alteracoes antes de voce. Suas mudancas nao foram gravadas; clique em Recarregar dados da base antes de continuar."
-          : result.error ?? "Nao foi possivel salvar cadastros na base.",
-      );
+      setSyncStatus(result.error ?? "Nao foi possivel salvar cadastros na base.");
       return false;
     }
 
@@ -1199,6 +1202,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!hasSession || !isSupabaseConfigured() || !remoteStateReady) return;
+    if (saveState === "conflict") return;
 
     const payload = JSON.stringify(data);
     if (payload === lastSavedPayloadRef.current) return;
@@ -1219,7 +1223,7 @@ export default function Home() {
         window.clearTimeout(saveTimerRef.current);
       }
     };
-  }, [data, hasSession, remoteStateReady, saveRemoteStateNow]);
+  }, [data, hasSession, remoteStateReady, saveRemoteStateNow, saveState]);
 
   useEffect(() => {
     const cleanup = window.setTimeout(() => {
@@ -3368,9 +3372,10 @@ export default function Home() {
               <strong>{isSupabaseConfigured() ? "Supabase preparado" : "Modo local ativo"}</strong>
               <span>{syncStatus}</span>
               {lastSavedAt && <small>Ultimo salvamento: {lastSavedAt}</small>}
-              {saveState === "error" && hasSession && isSupabaseConfigured() && (
+              {saveState === "conflict" && <small>Salvamento pausado para proteger os dados.</small>}
+              {(saveState === "error" || saveState === "conflict") && hasSession && isSupabaseConfigured() && (
                 <button className="sync-reload-button" onClick={reloadRemoteStateNow} type="button">
-                  Recarregar dados da base
+                  {saveState === "conflict" ? "Recarregar antes de continuar" : "Recarregar dados da base"}
                 </button>
               )}
             </div>

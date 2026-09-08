@@ -34,7 +34,7 @@ export type ChurchEvent = {
 export type AttendanceArea = "school" | "discipleship";
 
 export type AttendanceStatus = "Presente" | "Falta" | "Justificado" | "Precisa de contato";
-export type SaveState = "idle" | "saving" | "saved" | "error";
+export type SaveState = "idle" | "saving" | "saved" | "error" | "conflict";
 export type MemberFormTab = "Dados" | "Igreja" | "Classes" | "Observacoes" | "Acesso";
 
 export type AttendanceRecord = {
