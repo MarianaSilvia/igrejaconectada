@@ -2662,6 +2662,50 @@ textarea:focus {
   padding: 8px 12px;
 }
 
+.smart-hero-strip {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-top: 20px;
+  max-width: 920px;
+  width: 100%;
+}
+
+.smart-hero-strip button {
+  align-items: start;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: #fff;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  min-height: 94px;
+  padding: 12px;
+  text-align: left;
+}
+
+.smart-hero-strip span,
+.today-grid span,
+.priority-grid span,
+.member-home-grid span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.smart-hero-strip strong {
+  font-size: 16px;
+  line-height: 1.1;
+}
+
+.smart-hero-strip small {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
 .overview-streaming .streaming-cover .eyebrow {
   color: #ffb1bb;
   font-size: 13px;
@@ -2817,6 +2861,62 @@ textarea:focus {
 
 .overview-streaming .devotional-card {
   grid-column: 1 / -1;
+}
+
+.today-panel,
+.priority-panel,
+.member-home-panel {
+  grid-column: 1 / -1;
+}
+
+.today-grid,
+.priority-grid,
+.member-home-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.today-grid div,
+.priority-grid button,
+.member-home-grid button {
+  background:
+    radial-gradient(circle at 86% 14%, rgba(72, 184, 255, 0.18), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #fff;
+  display: grid;
+  gap: 8px;
+  min-height: 116px;
+  padding: 16px;
+  text-align: left;
+}
+
+.priority-grid button {
+  background:
+    radial-gradient(circle at 86% 14%, rgba(255, 107, 129, 0.22), transparent 30%),
+    linear-gradient(145deg, rgba(232, 58, 79, 0.17), rgba(255, 255, 255, 0.04));
+}
+
+.today-grid strong,
+.member-home-grid strong {
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.priority-grid strong {
+  font-size: 38px;
+  line-height: 0.9;
+}
+
+.today-grid small {
+  color: rgba(255, 255, 255, 0.74);
+  line-height: 1.35;
+}
+
+.member-home-grid button span {
+  text-transform: none;
 }
 
 .simple-mode-toggle {
@@ -3150,6 +3250,14 @@ textarea:focus {
     font-size: 14px;
   }
 
+  .smart-hero-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .smart-hero-strip button {
+    min-height: 78px;
+  }
+
   .mural-hero-background {
     opacity: 0.36;
   }
@@ -3186,6 +3294,12 @@ textarea:focus {
   }
 
   .simple-shortcuts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .today-grid,
+  .priority-grid,
+  .member-home-grid {
     grid-template-columns: 1fr;
   }
 

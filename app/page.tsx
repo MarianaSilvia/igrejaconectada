@@ -863,6 +863,7 @@ export default function Home() {
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
   const [activeModule, setActiveModule] = useState<ModuleKey>("overview");
   const [simpleViewEnabled, setSimpleViewEnabled] = useState(false);
+  const [muralSpotlightIndex, setMuralSpotlightIndex] = useState(0);
   const [data, setData] = useState<AppData>(() => {
     if (typeof window === "undefined") return initialData;
 
@@ -1435,14 +1436,24 @@ export default function Home() {
 
   const unreadCount = notifications.filter((notice) => !data.notificationReadIds.includes(notice.id)).length;
   const activeNotices = data.notices.filter((notice) => !isExpiredDate(notice.expiresAt));
-  const featuredMuralItem = useMemo(
-    () =>
-      data.mural.find((item) => item.published && item.featured && (item.imageDataUrl || item.bannerUrl)) ??
-      data.mural.find((item) => item.published && (item.imageDataUrl || item.bannerUrl)) ??
-      data.mural.find((item) => item.published),
+  const publishedMuralItems = useMemo(
+    () => data.mural.filter((item) => item.published).sort((first, second) => Number(second.featured) - Number(first.featured)),
     [data.mural],
   );
+  const featuredMuralItem = useMemo(
+    () => publishedMuralItems[muralSpotlightIndex % Math.max(publishedMuralItems.length, 1)],
+    [muralSpotlightIndex, publishedMuralItems],
+  );
   const featuredMuralImage = featuredMuralItem?.imageDataUrl || featuredMuralItem?.bannerUrl || "";
+  useEffect(() => {
+    if (publishedMuralItems.length <= 1) return;
+
+    const timer = window.setInterval(() => {
+      setMuralSpotlightIndex((index) => (index + 1) % publishedMuralItems.length);
+    }, 9000);
+
+    return () => window.clearInterval(timer);
+  }, [publishedMuralItems.length]);
   const monthlyBirthdays = useMemo(
     () =>
       data.members
@@ -1692,6 +1703,11 @@ export default function Home() {
         .sort((first, second) => second.publishedAt.localeCompare(first.publishedAt))[0],
     [data.devotionals],
   );
+  const nextAgendaEvent = weekEvents[0];
+  const pendingCareCount = visibleCareRequests.filter((request) => request.status !== "Concluido").length;
+  const unassignedCareCount = data.careRequests.filter((request) => !request.responsible && request.status !== "Concluido").length;
+  const memberSchoolName = currentMember?.schoolClassId ? classNameById(data.schoolClasses, currentMember.schoolClassId) : "";
+  const memberDiscipleshipName = currentMember?.discipleshipClassId ? classNameById(data.discipleshipClasses, currentMember.discipleshipClassId) : "";
   const birthdaySpotlightPanel = (
     <BirthdaySpotlightPanel
       canSendMessages={canManageMessages}
@@ -3539,6 +3555,28 @@ export default function Home() {
                   pronta para crescer com dados reais.
                 </p>
                 {featuredMuralItem && <span className="mural-hero-label">Destaque do mural: {featuredMuralItem.title}</span>}
+                <div className="smart-hero-strip" aria-label="Resumo do painel inteligente">
+                  <button onClick={() => setActiveModule("events")} type="button">
+                    <span>Hoje na igreja</span>
+                    <strong>{nextAgendaEvent ? nextAgendaEvent.title : "Sem evento na semana"}</strong>
+                    <small>{nextAgendaEvent ? `${formatDate(nextAgendaEvent.date)} - ${nextAgendaEvent.time || "Sem horario"}` : "Cadastre a agenda para aparecer aqui"}</small>
+                  </button>
+                  <button onClick={() => setActiveModule("members")} type="button">
+                    <span>Aniversariantes</span>
+                    <strong>{monthlyBirthdays.length}</strong>
+                    <small>do mes em destaque</small>
+                  </button>
+                  <button onClick={() => setActiveModule("overview")} type="button">
+                    <span>Pre-cadastros</span>
+                    <strong>{pendingRegistrationRequests.length}</strong>
+                    <small>aguardando analise</small>
+                  </button>
+                  <button onClick={() => setActiveModule("pastoral")} type="button">
+                    <span>Pastoral</span>
+                    <strong>{unassignedCareCount}</strong>
+                    <small>sem responsavel</small>
+                  </button>
+                </div>
                 <div className="hero-actions">
                   <button onClick={() => setActiveModule("pastoral")} type="button">
                     Abrir fila pastoral
@@ -3558,6 +3596,53 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+
+              <article className="surface wide streaming-section today-panel">
+                <div className="panel-heading">
+                  <h2>Hoje na igreja</h2>
+                  <button onClick={() => setActiveModule("events")} type="button">
+                    Abrir agenda
+                  </button>
+                </div>
+                <div className="today-grid">
+                  <div>
+                    <span>Proximo compromisso</span>
+                    <strong>{nextAgendaEvent ? nextAgendaEvent.title : "Nenhum evento nesta semana"}</strong>
+                    <small>{nextAgendaEvent ? `${formatDate(nextAgendaEvent.date)} - ${nextAgendaEvent.location || "Local nao informado"}` : "Quando a agenda for preenchida, o proximo evento aparece aqui."}</small>
+                  </div>
+                  <div>
+                    <span>Mural publicado</span>
+                    <strong>{publishedMuralItems.length}</strong>
+                    <small>{featuredMuralItem ? featuredMuralItem.title : "Nenhum destaque publicado"}</small>
+                  </div>
+                  <div>
+                    <span>Acoes pendentes</span>
+                    <strong>{pendingRegistrationRequests.length + unassignedCareCount}</strong>
+                    <small>pre-cadastros e pedidos sem responsavel</small>
+                  </div>
+                </div>
+              </article>
+
+              <article className="surface wide streaming-section priority-panel">
+                <div className="panel-heading">
+                  <h2>Pendencias importantes</h2>
+                  <span>Para revisar primeiro</span>
+                </div>
+                <div className="priority-grid">
+                  <button onClick={() => setActiveModule("overview")} type="button">
+                    <strong>{pendingRegistrationRequests.length}</strong>
+                    <span>pre-cadastros aguardando</span>
+                  </button>
+                  <button onClick={() => setActiveModule("pastoral")} type="button">
+                    <strong>{unassignedCareCount}</strong>
+                    <span>pedidos pastorais sem responsavel</span>
+                  </button>
+                  <button onClick={() => setActiveModule("visitors")} type="button">
+                    <strong>{data.visitors.filter((visitor) => !visitor.contactMade).length}</strong>
+                    <span>visitantes sem contato</span>
+                  </button>
+                </div>
+              </article>
 
               <SystemHealthPanel
                 agendaCount={data.events.length}
@@ -3630,8 +3715,7 @@ export default function Home() {
                   <span>{data.mural.filter((item) => item.published).length} de 5 publicados</span>
                 </div>
                 <div className="mural-stack">
-                  {data.mural
-                    .filter((item) => item.published)
+                  {publishedMuralItems
                     .map((item) => (
                       <div className={item.featured ? "mural-card featured" : "mural-card"} key={item.id}>
                         {(item.imageDataUrl || item.bannerUrl) && (
@@ -3658,6 +3742,23 @@ export default function Home() {
                 <h2>Bem-vindo, {profileName}.</h2>
                 <p>Veja sua ficha, acompanhe a agenda, leia os avisos e envie pedidos de atendimento pastoral ou oracao.</p>
                 {featuredMuralItem && <span className="mural-hero-label">Destaque do mural: {featuredMuralItem.title}</span>}
+                <div className="smart-hero-strip" aria-label="Resumo da area do membro">
+                  <button onClick={() => setActiveModule("events")} type="button">
+                    <span>Agenda da igreja</span>
+                    <strong>{nextAgendaEvent ? nextAgendaEvent.title : "Nada nesta semana"}</strong>
+                    <small>{nextAgendaEvent ? formatDate(nextAgendaEvent.date) : "A secretaria ainda nao publicou evento"}</small>
+                  </button>
+                  <button onClick={() => setActiveModule("mural")} type="button">
+                    <span>Avisos e mural</span>
+                    <strong>{publishedMuralItems.length}</strong>
+                    <small>{featuredMuralItem ? featuredMuralItem.title : "Nenhum aviso publicado hoje"}</small>
+                  </button>
+                  <button onClick={() => setActiveModule("pastoral")} type="button">
+                    <span>Meus pedidos</span>
+                    <strong>{pendingCareCount}</strong>
+                    <small>Clique aqui para pedir oracao</small>
+                  </button>
+                </div>
                 <div className="hero-actions">
                   <button onClick={() => setActiveModule("members")} type="button">
                     Meu cadastro
@@ -3686,11 +3787,11 @@ export default function Home() {
                       <span>Atualizar meus dados</span>
                     </button>
                     <button onClick={() => setActiveModule("events")} type="button">
-                      <strong>Agenda</strong>
+                      <strong>Agenda da igreja</strong>
                       <span>Ver a semana da igreja</span>
                     </button>
                     <button onClick={() => setActiveModule("mural")} type="button">
-                      <strong>Mural</strong>
+                      <strong>Avisos e mural</strong>
                       <span>Ver avisos da igreja</span>
                     </button>
                     <button onClick={() => setActiveModule("pastoral")} type="button">
@@ -3704,6 +3805,31 @@ export default function Home() {
                   </div>
                 </article>
               )}
+
+              <article className="surface wide streaming-section member-home-panel">
+                <div className="panel-heading">
+                  <h2>Para voce</h2>
+                  <span>Informacoes principais do seu acesso</span>
+                </div>
+                <div className="member-home-grid">
+                  <button onClick={() => setActiveModule("events")} type="button">
+                    <strong>{nextAgendaEvent ? nextAgendaEvent.title : "Agenda livre"}</strong>
+                    <span>{nextAgendaEvent ? `${formatDate(nextAgendaEvent.date)} - ${nextAgendaEvent.time || "Sem horario"}` : "Nenhum evento publicado para esta semana."}</span>
+                  </button>
+                  <button onClick={() => setActiveModule("mural")} type="button">
+                    <strong>{featuredMuralItem ? featuredMuralItem.title : "Avisos da igreja"}</strong>
+                    <span>{featuredMuralItem ? featuredMuralItem.category : "Nenhum aviso publicado hoje."}</span>
+                  </button>
+                  <button onClick={() => setActiveModule("school")} type="button">
+                    <strong>{memberSchoolName || "Classe EBD nao vinculada"}</strong>
+                    <span>Sua classe ainda nao foi vinculada se aparecer este aviso.</span>
+                  </button>
+                  <button onClick={() => setActiveModule("discipleship")} type="button">
+                    <strong>{memberDiscipleshipName || "Discipulado nao vinculado"}</strong>
+                    <span>Acompanhe sua turma e frequencia.</span>
+                  </button>
+                </div>
+              </article>
 
               {birthdaySpotlightPanel}
 
@@ -3797,8 +3923,7 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="mural-stack">
-                  {data.mural
-                    .filter((item) => item.published)
+                  {publishedMuralItems
                     .slice(0, 4)
                     .map((item) => (
                       <div className={item.featured ? "mural-card featured" : "mural-card"} key={item.id}>
@@ -3816,7 +3941,7 @@ export default function Home() {
                         )}
                       </div>
                     ))}
-                  {!data.mural.filter((item) => item.published).length && (
+                  {!publishedMuralItems.length && (
                     <p className="empty-state">Nenhum item publicado no mural no momento.</p>
                   )}
                 </div>

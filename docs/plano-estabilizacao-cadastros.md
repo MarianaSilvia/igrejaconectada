@@ -14,8 +14,9 @@ Este documento registra a estrategia atual para preparar o Igreja Conectada para
 ## Protecoes aplicadas
 
 - O painel administrativo mostra uma area de saude do sistema com status Supabase, ultimo salvamento e totais principais.
-- O painel inteligente usa o mural publicado como destaque visual de fundo, com camada escura para preservar leitura e botoes.
-- A area do membro ganhou modo Visual simples, com letras maiores e atalhos diretos para ficha, agenda, mural, pedido de oracao e sair.
+- O painel inteligente usa o mural publicado como destaque visual rotativo de fundo, com camada escura para preservar leitura e botoes.
+- A area do membro ganhou modo Visual simples, com letras maiores, linguagem direta e atalhos para ficha, agenda, mural, pedido de oracao e sair.
+- O painel principal ganhou blocos de resumo para proximo evento, mural publicado, pendencias administrativas e informacoes "Para voce" no acesso do membro.
 - Conflitos de `updated_at` aparecem em aviso destacado com acao direta para atualizar os dados da base antes de continuar editando.
 - Em conflito, a tela permite baixar backup do estado atual antes de recarregar a versao mais recente da base.
 - O cadastro manual de membros alerta possivel duplicidade por CPF, telefone ou nome parecido e oferece atualizacao do cadastro existente.

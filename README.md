@@ -5,7 +5,8 @@ Sistema de gestao para igreja com Supabase, painel administrativo, area do membr
 ## Recursos principais
 
 - Painel administrativo com prioridades, atalhos, aniversariantes, mural e agenda da semana.
-- Painel inteligente com destaque visual do mural ao fundo quando houver banner publicado.
+- Painel inteligente com destaque rotativo do mural ao fundo quando houver banner publicado.
+- Blocos de resumo com proximo evento, aniversariantes, pre-cadastros, pendencias e avisos.
 - Cadastro de membros, visitantes, novos convertidos, Area Kids e grupos.
 - Agenda, comunicados, mural, atendimento pastoral, EBD, Discipulado e chamadas.
 - Comunicacao manual por WhatsApp com modelos prontos e historico de campanhas.
@@ -13,7 +14,7 @@ Sistema de gestao para igreja com Supabase, painel administrativo, area do membr
 - Login por Supabase Auth com perfis: administrador, lider, professor, secretario, tesoureiro e membro.
 - PWA instalavel no celular, mantendo os dados online via Supabase.
 - Painel de saude do sistema com status de salvamento, totais principais e atalho para recarregar dados da base.
-- Modo Visual simples para membros, com letras maiores e atalhos grandes para terceira idade.
+- Modo Visual simples para membros, com letras maiores, atalhos grandes e linguagem direta para terceira idade.
 - Backup completo em JSON pelo modulo Configuracoes antes de importacoes ou mudancas grandes.
 
 ## Dados e seguranca
