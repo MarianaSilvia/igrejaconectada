@@ -2,7 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { adminClient, administrativeRoles, churchRoleFromLabel, requireSession, type ChurchRole } from "../auth";
 import { syncMembersTable } from "../../../member-table-sync";
-import { hiddenPayloadKeysByRole, payloadKeysByRole, visiblePublishedOnlyKeys } from "../../../state-access-policy";
+import { payloadKeysByRole, visiblePayloadKeysByRole, visiblePublishedOnlyKeys } from "../../../state-access-policy";
 
 const stateId = "main";
 
@@ -99,25 +99,45 @@ function filterAttendanceForMember(sessions: JsonRecord[], member: JsonRecord | 
     }));
 }
 
-function sanitizedAdministrativePayloadForRole(payload: JsonRecord, role: ChurchRole, user: User) {
+function sanitizeMemberDirectoryForRole(members: JsonRecord[], role: ChurchRole) {
+  if (role !== "PROFESSOR") return members;
+
+  return members.map((member) => ({
+    id: textValue(member.id),
+    memberCode: textValue(member.memberCode),
+    fullName: textValue(member.fullName),
+    phone: textValue(member.phone),
+    status: textValue(member.status),
+    memberType: textValue(member.memberType),
+    schoolClassId: textValue(member.schoolClassId),
+    discipleshipClassId: textValue(member.discipleshipClassId),
+    photoDataUrl: "",
+  }));
+}
+
+function payloadWithVisibleKeys(payload: JsonRecord, role: ChurchRole) {
+  const visibleKeys = visiblePayloadKeysByRole[role as Exclude<ChurchRole, "ADMIN" | "MEMBER">] ?? [];
+
+  return visibleKeys.reduce<JsonRecord>((nextPayload, key) => {
+    if (!(key in payload)) return nextPayload;
+
+    if (key === "members") {
+      return { ...nextPayload, members: sanitizeMemberDirectoryForRole(recordsFrom(payload.members), role) };
+    }
+
+    if (visiblePublishedOnlyKeys(role).includes(key)) {
+      return { ...nextPayload, [key]: recordsFrom(payload[key]).filter((item) => textValue(item.status) === "Publicado") };
+    }
+
+    return { ...nextPayload, [key]: payload[key] };
+  }, {});
+}
+
+function sanitizedAdministrativePayloadForRole(payload: JsonRecord, role: ChurchRole) {
   const strippedPayload = normalizeStatePayloadForStorage(payload);
   if (role === "ADMIN") return strippedPayload;
 
-  if (role in hiddenPayloadKeysByRole) {
-    const hiddenKeys = hiddenPayloadKeysByRole[role as Exclude<ChurchRole, "ADMIN" | "MEMBER">];
-    const visibleKeys = visiblePublishedOnlyKeys(role);
-    return hiddenKeys.reduce<JsonRecord>(
-      (nextPayload, key) => ({ ...nextPayload, [key]: [] }),
-      {
-        ...strippedPayload,
-        ...(visibleKeys.includes("devotionals")
-          ? { devotionals: recordsFrom(strippedPayload.devotionals).filter((devotional) => textValue(devotional.status) === "Publicado") }
-          : {}),
-      },
-    );
-  }
-
-  return sanitizeMemberPayloadForResponse(strippedPayload, user);
+  return payloadWithVisibleKeys(strippedPayload, role);
 }
 
 function mergeAdministrativePayloadByRole(existingPayload: JsonRecord, incomingPayload: JsonRecord, role: ChurchRole) {
@@ -157,7 +177,7 @@ function sanitizeMemberPayloadForResponse(payload: unknown, user: User) {
 
 function sanitizePayloadForResponse(payload: unknown, effectiveRole: ChurchRole, user: User) {
   if (!isRecord(payload)) return payload;
-  return administrativeRoles.has(effectiveRole) ? sanitizedAdministrativePayloadForRole(payload, effectiveRole, user) : sanitizeMemberPayloadForResponse(payload, user);
+  return administrativeRoles.has(effectiveRole) ? sanitizedAdministrativePayloadForRole(payload, effectiveRole) : sanitizeMemberPayloadForResponse(payload, user);
 }
 
 function mergeMemberRecord(existingMember: JsonRecord, incomingMember: JsonRecord) {

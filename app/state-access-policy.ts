@@ -15,6 +15,56 @@ export const hiddenPayloadKeysByRole: Record<Exclude<ChurchRole, "ADMIN" | "MEMB
   TREASURER: ["users", "audit", "registrationRequests", "members", "visitors", "kids", "careRequests", "schedules", "attendanceSessions", "messageCampaigns", "assets"],
 };
 
+export const visiblePayloadKeysByRole: Record<Exclude<ChurchRole, "ADMIN" | "MEMBER">, string[]> = {
+  SECRETARY: [
+    "members",
+    "visitors",
+    "kids",
+    "events",
+    "notices",
+    "mural",
+    "ministries",
+    "schedules",
+    "schoolClasses",
+    "discipleshipClasses",
+    "attendanceSessions",
+    "messageTemplates",
+    "messageCampaigns",
+    "devotionals",
+    "notificationReadIds",
+  ],
+  LEADER: [
+    "members",
+    "visitors",
+    "careRequests",
+    "events",
+    "schedules",
+    "ministries",
+    "notices",
+    "mural",
+    "schoolClasses",
+    "discipleshipClasses",
+    "attendanceSessions",
+    "messageTemplates",
+    "messageCampaigns",
+    "devotionals",
+    "notificationReadIds",
+  ],
+  PROFESSOR: [
+    "members",
+    "events",
+    "schedules",
+    "notices",
+    "mural",
+    "schoolClasses",
+    "discipleshipClasses",
+    "attendanceSessions",
+    "devotionals",
+    "notificationReadIds",
+  ],
+  TREASURER: ["transactions", "devotionals", "notificationReadIds"],
+};
+
 export function visiblePublishedOnlyKeys(role: ChurchRole) {
   return role === "ADMIN" ? [] : ["devotionals"];
 }
