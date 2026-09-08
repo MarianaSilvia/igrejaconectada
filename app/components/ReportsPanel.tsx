@@ -34,7 +34,6 @@ export function ReportsPanel({
     ["birthdays", "Aniversariantes", `${monthlyBirthdays.length} no mes`],
     ["kids", "Area Kids", `${data.kids.length} criancas`],
     ["agenda", "Agenda semanal", `${weekEvents.length} eventos na semana`],
-    ["schedules", "Escalas", `${data.schedules.length} pessoas escaladas`],
     ["attendance", "Presenca EBD/Discipulado", `${data.attendanceSessions.length} chamadas`],
     ["absences", "Faltosos recentes", `${absentRows.length} alertas`],
     ["finance", "Financeiro", `${data.transactions.length} lancamentos`],

@@ -202,7 +202,6 @@ export type MessageAudience =
   | "Discipulado"
   | "Grupos"
   | "Visitantes"
-  | "Escalas"
   | "Responsaveis Kids";
 
 export type MessageRecipient = {
@@ -267,7 +266,6 @@ export type ReportKind =
   | "birthdays"
   | "kids"
   | "agenda"
-  | "schedules"
   | "attendance"
   | "absences"
   | "finance"

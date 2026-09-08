@@ -3,8 +3,8 @@ import type { ChurchRole } from "./permissions";
 export const payloadKeysByRole: Record<Exclude<ChurchRole, "MEMBER">, string[]> = {
   ADMIN: [],
   SECRETARY: ["members", "visitors", "kids", "events", "notices", "mural", "messageTemplates", "messageCampaigns", "notificationReadIds"],
-  LEADER: ["visitors", "careRequests", "events", "schedules", "ministries", "notices", "mural", "messageTemplates", "messageCampaigns", "devotionals", "notificationReadIds"],
-  PROFESSOR: ["schoolClasses", "discipleshipClasses", "attendanceSessions", "schedules", "notificationReadIds"],
+  LEADER: ["visitors", "careRequests", "events", "ministries", "notices", "mural", "messageTemplates", "messageCampaigns", "devotionals", "notificationReadIds"],
+  PROFESSOR: ["schoolClasses", "discipleshipClasses", "attendanceSessions", "notificationReadIds"],
   TREASURER: ["transactions", "notificationReadIds"],
 };
 
@@ -24,7 +24,6 @@ export const visiblePayloadKeysByRole: Record<Exclude<ChurchRole, "ADMIN" | "MEM
     "notices",
     "mural",
     "ministries",
-    "schedules",
     "schoolClasses",
     "discipleshipClasses",
     "attendanceSessions",
@@ -38,7 +37,6 @@ export const visiblePayloadKeysByRole: Record<Exclude<ChurchRole, "ADMIN" | "MEM
     "visitors",
     "careRequests",
     "events",
-    "schedules",
     "ministries",
     "notices",
     "mural",
@@ -53,7 +51,6 @@ export const visiblePayloadKeysByRole: Record<Exclude<ChurchRole, "ADMIN" | "MEM
   PROFESSOR: [
     "members",
     "events",
-    "schedules",
     "notices",
     "mural",
     "schoolClasses",

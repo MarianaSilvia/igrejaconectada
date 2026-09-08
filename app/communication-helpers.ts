@@ -1,13 +1,12 @@
 import { birthdayLabel, normalizeSearchText, normalizeWhatsappPhone } from "./app-helpers";
 import { classNameById, type ClassNoticeArea } from "./attendance-helpers";
-import type { KidRecord, MemberRecord, MessageAudience, MessageRecipient, ScheduleRecord, SchoolClass, VisitorRecord } from "./types";
+import type { KidRecord, MemberRecord, MessageAudience, MessageRecipient, SchoolClass, VisitorRecord } from "./types";
 
 type MessageRecipientParams = {
   audience: MessageAudience;
   members: MemberRecord[];
   visitors: VisitorRecord[];
   kids: KidRecord[];
-  schedules: ScheduleRecord[];
   schoolClasses: SchoolClass[];
   discipleshipClasses: SchoolClass[];
   weeklyBirthdays: MemberRecord[];
@@ -19,7 +18,6 @@ export function messageRecipientsForAudience({
   members,
   visitors,
   kids,
-  schedules,
   schoolClasses,
   discipleshipClasses,
   weeklyBirthdays,
@@ -62,11 +60,6 @@ export function messageRecipientsForAudience({
     return visitors
       .filter((visitor) => normalizeWhatsappPhone(visitor.phone))
       .map((visitor) => ({ id: visitor.id, name: visitor.fullName, phone: visitor.phone, group: visitor.integrationStatus }));
-  }
-  if (audience === "Escalas") {
-    return schedules
-      .filter((schedule) => normalizeWhatsappPhone(schedule.phone))
-      .map((schedule) => ({ id: schedule.id, name: schedule.assignedTo, phone: schedule.phone, group: `${schedule.serviceType} - ${schedule.functionName}` }));
   }
   return kids
     .filter((kid) => normalizeWhatsappPhone(kid.guardianPhone))

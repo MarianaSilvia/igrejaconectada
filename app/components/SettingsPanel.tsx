@@ -112,7 +112,7 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
           <span>100%</span>
           <small>
             {data.members.length} membros, {monthlyBirthdays.length} aniversariantes no mes, {data.kids.length} criancas no Kids,{" "}
-            {data.visitors.length} visitantes, {data.schedules.length} escalas, {monthlyKidsBirthdays.length} aniversariantes Kids no mes,{" "}
+            {data.visitors.length} visitantes, {monthlyKidsBirthdays.length} aniversariantes Kids no mes,{" "}
             {data.users.length} usuarios, {data.careRequests.length} atendimentos, {data.events.length} eventos, {data.schoolClasses.length} classes EBD,{" "}
             {data.discipleshipClasses.length} classes Discipulado, {activeNotices.length} comunicados ativos, {data.mural.length} itens de mural,{" "}
             {data.transactions.length} lancamentos financeiros, {data.assets.length} itens de patrimonio, {data.devotionals.length} devocionais e{" "}

@@ -34,7 +34,6 @@ import { NoticesPanel } from "./components/NoticesPanel";
 import { PastoralPanel } from "./components/PastoralPanel";
 import { ReportsPanel } from "./components/ReportsPanel";
 import { ResponsiveImage } from "./components/ResponsiveImage";
-import { SchedulesPanel } from "./components/SchedulesPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { UsersAccessPanel } from "./components/UsersAccessPanel";
 import { VisitorsPanel } from "./components/VisitorsPanel";
@@ -67,7 +66,6 @@ import {
   blankMinistry,
   blankMuralItem,
   blankNotice,
-  blankSchedule,
   blankSchoolNotice,
   blankTransaction,
   blankUser,
@@ -94,7 +92,6 @@ import {
   deleteMinistryData,
   deleteMuralItemData,
   deleteNoticeData,
-  deleteScheduleData,
   deleteTransactionData,
   deleteVisitorData,
   declineRegistrationRequestData,
@@ -109,7 +106,6 @@ import {
   upsertMemberData,
   upsertMinistryData,
   upsertMuralItemData,
-  upsertScheduleData,
   upsertTransactionData,
   upsertVisitorData,
 } from "./system-actions";
@@ -142,7 +138,6 @@ import type {
   RemoteAppStateResponse,
   ReportKind,
   SaveState,
-  ScheduleRecord,
   SchoolClass,
   TransactionRecord,
   VisitorRecord,
@@ -626,7 +621,6 @@ const messageAudiences: MessageAudience[] = [
   "Discipulado",
   "Grupos",
   "Visitantes",
-  "Escalas",
   "Responsaveis Kids",
 ];
 
@@ -899,8 +893,6 @@ export default function Home() {
   const [visitorForm, setVisitorForm] = useState(blankVisitor);
   const [editingVisitorId, setEditingVisitorId] = useState<string | null>(null);
   const [kidForm, setKidForm] = useState(blankKid);
-  const [scheduleForm, setScheduleForm] = useState(blankSchedule);
-  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [transactionForm, setTransactionForm] = useState(blankTransaction);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [assetForm, setAssetForm] = useState(blankAsset);
@@ -931,11 +923,6 @@ export default function Home() {
   const [eventWeekOffset, setEventWeekOffset] = useState(0);
   const [eventGroupFilter, setEventGroupFilter] = useState("Todos");
   const [eventStatusFilter, setEventStatusFilter] = useState("Todos");
-  const [scheduleGroupFilter, setScheduleGroupFilter] = useState("Todos");
-  const [scheduleWeekOffset, setScheduleWeekOffset] = useState(0);
-  const [scheduleServiceFilter, setScheduleServiceFilter] = useState("Todos");
-  const [scheduleFunctionFilter, setScheduleFunctionFilter] = useState("Todos");
-  const [scheduleStatusFilter, setScheduleStatusFilter] = useState("Todos");
   const [memberSchoolFilter, setMemberSchoolFilter] = useState("Todos");
   const [memberDiscipleshipFilter, setMemberDiscipleshipFilter] = useState("Todos");
   const [memberPastoralFilter, setMemberPastoralFilter] = useState("Todos");
@@ -1265,7 +1252,6 @@ export default function Home() {
   const canManageVisitors = canManageModule(currentAccessRole, "visitors");
   const canManageKids = canManageModule(currentAccessRole, "kids");
   const canManageEvents = canManageModule(currentAccessRole, "events");
-  const canManageSchedules = canManageModule(currentAccessRole, "schedules");
   const canManageGroups = canManageModule(currentAccessRole, "ministries");
   const canManageNotices = canManageModule(currentAccessRole, "notices");
   const canManageMessages = canManageModule(currentAccessRole, "messages");
@@ -1386,10 +1372,6 @@ export default function Home() {
     const today = eventDate(todayKey) ?? new Date();
     return weekRangeWithOffset(eventWeekOffset, today);
   }, [eventWeekOffset, todayKey]);
-  const selectedScheduleWeekRange = useMemo(() => {
-    const today = eventDate(todayKey) ?? new Date();
-    return weekRangeWithOffset(scheduleWeekOffset, today);
-  }, [scheduleWeekOffset, todayKey]);
   const weekEvents = useMemo(() => {
     return data.events
       .filter((event) => isEventInWeek(event, selectedWeekRange.start, selectedWeekRange.end))
@@ -1507,7 +1489,6 @@ export default function Home() {
     canManageModule(currentAccessRole, "discipleship") && discipleshipNoticeForm.classId && discipleshipNoticeForm.title.trim() && discipleshipNoticeForm.body.trim(),
   );
   const canCreateEvent = canManageEvents && Boolean(eventForm.title.trim() && eventForm.date);
-  const canCreateSchedule = canManageSchedules && Boolean(scheduleForm.date && scheduleForm.serviceType.trim() && scheduleForm.assignedTo.trim());
   const canCreateNotice = canManageNotices && Boolean(noticeForm.title.trim() && noticeForm.body.trim());
   const canCreateMinistry = canManageGroups && Boolean(ministryForm.name.trim() && ministryForm.leader.trim());
   const canCreateTransaction = canManageFinance && Boolean(transactionForm.date && transactionForm.category.trim() && transactionForm.description.trim());
@@ -1638,25 +1619,6 @@ export default function Home() {
       }),
     [canManageMural, data.mural, searchQuery],
   );
-  const filteredSchedules = useMemo(
-    () =>
-      data.schedules
-        .filter(() => canAccessModule(currentAccessRole, "schedules"))
-        .filter((schedule) => {
-          const date = eventDate(schedule.date);
-          return Boolean(date && date >= selectedScheduleWeekRange.start && date <= selectedScheduleWeekRange.end);
-        })
-        .filter((schedule) => scheduleGroupFilter === "Todos" || schedule.group === scheduleGroupFilter)
-        .filter((schedule) => scheduleServiceFilter === "Todos" || schedule.serviceType === scheduleServiceFilter)
-        .filter((schedule) => scheduleFunctionFilter === "Todos" || schedule.functionName === scheduleFunctionFilter)
-        .filter((schedule) => scheduleStatusFilter === "Todos" || schedule.confirmationStatus === scheduleStatusFilter)
-        .filter((schedule) => {
-          if (!searchQuery) return true;
-          return normalizeSearchText([schedule.serviceType, schedule.group, schedule.functionName, schedule.assignedTo, schedule.phone, schedule.confirmationStatus].join(" ")).includes(searchQuery);
-        })
-        .sort((first, second) => `${first.date} ${first.serviceType}`.localeCompare(`${second.date} ${second.serviceType}`)),
-    [currentAccessRole, data.schedules, scheduleFunctionFilter, scheduleGroupFilter, scheduleServiceFilter, scheduleStatusFilter, searchQuery, selectedScheduleWeekRange],
-  );
   const filteredTransactions = useMemo(
     () =>
       data.transactions
@@ -1701,13 +1663,12 @@ export default function Home() {
         members: data.members,
         visitors: data.visitors,
         kids: data.kids,
-        schedules: data.schedules,
         schoolClasses: data.schoolClasses,
         discipleshipClasses: data.discipleshipClasses,
         weeklyBirthdays,
         monthlyBirthdays,
       }),
-    [data.discipleshipClasses, data.kids, data.members, data.schedules, data.schoolClasses, data.visitors, messageAudience, monthlyBirthdays, weeklyBirthdays],
+    [data.discipleshipClasses, data.kids, data.members, data.schoolClasses, data.visitors, messageAudience, monthlyBirthdays, weeklyBirthdays],
   );
   const selectedMessageRecipients = useMemo(() => {
     return selectedOrAllRecipients(messageRecipients, selectedMessageRecipientIds);
@@ -2605,35 +2566,6 @@ export default function Home() {
     }
   }
 
-  function createSchedule() {
-    if (!requireModuleAccess("schedules", editingScheduleId ? "editar escala" : "criar escala")) return;
-    if (!canCreateSchedule) return;
-
-    setData((current) => upsertScheduleData(current, scheduleForm, editingScheduleId, uid));
-    setScheduleForm(blankSchedule);
-    setEditingScheduleId(null);
-    setSyncStatus(editingScheduleId ? "Escala atualizada." : "Escala cadastrada.");
-  }
-
-  function editSchedule(schedule: ScheduleRecord) {
-    if (!requireModuleAccess("schedules", "editar escala")) return;
-    const { id, ...form } = schedule;
-    setScheduleForm(form);
-    setEditingScheduleId(id);
-    setSyncStatus(`Editando escala de ${schedule.serviceType}.`);
-  }
-
-  function deleteSchedule(schedule: ScheduleRecord) {
-    if (!requireModuleAccess("schedules", "excluir escala")) return;
-    if (!window.confirm(`Excluir a escala de ${schedule.serviceType} para ${schedule.assignedTo}?`)) return;
-
-    setData((current) => deleteScheduleData(current, schedule, uid));
-    if (editingScheduleId === schedule.id) {
-      setScheduleForm(blankSchedule);
-      setEditingScheduleId(null);
-    }
-  }
-
   function createTransaction() {
     if (!requireModuleAccess("finance", editingTransactionId ? "editar lancamento financeiro" : "criar lancamento financeiro")) return;
     if (!canCreateTransaction) return;
@@ -2873,8 +2805,6 @@ export default function Home() {
     setVisitorForm(blankVisitor);
     setEditingVisitorId(null);
     setKidForm(blankKid);
-    setScheduleForm(blankSchedule);
-    setEditingScheduleId(null);
     setMuralForm(blankMuralItem);
     setSchoolNoticeForm(blankSchoolNotice);
     setDiscipleshipNoticeForm({ ...blankSchoolNotice, classId: "discipleship-new" });
@@ -2915,13 +2845,6 @@ export default function Home() {
       hint: "em acompanhamento",
       module: "visitors" as ModuleKey,
       cover: "visitors" as ModuleCoverKey,
-    },
-    {
-      label: "Escalas",
-      value: data.schedules.length.toString(),
-      hint: "pessoas escaladas",
-      module: "schedules" as ModuleKey,
-      cover: "schedules" as ModuleCoverKey,
     },
     {
       label: "Comunicados ativos",
@@ -3419,13 +3342,6 @@ export default function Home() {
           >
             Visitas
           </button>}
-          {canAccessModule(currentAccessRole, "schedules") && <button
-            className={activeModule === "schedules" ? "active" : ""}
-            onClick={() => setActiveModule("schedules")}
-            type="button"
-          >
-            Escalas
-          </button>}
           <button className={notificationsOpen ? "active" : ""} onClick={() => setNotificationsOpen((open) => !open)} type="button">
             Acoes
           </button>
@@ -3838,36 +3754,6 @@ export default function Home() {
               totalEvents={data.events.length}
               updateEventStatus={updateEventStatus}
               weekEvents={weekEvents}
-            />
-          )}
-
-          {activeModule === "schedules" && (
-            <SchedulesPanel
-              canCreateSchedule={canCreateSchedule}
-              canManageSchedules={canManageSchedules}
-              createSchedule={createSchedule}
-              deleteSchedule={deleteSchedule}
-              editSchedule={editSchedule}
-              editingScheduleId={editingScheduleId}
-              exportReport={exportReport}
-              filteredSchedules={filteredSchedules}
-              groupOptions={groupOptions}
-              memberRoleOptions={memberRoleOptions}
-              members={data.members}
-              scheduleForm={scheduleForm}
-              scheduleFunctionFilter={scheduleFunctionFilter}
-              scheduleGroupFilter={scheduleGroupFilter}
-              scheduleServiceFilter={scheduleServiceFilter}
-              scheduleStatusFilter={scheduleStatusFilter}
-              schedules={data.schedules}
-              selectedScheduleWeekRange={selectedScheduleWeekRange}
-              setEditingScheduleId={setEditingScheduleId}
-              setScheduleForm={setScheduleForm}
-              setScheduleFunctionFilter={setScheduleFunctionFilter}
-              setScheduleGroupFilter={setScheduleGroupFilter}
-              setScheduleServiceFilter={setScheduleServiceFilter}
-              setScheduleStatusFilter={setScheduleStatusFilter}
-              setScheduleWeekOffset={setScheduleWeekOffset}
             />
           )}
 

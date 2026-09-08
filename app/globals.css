@@ -855,7 +855,6 @@ button:disabled {
 .module-cover-pastoral::after { content: "P"; }
 .module-cover-agenda::after { content: "7"; }
 .module-cover-visitors::after { content: "V"; }
-.module-cover-schedules::after { content: "OK"; font-size: 38px; }
 .module-cover-notices::after { content: "!"; }
 .module-cover-kids::after { content: "*"; }
 .module-cover-members::after { content: "ID"; font-size: 42px; }
@@ -887,7 +886,6 @@ button:disabled {
   --cover-low: rgba(143, 124, 255, 0.18);
 }
 
-.module-cover-schedules,
 .module-cover-groups {
   --cover-a: rgba(143, 124, 255, 0.27);
   --cover-b: rgba(30, 24, 58, 0.93);
@@ -1463,10 +1461,25 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--foreground);
+  color-scheme: dark;
   min-height: 44px;
   outline: none;
   padding: 10px 12px;
   text-transform: none;
+}
+
+select option {
+  background: #20212a;
+  color: #f8fafc;
+}
+
+select option:checked {
+  background: #3a3f4d;
+  color: #ffffff;
+}
+
+select option:disabled {
+  color: #9ca3af;
 }
 
 textarea {

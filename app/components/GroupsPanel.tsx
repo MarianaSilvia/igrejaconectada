@@ -90,7 +90,7 @@ export function GroupsPanel({
             Observacoes
             <textarea
               onChange={(event) => setMinistryForm((form) => ({ ...form, notes: event.target.value }))}
-              placeholder="Escalas, necessidades ou observacoes"
+              placeholder="Necessidades, atividades ou observacoes"
               value={ministryForm.notes}
             />
           </label>

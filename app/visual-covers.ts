@@ -6,7 +6,6 @@ export type ModuleCoverKey =
   | "pastoral"
   | "agenda"
   | "visitors"
-  | "schedules"
   | "notices"
   | "kids"
   | "members"

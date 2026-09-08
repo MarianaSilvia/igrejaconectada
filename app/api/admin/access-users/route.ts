@@ -60,6 +60,10 @@ function textValue(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function isSupabaseAuthId(value?: string) {
+  return Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value));
+}
+
 async function canManageAccessUsers(client: NonNullable<ReturnType<typeof adminClient>>, email: string, metadataRole: string) {
   if (metadataRole === "ADMIN") return true;
 
@@ -217,6 +221,7 @@ export async function DELETE(request: Request) {
   if (session.response || !session.user) return session.response;
 
   const payload = (await request.json()) as DeleteAccessUserPayload;
+  const requestedUserId = payload.userId?.trim();
   const email = payload.email?.trim().toLowerCase();
 
   const client = adminClient();
@@ -225,14 +230,18 @@ export async function DELETE(request: Request) {
   if (!canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
 
   try {
-    const userId = payload.userId ?? (await findUserIdByEmail(client, email));
-
-    if (!userId) {
-      return NextResponse.json({ error: "Usuario nao localizado no Supabase." }, { status: 404 });
+    if (!requestedUserId && !email) {
+      return NextResponse.json({ error: "Informe o usuario ou e-mail do acesso para excluir." }, { status: 400 });
     }
 
-    if (userId === session.user.id) {
+    if (requestedUserId === session.user.id || (email && email === (session.user.email ?? "").toLowerCase())) {
       return NextResponse.json({ error: "Voce nao pode excluir o proprio acesso enquanto esta conectado." }, { status: 400 });
+    }
+
+    const userId = (await findUserIdByEmail(client, email)) ?? (isSupabaseAuthId(requestedUserId) ? requestedUserId : null);
+
+    if (!userId) {
+      return NextResponse.json({ id: requestedUserId ?? email, authDeleted: false, localOnly: true });
     }
 
     const { error } = await client.auth.admin.deleteUser(userId);
@@ -241,7 +250,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ id: userId });
+    return NextResponse.json({ id: userId, authDeleted: true, localOnly: false });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Nao foi possivel excluir o acesso no Supabase." },

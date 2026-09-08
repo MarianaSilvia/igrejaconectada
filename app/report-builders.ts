@@ -112,20 +112,6 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
         event.status,
       ]),
     },
-    schedules: {
-      title: "Escalas",
-      headers: ["Data", "Culto", "Grupo", "Funcao", "Pessoa", "WhatsApp", "Status", "Observacoes"],
-      rows: data.schedules.map((schedule) => [
-        formatDate(schedule.date),
-        schedule.serviceType,
-        schedule.group || "Sem grupo",
-        schedule.functionName,
-        schedule.assignedTo,
-        schedule.phone,
-        schedule.confirmationStatus,
-        schedule.notes,
-      ]),
-    },
     attendance: {
       title: "Presenca EBD e Discipulado",
       headers: ["Data", "Area", "Classe", "Aula", "Aluno", "Status", "Observacao"],
