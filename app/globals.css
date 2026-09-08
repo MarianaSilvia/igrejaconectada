@@ -2536,8 +2536,106 @@ textarea:focus {
     font-size: 32px;
   }
 
-  .panel-heading {
+.panel-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+.public-registration-page {
+  background:
+    radial-gradient(circle at top left, rgba(229, 9, 20, 0.22), transparent 34%),
+    linear-gradient(180deg, #08090d 0%, #11131b 52%, #050507 100%);
+  color: var(--text-primary);
+  display: grid;
+  gap: 24px;
+  min-height: 100vh;
+  padding: clamp(18px, 4vw, 48px);
+}
+
+.public-registration-hero {
+  align-items: end;
+  display: grid;
+  gap: 28px;
+  grid-template-columns: minmax(0, 0.7fr) minmax(280px, 1.3fr);
+  min-height: 280px;
+}
+
+.public-registration-hero h1 {
+  font-size: clamp(36px, 7vw, 76px);
+  line-height: 0.95;
+  margin: 8px 0 12px;
+  max-width: 780px;
+}
+
+.public-registration-hero p {
+  color: var(--text-muted);
+  max-width: 680px;
+}
+
+.public-registration-form {
+  margin: 0 auto;
+  max-width: 1100px;
+  width: 100%;
+}
+
+.honeypot-field {
+  height: 0;
+  left: -9999px;
+  opacity: 0;
+  position: absolute;
+  width: 0;
+}
+
+.public-registration-form .form-grid {
+  margin: 24px 0;
+}
+
+.span-2 {
+  grid-column: span 2;
+}
+
+.registration-queue-panel {
+  border-color: rgba(229, 9, 20, 0.35);
+}
+
+.registration-request-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.registration-request-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.registration-request-card strong,
+.registration-request-card small {
+  display: block;
+}
+
+.registration-request-card p {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+@media (max-width: 780px) {
+  .public-registration-hero,
+  .span-2 {
+    grid-column: auto;
+  }
+
+  .public-registration-hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .public-registration-page {
+    padding: 18px;
   }
 }

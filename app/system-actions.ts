@@ -11,6 +11,7 @@ import type {
   MinistryRecord,
   MuralItem,
   Notice,
+  RegistrationRequest,
   ScheduleRecord,
   TransactionRecord,
   VisitorRecord,
@@ -47,6 +48,54 @@ function visitorFromMember(member: MemberRecord, today: string): VisitorRecord {
   };
 }
 
+function memberFromRegistration(request: RegistrationRequest, blankMember: MemberForm, createId: IdFactory, memberType: MemberRecord["memberType"]): MemberRecord {
+  const now = new Date().toISOString();
+  const status = memberType === "Membro" ? "Membro ativo" : request.requestedStatus === "Novo convertido" ? "Novo convertido" : "Visitante";
+
+  return {
+    ...blankMember,
+    id: createId("member"),
+    memberCode: "",
+    fullName: request.fullName,
+    fatherName: request.fatherName,
+    motherName: request.motherName,
+    cpf: request.cpf,
+    phone: request.phone,
+    email: request.email,
+    gender: request.gender,
+    status,
+    memberType,
+    categories: memberType,
+    birthDate: request.birthDate,
+    maritalStatus: request.maritalStatus,
+    education: request.education,
+    spouseName: request.spouseName,
+    address: request.address,
+    zipCode: request.zipCode,
+    city: request.city,
+    neighborhood: request.neighborhood,
+    registrationSource: request.registrationSource || "Cadastro via link WhatsApp",
+    pastoralStatus: "Precisa de contato",
+    joinedAt: request.createdAt.slice(0, 10),
+    createdAt: request.createdAt || now,
+    notes: request.notes,
+  };
+}
+
+function visitorFromRegistration(request: RegistrationRequest, createId: IdFactory): VisitorRecord {
+  return {
+    id: createId("visitor"),
+    fullName: request.fullName,
+    phone: request.phone,
+    firstVisitDate: request.createdAt.slice(0, 10),
+    returnDate: "",
+    invitedBy: request.registrationSource || "Cadastro via link WhatsApp",
+    contactMade: false,
+    integrationStatus: request.requestedStatus === "Novo convertido" ? "Em acompanhamento" : "Primeira visita",
+    notes: request.notes,
+  };
+}
+
 export function upsertMemberData(data: AppData, form: MemberForm, editingMemberId: string | null, createId: IdFactory): AppData {
   const now = new Date().toISOString();
   const existingMember = editingMemberId ? data.members.find((item) => item.id === editingMemberId) : undefined;
@@ -68,6 +117,52 @@ export function upsertMemberData(data: AppData, form: MemberForm, editingMemberI
       auditItem(createId, editingMemberId ? `Ficha atualizada: ${member.fullName}` : `Membro cadastrado: ${member.fullName}`, now),
       ...data.audit,
     ].slice(0, 12),
+  };
+}
+
+export function approveRegistrationAsMemberData(
+  data: AppData,
+  request: RegistrationRequest,
+  blankMember: MemberForm,
+  createId: IdFactory,
+  memberType: MemberRecord["memberType"] = "Membro",
+): AppData {
+  const now = new Date().toISOString();
+  const member = memberFromRegistration(request, blankMember, createId, memberType);
+  const withMember = upsertMemberData(data, member, null, createId);
+
+  return {
+    ...withMember,
+    registrationRequests: data.registrationRequests.map((item) =>
+      item.id === request.id ? { ...item, status: "Aprovado", reviewedAt: now, reviewNote: `Aprovado como ${memberType}` } : item,
+    ),
+    audit: [auditItem(createId, `Pre-cadastro aprovado: ${request.fullName}`, now), ...withMember.audit].slice(0, 12),
+  };
+}
+
+export function approveRegistrationAsVisitorData(data: AppData, request: RegistrationRequest, createId: IdFactory): AppData {
+  const now = new Date().toISOString();
+  const visitor = visitorFromRegistration(request, createId);
+
+  return {
+    ...data,
+    visitors: [visitor, ...data.visitors],
+    registrationRequests: data.registrationRequests.map((item) =>
+      item.id === request.id ? { ...item, status: "Aprovado", reviewedAt: now, reviewNote: "Aprovado como visitante" } : item,
+    ),
+    audit: [auditItem(createId, `Pre-cadastro aprovado como visitante: ${request.fullName}`, now), ...data.audit].slice(0, 12),
+  };
+}
+
+export function declineRegistrationRequestData(data: AppData, request: RegistrationRequest, createId: IdFactory): AppData {
+  const now = new Date().toISOString();
+
+  return {
+    ...data,
+    registrationRequests: data.registrationRequests.map((item) =>
+      item.id === request.id ? { ...item, status: "Recusado", reviewedAt: now, reviewNote: "Recusado pela administracao" } : item,
+    ),
+    audit: [auditItem(createId, `Pre-cadastro recusado: ${request.fullName}`, now), ...data.audit].slice(0, 12),
   };
 }
 

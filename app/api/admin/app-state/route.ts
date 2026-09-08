@@ -140,6 +140,7 @@ function sanitizeMemberPayloadForResponse(payload: unknown, user: User) {
     ...payload,
     users: [],
     members: currentMember ? [currentMember] : [],
+    registrationRequests: [],
     visitors: [],
     kids: recordsFrom(payload.kids).filter((kid) => kidBelongsToMember(kid, currentMember, user)),
     careRequests: recordsFrom(payload.careRequests).filter((request) => careBelongsToMember(request, currentMember, user)),

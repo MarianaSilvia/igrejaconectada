@@ -81,6 +81,8 @@ import { buildReportDefinition } from "./report-builders";
 import { downloadCsv, escapeHtml, printHtmlReport } from "./report-helpers";
 import {
   convertVisitorToMemberData,
+  approveRegistrationAsMemberData,
+  approveRegistrationAsVisitorData,
   createCareRequestData,
   createNoticeData,
   deleteAccessUserData,
@@ -94,6 +96,7 @@ import {
   deleteScheduleData,
   deleteTransactionData,
   deleteVisitorData,
+  declineRegistrationRequestData,
   toggleMuralItemData,
   updateAccessUserStatusData,
   updateCareRequestData,
@@ -133,6 +136,7 @@ import type {
   MuralImageResult,
   MuralItem,
   Notice,
+  RegistrationRequest,
   RemoteAppStateResponse,
   ReportKind,
   SaveState,
@@ -286,6 +290,7 @@ const initialData: AppData = {
       status: "Ativo",
     },
   ],
+  registrationRequests: [],
   members: [
     {
       id: "member-1",
@@ -888,6 +893,7 @@ export default function Home() {
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [memberFormTab, setMemberFormTab] = useState<MemberFormTab>("Dados");
   const [memberCredentialForm, setMemberCredentialForm] = useState(blankMemberCredential);
+  const [memberFormRegistrationId, setMemberFormRegistrationId] = useState<string | null>(null);
   const [visitorForm, setVisitorForm] = useState(blankVisitor);
   const [editingVisitorId, setEditingVisitorId] = useState<string | null>(null);
   const [kidForm, setKidForm] = useState(blankKid);
@@ -1250,6 +1256,7 @@ export default function Home() {
   const canManageFinance = canManageModule(currentAccessRole, "finance");
   const canManageAssets = canManageModule(currentAccessRole, "assets");
   const canManageDevotional = canManageModule(currentAccessRole, "devotional");
+  const canManageRegistrationRequests = currentAccessRole === "Administrador" || currentAccessRole === "Secretario";
   const visibleModules = useMemo(
     () => modules.filter((module) => canAccessModule(currentAccessRole, module.key)),
     [currentAccessRole],
@@ -1281,6 +1288,13 @@ export default function Home() {
     [currentMember, currentMemberPhone, data.careRequests, isAdminView],
   );
   const selectedRequest = visibleCareRequests.find((request) => request.id === selectedRequestId) ?? visibleCareRequests[0];
+  const pendingRegistrationRequests = useMemo(
+    () =>
+      canManageRegistrationRequests
+        ? data.registrationRequests.filter((request) => request.status === "Aguardando aprovacao")
+        : [],
+    [canManageRegistrationRequests, data.registrationRequests],
+  );
   const profileName = currentMember?.fullName ?? currentAccessUser?.name ?? (sessionEmail ? sessionEmail.split("@")[0] : "Usuario");
   const profileInitial = profileName.slice(0, 1).toUpperCase() || "U";
   const [todayKey, setTodayKey] = useState(currentDateKey);
@@ -1347,8 +1361,15 @@ export default function Home() {
         module: "mural" as ModuleKey,
       }));
 
-    return [...pendingCare, ...upcomingEvents, ...publishedMural];
-  }, [data.mural, visibleCareRequests, weekEvents]);
+    const pendingRegistrations = pendingRegistrationRequests.map((request) => ({
+      id: `registration-${request.id}`,
+      title: `Pre-cadastro: ${request.fullName}`,
+      body: `${request.requestedStatus} - ${request.phone}`,
+      module: "overview" as ModuleKey,
+    }));
+
+    return [...pendingRegistrations, ...pendingCare, ...upcomingEvents, ...publishedMural];
+  }, [data.mural, pendingRegistrationRequests, visibleCareRequests, weekEvents]);
 
   const unreadCount = notifications.filter((notice) => !data.notificationReadIds.includes(notice.id)).length;
   const activeNotices = data.notices.filter((notice) => !isExpiredDate(notice.expiresAt));
@@ -2082,9 +2103,27 @@ export default function Home() {
     const isEditing = Boolean(editingMemberId);
     const member: MemberRecord = { ...memberForm, id: editingMemberId ?? uid("member") };
 
-    setData((current) => upsertMemberData(current, memberForm, editingMemberId, uid));
+    setData((current) => {
+      const nextData = upsertMemberData(current, memberForm, editingMemberId, uid);
+      if (!memberFormRegistrationId) return nextData;
+
+      return {
+        ...nextData,
+        registrationRequests: current.registrationRequests.map((request) =>
+          request.id === memberFormRegistrationId
+            ? {
+                ...request,
+                status: "Aprovado",
+                reviewedAt: new Date().toISOString(),
+                reviewNote: "Aprovado com edicao da ficha",
+              }
+            : request,
+        ),
+      };
+    });
     setMemberForm(blankMember);
     setEditingMemberId(null);
+    setMemberFormRegistrationId(null);
     setSyncStatus(isEditing ? `Ficha de ${member.fullName} atualizada.` : `Ficha de ${member.fullName} cadastrada.`);
   }
 
@@ -2107,6 +2146,72 @@ export default function Home() {
   function cancelMemberEdit() {
     setMemberForm(blankMember);
     setEditingMemberId(null);
+    setMemberFormRegistrationId(null);
+  }
+
+  function memberFormFromRegistration(request: RegistrationRequest, memberType: MemberRecord["memberType"] = "Membro"): Omit<MemberRecord, "id"> {
+    const status = memberType === "Membro" ? "Membro ativo" : request.requestedStatus === "Novo convertido" ? "Novo convertido" : "Visitante";
+
+    return {
+      ...blankMember,
+      memberCode: "",
+      fullName: request.fullName,
+      fatherName: request.fatherName,
+      motherName: request.motherName,
+      cpf: request.cpf,
+      phone: request.phone,
+      email: request.email,
+      gender: request.gender,
+      status,
+      memberType,
+      categories: memberType,
+      birthDate: request.birthDate,
+      maritalStatus: request.maritalStatus,
+      education: request.education,
+      spouseName: request.spouseName,
+      address: request.address,
+      zipCode: request.zipCode,
+      city: request.city,
+      neighborhood: request.neighborhood,
+      registrationSource: request.registrationSource || "Cadastro via link WhatsApp",
+      pastoralStatus: "Precisa de contato",
+      joinedAt: request.createdAt.slice(0, 10),
+      createdAt: request.createdAt,
+      notes: request.notes,
+    };
+  }
+
+  function reviewRegistrationRequest(request: RegistrationRequest) {
+    if (!canManageRegistrationRequests) return;
+    setMemberForm(memberFormFromRegistration(request));
+    setEditingMemberId(null);
+    setMemberFormRegistrationId(request.id);
+    setMemberFormTab("Dados");
+    setActiveModule("members");
+    setSyncStatus(`Revise a ficha de ${request.fullName} e salve para aprovar o pre-cadastro.`);
+    window.setTimeout(() => {
+      document.getElementById("member-form-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("member-full-name")?.focus();
+    }, 0);
+  }
+
+  function approveRegistrationAsMember(request: RegistrationRequest) {
+    if (!canManageRegistrationRequests) return;
+    setData((current) => approveRegistrationAsMemberData(current, request, blankMember, uid, "Membro"));
+    setSyncStatus(`Pre-cadastro de ${request.fullName} aprovado como membro.`);
+  }
+
+  function approveRegistrationAsVisitor(request: RegistrationRequest) {
+    if (!canManageRegistrationRequests) return;
+    setData((current) => approveRegistrationAsVisitorData(current, request, uid));
+    setSyncStatus(`Pre-cadastro de ${request.fullName} aprovado como visitante.`);
+  }
+
+  function declineRegistrationRequest(request: RegistrationRequest) {
+    if (!canManageRegistrationRequests) return;
+    if (!window.confirm(`Recusar o pre-cadastro de ${request.fullName}?`)) return;
+    setData((current) => declineRegistrationRequestData(current, request, uid));
+    setSyncStatus(`Pre-cadastro de ${request.fullName} recusado.`);
   }
 
   function deleteMember(member: MemberRecord) {
@@ -2638,7 +2743,19 @@ export default function Home() {
     setAttendanceEventSelection({});
   }
 
+  async function copyPublicRegistrationLink() {
+    const link = `${window.location.origin}/cadastro`;
+    await navigator.clipboard.writeText(link);
+    setSyncStatus("Link de cadastro copiado. Agora voce pode enviar pelo WhatsApp.");
+  }
+
   const actionHighlights = [
+    {
+      label: "Pre-cadastros",
+      value: pendingRegistrationRequests.length.toString(),
+      hint: "aguardando analise",
+      module: "overview" as ModuleKey,
+    },
     {
       label: "Atencao pastoral",
       value: data.careRequests.filter((request) => !request.responsible && request.status !== "Concluido").length.toString(),
@@ -3248,6 +3365,17 @@ export default function Home() {
                 ))}
               </div>
 
+              {canManageRegistrationRequests && (
+                <RegistrationRequestsPanel
+                  copyPublicRegistrationLink={copyPublicRegistrationLink}
+                  onApproveMember={approveRegistrationAsMember}
+                  onApproveVisitor={approveRegistrationAsVisitor}
+                  onDecline={declineRegistrationRequest}
+                  onReview={reviewRegistrationRequest}
+                  requests={pendingRegistrationRequests}
+                />
+              )}
+
               {birthdaySpotlightPanel}
 
               {publishedDevotional && (
@@ -3833,6 +3961,71 @@ export default function Home() {
         </section>
       </div>
     </main>
+  );
+}
+
+function RegistrationRequestsPanel({
+  copyPublicRegistrationLink,
+  onApproveMember,
+  onApproveVisitor,
+  onDecline,
+  onReview,
+  requests,
+}: {
+  copyPublicRegistrationLink: () => void | Promise<void>;
+  onApproveMember: (request: RegistrationRequest) => void;
+  onApproveVisitor: (request: RegistrationRequest) => void;
+  onDecline: (request: RegistrationRequest) => void;
+  onReview: (request: RegistrationRequest) => void;
+  requests: RegistrationRequest[];
+}) {
+  return (
+    <article className="surface wide streaming-section registration-queue-panel" id="registration-queue-panel">
+      <div className="panel-heading">
+        <div>
+          <h2>Pre-cadastros aguardando</h2>
+          <span>{requests.length} ficha{requests.length === 1 ? "" : "s"} na fila</span>
+        </div>
+        <button className="secondary" onClick={copyPublicRegistrationLink} type="button">
+          Copiar link de cadastro
+        </button>
+      </div>
+
+      {requests.length ? (
+        <div className="registration-request-grid">
+          {requests.map((request) => (
+            <div className="registration-request-card" key={request.id}>
+              <div>
+                <p className="eyebrow">{request.requestedStatus}</p>
+                <strong>{request.fullName}</strong>
+                <small>{request.phone} - {request.email || "E-mail nao informado"}</small>
+                <small>
+                  {request.city || "Cidade nao informada"} {request.neighborhood ? `- ${request.neighborhood}` : ""}
+                </small>
+                <small>Enviado em {formatDate(request.createdAt.slice(0, 10))}</small>
+              </div>
+              {request.notes && <p>{request.notes}</p>}
+              <div className="card-actions">
+                <button onClick={() => onReview(request)} type="button">
+                  Editar ficha
+                </button>
+                <button className="secondary" onClick={() => onApproveMember(request)} type="button">
+                  Aprovar membro
+                </button>
+                <button className="secondary" onClick={() => onApproveVisitor(request)} type="button">
+                  Aprovar visitante
+                </button>
+                <button className="danger-action" onClick={() => onDecline(request)} type="button">
+                  Recusar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="empty-state">Nenhum pre-cadastro aguardando. Use o link para receber novas fichas pelo WhatsApp.</p>
+      )}
+    </article>
   );
 }
 

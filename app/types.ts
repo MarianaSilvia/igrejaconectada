@@ -138,6 +138,32 @@ export type MemberRecord = {
   notes: string;
 };
 
+export type RegistrationRequest = {
+  id: string;
+  fullName: string;
+  fatherName: string;
+  motherName: string;
+  cpf: string;
+  phone: string;
+  email: string;
+  birthDate: string;
+  gender: string;
+  address: string;
+  zipCode: string;
+  city: string;
+  neighborhood: string;
+  maritalStatus: string;
+  education: string;
+  spouseName: string;
+  requestedStatus: "Visitante" | "Novo convertido" | "Membro ativo";
+  registrationSource: string;
+  notes: string;
+  status: "Aguardando aprovacao" | "Aprovado" | "Recusado";
+  createdAt: string;
+  reviewedAt: string;
+  reviewNote: string;
+};
+
 export type VisitorRecord = {
   id: string;
   fullName: string;
@@ -293,6 +319,7 @@ export type AppData = {
   mural: MuralItem[];
   users: AccessUser[];
   members: MemberRecord[];
+  registrationRequests: RegistrationRequest[];
   visitors: VisitorRecord[];
   kids: KidRecord[];
   schoolClasses: SchoolClass[];

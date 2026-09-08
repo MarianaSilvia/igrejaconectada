@@ -13,6 +13,7 @@ import type {
   MinistryRecord,
   MuralItem,
   Notice,
+  RegistrationRequest,
   ScheduleRecord,
   SchoolClass,
   TransactionRecord,
@@ -121,6 +122,28 @@ export const blankVisitor: Omit<VisitorRecord, "id"> = {
   contactMade: false,
   integrationStatus: "Primeira visita",
   notes: "",
+};
+
+export const blankRegistrationRequest: Omit<RegistrationRequest, "id" | "createdAt" | "reviewedAt" | "reviewNote"> = {
+  fullName: "",
+  fatherName: "",
+  motherName: "",
+  cpf: "",
+  phone: "",
+  email: "",
+  birthDate: "",
+  gender: "",
+  address: "",
+  zipCode: "",
+  city: "",
+  neighborhood: "",
+  maritalStatus: "Solteiro(a)",
+  education: "",
+  spouseName: "",
+  requestedStatus: "Visitante",
+  registrationSource: "Cadastro via link WhatsApp",
+  notes: "",
+  status: "Aguardando aprovacao",
 };
 
 export const blankMemberCredential = {
@@ -318,6 +341,19 @@ export function normalizeVisitor(visitor: Partial<VisitorRecord>): VisitorRecord
   };
 }
 
+export function normalizeRegistrationRequest(request: Partial<RegistrationRequest>): RegistrationRequest {
+  return {
+    ...blankRegistrationRequest,
+    ...request,
+    id: request.id ?? uid("registration"),
+    requestedStatus: request.requestedStatus ?? "Visitante",
+    status: request.status ?? "Aguardando aprovacao",
+    createdAt: request.createdAt ?? new Date().toISOString(),
+    reviewedAt: request.reviewedAt ?? "",
+    reviewNote: request.reviewNote ?? "",
+  };
+}
+
 export function normalizeSchedule(schedule: Partial<ScheduleRecord>): ScheduleRecord {
   return {
     ...blankSchedule,
@@ -420,6 +456,9 @@ export function normalizeAppData(value: Partial<AppData>, initialData: AppData):
     mural: (value.mural ?? initialData.mural).map((item) => normalizeMuralItem(item)),
     users: value.users ?? initialData.users,
     members: normalizedMembers,
+    registrationRequests: (value.registrationRequests ?? initialData.registrationRequests ?? []).map((request) =>
+      normalizeRegistrationRequest(request),
+    ),
     visitors: normalizedVisitors,
     kids: (value.kids ?? initialData.kids).map((kid) => normalizeKid(kid)),
     schoolClasses: value.schoolClasses ?? initialData.schoolClasses,
