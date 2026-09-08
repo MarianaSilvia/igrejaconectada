@@ -4,6 +4,11 @@ import { adminClient } from "../../admin/auth";
 type JsonRecord = Record<string, unknown>;
 
 const allowedStatuses = new Set(["Visitante", "Novo convertido", "Membro ativo"]);
+const maxBodyBytes = 24_000;
+const maxDigits = {
+  cpf: 11,
+  phone: 13,
+};
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -25,6 +30,10 @@ function comparableCpf(value: unknown) {
   return textValue(value).replace(/\D/g, "");
 }
 
+function hasValidEmail(value: string) {
+  return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 function hasDuplicate(payload: JsonRecord, cpf: string, phone: string) {
   const allRecords = [
     ...recordsFrom(payload.visitors),
@@ -39,6 +48,11 @@ function hasDuplicate(payload: JsonRecord, cpf: string, phone: string) {
 }
 
 export async function POST(request: Request) {
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > maxBodyBytes) {
+    return NextResponse.json({ error: "Cadastro muito grande. Revise os campos e tente novamente." }, { status: 413 });
+  }
+
   const client = adminClient();
   if (!client) {
     return NextResponse.json({ error: "Cadastro online indisponivel no momento." }, { status: 503 });
@@ -55,11 +69,20 @@ export async function POST(request: Request) {
 
   const fullName = textValue(body.fullName);
   const phone = textValue(body.phone, 40);
+  const email = textValue(body.email, 140).toLowerCase();
   const cleanPhone = comparablePhone(phone);
   const cleanCpf = comparableCpf(body.cpf);
 
-  if (!fullName || cleanPhone.length < 8) {
+  if (fullName.length < 6 || cleanPhone.length < 8 || cleanPhone.length > maxDigits.phone) {
     return NextResponse.json({ error: "Informe nome completo e telefone para enviar o cadastro." }, { status: 400 });
+  }
+
+  if (cleanCpf && cleanCpf.length !== maxDigits.cpf) {
+    return NextResponse.json({ error: "CPF invalido. Informe 11 numeros ou deixe em branco." }, { status: 400 });
+  }
+
+  if (!hasValidEmail(email)) {
+    return NextResponse.json({ error: "E-mail invalido. Corrija o e-mail ou deixe em branco." }, { status: 400 });
   }
 
   const { data: memberMatches, error: memberMatchError } = await client
@@ -122,7 +145,7 @@ export async function POST(request: Request) {
     cpf_digits: cleanCpf,
     phone,
     phone_digits: cleanPhone,
-    email: textValue(body.email, 140).toLowerCase(),
+    email,
     birth_date: textValue(body.birthDate, 20),
     gender: textValue(body.gender, 40),
     address: textValue(body.address, 220),

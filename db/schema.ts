@@ -194,27 +194,6 @@ export const transactions = sqliteTable("transactions", {
   createdAt: text("created_at").notNull(),
 });
 
-export const schedules = sqliteTable("schedules", {
-  id: text("id").primaryKey(),
-  churchId: text("church_id").notNull().references(() => churches.id),
-  ministryId: text("ministry_id").notNull().references(() => ministries.id),
-  title: text("title").notNull(),
-  startsAt: text("starts_at").notNull(),
-  createdBy: text("created_by").notNull().references(() => profiles.id),
-});
-
-export const scheduleAssignments = sqliteTable("schedule_assignments", {
-  id: text("id").primaryKey(),
-  churchId: text("church_id").notNull().references(() => churches.id),
-  scheduleId: text("schedule_id").notNull().references(() => schedules.id),
-  memberId: text("member_id").notNull().references(() => members.id),
-  functionName: text("function_name").notNull(),
-  confirmationStatus: text("confirmation_status", {
-    enum: ["pendente", "confirmado", "recusado"],
-  }).notNull(),
-  confirmedAt: text("confirmed_at"),
-});
-
 export const prayerRequests = sqliteTable("prayer_requests", {
   id: text("id").primaryKey(),
   churchId: text("church_id").notNull().references(() => churches.id),
@@ -331,7 +310,7 @@ export const messageLogs = sqliteTable("message_logs", {
   id: text("id").primaryKey(),
   churchId: text("church_id").notNull().references(() => churches.id),
   senderProfileId: text("sender_profile_id").notNull().references(() => profiles.id),
-  targetType: text("target_type", { enum: ["membro", "familia", "ministerio", "escala"] }).notNull(),
+  targetType: text("target_type", { enum: ["membro", "familia", "ministerio"] }).notNull(),
   targetId: text("target_id").notNull(),
   channel: text("channel", { enum: ["whatsapp_manual"] }).notNull(),
   messageBody: text("message_body").notNull(),

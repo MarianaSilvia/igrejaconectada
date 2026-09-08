@@ -41,3 +41,5 @@ Este documento registra a estrategia atual para preparar o Igreja Conectada para
 - Nao permitir que membro comum receba dados administrativos pela API.
 - Manter bloqueio de conflito por `updated_at` enquanto o JSON unico existir.
 - Ativar a protecao contra senhas vazadas no painel do Supabase Auth antes de liberar uso amplo.
+- O modulo Escalas foi retirado da experiencia ativa; manter qualquer dado antigo apenas como backup/compatibilidade.
+- Para preparar o app, usar PWA primeiro e manter dados sensiveis sempre online via Supabase.

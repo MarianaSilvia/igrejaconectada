@@ -16,7 +16,6 @@ Este documento prepara a migracao futura do estado unico `church_app_state` para
 - `kids`: criancas e responsaveis.
 - `ministries`: grupos da igreja, mantendo o nome tecnico existente ate uma migracao completa.
 - `events`: agenda e eventos.
-- `schedules`: escalas.
 - `school_classes`: classes da EBD e do discipulado identificadas por area.
 - `attendance_sessions`: chamadas e historico de aula.
 - `attendance_records`: presenca, falta, justificativa e precisa de contato por aluno.
@@ -49,7 +48,7 @@ O arquivo `db/schema.ts` deve funcionar como rascunho tecnico do alvo normalizad
 - Membro comum so pode ler a propria ficha, mural, agenda, devocional publicado, propria frequencia e proprios pedidos.
 - Professor le apenas classes, chamadas, alunos necessarios para sua turma e avisos de classe.
 - Secretario gerencia membros, visitantes, Kids, agenda, comunicados e relatorios.
-- Lider gerencia grupos, pastoral, visitantes, agenda, escalas, mural, relatorios e devocional.
+- Lider gerencia grupos, pastoral, visitantes, agenda, mural, relatorios e devocional.
 - Tesoureiro le relatorios e gerencia financeiro.
 - Administrador tem acesso total.
 

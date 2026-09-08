@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="Igreja Conectada">
+  <defs>
+    <linearGradient id="bg" x1="26" x2="160" y1="12" y2="170" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e83a4f"/>
+      <stop offset=".5" stop-color="#14121a"/>
+      <stop offset="1" stop-color="#14d9c4"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="40" fill="#080910"/>
+  <rect x="10" y="10" width="160" height="160" rx="34" fill="url(#bg)"/>
+  <circle cx="90" cy="82" r="46" fill="#f8fafc"/>
+  <path d="M90 50v64M64 78h52" stroke="#101421" stroke-width="14" stroke-linecap="round"/>
+  <path d="M48 136h84" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
+</svg>

@@ -12,7 +12,6 @@ import type {
   MuralItem,
   Notice,
   RegistrationRequest,
-  ScheduleRecord,
   TransactionRecord,
   VisitorRecord,
 } from "./types";
@@ -21,7 +20,6 @@ type IdFactory = (prefix: string) => string;
 type MemberForm = Omit<MemberRecord, "id">;
 type VisitorForm = Omit<VisitorRecord, "id">;
 type EventForm = Omit<ChurchEvent, "id">;
-type ScheduleForm = Omit<ScheduleRecord, "id">;
 type CareForm = Omit<CareRequest, "id" | "createdAt" | "updatedAt">;
 type MuralForm = Omit<MuralItem, "id">;
 type NoticeForm = Omit<Notice, "id">;
@@ -271,26 +269,6 @@ export function deleteEventData(data: AppData, event: ChurchEvent, createId: IdF
     ...data,
     events: data.events.filter((item) => item.id !== event.id),
     audit: [auditItem(createId, `Evento excluido da agenda: ${event.title}`), ...data.audit].slice(0, 12),
-  };
-}
-
-export function upsertScheduleData(data: AppData, form: ScheduleForm, editingScheduleId: string | null, createId: IdFactory): AppData {
-  const schedule: ScheduleRecord = { ...form, id: editingScheduleId ?? createId("schedule") };
-  return {
-    ...data,
-    schedules: editingScheduleId ? data.schedules.map((item) => (item.id === editingScheduleId ? schedule : item)) : [schedule, ...data.schedules],
-    audit: [
-      auditItem(createId, editingScheduleId ? `Escala atualizada: ${schedule.serviceType}` : `Escala criada: ${schedule.serviceType}`),
-      ...data.audit,
-    ].slice(0, 12),
-  };
-}
-
-export function deleteScheduleData(data: AppData, schedule: ScheduleRecord, createId: IdFactory): AppData {
-  return {
-    ...data,
-    schedules: data.schedules.filter((item) => item.id !== schedule.id),
-    audit: [auditItem(createId, `Escala excluida: ${schedule.serviceType}`), ...data.audit].slice(0, 12),
   };
 }
 

@@ -217,8 +217,8 @@ const initialData: AppData = {
   notices: [
     {
       id: "notice-1",
-      title: "Escala de setembro disponivel",
-      body: "Lideres ja podem conferir e ajustar a escala mensal.",
+      title: "Agenda de setembro disponivel",
+      body: "Lideres ja podem conferir e ajustar a agenda mensal.",
       status: "Publicado",
       audience: "Lideres",
       channel: "App",
@@ -504,7 +504,7 @@ const initialData: AppData = {
       meetingDay: "Quinta-feira",
       volunteers: 14,
       status: "Ativo",
-      notes: "Revisar escala mensal e ensaio geral.",
+      notes: "Revisar atividades mensais e ensaio geral.",
     },
     {
       id: "ministry-2",
@@ -527,19 +527,7 @@ const initialData: AppData = {
       notes: "Abrir novos horarios de oracao.",
     },
   ],
-  schedules: [
-    {
-      id: "schedule-1",
-      date: "2026-09-06",
-      serviceType: "Culto da familia",
-      group: "Louvor",
-      functionName: "Dirigente",
-      assignedTo: "Ana Ribeiro",
-      phone: "(11) 98888-1201",
-      confirmationStatus: "Confirmado",
-      notes: "Chegar 30 minutos antes para alinhamento.",
-    },
-  ],
+  schedules: [],
   transactions: [
     {
       id: "transaction-1",
@@ -666,11 +654,6 @@ const messageTemplates: MessageTemplateItem[] = [
     id: "absence-follow-up",
     label: "Faltoso - cuidado",
     text: "Paz, {nome}! Sentimos sua falta na aula. Estamos orando por voce e queremos saber se podemos ajudar em algo. {igreja}.",
-  },
-  {
-    id: "schedule-confirmation",
-    label: "Escala - confirmar servico",
-    text: "Paz, {nome}! Voce esta na escala desta semana. Por favor, confirme sua disponibilidade e horario de chegada. {igreja}.",
   },
   {
     id: "class-notice",

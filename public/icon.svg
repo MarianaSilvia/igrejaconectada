@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Igreja Conectada">
+  <defs>
+    <linearGradient id="bg" x1="80" x2="450" y1="32" y2="470" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e83a4f"/>
+      <stop offset=".52" stop-color="#151722"/>
+      <stop offset="1" stop-color="#14d9c4"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="130" x2="365" y1="105" y2="395" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#9bdcff"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#080910"/>
+  <rect x="28" y="28" width="456" height="456" rx="96" fill="url(#bg)"/>
+  <path d="M256 92c-61 0-111 47-111 106 0 38 21 72 53 91v60l58-42c61 0 111-49 111-109S317 92 256 92Z" fill="#080910" opacity=".58"/>
+  <path d="M256 116c-48 0-87 36-87 81 0 30 18 57 46 72v39l40-30h1c48 0 87-36 87-81s-39-81-87-81Z" fill="url(#shine)"/>
+  <path d="M257 149v99" stroke="#101421" stroke-width="28" stroke-linecap="round"/>
+  <path d="M216 191h82" stroke="#101421" stroke-width="28" stroke-linecap="round"/>
+  <path d="M152 380h208" stroke="#ffffff" stroke-width="30" stroke-linecap="round" opacity=".94"/>
+  <path d="M184 424h144" stroke="#ffffff" stroke-width="20" stroke-linecap="round" opacity=".78"/>
+</svg>

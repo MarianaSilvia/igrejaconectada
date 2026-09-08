@@ -2677,7 +2677,7 @@ textarea:focus {
     gap: 2px;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     left: 0;
-    padding: 16px;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
     position: fixed;
     right: 0;
     z-index: 30;

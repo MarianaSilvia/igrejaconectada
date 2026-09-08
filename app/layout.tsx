@@ -1,10 +1,27 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import { PwaBoot } from './components/PwaBoot';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Igreja Conectada | Painel Administrativo Local',
+  applicationName: 'Igreja Conectada',
+  manifest: '/manifest.webmanifest',
+  title: 'Igreja Conectada',
   description:
-    'Painel local para gerenciamento de igrejas com atendimento pastoral, notificacoes, mural, agenda e backup.',
+    'Sistema conectado para membros, secretaria, agenda, mural, atendimento pastoral, EBD, Discipulado e comunicacao da igreja.',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Igreja Conectada',
+  },
+  icons: {
+    icon: '/icon.svg',
+    apple: '/apple-touch-icon.png',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#080910',
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
@@ -14,7 +31,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        <PwaBoot />
+        {children}
+      </body>
     </html>
   );
 }

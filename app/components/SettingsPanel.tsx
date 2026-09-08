@@ -24,7 +24,7 @@ function auditModuleFor(action: string): AuditModuleFilter {
 
   if (normalized.includes("membro") || normalized.includes("ficha") || normalized.includes("pre-cadastro")) return "Membros";
   if (normalized.includes("acesso") || normalized.includes("usuario") || normalized.includes("login")) return "Acessos";
-  if (normalized.includes("evento") || normalized.includes("agenda") || normalized.includes("escala")) return "Agenda";
+  if (normalized.includes("evento") || normalized.includes("agenda")) return "Agenda";
   if (normalized.includes("visitante")) return "Visitantes";
   if (normalized.includes("pastoral") || normalized.includes("atendimento") || normalized.includes("pedido")) return "Pastoral";
 

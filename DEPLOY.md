@@ -43,3 +43,6 @@ Essas variaveis podem ser cadastradas em `Project Settings > Environment Variabl
 - Cada envio para a branch `main` pode gerar uma nova publicacao.
 - Branches separadas podem gerar previews para revisao.
 - Quando o sistema passar a usar banco de dados, cadastre as variaveis no painel do Vercel antes de publicar.
+- Para uso real, confirme que Supabase Auth, `church_app_state`, `registration_requests` e o espelho `members` estao funcionando antes de cadastrar dados sensiveis.
+- A versao atual ja inclui PWA. Depois do deploy, abra a URL no celular e teste "Adicionar a tela inicial" no Android/Chrome e iPhone/Safari.
+- O service worker nao salva dados sensiveis offline; ele cacheia apenas arquivos estaticos do app.

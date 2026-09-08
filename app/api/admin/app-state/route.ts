@@ -389,7 +389,6 @@ function mergeProfessorPayload(existingPayload: JsonRecord, incomingPayload: Jso
     schoolClasses: mergeRecordsByAllowedIds(recordsFrom(existing.schoolClasses), recordsFrom(incoming.schoolClasses), classIds),
     discipleshipClasses: mergeRecordsByAllowedIds(recordsFrom(existing.discipleshipClasses), recordsFrom(incoming.discipleshipClasses), classIds),
     attendanceSessions: mergeRecordsByAllowedIds(recordsFrom(existing.attendanceSessions), recordsFrom(incoming.attendanceSessions), classIds, "classId"),
-    schedules: Array.isArray(incoming.schedules) ? incoming.schedules : existing.schedules,
     notificationReadIds: Array.isArray(incoming.notificationReadIds) ? incoming.notificationReadIds : existing.notificationReadIds,
   };
 }

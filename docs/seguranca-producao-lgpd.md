@@ -42,7 +42,7 @@ Regras sugeridas:
 Antes de qualquer limpeza ou migracao:
 
 1. Exportar backup pelo modulo Configuracoes.
-2. Conferir total de membros, visitantes, Kids, agenda, escalas e auditoria.
+2. Conferir total de membros, visitantes, Kids, agenda, mural e auditoria.
 3. Salvar copia em local protegido.
 4. Testar restauracao em ambiente de teste antes de mexer em producao.
 
@@ -52,6 +52,12 @@ Antes de qualquer limpeza ou migracao:
 - Evitar senhas padrao em contas administrativas.
 - Bloquear ou excluir acessos que nao sejam mais usados.
 - Revisar usuarios administrativos mensalmente.
+
+## App instalavel
+
+- A primeira versao mobile deve ser PWA, sem cache offline de dados sensiveis.
+- O service worker pode cachear apenas arquivos estaticos, icones e scripts publicos.
+- Dados de membros, Kids e atendimento pastoral devem continuar sendo carregados pela API protegida.
 
 ## Vite, Vinext e Sites
 

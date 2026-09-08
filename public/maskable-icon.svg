@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Igreja Conectada">
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="34%" r="70%">
+      <stop stop-color="#48b8ff"/>
+      <stop offset=".45" stop-color="#151722"/>
+      <stop offset="1" stop-color="#080910"/>
+    </radialGradient>
+    <linearGradient id="accent" x1="90" x2="420" y1="90" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e83a4f"/>
+      <stop offset=".55" stop-color="#f6c65b"/>
+      <stop offset="1" stop-color="#14d9c4"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#halo)"/>
+  <circle cx="256" cy="256" r="168" fill="#080910" opacity=".82"/>
+  <circle cx="256" cy="256" r="130" fill="url(#accent)"/>
+  <path d="M256 162v160" stroke="#ffffff" stroke-width="36" stroke-linecap="round"/>
+  <path d="M194 226h124" stroke="#ffffff" stroke-width="36" stroke-linecap="round"/>
+  <path d="M160 366h192" stroke="#ffffff" stroke-width="24" stroke-linecap="round" opacity=".92"/>
+</svg>

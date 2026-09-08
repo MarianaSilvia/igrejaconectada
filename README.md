@@ -1,16 +1,25 @@
 # Igreja Conectada
 
-Sistema administrativo para igreja com painel local, cadastro de membros e visitantes, Area Kids, EBD, grupos, agenda, mural, comunicacao por WhatsApp e aniversariantes.
+Sistema de gestao para igreja com Supabase, painel administrativo, area do membro, pre-cadastro publico e suporte inicial a app instalavel PWA.
 
 ## Recursos principais
 
-- Painel administrativo com prioridades e atalhos.
-- Cadastro completo de membros, visitantes e novos convertidos.
-- Area Kids com cadastro da crianca, responsavel e autorizacoes.
-- Modulos de agenda, grupos, comunicados, mural e atendimento pastoral.
-- EBD com avisos por classe.
-- Comunicacao por WhatsApp com modelos prontos, aniversariantes, EBD, grupos e responsaveis Kids.
-- Backup local dos dados cadastrados no navegador.
+- Painel administrativo com prioridades, atalhos, aniversariantes, mural e agenda da semana.
+- Cadastro de membros, visitantes, novos convertidos, Area Kids e grupos.
+- Agenda, comunicados, mural, atendimento pastoral, EBD, Discipulado e chamadas.
+- Comunicacao manual por WhatsApp com modelos prontos e historico de campanhas.
+- Relatorios em PDF/CSV para membros, visitantes, Kids, agenda, presenca, faltosos, financeiro e patrimonio.
+- Login por Supabase Auth com perfis: administrador, lider, professor, secretario, tesoureiro e membro.
+- PWA instalavel no celular, mantendo os dados online via Supabase.
+
+## Dados e seguranca
+
+- A fonte principal ainda e `church_app_state`, acessada apenas por rotas server-side.
+- Membros tambem sao espelhados na tabela `members` para busca e preparacao da futura normalizacao.
+- `SUPABASE_SERVICE_ROLE_KEY` deve ficar somente no servidor/Vercel e nunca no frontend.
+- Membro comum recebe apenas propria ficha, agenda, mural publicado, pedidos proprios, classes, frequencia e devocional publicado.
+- Fotos de membros permanecem removidas. Fotos continuam permitidas apenas no Kids.
+- O modulo Escalas foi retirado da experiencia ativa; dados antigos ficam apenas como compatibilidade/backup.
 
 ## Como rodar localmente
 
@@ -24,12 +33,13 @@ Abra `http://localhost:3000`.
 ## Como validar antes de publicar
 
 ```bash
-pnpm run build
+pnpm lint
+pnpm build
 ```
 
-## Configurar Supabase
+## Variaveis de ambiente
 
-Crie estas variaveis no Vercel antes de usar o banco em producao:
+Configure estas variaveis no Vercel em Production:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://bssrgotlvvexvrutshqz.supabase.co
@@ -37,31 +47,23 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_publica_do_supabase
 SUPABASE_SERVICE_ROLE_KEY=sua_chave_service_role_privada
 ```
 
-Sem as variaveis publicas, o sistema continua funcionando em modo local no navegador. A `SUPABASE_SERVICE_ROLE_KEY` e privada e deve ficar apenas no servidor/Vercel; ela permite criar usuarios reais no Supabase Auth pelo painel administrativo.
+Sem Supabase, o sistema pode abrir em modo local, mas o uso real com membros deve acontecer com as variaveis configuradas.
 
-## Deploy via GitHub e Vercel
+## App instalavel
 
-1. Crie um repositorio no GitHub.
-2. Envie este projeto para o repositorio.
-3. No Vercel, escolha `Add New Project`.
-4. Importe o repositorio do GitHub.
-5. Confirme as configuracoes:
-   - Framework Preset: `Next.js`
-   - Install Command: `pnpm install --frozen-lockfile`
-   - Build Command: `pnpm run build`
-   - Development Command: `pnpm run dev`
-6. Clique em `Deploy`.
+O projeto inclui manifesto, icones e service worker leve para funcionar como PWA. O service worker cacheia apenas arquivos estaticos e nao guarda dados sensiveis, paginas administrativas ou respostas da API.
 
-## Observacao sobre dados
+Para instalar:
 
-Nesta versao, os dados ficam salvos no navegador do aparelho. Para varios usuarios acessarem os mesmos dados em tempo real, o proximo passo e conectar banco de dados, autenticacao real e armazenamento de fotos.
+1. Abra o sistema no navegador do celular.
+2. No Android/Chrome, toque em "Instalar app" ou "Adicionar a tela inicial".
+3. No iPhone/Safari, use compartilhar e depois "Adicionar a Tela de Inicio".
 
-## Publicacao antiga pelo Sites
+## Backup e migracao futura
 
-O projeto ainda preserva comandos separados para o fluxo anterior:
+Antes de qualquer migracao real no Supabase:
 
-```bash
-pnpm run dev:sites
-pnpm run build:sites
-pnpm run start:sites
-```
+1. Exportar backup pelo modulo Configuracoes.
+2. Conferir totais de membros, visitantes, Kids, agenda, mural e auditoria.
+3. Testar importacao em ambiente separado.
+4. Migrar modulo por modulo, mantendo `church_app_state` como backup temporario.

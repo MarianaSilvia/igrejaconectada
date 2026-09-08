@@ -113,19 +113,19 @@ export default function PublicRegistrationPage() {
         <div className="form-grid">
           <label>
             Nome completo *
-            <input required value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} />
+            <input minLength={6} maxLength={140} required value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} />
           </label>
           <label>
             Telefone/WhatsApp *
-            <input required value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
+            <input maxLength={40} required value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
           </label>
           <label>
             CPF
-            <input value={form.cpf} onChange={(event) => setForm((current) => ({ ...current, cpf: event.target.value }))} />
+            <input maxLength={20} value={form.cpf} onChange={(event) => setForm((current) => ({ ...current, cpf: event.target.value }))} />
           </label>
           <label>
             E-mail
-            <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
+            <input maxLength={140} type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
           </label>
           <label>
             Data de nascimento
@@ -141,11 +141,11 @@ export default function PublicRegistrationPage() {
           </label>
           <label>
             Nome do pai
-            <input value={form.fatherName} onChange={(event) => setForm((current) => ({ ...current, fatherName: event.target.value }))} />
+            <input maxLength={180} value={form.fatherName} onChange={(event) => setForm((current) => ({ ...current, fatherName: event.target.value }))} />
           </label>
           <label>
             Nome da mae
-            <input value={form.motherName} onChange={(event) => setForm((current) => ({ ...current, motherName: event.target.value }))} />
+            <input maxLength={180} value={form.motherName} onChange={(event) => setForm((current) => ({ ...current, motherName: event.target.value }))} />
           </label>
           <label>
             Estado civil
@@ -158,11 +158,11 @@ export default function PublicRegistrationPage() {
           </label>
           <label>
             Nome do conjuge
-            <input value={form.spouseName} onChange={(event) => setForm((current) => ({ ...current, spouseName: event.target.value }))} />
+            <input maxLength={140} value={form.spouseName} onChange={(event) => setForm((current) => ({ ...current, spouseName: event.target.value }))} />
           </label>
           <label>
             Escolaridade
-            <input value={form.education} onChange={(event) => setForm((current) => ({ ...current, education: event.target.value }))} />
+            <input maxLength={80} value={form.education} onChange={(event) => setForm((current) => ({ ...current, education: event.target.value }))} />
           </label>
           <label>
             Como deseja ser cadastrado?
@@ -174,23 +174,23 @@ export default function PublicRegistrationPage() {
           </label>
           <label className="span-2">
             Endereco
-            <input value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} />
+            <input maxLength={220} value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} />
           </label>
           <label>
             CEP
-            <input value={form.zipCode} onChange={(event) => setForm((current) => ({ ...current, zipCode: event.target.value }))} />
+            <input maxLength={20} value={form.zipCode} onChange={(event) => setForm((current) => ({ ...current, zipCode: event.target.value }))} />
           </label>
           <label>
             Cidade
-            <input value={form.city} onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))} />
+            <input maxLength={80} value={form.city} onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))} />
           </label>
           <label>
             Bairro
-            <input value={form.neighborhood} onChange={(event) => setForm((current) => ({ ...current, neighborhood: event.target.value }))} />
+            <input maxLength={80} value={form.neighborhood} onChange={(event) => setForm((current) => ({ ...current, neighborhood: event.target.value }))} />
           </label>
           <label className="span-2">
             Observacoes
-            <textarea value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} />
+            <textarea maxLength={600} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} />
           </label>
         </div>
 
