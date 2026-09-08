@@ -14,7 +14,6 @@ import type {
   MuralItem,
   Notice,
   RegistrationRequest,
-  ScheduleRecord,
   SchoolClass,
   TransactionRecord,
   VisitorRecord,
@@ -167,17 +166,6 @@ export const blankKid: Omit<KidRecord, "id"> = {
   authorizedPickup: "",
   consentImage: false,
   joinedAt: "",
-};
-
-export const blankSchedule: Omit<ScheduleRecord, "id"> = {
-  date: "",
-  serviceType: "",
-  group: "",
-  functionName: "",
-  assignedTo: "",
-  phone: "",
-  confirmationStatus: "Pendente",
-  notes: "",
 };
 
 export const blankTransaction: Omit<TransactionRecord, "id"> = {
@@ -354,14 +342,6 @@ export function normalizeRegistrationRequest(request: Partial<RegistrationReques
   };
 }
 
-export function normalizeSchedule(schedule: Partial<ScheduleRecord>): ScheduleRecord {
-  return {
-    ...blankSchedule,
-    ...schedule,
-    id: schedule.id ?? uid("schedule"),
-  };
-}
-
 export function normalizeTransaction(transaction: Partial<TransactionRecord>): TransactionRecord {
   return {
     ...blankTransaction,
@@ -441,40 +421,43 @@ export function normalizeDiscipleshipClasses(classes: SchoolClass[] | undefined,
   });
 }
 
-export function normalizeAppData(value: Partial<AppData>, initialData: AppData): AppData {
-  const normalizedMembers = ensureMemberCodes((value.members ?? initialData.members).map((member) => normalizeMember(member)));
-  const normalizedVisitors = value.visitors?.length
-    ? value.visitors.map((visitor) => normalizeVisitor(visitor))
+type LegacyAppData = Partial<AppData> & { schedules?: unknown };
+
+export function normalizeAppData(value: LegacyAppData, initialData: AppData): AppData {
+  const safeValue = { ...value };
+  delete safeValue.schedules;
+  const normalizedMembers = ensureMemberCodes((safeValue.members ?? initialData.members).map((member) => normalizeMember(member)));
+  const normalizedVisitors = safeValue.visitors?.length
+    ? safeValue.visitors.map((visitor) => normalizeVisitor(visitor))
     : visitorsFromMembers(normalizedMembers);
 
   return {
     ...initialData,
-    ...value,
-    careRequests: value.careRequests ?? initialData.careRequests,
-    events: (value.events ?? initialData.events).map((event) => normalizeEvent(event)),
-    notices: (value.notices ?? initialData.notices).map((notice) => normalizeNotice(notice)).filter((notice) => !isExpiredDate(notice.expiresAt)),
-    mural: (value.mural ?? initialData.mural).map((item) => normalizeMuralItem(item)),
-    users: value.users ?? initialData.users,
+    ...safeValue,
+    careRequests: safeValue.careRequests ?? initialData.careRequests,
+    events: (safeValue.events ?? initialData.events).map((event) => normalizeEvent(event)),
+    notices: (safeValue.notices ?? initialData.notices).map((notice) => normalizeNotice(notice)).filter((notice) => !isExpiredDate(notice.expiresAt)),
+    mural: (safeValue.mural ?? initialData.mural).map((item) => normalizeMuralItem(item)),
+    users: safeValue.users ?? initialData.users,
     members: normalizedMembers,
-    registrationRequests: (value.registrationRequests ?? initialData.registrationRequests ?? []).map((request) =>
+    registrationRequests: (safeValue.registrationRequests ?? initialData.registrationRequests ?? []).map((request) =>
       normalizeRegistrationRequest(request),
     ),
     visitors: normalizedVisitors,
-    kids: (value.kids ?? initialData.kids).map((kid) => normalizeKid(kid)),
-    schoolClasses: value.schoolClasses ?? initialData.schoolClasses,
-    discipleshipClasses: normalizeDiscipleshipClasses(value.discipleshipClasses, initialData.discipleshipClasses),
-    ministries: (value.ministries ?? initialData.ministries).map((ministry) => normalizeMinistry(ministry)),
-    schedules: (value.schedules ?? initialData.schedules).map((schedule) => normalizeSchedule(schedule)),
-    attendanceSessions: (value.attendanceSessions ?? initialData.attendanceSessions).map((session) =>
+    kids: (safeValue.kids ?? initialData.kids).map((kid) => normalizeKid(kid)),
+    schoolClasses: safeValue.schoolClasses ?? initialData.schoolClasses,
+    discipleshipClasses: normalizeDiscipleshipClasses(safeValue.discipleshipClasses, initialData.discipleshipClasses),
+    ministries: (safeValue.ministries ?? initialData.ministries).map((ministry) => normalizeMinistry(ministry)),
+    attendanceSessions: (safeValue.attendanceSessions ?? initialData.attendanceSessions).map((session) =>
       normalizeAttendanceSession(session),
     ),
-    messageTemplates: (value.messageTemplates ?? initialData.messageTemplates).map((template) => normalizeMessageTemplate(template)),
-    messageCampaigns: value.messageCampaigns ?? initialData.messageCampaigns,
-    transactions: (value.transactions ?? initialData.transactions).map((transaction) => normalizeTransaction(transaction)),
-    assets: (value.assets ?? initialData.assets).map((asset) => normalizeAsset(asset)),
-    devotionals: (value.devotionals ?? initialData.devotionals).map((devotional) => normalizeDevotional(devotional)),
-    audit: value.audit ?? initialData.audit,
-    notificationReadIds: value.notificationReadIds ?? initialData.notificationReadIds,
+    messageTemplates: (safeValue.messageTemplates ?? initialData.messageTemplates).map((template) => normalizeMessageTemplate(template)),
+    messageCampaigns: safeValue.messageCampaigns ?? initialData.messageCampaigns,
+    transactions: (safeValue.transactions ?? initialData.transactions).map((transaction) => normalizeTransaction(transaction)),
+    assets: (safeValue.assets ?? initialData.assets).map((asset) => normalizeAsset(asset)),
+    devotionals: (safeValue.devotionals ?? initialData.devotionals).map((devotional) => normalizeDevotional(devotional)),
+    audit: safeValue.audit ?? initialData.audit,
+    notificationReadIds: safeValue.notificationReadIds ?? initialData.notificationReadIds,
   };
 }
 

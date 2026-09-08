@@ -26,7 +26,6 @@ const appStateCollectionKeys = [
   "schoolClasses",
   "discipleshipClasses",
   "ministries",
-  "schedules",
   "attendanceSessions",
   "messageTemplates",
   "messageCampaigns",
@@ -472,9 +471,12 @@ function mergeMemberRecord(existingMember: JsonRecord, incomingMember: JsonRecor
 }
 
 function stripMemberPhotos(payload: JsonRecord): JsonRecord {
+  const payloadWithoutLegacySchedules = { ...payload };
+  delete payloadWithoutLegacySchedules.schedules;
+
   return {
-    ...payload,
-    members: recordsFrom(payload.members).map((member) => ({ ...member, photoDataUrl: "" })),
+    ...payloadWithoutLegacySchedules,
+    members: recordsFrom(payloadWithoutLegacySchedules.members).map((member) => ({ ...member, photoDataUrl: "" })),
     registrationRequests: [],
   };
 }

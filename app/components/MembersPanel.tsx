@@ -97,6 +97,18 @@ function generatedMemberEmail(fullName: string, members: MemberRecord[], editing
   return nextEmail;
 }
 
+function missingMemberFields(member: Pick<MemberRecord, "birthDate" | "categories" | "cpf" | "fullName" | "memberCode" | "ministry" | "phone">) {
+  return [
+    !member.fullName.trim() ? "nome" : "",
+    !member.phone.trim() ? "telefone" : "",
+    !member.cpf.trim() ? "CPF" : "",
+    !member.birthDate.trim() ? "nascimento" : "",
+    !member.categories.trim() ? "categoria" : "",
+    !member.ministry.trim() ? "grupo" : "",
+    !member.memberCode.trim() ? "codigo" : "",
+  ].filter(Boolean);
+}
+
 export function MembersPanel({
   availableMemberFormTabs,
   canCreateMember,
@@ -142,6 +154,7 @@ export function MembersPanel({
   createMember,
 }: MembersPanelProps) {
   const canShowForm = canManageMembers || editingMemberId === currentMember?.id;
+  const missingFormFields = missingMemberFields(memberForm);
   const updateMemberName = (fullName: string) => {
     setMemberForm((form) => {
       const shouldGenerateEmail = !form.email.trim() || isGeneratedMemberEmail(form.email);
@@ -192,6 +205,12 @@ export function MembersPanel({
                     Atualizar cadastro existente
                   </button>
                 )}
+              </div>
+            )}
+            {missingFormFields.length > 0 && (
+              <div className="member-checklist-alert full">
+                <strong>Ficha ainda incompleta</strong>
+                <small>Faltam: {missingFormFields.join(", ")}.</small>
               </div>
             )}
             <label className="full" data-member-section="Dados">
@@ -579,6 +598,7 @@ export function MembersPanel({
           {filteredMembers.map((member) => {
             const schoolClassName = classNameById(data.schoolClasses, member.schoolClassId);
             const discipleshipClassName = classNameById(data.discipleshipClasses, member.discipleshipClassId);
+            const missingFields = missingMemberFields(member);
 
             return (
               <div className="member-record" key={member.id}>
@@ -627,6 +647,9 @@ export function MembersPanel({
                     )}
                     {member.createdAt && <small>Criado em: {formatDate(member.createdAt.slice(0, 10))}</small>}
                     {member.memberVisibleNotes && <small>Nota ao membro: {member.memberVisibleNotes}</small>}
+                    {missingFields.length > 0 && (
+                      <small className="member-incomplete-line">Ficha incompleta: {missingFields.join(", ")}</small>
+                    )}
                   </div>
                 </div>
                 <div className="record-actions">

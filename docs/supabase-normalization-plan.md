@@ -64,3 +64,4 @@ O arquivo `db/schema.ts` deve funcionar como rascunho tecnico do alvo normalizad
 ## Observacao
 
 A migracao nao deve ser aplicada junto com uma grande refatoracao visual. O caminho mais seguro e consolidar o codigo primeiro, depois migrar dados modulo por modulo.
+O modulo Escalas foi removido do uso ativo; qualquer dado legado de `schedules` deve ser descartado ou arquivado fora da experiencia principal antes da normalizacao.

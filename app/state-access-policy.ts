@@ -12,7 +12,7 @@ export const hiddenPayloadKeysByRole: Record<Exclude<ChurchRole, "ADMIN" | "MEMB
   SECRETARY: ["users", "audit", "transactions", "assets"],
   LEADER: ["users", "audit", "registrationRequests", "transactions", "assets", "kids"],
   PROFESSOR: ["users", "audit", "registrationRequests", "visitors", "kids", "careRequests", "transactions", "assets", "messageCampaigns"],
-  TREASURER: ["users", "audit", "registrationRequests", "members", "visitors", "kids", "careRequests", "schedules", "attendanceSessions", "messageCampaigns", "assets"],
+  TREASURER: ["users", "audit", "registrationRequests", "members", "visitors", "kids", "careRequests", "attendanceSessions", "messageCampaigns", "assets"],
 };
 
 export const visiblePayloadKeysByRole: Record<Exclude<ChurchRole, "ADMIN" | "MEMBER">, string[]> = {

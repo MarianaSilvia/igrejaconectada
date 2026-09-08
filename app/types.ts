@@ -248,18 +248,6 @@ export type MinistryRecord = {
   notes: string;
 };
 
-export type ScheduleRecord = {
-  id: string;
-  date: string;
-  serviceType: string;
-  group: string;
-  functionName: string;
-  assignedTo: string;
-  phone: string;
-  confirmationStatus: "Pendente" | "Confirmado" | "Substituir";
-  notes: string;
-};
-
 export type ReportKind =
   | "members"
   | "visitors"
@@ -323,7 +311,6 @@ export type AppData = {
   schoolClasses: SchoolClass[];
   discipleshipClasses: SchoolClass[];
   ministries: MinistryRecord[];
-  schedules: ScheduleRecord[];
   attendanceSessions: AttendanceSession[];
   messageTemplates: MessageTemplateItem[];
   messageCampaigns: MessageCampaign[];

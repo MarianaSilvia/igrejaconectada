@@ -14,8 +14,12 @@ Este documento registra a estrategia atual para preparar o Igreja Conectada para
 ## Protecoes aplicadas
 
 - O painel administrativo mostra uma area de saude do sistema com status Supabase, ultimo salvamento e totais principais.
+- O painel inteligente usa o mural publicado como destaque visual de fundo, com camada escura para preservar leitura e botoes.
+- A area do membro ganhou modo Visual simples, com letras maiores e atalhos diretos para ficha, agenda, mural, pedido de oracao e sair.
 - Conflitos de `updated_at` aparecem em aviso destacado com acao direta para atualizar os dados da base antes de continuar editando.
+- Em conflito, a tela permite baixar backup do estado atual antes de recarregar a versao mais recente da base.
 - O cadastro manual de membros alerta possivel duplicidade por CPF, telefone ou nome parecido e oferece atualizacao do cadastro existente.
+- A ficha de membros indica campos essenciais ainda incompletos, ajudando a secretaria a revisar cadastros em volume.
 - O modulo Configuracoes permite baixar um backup completo em JSON antes de importacoes, migracoes ou mudancas grandes.
 - As tres variaveis de producao da Vercel foram conferidas: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY`.
 - O acesso direto de `anon` e `authenticated` a `church_app_state` foi revogado.
@@ -46,4 +50,5 @@ Este documento registra a estrategia atual para preparar o Igreja Conectada para
 - Manter bloqueio de conflito por `updated_at` enquanto o JSON unico existir.
 - Ativar a protecao contra senhas vazadas no painel do Supabase Auth antes de liberar uso amplo.
 - O modulo Escalas foi retirado da experiencia ativa; manter qualquer dado antigo apenas como backup/compatibilidade.
+- As sobras ativas de `ScheduleRecord`/`schedules` foram removidas do modelo do app; a API descarta a chave antiga para nao reativar o modulo.
 - Para preparar o app, usar PWA primeiro e manter dados sensiveis sempre online via Supabase.

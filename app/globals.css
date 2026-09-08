@@ -712,6 +712,19 @@ button:disabled {
   white-space: nowrap;
 }
 
+.conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.conflict-actions .secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(246, 198, 91, 0.42);
+  color: #fff8e2;
+}
+
 .pwa-update-banner {
   bottom: calc(14px + env(safe-area-inset-bottom));
   left: 50%;
@@ -1420,6 +1433,26 @@ button.data-row.active {
 
 .duplicate-alert button {
   justify-self: start;
+}
+
+.member-checklist-alert {
+  background: rgba(72, 184, 255, 0.08);
+  border: 1px solid rgba(72, 184, 255, 0.3);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.member-checklist-alert strong,
+.member-checklist-alert small {
+  display: block;
+}
+
+.member-checklist-alert small,
+.member-incomplete-line {
+  color: #9bd7ff;
+  font-weight: 850;
 }
 
 .row-actions {
@@ -2586,6 +2619,49 @@ textarea:focus {
   opacity: 0.9;
 }
 
+.mural-hero-cover {
+  overflow: hidden;
+}
+
+.mural-hero-background {
+  inset: 0;
+  opacity: 0.42;
+  position: absolute;
+  transform: scale(1.04);
+  z-index: 0;
+}
+
+.mural-hero-background::after {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.18), transparent 22%),
+    linear-gradient(180deg, rgba(6, 7, 11, 0.18) 0%, rgba(6, 7, 11, 0.48) 46%, rgba(6, 7, 11, 0.94) 100%),
+    linear-gradient(90deg, rgba(6, 7, 11, 0.82) 0%, rgba(6, 7, 11, 0.2) 48%, rgba(6, 7, 11, 0.78) 100%);
+  content: "";
+  inset: 0;
+  position: absolute;
+}
+
+.mural-hero-background .responsive-image {
+  object-fit: cover;
+}
+
+.mural-hero-cover > :not(.mural-hero-background) {
+  position: relative;
+  z-index: 1;
+}
+
+.mural-hero-label {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 8px;
+  padding: 8px 12px;
+}
+
 .overview-streaming .streaming-cover .eyebrow {
   color: #ffb1bb;
   font-size: 13px;
@@ -2743,6 +2819,84 @@ textarea:focus {
   grid-column: 1 / -1;
 }
 
+.simple-mode-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.88);
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.simple-mode-toggle.active {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #111217;
+}
+
+.simple-view {
+  font-size: 18px;
+}
+
+.simple-view .topbar h1 {
+  font-size: clamp(34px, 6vw, 56px);
+}
+
+.simple-view .surface,
+.simple-view .data-row,
+.simple-view .notification-card {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.simple-view button,
+.simple-view .primary-action,
+.simple-view .secondary,
+.simple-view .danger-action,
+.simple-view .whatsapp-link {
+  font-size: 16px;
+  min-height: 54px;
+}
+
+.simple-shortcuts-panel {
+  grid-column: 1 / -1;
+}
+
+.simple-shortcuts-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.simple-shortcuts-grid button {
+  align-items: flex-start;
+  background:
+    radial-gradient(circle at 86% 18%, rgba(72, 184, 255, 0.2), transparent 32%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: #fff;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  min-height: 118px;
+  padding: 18px;
+  text-align: left;
+}
+
+.simple-shortcuts-grid button strong {
+  font-size: 20px;
+}
+
+.simple-shortcuts-grid button span {
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 700;
+}
+
+.simple-shortcuts-grid .simple-logout {
+  background:
+    radial-gradient(circle at 86% 18%, rgba(255, 107, 129, 0.24), transparent 34%),
+    linear-gradient(145deg, rgba(232, 58, 79, 0.22), rgba(255, 255, 255, 0.06));
+}
+
 @media (max-width: 1100px) {
   .access-page {
     grid-template-columns: 1fr;
@@ -2872,7 +3026,7 @@ textarea:focus {
 
   .topbar-actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     width: 100%;
   }
 
@@ -2915,12 +3069,14 @@ textarea:focus {
 
   .conflict-banner,
   .pwa-update-banner,
+  .conflict-actions,
   .system-health-footer {
     align-items: stretch;
     flex-direction: column;
   }
 
   .conflict-banner button,
+  .conflict-actions button,
   .pwa-update-banner button,
   .system-health-footer .secondary {
     width: 100%;
@@ -2994,6 +3150,10 @@ textarea:focus {
     font-size: 14px;
   }
 
+  .mural-hero-background {
+    opacity: 0.36;
+  }
+
   .overview-streaming .hero-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3014,6 +3174,19 @@ textarea:focus {
 
   .overview-streaming .action-tile {
     min-height: 176px;
+  }
+
+  .simple-view .topbar-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .simple-view .simple-mode-toggle,
+  .simple-view .notification-button {
+    width: 100%;
+  }
+
+  .simple-shortcuts-grid {
+    grid-template-columns: 1fr;
   }
 
   .action-tile {

@@ -528,7 +528,6 @@ const initialData: AppData = {
       notes: "Abrir novos horarios de oracao.",
     },
   ],
-  schedules: [],
   transactions: [
     {
       id: "transaction-1",
@@ -863,6 +862,7 @@ export default function Home() {
   const [accessMessage, setAccessMessage] = useState("");
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
   const [activeModule, setActiveModule] = useState<ModuleKey>("overview");
+  const [simpleViewEnabled, setSimpleViewEnabled] = useState(false);
   const [data, setData] = useState<AppData>(() => {
     if (typeof window === "undefined") return initialData;
 
@@ -1236,6 +1236,7 @@ export default function Home() {
   );
   const currentAccessRole = currentAccessUser?.role ?? sessionRole;
   const isAdminView = isAdministrativeRole(currentAccessRole);
+  const isSimpleView = simpleViewEnabled && !isAdminView;
   const currentMember = useMemo(
     () =>
       data.members.find(
@@ -1434,6 +1435,14 @@ export default function Home() {
 
   const unreadCount = notifications.filter((notice) => !data.notificationReadIds.includes(notice.id)).length;
   const activeNotices = data.notices.filter((notice) => !isExpiredDate(notice.expiresAt));
+  const featuredMuralItem = useMemo(
+    () =>
+      data.mural.find((item) => item.published && item.featured && (item.imageDataUrl || item.bannerUrl)) ??
+      data.mural.find((item) => item.published && (item.imageDataUrl || item.bannerUrl)) ??
+      data.mural.find((item) => item.published),
+    [data.mural],
+  );
+  const featuredMuralImage = featuredMuralItem?.imageDataUrl || featuredMuralItem?.bannerUrl || "";
   const monthlyBirthdays = useMemo(
     () =>
       data.members
@@ -2864,6 +2873,18 @@ export default function Home() {
     setSyncStatus("Link de cadastro copiado. Agora voce pode enviar pelo WhatsApp.");
   }
 
+  function downloadCurrentBackup(reason = "backup-manual") {
+    const content = JSON.stringify(data, null, 2);
+    const blob = new Blob([content], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `igreja-conectada-${reason}-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setSyncStatus("Backup desta tela baixado. Agora voce pode atualizar os dados da base com mais seguranca.");
+  }
+
   const actionHighlights = [
     {
       label: "Pre-cadastros",
@@ -3312,7 +3333,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+    <main className={`min-h-screen bg-[var(--background)] text-[var(--foreground)]${isSimpleView ? " simple-view" : ""}`}>
       <div className="app-shell">
         <aside className="sidebar" aria-label="Navegacao principal">
           <div className="brand-block">
@@ -3433,6 +3454,15 @@ export default function Home() {
                 <span>Acoes</span>
                 {unreadCount > 0 && <strong>{unreadCount}</strong>}
               </button>
+              {!isAdminView && (
+                <button
+                  className={isSimpleView ? "simple-mode-toggle active" : "simple-mode-toggle"}
+                  onClick={() => setSimpleViewEnabled((enabled) => !enabled)}
+                  type="button"
+                >
+                  {isSimpleView ? "Visual normal" : "Visual simples"}
+                </button>
+              )}
               <div className="profile-pill">
                 <span>{profileInitial}</span>
                 <div>
@@ -3481,23 +3511,34 @@ export default function Home() {
             <div className="conflict-banner" role="alert">
               <div>
                 <strong>Existe uma versao mais recente salva na base.</strong>
-                <span>Para proteger os cadastros, o salvamento foi pausado ate atualizar os dados deste aparelho.</span>
+                <span>Outro aparelho salvou antes de voce. Para proteger os cadastros, baixe um backup desta tela se precisar e atualize os dados da base.</span>
               </div>
-              <button onClick={reloadRemoteStateNow} type="button">
-                Atualizar dados da base
-              </button>
+              <div className="conflict-actions">
+                <button className="secondary" onClick={() => downloadCurrentBackup("conflito")} type="button">
+                  Baixar backup antes
+                </button>
+                <button onClick={reloadRemoteStateNow} type="button">
+                  Atualizar dados da base
+                </button>
+              </div>
             </div>
           )}
 
           {activeModule === "overview" && (isAdminView ? (
             <section className="content-grid overview-streaming admin-overview">
-              <div className="hero-panel streaming-cover">
+              <div className={featuredMuralImage ? "hero-panel streaming-cover mural-hero-cover" : "hero-panel streaming-cover"}>
+                {featuredMuralImage && (
+                  <div className="mural-hero-background" aria-hidden="true">
+                    <ResponsiveImage src={featuredMuralImage} />
+                  </div>
+                )}
                 <p className="eyebrow">Painel inteligente da igreja</p>
                 <h2>Prioridades, pessoas e grupos em tempo real.</h2>
                 <p>
                   Acompanhe pedidos pastorais, eventos, comunicados e a rotina da igreja em uma central viva,
                   pronta para crescer com dados reais.
                 </p>
+                {featuredMuralItem && <span className="mural-hero-label">Destaque do mural: {featuredMuralItem.title}</span>}
                 <div className="hero-actions">
                   <button onClick={() => setActiveModule("pastoral")} type="button">
                     Abrir fila pastoral
@@ -3607,10 +3648,16 @@ export default function Home() {
             </section>
           ) : (
             <section className="content-grid overview-streaming member-overview">
-              <div className="hero-panel streaming-cover">
+              <div className={featuredMuralImage ? "hero-panel streaming-cover mural-hero-cover" : "hero-panel streaming-cover"}>
+                {featuredMuralImage && (
+                  <div className="mural-hero-background" aria-hidden="true">
+                    <ResponsiveImage src={featuredMuralImage} />
+                  </div>
+                )}
                 <p className="eyebrow">Area do membro</p>
                 <h2>Bem-vindo, {profileName}.</h2>
                 <p>Veja sua ficha, acompanhe a agenda, leia os avisos e envie pedidos de atendimento pastoral ou oracao.</p>
+                {featuredMuralItem && <span className="mural-hero-label">Destaque do mural: {featuredMuralItem.title}</span>}
                 <div className="hero-actions">
                   <button onClick={() => setActiveModule("members")} type="button">
                     Meu cadastro
@@ -3626,6 +3673,37 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+
+              {isSimpleView && (
+                <article className="surface wide simple-shortcuts-panel">
+                  <div className="panel-heading">
+                    <h2>Acesso facil</h2>
+                    <span>Toque em um botao para abrir</span>
+                  </div>
+                  <div className="simple-shortcuts-grid">
+                    <button onClick={() => setActiveModule("members")} type="button">
+                      <strong>Minha ficha</strong>
+                      <span>Atualizar meus dados</span>
+                    </button>
+                    <button onClick={() => setActiveModule("events")} type="button">
+                      <strong>Agenda</strong>
+                      <span>Ver a semana da igreja</span>
+                    </button>
+                    <button onClick={() => setActiveModule("mural")} type="button">
+                      <strong>Mural</strong>
+                      <span>Ver avisos da igreja</span>
+                    </button>
+                    <button onClick={() => setActiveModule("pastoral")} type="button">
+                      <strong>Pedido de oracao</strong>
+                      <span>Clique aqui para pedir oracao</span>
+                    </button>
+                    <button className="simple-logout" onClick={handleLogout} type="button">
+                      <strong>Sair</strong>
+                      <span>Encerrar acesso</span>
+                    </button>
+                  </div>
+                </article>
+              )}
 
               {birthdaySpotlightPanel}
 
