@@ -19,12 +19,33 @@ type DeleteAccessUserPayload = {
 
 type JsonRecord = Record<string, unknown>;
 
-function toChurchRole(role?: string) {
-  return churchRoleFromAccessRole((role ?? "Membro") as AccessRole);
+const allowedAccessRoles: AccessRole[] = ["Administrador", "Lider", "Professor", "Secretario", "Tesoureiro", "Membro"];
+const allowedAccessStatuses = ["Ativo", "Pendente", "Bloqueado"] as const;
+type AccessStatus = (typeof allowedAccessStatuses)[number];
+
+function normalizeAccessRole(role?: string): AccessRole {
+  return allowedAccessRoles.includes(role as AccessRole) ? (role as AccessRole) : "Membro";
 }
 
-function toChurchAccess(status?: string) {
-  return status === "Ativo" ? "approved" : "pending";
+function normalizeAccessStatus(status?: string): AccessStatus {
+  return allowedAccessStatuses.includes(status as AccessStatus) ? (status as AccessStatus) : "Ativo";
+}
+
+function hasInvalidRoleOrStatus(payload: AccessUserPayload) {
+  return Boolean(
+    (payload.role && !allowedAccessRoles.includes(payload.role as AccessRole)) ||
+      (payload.status && !allowedAccessStatuses.includes(payload.status as AccessStatus)),
+  );
+}
+
+function toChurchRole(role: AccessRole) {
+  return churchRoleFromAccessRole(role);
+}
+
+function toChurchAccess(status: AccessStatus) {
+  if (status === "Ativo") return "approved";
+  if (status === "Bloqueado") return "blocked";
+  return "pending";
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -73,10 +94,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Informe nome, e-mail e senha com pelo menos 6 caracteres." }, { status: 400 });
   }
 
+  if (hasInvalidRoleOrStatus(payload)) {
+    return NextResponse.json({ error: "Perfil ou status invalido para criar acesso." }, { status: 400 });
+  }
+
   const client = adminClient();
   if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
   const canManage = await canManageAccessUsers(client, session.user.email ?? "", session.role);
   if (!canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
+
+  const role = normalizeAccessRole(payload.role ?? "Lider");
+  const status = normalizeAccessStatus(payload.status ?? "Ativo");
 
   const { data, error } = await client.auth.admin.createUser({
     email,
@@ -84,10 +112,10 @@ export async function POST(request: Request) {
     email_confirm: true,
     user_metadata: { name },
     app_metadata: {
-      role: payload.role ?? "Lider",
-      status: payload.status ?? "Ativo",
-      church_gp_role: toChurchRole(payload.role),
-      church_gp_access: toChurchAccess(payload.status),
+      role,
+      status,
+      church_gp_role: toChurchRole(role),
+      church_gp_access: toChurchAccess(status),
       created_by: session.user.id,
     },
   });
@@ -117,6 +145,10 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "A senha precisa ter pelo menos 6 caracteres." }, { status: 400 });
   }
 
+  if (hasInvalidRoleOrStatus(payload)) {
+    return NextResponse.json({ error: "Perfil ou status invalido para atualizar acesso." }, { status: 400 });
+  }
+
   const client = adminClient();
   if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
   const canManage = await canManageAccessUsers(client, session.user.email ?? "", session.role);
@@ -124,11 +156,18 @@ export async function PATCH(request: Request) {
 
   try {
     const userId = payload.userId ?? (await findUserIdByEmail(client, currentEmail ?? email));
+    const role = normalizeAccessRole(payload.role ?? "Membro");
+    const status = normalizeAccessStatus(payload.status ?? "Ativo");
+
+    if (userId === session.user.id && (role !== "Administrador" || status !== "Ativo")) {
+      return NextResponse.json({ error: "Voce nao pode rebaixar ou bloquear o proprio acesso enquanto esta conectado." }, { status: 400 });
+    }
+
     const appMetadata = {
-      role: payload.role ?? "Membro",
-      status: payload.status ?? "Ativo",
-      church_gp_role: toChurchRole(payload.role ?? "Membro"),
-      church_gp_access: toChurchAccess(payload.status ?? "Ativo"),
+      role,
+      status,
+      church_gp_role: toChurchRole(role),
+      church_gp_access: toChurchAccess(status),
       updated_by: session.user.id,
     };
 
