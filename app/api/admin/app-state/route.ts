@@ -100,7 +100,7 @@ function filterAttendanceForMember(sessions: JsonRecord[], member: JsonRecord | 
 }
 
 function sanitizedAdministrativePayloadForRole(payload: JsonRecord, role: ChurchRole, user: User) {
-  const strippedPayload = stripMemberPhotos(payload);
+  const strippedPayload = normalizeStatePayloadForStorage(payload);
   if (role === "ADMIN") return strippedPayload;
 
   if (role in hiddenPayloadKeysByRole) {
@@ -121,14 +121,14 @@ function sanitizedAdministrativePayloadForRole(payload: JsonRecord, role: Church
 }
 
 function mergeAdministrativePayloadByRole(existingPayload: JsonRecord, incomingPayload: JsonRecord, role: ChurchRole) {
-  const incoming = stripMemberPhotos(incomingPayload);
+  const incoming = normalizeStatePayloadForStorage(incomingPayload);
   if (role === "ADMIN") return incoming;
 
   const allowedKeys = payloadKeysByRole[role as Exclude<ChurchRole, "MEMBER">] ?? [];
 
   return allowedKeys.reduce<JsonRecord>(
     (nextPayload, key) => (key in incoming ? { ...nextPayload, [key]: incoming[key] } : nextPayload),
-    stripMemberPhotos(existingPayload),
+    normalizeStatePayloadForStorage(existingPayload),
   );
 }
 
@@ -191,6 +191,13 @@ function stripMemberPhotos(payload: JsonRecord): JsonRecord {
   return {
     ...payload,
     members: recordsFrom(payload.members).map((member) => ({ ...member, photoDataUrl: "" })),
+    registrationRequests: [],
+  };
+}
+
+function normalizeStatePayloadForStorage(payload: JsonRecord): JsonRecord {
+  return {
+    ...stripMemberPhotos(payload),
     registrationRequests: [],
   };
 }

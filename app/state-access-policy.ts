@@ -2,7 +2,7 @@ import type { ChurchRole } from "./permissions";
 
 export const payloadKeysByRole: Record<Exclude<ChurchRole, "MEMBER">, string[]> = {
   ADMIN: [],
-  SECRETARY: ["members", "registrationRequests", "visitors", "kids", "events", "notices", "mural", "messageTemplates", "messageCampaigns", "notificationReadIds"],
+  SECRETARY: ["members", "visitors", "kids", "events", "notices", "mural", "messageTemplates", "messageCampaigns", "notificationReadIds"],
   LEADER: ["visitors", "careRequests", "events", "schedules", "ministries", "notices", "mural", "messageTemplates", "messageCampaigns", "devotionals", "notificationReadIds"],
   PROFESSOR: ["schoolClasses", "discipleshipClasses", "attendanceSessions", "schedules", "notificationReadIds"],
   TREASURER: ["transactions", "notificationReadIds"],
