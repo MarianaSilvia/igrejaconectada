@@ -13,7 +13,10 @@ Este documento registra a estrategia atual para preparar o Igreja Conectada para
 
 ## Protecoes aplicadas
 
+- As tres variaveis de producao da Vercel foram conferidas: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY`.
 - O acesso direto de `anon` e `authenticated` a `church_app_state` foi revogado.
+- `church_app_state` recebeu uma politica RLS explicita bloqueando acesso direto de `anon` e `authenticated`, mantendo uso somente por rotas server-side.
+- `registration_requests` recebeu uma politica RLS explicita bloqueando acesso direto de `anon` e `authenticated`; o cadastro publico continua salvando por rota server-side validada.
 - A fila principal carrega apenas pre-cadastros ativos: `Aguardando aprovacao` e `Em analise`.
 - A administracao pode marcar um pre-cadastro como `Em analise` antes de aprovar ou recusar.
 - Indices foram adicionados para chaves estrangeiras que apareciam nos avisos de performance.
@@ -37,3 +40,4 @@ Este documento registra a estrategia atual para preparar o Igreja Conectada para
 - Nao expor `SUPABASE_SERVICE_ROLE_KEY` no frontend.
 - Nao permitir que membro comum receba dados administrativos pela API.
 - Manter bloqueio de conflito por `updated_at` enquanto o JSON unico existir.
+- Ativar a protecao contra senhas vazadas no painel do Supabase Auth antes de liberar uso amplo.
