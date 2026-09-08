@@ -1291,7 +1291,7 @@ export default function Home() {
   const pendingRegistrationRequests = useMemo(
     () =>
       canManageRegistrationRequests
-        ? data.registrationRequests.filter((request) => request.status === "Aguardando aprovacao")
+        ? data.registrationRequests.filter((request) => request.status === "Aguardando aprovacao" || request.status === "Em analise")
         : [],
     [canManageRegistrationRequests, data.registrationRequests],
   );
@@ -2183,6 +2183,22 @@ export default function Home() {
     }
 
     return true;
+  }
+
+  async function markRegistrationInReview(request: RegistrationRequest) {
+    if (!canManageRegistrationRequests || request.status === "Em analise") return;
+    const updated = await updateRegistrationRequestStatus(request.id, "Em analise", "Marcado para analise da administracao");
+    if (!updated) return;
+    const now = new Date().toISOString();
+    setData((current) => ({
+      ...current,
+      registrationRequests: current.registrationRequests.map((item) =>
+        item.id === request.id
+          ? { ...item, status: "Em analise", reviewedAt: now, reviewNote: "Marcado para analise da administracao" }
+          : item,
+      ),
+    }));
+    setSyncStatus(`Pre-cadastro de ${request.fullName} marcado como em analise.`);
   }
 
   function memberFormFromRegistration(request: RegistrationRequest, memberType: MemberRecord["memberType"] = "Membro"): Omit<MemberRecord, "id"> {
@@ -3413,6 +3429,7 @@ export default function Home() {
                   onApproveMember={approveRegistrationAsMember}
                   onApproveVisitor={approveRegistrationAsVisitor}
                   onDecline={declineRegistrationRequest}
+                  onMarkInReview={markRegistrationInReview}
                   onReview={reviewRegistrationRequest}
                   requests={pendingRegistrationRequests}
                 />
@@ -4011,6 +4028,7 @@ function RegistrationRequestsPanel({
   onApproveMember,
   onApproveVisitor,
   onDecline,
+  onMarkInReview,
   onReview,
   requests,
 }: {
@@ -4018,6 +4036,7 @@ function RegistrationRequestsPanel({
   onApproveMember: (request: RegistrationRequest) => void;
   onApproveVisitor: (request: RegistrationRequest) => void;
   onDecline: (request: RegistrationRequest) => void;
+  onMarkInReview: (request: RegistrationRequest) => void;
   onReview: (request: RegistrationRequest) => void;
   requests: RegistrationRequest[];
 }) {
@@ -4040,6 +4059,9 @@ function RegistrationRequestsPanel({
               <div>
                 <p className="eyebrow">{request.requestedStatus}</p>
                 <strong>{request.fullName}</strong>
+                <span className={`status-chip ${request.status === "Em analise" ? "em-analise" : "pendente"}`}>
+                  {request.status === "Em analise" ? "Em analise" : "Aguardando aprovacao"}
+                </span>
                 <small>{request.phone} - {request.email || "E-mail nao informado"}</small>
                 <small>
                   {request.city || "Cidade nao informada"} {request.neighborhood ? `- ${request.neighborhood}` : ""}
@@ -4048,6 +4070,11 @@ function RegistrationRequestsPanel({
               </div>
               {request.notes && <p>{request.notes}</p>}
               <div className="card-actions">
+                {request.status !== "Em analise" && (
+                  <button className="secondary" onClick={() => onMarkInReview(request)} type="button">
+                    Marcar em analise
+                  </button>
+                )}
                 <button onClick={() => onReview(request)} type="button">
                   Editar ficha
                 </button>

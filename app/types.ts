@@ -158,7 +158,7 @@ export type RegistrationRequest = {
   requestedStatus: "Visitante" | "Novo convertido" | "Membro ativo";
   registrationSource: string;
   notes: string;
-  status: "Aguardando aprovacao" | "Aprovado" | "Recusado";
+  status: "Aguardando aprovacao" | "Em analise" | "Aprovado" | "Recusado";
   createdAt: string;
   reviewedAt: string;
   reviewNote: string;

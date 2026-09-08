@@ -227,8 +227,12 @@ async function readRegistrationRequests(client: NonNullable<ReturnType<typeof ad
 
   const { data, error } = await client
     .from("registration_requests")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select(
+      "id, full_name, father_name, mother_name, cpf, phone, email, birth_date, gender, address, zip_code, city, neighborhood, marital_status, education, spouse_name, requested_status, registration_source, notes, status, created_at, reviewed_at, review_note",
+    )
+    .in("status", ["Aguardando aprovacao", "Em analise"])
+    .order("created_at", { ascending: false })
+    .limit(100);
 
   if (error) return [];
 
