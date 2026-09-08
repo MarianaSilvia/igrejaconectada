@@ -68,6 +68,23 @@ function userEmail(user: User) {
   return user.email?.trim().toLowerCase() ?? "";
 }
 
+function displayName(record: JsonRecord | undefined, fallback = "registro") {
+  return (
+    textValue(record?.fullName) ||
+    textValue(record?.name) ||
+    textValue(record?.title) ||
+    textValue(record?.serviceType) ||
+    textValue(record?.member) ||
+    textValue(record?.childName) ||
+    fallback
+  );
+}
+
+function auditActor(payload: JsonRecord, user: User) {
+  const accessUser = findAccessUser(payload, user);
+  return textValue(accessUser?.name) || userEmail(user) || "Usuario";
+}
+
 function memberBelongsToUser(member: JsonRecord, user: User) {
   const authUserId = textValue(member.authUserId);
   const memberEmail = textValue(member.email).toLowerCase();
@@ -212,6 +229,112 @@ function mergeMembersWithoutAccessFields(existingMembers: JsonRecord[], incoming
       .filter((existingMember) => !incomingIds.has(textValue(existingMember.id)))
       .map((existingMember) => ({ ...existingMember, photoDataUrl: "" })),
   ];
+}
+
+function mapById(records: JsonRecord[]) {
+  const entries: Array<[string, JsonRecord]> = [];
+
+  records.forEach((record) => {
+    const id = textValue(record.id);
+    if (id) entries.push([id, record]);
+  });
+
+  return new Map(entries);
+}
+
+function createdRecords(existingPayload: JsonRecord, nextPayload: JsonRecord, key: string) {
+  const existingIds = new Set(recordsFrom(existingPayload[key]).map((record) => textValue(record.id)));
+  return recordsFrom(nextPayload[key]).filter((record) => {
+    const id = textValue(record.id);
+    return id && !existingIds.has(id);
+  });
+}
+
+function deletedRecords(existingPayload: JsonRecord, nextPayload: JsonRecord, key: string) {
+  const nextIds = new Set(recordsFrom(nextPayload[key]).map((record) => textValue(record.id)));
+  return recordsFrom(existingPayload[key]).filter((record) => {
+    const id = textValue(record.id);
+    return id && !nextIds.has(id);
+  });
+}
+
+function changedRecords(existingPayload: JsonRecord, nextPayload: JsonRecord, key: string, fields: string[]) {
+  const existingById = mapById(recordsFrom(existingPayload[key]));
+
+  return recordsFrom(nextPayload[key]).filter((record) => {
+    const previous = existingById.get(textValue(record.id));
+    return previous && fields.some((field) => JSON.stringify(previous[field] ?? "") !== JSON.stringify(record[field] ?? ""));
+  });
+}
+
+function auditEntry(action: string, actor: string, role: ChurchRole, when: string) {
+  return {
+    id: `audit-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    action: `${action} por ${actor} (${role})`,
+    when,
+  };
+}
+
+function serverAuditEntries(existingPayload: JsonRecord, nextPayload: JsonRecord, role: ChurchRole, user: User) {
+  const actor = auditActor(existingPayload, user);
+  const when = new Date().toISOString();
+  const entries: JsonRecord[] = [];
+
+  createdRecords(existingPayload, nextPayload, "members").forEach((record) =>
+    entries.push(auditEntry(`Membro cadastrado: ${displayName(record)}`, actor, role, when)),
+  );
+  deletedRecords(existingPayload, nextPayload, "members").forEach((record) =>
+    entries.push(auditEntry(`Membro excluido: ${displayName(record)}`, actor, role, when)),
+  );
+  changedRecords(existingPayload, nextPayload, "members", ["fullName", "phone", "email", "status", "memberType", "ministry"]).forEach((record) =>
+    entries.push(auditEntry(`Ficha atualizada: ${displayName(record)}`, actor, role, when)),
+  );
+
+  createdRecords(existingPayload, nextPayload, "users").forEach((record) =>
+    entries.push(auditEntry(`Acesso criado: ${displayName(record)}`, actor, role, when)),
+  );
+  deletedRecords(existingPayload, nextPayload, "users").forEach((record) =>
+    entries.push(auditEntry(`Acesso excluido: ${displayName(record)}`, actor, role, when)),
+  );
+  changedRecords(existingPayload, nextPayload, "users", ["role", "status", "email"]).forEach((record) =>
+    entries.push(auditEntry(`Acesso atualizado: ${displayName(record)}`, actor, role, when)),
+  );
+
+  createdRecords(existingPayload, nextPayload, "events").forEach((record) =>
+    entries.push(auditEntry(`Evento criado: ${displayName(record)}`, actor, role, when)),
+  );
+  deletedRecords(existingPayload, nextPayload, "events").forEach((record) =>
+    entries.push(auditEntry(`Evento excluido: ${displayName(record)}`, actor, role, when)),
+  );
+  changedRecords(existingPayload, nextPayload, "events", ["title", "date", "time", "responsible", "status"]).forEach((record) =>
+    entries.push(auditEntry(`Evento atualizado: ${displayName(record)}`, actor, role, when)),
+  );
+
+  createdRecords(existingPayload, nextPayload, "visitors").forEach((record) =>
+    entries.push(auditEntry(`Visitante cadastrado: ${displayName(record)}`, actor, role, when)),
+  );
+  deletedRecords(existingPayload, nextPayload, "visitors").forEach((record) =>
+    entries.push(auditEntry(`Visitante excluido: ${displayName(record)}`, actor, role, when)),
+  );
+
+  createdRecords(existingPayload, nextPayload, "careRequests").forEach((record) =>
+    entries.push(auditEntry(`Pedido pastoral criado: ${displayName(record)}`, actor, role, when)),
+  );
+  changedRecords(existingPayload, nextPayload, "careRequests", ["status", "responsible", "scheduleDate", "scheduleTime"]).forEach((record) =>
+    entries.push(auditEntry(`Atendimento pastoral atualizado: ${displayName(record)}`, actor, role, when)),
+  );
+
+  return entries;
+}
+
+function appendServerAudit(existingPayload: JsonRecord, nextPayload: JsonRecord, role: ChurchRole, user: User) {
+  const entries = serverAuditEntries(existingPayload, nextPayload, role, user);
+  if (!entries.length) return nextPayload;
+
+  return {
+    ...nextPayload,
+    audit: [...entries, ...recordsFrom(nextPayload.audit), ...recordsFrom(existingPayload.audit)].slice(0, 80),
+  };
 }
 
 function payloadWithVisibleKeys(payload: JsonRecord, role: ChurchRole, user: User) {
@@ -526,12 +649,13 @@ export async function PUT(request: Request) {
   const mergedPayload = sanitizePayloadForSave(isRecord(stored.payload) ? stored.payload : {}, payload, effectiveRole, session.user);
 
   if ("response" in mergedPayload) return mergedPayload.response;
+  const payloadWithAudit = appendServerAudit(isRecord(stored.payload) ? stored.payload : {}, mergedPayload.payload, effectiveRole, session.user);
 
   const { data, error } = await stored.client
     .from("church_app_state")
     .upsert({
       id: stateId,
-      payload: mergedPayload.payload,
+      payload: payloadWithAudit,
       updated_by: session.user.id,
       updated_at: new Date().toISOString(),
     })
@@ -542,7 +666,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  const memberSync = await syncMembersTable(stored.client, mergedPayload.payload);
+  const memberSync = await syncMembersTable(stored.client, payloadWithAudit);
 
   return NextResponse.json({
     ok: true,
