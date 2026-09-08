@@ -11,6 +11,8 @@ Sistema de gestao para igreja com Supabase, painel administrativo, area do membr
 - Relatorios em PDF/CSV para membros, visitantes, Kids, agenda, presenca, faltosos, financeiro e patrimonio.
 - Login por Supabase Auth com perfis: administrador, lider, professor, secretario, tesoureiro e membro.
 - PWA instalavel no celular, mantendo os dados online via Supabase.
+- Painel de saude do sistema com status de salvamento, totais principais e atalho para recarregar dados da base.
+- Backup completo em JSON pelo modulo Configuracoes antes de importacoes ou mudancas grandes.
 
 ## Dados e seguranca
 
@@ -52,6 +54,7 @@ Sem Supabase, o sistema pode abrir em modo local, mas o uso real com membros dev
 ## App instalavel
 
 O projeto inclui manifesto, icones e service worker leve para funcionar como PWA. O service worker cacheia apenas arquivos estaticos e nao guarda dados sensiveis, paginas administrativas ou respostas da API.
+Quando uma nova versao estiver disponivel, o app mostra um aviso para atualizar a tela e carregar a publicacao mais recente.
 
 Para instalar:
 

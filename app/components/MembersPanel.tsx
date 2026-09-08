@@ -28,6 +28,8 @@ type MembersPanelProps = {
   groupOptions: string[];
   memberAccessMessage: (member: MemberRecord) => string;
   memberCredentialForm: MemberCredentialForm;
+  memberDuplicateCandidate?: MemberRecord;
+  memberDuplicateWarnings: string[];
   memberDiscipleshipFilter: string;
   memberForm: MemberForm;
   memberFormTab: MemberFormTab;
@@ -111,6 +113,8 @@ export function MembersPanel({
   groupOptions,
   memberAccessMessage,
   memberCredentialForm,
+  memberDuplicateCandidate,
+  memberDuplicateWarnings,
   memberDiscipleshipFilter,
   memberForm,
   memberFormTab,
@@ -179,6 +183,17 @@ export function MembersPanel({
               <strong>Acesso do membro</strong>
               <small>O login e a senha ficam no card do cadastro ja salvo, com envio pelo WhatsApp e link do sistema.</small>
             </div>
+            {memberDuplicateWarnings.length > 0 && (
+              <div className="duplicate-alert full">
+                <strong>Possivel cadastro ja existente</strong>
+                <small>{memberDuplicateWarnings.join(" ")}</small>
+                {memberDuplicateCandidate && (
+                  <button className="secondary" onClick={() => editMember(memberDuplicateCandidate)} type="button">
+                    Atualizar cadastro existente
+                  </button>
+                )}
+              </div>
+            )}
             <label className="full" data-member-section="Dados">
               Nome completo
               <input id="member-full-name" onChange={(event) => updateMemberName(event.target.value)} placeholder="Ex.: Maria Oliveira" value={memberForm.fullName} />

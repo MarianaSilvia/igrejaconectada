@@ -483,6 +483,18 @@ button:disabled {
   margin-top: 4px;
 }
 
+.sync-reload-button {
+  background: rgba(246, 198, 91, 0.14);
+  border: 1px solid rgba(246, 198, 91, 0.42);
+  border-radius: 8px;
+  color: #ffe0a1;
+  font-size: 12px;
+  font-weight: 900;
+  margin-top: 10px;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
 .status-dot {
   background: var(--accent);
   border-radius: 999px;
@@ -657,6 +669,62 @@ button:disabled {
   top: 64px;
   width: min(420px, calc(100vw - 48px));
   z-index: 10;
+}
+
+.conflict-banner,
+.pwa-update-banner {
+  align-items: center;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(246, 198, 91, 0.2), transparent 32%),
+    rgba(28, 22, 12, 0.96);
+  border: 1px solid rgba(246, 198, 91, 0.42);
+  border-radius: 8px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+  color: #fff8e2;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin: 0 auto 16px;
+  max-width: 1280px;
+  padding: 14px;
+}
+
+.conflict-banner strong,
+.conflict-banner span {
+  display: block;
+}
+
+.conflict-banner span {
+  color: #e7d6ad;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.conflict-banner button,
+.pwa-update-banner button {
+  background: linear-gradient(135deg, #f6c65b, #ff8c5d);
+  border: 0;
+  border-radius: 8px;
+  color: #160d05;
+  font-weight: 950;
+  min-height: 40px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.pwa-update-banner {
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  left: 50%;
+  margin: 0;
+  max-width: min(520px, calc(100vw - 28px));
+  position: fixed;
+  transform: translateX(-50%);
+  width: 100%;
+  z-index: 50;
+}
+
+.pwa-update-banner span {
+  font-weight: 900;
 }
 
 .notification-list {
@@ -970,6 +1038,70 @@ button:disabled {
   margin-bottom: 14px;
 }
 
+.system-health-panel {
+  background:
+    radial-gradient(circle at 86% 10%, rgba(20, 217, 196, 0.22), transparent 34%),
+    linear-gradient(145deg, rgba(18, 45, 76, 0.9), rgba(13, 18, 32, 0.94));
+  border-color: rgba(72, 184, 255, 0.28);
+}
+
+.system-health-conflict,
+.system-health-error {
+  border-color: rgba(246, 198, 91, 0.42);
+}
+
+.system-health-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.system-health-grid div {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  min-height: 78px;
+  padding: 12px;
+}
+
+.system-health-grid strong,
+.system-health-grid small,
+.system-health-footer strong,
+.system-health-footer small {
+  display: block;
+}
+
+.system-health-grid strong {
+  color: #fff;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.system-health-grid small,
+.system-health-footer small {
+  color: var(--muted);
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.system-health-footer {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.system-health-footer .secondary {
+  background: rgba(72, 184, 255, 0.1);
+  border: 1px solid rgba(72, 184, 255, 0.28);
+  border-radius: 8px;
+  color: #9bd7ff;
+  font-weight: 900;
+  min-height: 40px;
+  padding: 0 12px;
+}
+
 .surface {
   min-width: 0;
   padding: 18px;
@@ -1262,6 +1394,32 @@ button.data-row.active {
 .selected-member-access small {
   color: var(--muted);
   margin-top: 3px;
+}
+
+.duplicate-alert {
+  background:
+    radial-gradient(circle at 92% 18%, rgba(246, 198, 91, 0.18), transparent 34%),
+    rgba(58, 37, 17, 0.42);
+  border: 1px solid rgba(246, 198, 91, 0.42);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.duplicate-alert strong,
+.duplicate-alert small {
+  display: block;
+}
+
+.duplicate-alert small {
+  color: #f4ddb3;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.duplicate-alert button {
+  justify-self: start;
 }
 
 .row-actions {
@@ -2621,6 +2779,10 @@ textarea:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .system-health-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .action-strip {
     grid-template-columns: 1fr;
   }
@@ -2660,6 +2822,14 @@ textarea:focus {
 
   .workspace {
     padding: 18px 14px 92px;
+  }
+
+  button,
+  .primary-action,
+  .secondary,
+  .danger-action,
+  .whatsapp-link {
+    min-height: 44px;
   }
 
   .sidebar {
@@ -2743,13 +2913,27 @@ textarea:focus {
     width: 100%;
   }
 
+  .conflict-banner,
+  .pwa-update-banner,
+  .system-health-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .conflict-banner button,
+  .pwa-update-banner button,
+  .system-health-footer .secondary {
+    width: 100%;
+  }
+
   .module-list,
   .stats-grid,
   .birthday-grid,
   .birthday-spotlight-list,
   .report-grid,
   .filter-bar,
-  .stats-row,
+    .stats-row,
+  .system-health-grid,
   .week-switcher,
   .member-form-tabs,
   .record-actions,

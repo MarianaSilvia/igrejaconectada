@@ -97,6 +97,18 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
     log(opened ? "Auditoria preparada em PDF" : "Falha ao abrir relatorio de auditoria");
   }
 
+  function downloadFullBackup() {
+    const content = JSON.stringify(data, null, 2);
+    const blob = new Blob([content], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `backup-igreja-conectada-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    log("Backup completo baixado em JSON");
+  }
+
   return (
     <section className="content-grid">
       <article className="surface wide">
@@ -105,7 +117,7 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
           <span>JSON validado</span>
         </div>
         <p className="body-copy">
-          Esta copia roda neste computador. O backup abaixo representa os dados locais do navegador e ajuda a validar a estrutura antes de conectar novamente ao Supabase.
+          Antes de importacoes, migracoes ou mudancas grandes, baixe um backup completo. Ele representa a copia atual carregada neste painel e serve como ponto de seguranca para conferencia.
         </p>
         <div className="backup-box">
           <strong>Cobertura do backup</strong>
@@ -121,8 +133,11 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
         </div>
         <textarea className="backup-json" readOnly value={JSON.stringify(data, null, 2)} />
         <div className="detail-actions">
-          <button onClick={() => log("Backup local gerado")} type="button">
-            Registrar backup
+          <button onClick={downloadFullBackup} type="button">
+            Baixar backup completo
+          </button>
+          <button className="secondary" onClick={() => log("Backup conferido antes de alteracao grande")} type="button">
+            Registrar conferencia
           </button>
           <button className="secondary" onClick={resetLocalData} type="button">
             Restaurar dados exemplo

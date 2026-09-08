@@ -35,6 +35,7 @@ import { PastoralPanel } from "./components/PastoralPanel";
 import { ReportsPanel } from "./components/ReportsPanel";
 import { ResponsiveImage } from "./components/ResponsiveImage";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { SystemHealthPanel } from "./components/SystemHealthPanel";
 import { UsersAccessPanel } from "./components/UsersAccessPanel";
 import { VisitorsPanel } from "./components/VisitorsPanel";
 import {
@@ -732,6 +733,21 @@ function accessRoleForSession(users: AccessUser[], email: string, metadata: Reco
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function firstPhoneDigits(value: string) {
+  return onlyDigits(value.split("/")[0] ?? value).replace(/^55/, "");
+}
+
+function similarNameScore(first: string, second: string) {
+  const firstWords = new Set(normalizeSearchText(first).split(/\s+/).filter((word) => word.length > 2));
+  const secondWords = normalizeSearchText(second).split(/\s+/).filter((word) => word.length > 2);
+  if (!firstWords.size || !secondWords.length) return 0;
+  return secondWords.filter((word) => firstWords.has(word)).length;
 }
 
 function suggestedNextStep(request: CareRequest) {
@@ -1458,6 +1474,41 @@ export default function Home() {
       (selectedAccessExistingUser || userForm.password.trim().length >= 6),
   );
   const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim()) && (canManageMembers || editingMemberId === currentMember?.id);
+  const memberDuplicateCandidate = useMemo(() => {
+    if (!canManageMembers || editingMemberId) return undefined;
+
+    const cpf = onlyDigits(memberForm.cpf);
+    const phone = firstPhoneDigits(memberForm.phone);
+    const fullName = memberForm.fullName.trim();
+
+    if (!cpf && !phone && fullName.length < 6) return undefined;
+
+    return data.members.find((member) => {
+      const sameCpf = Boolean(cpf && onlyDigits(member.cpf) === cpf);
+      const samePhone = Boolean(phone && firstPhoneDigits(member.phone) === phone);
+      const similarName = Boolean(fullName.length >= 6 && similarNameScore(member.fullName, fullName) >= 2);
+      return sameCpf || samePhone || similarName;
+    });
+  }, [canManageMembers, data.members, editingMemberId, memberForm.cpf, memberForm.fullName, memberForm.phone]);
+  const memberDuplicateWarnings = useMemo(() => {
+    if (!canManageMembers || editingMemberId) return [];
+
+    const cpf = onlyDigits(memberForm.cpf);
+    const phone = firstPhoneDigits(memberForm.phone);
+    const fullName = memberForm.fullName.trim();
+
+    if (!cpf && !phone && fullName.length < 6) return [];
+
+    return data.members
+      .filter((member) => {
+        const sameCpf = Boolean(cpf && onlyDigits(member.cpf) === cpf);
+        const samePhone = Boolean(phone && firstPhoneDigits(member.phone) === phone);
+        const similarName = Boolean(fullName.length >= 6 && similarNameScore(member.fullName, fullName) >= 2);
+        return sameCpf || samePhone || similarName;
+      })
+      .slice(0, 3)
+      .map((member) => `${member.fullName} (${member.memberCode || "sem codigo"}) ja parece estar cadastrado.`);
+  }, [canManageMembers, data.members, editingMemberId, memberForm.cpf, memberForm.fullName, memberForm.phone]);
   const canCreateVisitor = canManageVisitors && Boolean(visitorForm.fullName.trim() && visitorForm.phone.trim());
   const canSaveMemberAccess = Boolean(
     canManageUsers &&
@@ -2122,6 +2173,19 @@ export default function Home() {
     if (!canManageMembers && editingMemberId !== currentMember?.id) {
       setSyncStatus("Acesso de membro: voce pode atualizar apenas o seu proprio cadastro.");
       return;
+    }
+
+    if (!editingMemberId && canManageMembers) {
+      const cpf = onlyDigits(memberForm.cpf);
+      const phone = firstPhoneDigits(memberForm.phone);
+      const exactDuplicate = data.members.find(
+        (member) => Boolean(cpf && onlyDigits(member.cpf) === cpf) || Boolean(phone && firstPhoneDigits(member.phone) === phone),
+      );
+
+      if (exactDuplicate) {
+        setSyncStatus(`Possivel duplicidade: ${exactDuplicate.fullName} ja possui este CPF ou telefone. Use "Atualizar cadastro existente".`);
+        return;
+      }
     }
 
     const isEditing = Boolean(editingMemberId);
@@ -3413,6 +3477,18 @@ export default function Home() {
             )}
           </header>
 
+          {saveState === "conflict" && (
+            <div className="conflict-banner" role="alert">
+              <div>
+                <strong>Existe uma versao mais recente salva na base.</strong>
+                <span>Para proteger os cadastros, o salvamento foi pausado ate atualizar os dados deste aparelho.</span>
+              </div>
+              <button onClick={reloadRemoteStateNow} type="button">
+                Atualizar dados da base
+              </button>
+            </div>
+          )}
+
           {activeModule === "overview" && (isAdminView ? (
             <section className="content-grid overview-streaming admin-overview">
               <div className="hero-panel streaming-cover">
@@ -3441,6 +3517,20 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+
+              <SystemHealthPanel
+                agendaCount={data.events.length}
+                canReload={hasSession && isSupabaseConfigured()}
+                isSupabaseReady={isSupabaseConfigured()}
+                kidsCount={data.kids.length}
+                lastSavedAt={lastSavedAt}
+                membersCount={data.members.length}
+                onReload={reloadRemoteStateNow}
+                pendingRegistrationsCount={pendingRegistrationRequests.length}
+                saveState={saveState}
+                syncStatus={syncStatus}
+                visitorsCount={data.visitors.length}
+              />
 
               {canManageRegistrationRequests && (
                 <RegistrationRequestsPanel
@@ -3808,6 +3898,8 @@ export default function Home() {
               groupOptions={groupOptions}
               memberAccessMessage={memberAccessMessage}
               memberCredentialForm={memberCredentialForm}
+              memberDuplicateCandidate={memberDuplicateCandidate}
+              memberDuplicateWarnings={memberDuplicateWarnings}
               memberDiscipleshipFilter={memberDiscipleshipFilter}
               memberForm={memberForm}
               memberFormTab={memberFormTab}

@@ -13,6 +13,10 @@ Este documento registra a estrategia atual para preparar o Igreja Conectada para
 
 ## Protecoes aplicadas
 
+- O painel administrativo mostra uma area de saude do sistema com status Supabase, ultimo salvamento e totais principais.
+- Conflitos de `updated_at` aparecem em aviso destacado com acao direta para atualizar os dados da base antes de continuar editando.
+- O cadastro manual de membros alerta possivel duplicidade por CPF, telefone ou nome parecido e oferece atualizacao do cadastro existente.
+- O modulo Configuracoes permite baixar um backup completo em JSON antes de importacoes, migracoes ou mudancas grandes.
 - As tres variaveis de producao da Vercel foram conferidas: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY`.
 - O acesso direto de `anon` e `authenticated` a `church_app_state` foi revogado.
 - `church_app_state` recebeu uma politica RLS explicita bloqueando acesso direto de `anon` e `authenticated`, mantendo uso somente por rotas server-side.
@@ -36,7 +40,7 @@ Este documento registra a estrategia atual para preparar o Igreja Conectada para
 
 ## Cuidados
 
-- Nao executar migracao real sem backup conferido.
+- Nao executar migracao real sem backup baixado e conferido.
 - Nao expor `SUPABASE_SERVICE_ROLE_KEY` no frontend.
 - Nao permitir que membro comum receba dados administrativos pela API.
 - Manter bloqueio de conflito por `updated_at` enquanto o JSON unico existir.

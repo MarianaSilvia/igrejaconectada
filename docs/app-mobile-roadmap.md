@@ -15,6 +15,7 @@ Este documento registra a estrategia escolhida para transformar o Igreja Conecta
 - Revisar telas com maior uso no celular: login, painel, membros, agenda, mural, pedidos pastorais, EBD e Discipulado.
 - Garantir botoes com area de toque confortavel.
 - Reduzir rolagem excessiva em formulários longos.
+- Exibir aviso quando uma nova versao da PWA estiver disponivel, permitindo atualizar o app sem reinstalar.
 - Testar visual em telas pequenas antes de publicar.
 
 ## Fase 3: Empacotamento Android/iOS

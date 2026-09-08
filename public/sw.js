@@ -1,4 +1,4 @@
-const STATIC_CACHE = "igreja-conectada-static-v1";
+const STATIC_CACHE = "igreja-conectada-static-v2";
 const STATIC_ASSETS = [
   "/favicon.png",
   "/icon-192.png",
