@@ -193,6 +193,27 @@ function mergeRecordsByAllowedIds(existingRecords: JsonRecord[], incomingRecords
   ];
 }
 
+function mergeMembersWithoutAccessFields(existingMembers: JsonRecord[], incomingMembers: JsonRecord[]) {
+  const existingById = new Map(existingMembers.map((member) => [textValue(member.id), member]));
+  const incomingIds = new Set(incomingMembers.map((member) => textValue(member.id)).filter(Boolean));
+
+  return [
+    ...incomingMembers.map((incomingMember) => {
+      const existingMember = existingById.get(textValue(incomingMember.id));
+
+      return {
+        ...incomingMember,
+        authUserId: textValue(existingMember?.authUserId),
+        role: textValue(existingMember?.role),
+        photoDataUrl: "",
+      };
+    }),
+    ...existingMembers
+      .filter((existingMember) => !incomingIds.has(textValue(existingMember.id)))
+      .map((existingMember) => ({ ...existingMember, photoDataUrl: "" })),
+  ];
+}
+
 function payloadWithVisibleKeys(payload: JsonRecord, role: ChurchRole, user: User) {
   const visibleKeys = visiblePayloadKeysByRole[role as Exclude<ChurchRole, "ADMIN" | "MEMBER">] ?? [];
   const professorOwnedClassIds = role === "PROFESSOR" ? professorClassIds(payload, user) : new Set<string>();
@@ -258,7 +279,18 @@ function mergeAdministrativePayloadByRole(existingPayload: JsonRecord, incomingP
   const allowedKeys = payloadKeysByRole[role as Exclude<ChurchRole, "MEMBER">] ?? [];
 
   return allowedKeys.reduce<JsonRecord>(
-    (nextPayload, key) => (key in incoming ? { ...nextPayload, [key]: incoming[key] } : nextPayload),
+    (nextPayload, key) => {
+      if (!(key in incoming)) return nextPayload;
+
+      if (role === "SECRETARY" && key === "members") {
+        return {
+          ...nextPayload,
+          members: mergeMembersWithoutAccessFields(recordsFrom(existingPayload.members), recordsFrom(incoming.members)),
+        };
+      }
+
+      return { ...nextPayload, [key]: incoming[key] };
+    },
     normalizeStatePayloadForStorage(existingPayload),
   );
 }
