@@ -1195,37 +1195,6 @@ export default function Home() {
     return () => window.clearTimeout(cleanup);
   }, []);
 
-  useEffect(() => {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
-    supabase
-      .from("message_templates")
-      .select("id,label,body,audience,is_birthday")
-      .then(({ data: templates, error }) => {
-        if (error) {
-          setSyncStatus("Supabase conectado, aguardando login para sincronizar dados.");
-          return;
-        }
-
-        if (templates?.length) {
-          const mappedTemplates = templates.map((template) => normalizeMessageTemplate({
-              id: template.id,
-              label: template.label ?? "",
-              text: template.body ?? "",
-              audience: template.audience ?? undefined,
-              isBirthday: template.is_birthday,
-            }));
-          const defaultTemplate = mappedTemplates.find((template) => template.id === "general_invite") ?? mappedTemplates[0];
-
-          setRemoteMessageTemplates(mappedTemplates);
-          setMessageTemplateId(defaultTemplate.id);
-          setMessageText(defaultTemplate.text);
-          setSyncStatus("Modelos de mensagem carregados do Supabase.");
-        }
-      });
-  }, []);
-
   const normalizedSessionEmail = normalizeEmail(sessionEmail);
   const currentAccessUser = useMemo(
     () => data.users.find((user) => normalizeEmail(user.email) === normalizedSessionEmail),
@@ -1258,6 +1227,41 @@ export default function Home() {
   const canManageAssets = canManageModule(currentAccessRole, "assets");
   const canManageDevotional = canManageModule(currentAccessRole, "devotional");
   const canManageRegistrationRequests = currentAccessRole === "Administrador" || currentAccessRole === "Secretario";
+  useEffect(() => {
+    if (!hasSession || !canManageMessages) return;
+
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    async function loadMessageTemplates() {
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const token = sessionData.session?.access_token;
+
+      if (!token) return;
+
+      const response = await fetch("/api/admin/message-templates", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = (await response.json()) as { templates?: MessageTemplateItem[]; error?: string };
+
+      if (!response.ok) {
+        setSyncStatus("Supabase conectado, aguardando login para sincronizar dados.");
+        return;
+      }
+
+      if (result.templates?.length) {
+        const mappedTemplates = result.templates.map((template) => normalizeMessageTemplate(template));
+        const defaultTemplate = mappedTemplates.find((template) => template.id === "general_invite") ?? mappedTemplates[0];
+
+        setRemoteMessageTemplates(mappedTemplates);
+        setMessageTemplateId(defaultTemplate.id);
+        setMessageText(defaultTemplate.text);
+        setSyncStatus("Modelos de mensagem carregados do Supabase.");
+      }
+    }
+
+    void loadMessageTemplates();
+  }, [canManageMessages, hasSession]);
   const visibleModules = useMemo(
     () => modules.filter((module) => canAccessModule(currentAccessRole, module.key)),
     [currentAccessRole],
@@ -1296,6 +1300,33 @@ export default function Home() {
         : [],
     [canManageRegistrationRequests, data.registrationRequests],
   );
+  useEffect(() => {
+    if (!hasSession || !canManageRegistrationRequests) return;
+
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    async function loadRegistrationRequests() {
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const token = sessionData.session?.access_token;
+
+      if (!token) return;
+
+      const response = await fetch("/api/admin/registration-requests", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = (await response.json()) as { requests?: RegistrationRequest[]; error?: string };
+
+      if (!response.ok || !result.requests) return;
+
+      setData((current) => ({
+        ...current,
+        registrationRequests: result.requests ?? current.registrationRequests,
+      }));
+    }
+
+    void loadRegistrationRequests();
+  }, [canManageRegistrationRequests, hasSession]);
   const profileName = currentMember?.fullName ?? currentAccessUser?.name ?? (sessionEmail ? sessionEmail.split("@")[0] : "Usuario");
   const profileInitial = profileName.slice(0, 1).toUpperCase() || "U";
   const [todayKey, setTodayKey] = useState(currentDateKey);
@@ -3196,69 +3227,51 @@ export default function Home() {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
-    const { error } = await supabase.from("kids_profiles").insert({
-      id: kid.id,
-      child_name: kid.childName,
-      birth_date: kid.birthDate || null,
-      age_group: kid.ageGroup,
-      class_name: kid.className || null,
-      photo_url: null,
-      allergies: kid.allergies || null,
-      notes: kid.notes || null,
-      guardian_name: kid.guardianName,
-      guardian_phone: kid.guardianPhone,
-      guardian_email: kid.guardianEmail || null,
-      relationship: kid.relationship || null,
-      authorized_pickup: kid.authorizedPickup || null,
-      consent_image: kid.consentImage,
-      whatsapp_opt_in: true,
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+      setSyncStatus("Kids salvo localmente; faca login Supabase para sincronizar.");
+      return;
+    }
+
+    const response = await fetch("/api/admin/kids-profiles", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(kid),
     });
 
-    setSyncStatus(error ? "Kids salvo localmente; faca login Supabase para sincronizar." : "Cadastro Kids sincronizado com Supabase.");
+    setSyncStatus(response.ok ? "Cadastro Kids sincronizado com Supabase." : "Kids salvo localmente; nao foi possivel sincronizar agora.");
   }
 
   async function saveMessageCampaignToSupabase(recipients: MessageRecipient[]) {
     const supabase = getSupabaseClient();
     if (!supabase || !recipients.length) return;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
       setSyncStatus("Mensagens abertas localmente; faca login Supabase para registrar campanha.");
       return;
     }
 
-    const campaignId = uid("campaign");
-    const { error: campaignError } = await supabase.from("message_campaigns").insert({
-      id: campaignId,
-      title: `Envio ${messageAudience}`,
-      audience: messageAudience,
-      body: messageText,
-      channel: "whatsapp_manual",
-      status: "prepared",
-      recipient_count: recipients.length,
-      created_by: user.id,
+    const response = await fetch("/api/admin/message-campaigns", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        audience: messageAudience,
+        body: messageText,
+        recipients,
+      }),
     });
 
-    if (campaignError) {
-      setSyncStatus("Mensagens abertas; campanha nao foi salva no Supabase.");
-      return;
-    }
-
-    const { error: recipientsError } = await supabase.from("message_recipients").insert(
-      recipients.map((recipient) => ({
-        campaign_id: campaignId,
-        recipient_type: messageAudience === "Responsaveis Kids" ? "kid_guardian" : "member",
-        recipient_id: recipient.id,
-        recipient_name: recipient.name,
-        phone: recipient.phone,
-        whatsapp_url: whatsappUrl(recipient.phone, messageText, recipient.name),
-        send_status: "opened",
-      })),
-    );
-
-    setSyncStatus(recipientsError ? "Campanha salva, mas alguns destinatarios nao foram registrados." : "Campanha registrada no Supabase.");
+    setSyncStatus(response.ok ? "Campanha registrada no Supabase." : "Mensagens abertas; campanha nao foi salva no Supabase.");
   }
 
   function handleRecover(event: FormEvent<HTMLFormElement>) {
@@ -3489,7 +3502,7 @@ export default function Home() {
                   onDecline={declineRegistrationRequest}
                   onMarkInReview={markRegistrationInReview}
                   onReview={reviewRegistrationRequest}
-                  requests={pendingRegistrationRequests}
+                  requests={data.registrationRequests}
                 />
               )}
 
@@ -4098,27 +4111,66 @@ function RegistrationRequestsPanel({
   onReview: (request: RegistrationRequest) => void;
   requests: RegistrationRequest[];
 }) {
+  const [statusFilter, setStatusFilter] = useState<RegistrationRequest["status"] | "Ativos" | "Todos">("Ativos");
+  const visibleRequests = requests.filter((request) => {
+    if (statusFilter === "Todos") return true;
+    if (statusFilter === "Ativos") return request.status === "Aguardando aprovacao" || request.status === "Em analise";
+    return request.status === statusFilter;
+  });
+  const activeRequests = requests.filter((request) => request.status === "Aguardando aprovacao" || request.status === "Em analise");
+  const statusOptions: Array<{ label: string; value: RegistrationRequest["status"] | "Ativos" | "Todos" }> = [
+    { label: "Ativos", value: "Ativos" },
+    { label: "Todos", value: "Todos" },
+    { label: "Aguardando", value: "Aguardando aprovacao" },
+    { label: "Em analise", value: "Em analise" },
+    { label: "Aprovados", value: "Aprovado" },
+    { label: "Recusados", value: "Recusado" },
+  ];
+
   return (
     <article className="surface wide streaming-section registration-queue-panel" id="registration-queue-panel">
       <div className="panel-heading">
         <div>
-          <h2>Pre-cadastros aguardando</h2>
-          <span>{requests.length} ficha{requests.length === 1 ? "" : "s"} na fila</span>
+          <h2>Pre-cadastros</h2>
+          <span>{activeRequests.length} ficha{activeRequests.length === 1 ? "" : "s"} em andamento</span>
         </div>
         <button className="secondary" onClick={copyPublicRegistrationLink} type="button">
           Copiar link de cadastro
         </button>
       </div>
 
-      {requests.length ? (
+      <div className="registration-status-tabs">
+        {statusOptions.map((option) => {
+          const total =
+            option.value === "Todos"
+              ? requests.length
+              : option.value === "Ativos"
+                ? activeRequests.length
+              : requests.filter((request) => request.status === option.value).length;
+
+          return (
+            <button
+              className={statusFilter === option.value ? "active" : ""}
+              key={option.value}
+              onClick={() => setStatusFilter(option.value)}
+              type="button"
+            >
+              {option.label}
+              <span>{total}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {visibleRequests.length ? (
         <div className="registration-request-grid">
-          {requests.map((request) => (
+          {visibleRequests.map((request) => (
             <div className="registration-request-card" key={request.id}>
               <div>
                 <p className="eyebrow">{request.requestedStatus}</p>
                 <strong>{request.fullName}</strong>
-                <span className={`status-chip ${request.status === "Em analise" ? "em-analise" : "pendente"}`}>
-                  {request.status === "Em analise" ? "Em analise" : "Aguardando aprovacao"}
+                <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>
+                  {request.status}
                 </span>
                 <small>{request.phone} - {request.email || "E-mail nao informado"}</small>
                 <small>
@@ -4128,29 +4180,33 @@ function RegistrationRequestsPanel({
               </div>
               {request.notes && <p>{request.notes}</p>}
               <div className="card-actions">
-                {request.status !== "Em analise" && (
+                {request.status === "Aguardando aprovacao" && (
                   <button className="secondary" onClick={() => onMarkInReview(request)} type="button">
                     Marcar em analise
                   </button>
                 )}
-                <button onClick={() => onReview(request)} type="button">
-                  Editar ficha
-                </button>
-                <button className="secondary" onClick={() => onApproveMember(request)} type="button">
-                  Aprovar membro
-                </button>
-                <button className="secondary" onClick={() => onApproveVisitor(request)} type="button">
-                  Aprovar visitante
-                </button>
-                <button className="danger-action" onClick={() => onDecline(request)} type="button">
-                  Recusar
-                </button>
+                {(request.status === "Aguardando aprovacao" || request.status === "Em analise") && (
+                  <>
+                    <button onClick={() => onReview(request)} type="button">
+                      Editar ficha
+                    </button>
+                    <button className="secondary" onClick={() => onApproveMember(request)} type="button">
+                      Aprovar membro
+                    </button>
+                    <button className="secondary" onClick={() => onApproveVisitor(request)} type="button">
+                      Aprovar visitante
+                    </button>
+                    <button className="danger-action" onClick={() => onDecline(request)} type="button">
+                      Recusar
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <p className="empty-state">Nenhum pre-cadastro aguardando. Use o link para receber novas fichas pelo WhatsApp.</p>
+        <p className="empty-state">Nenhum pre-cadastro neste filtro. Use o link para receber novas fichas pelo WhatsApp.</p>
       )}
     </article>
   );

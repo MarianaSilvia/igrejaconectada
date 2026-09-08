@@ -27,6 +27,32 @@ type RegistrationRequestRow = {
   review_note: string;
 };
 
+const registrationRequestColumns = [
+  "id",
+  "full_name",
+  "father_name",
+  "mother_name",
+  "cpf",
+  "phone",
+  "email",
+  "birth_date",
+  "gender",
+  "address",
+  "zip_code",
+  "city",
+  "neighborhood",
+  "marital_status",
+  "education",
+  "spouse_name",
+  "requested_status",
+  "registration_source",
+  "notes",
+  "status",
+  "created_at",
+  "reviewed_at",
+  "review_note",
+].join(",");
+
 function toRegistrationRequest(row: RegistrationRequestRow) {
   return {
     id: row.id,
@@ -64,14 +90,15 @@ export async function GET(request: Request) {
 
   const { data, error } = await client
     .from("registration_requests")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select(registrationRequestColumns)
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   if (error) {
     return NextResponse.json({ error: "Nao foi possivel carregar os pre-cadastros." }, { status: 400 });
   }
 
-  return NextResponse.json({ requests: (data as RegistrationRequestRow[]).map(toRegistrationRequest) });
+  return NextResponse.json({ requests: (data as unknown as RegistrationRequestRow[]).map(toRegistrationRequest) });
 }
 
 export async function PATCH(request: Request) {
@@ -98,12 +125,12 @@ export async function PATCH(request: Request) {
       reviewed_by: session.user.id,
     })
     .eq("id", id)
-    .select("*")
+    .select(registrationRequestColumns)
     .single();
 
   if (error) {
     return NextResponse.json({ error: "Nao foi possivel atualizar o pre-cadastro." }, { status: 400 });
   }
 
-  return NextResponse.json({ request: toRegistrationRequest(data as RegistrationRequestRow) });
+  return NextResponse.json({ request: toRegistrationRequest(data as unknown as RegistrationRequestRow) });
 }

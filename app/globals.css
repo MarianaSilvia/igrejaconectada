@@ -1847,6 +1847,21 @@ textarea:focus {
   color: #9bd7ff;
 }
 
+.status-chip.aguardando-aprovacao {
+  background: rgba(241, 199, 91, 0.16);
+  color: #ffe49b;
+}
+
+.status-chip.aprovado {
+  background: rgba(20, 217, 196, 0.14);
+  color: var(--accent-strong);
+}
+
+.status-chip.recusado {
+  background: rgba(255, 82, 102, 0.16);
+  color: #ff9baa;
+}
+
 .status-chip.agendado {
   background: rgba(20, 217, 196, 0.14);
   color: var(--accent-strong);
@@ -2826,6 +2841,41 @@ textarea:focus {
 
 .registration-queue-panel {
   border-color: rgba(229, 9, 20, 0.35);
+}
+
+.registration-status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.registration-status-tabs button {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  color: var(--foreground);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.registration-status-tabs button.active {
+  background: rgba(232, 58, 79, 0.18);
+  border-color: rgba(255, 99, 116, 0.48);
+  color: #fff;
+}
+
+.registration-status-tabs span {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  min-width: 24px;
+  padding: 3px 7px;
+  text-align: center;
 }
 
 .registration-request-grid {
