@@ -2091,6 +2091,195 @@ textarea:focus {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
+.overview-streaming {
+  gap: 18px;
+}
+
+.overview-streaming .streaming-cover {
+  align-content: end;
+  aspect-ratio: 16 / 7;
+  display: grid;
+  justify-items: center;
+  min-height: 420px;
+  padding: clamp(26px, 5vw, 56px);
+  text-align: center;
+}
+
+.overview-streaming .streaming-cover::before {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(232, 58, 79, 0.42), transparent 24%),
+    radial-gradient(circle at 78% 22%, rgba(37, 199, 255, 0.22), transparent 30%),
+    linear-gradient(180deg, rgba(7, 8, 13, 0.08) 0%, rgba(7, 8, 13, 0.42) 48%, rgba(7, 8, 13, 0.95) 100%),
+    linear-gradient(135deg, #24121a 0%, #10111a 52%, #07080d 100%);
+  content: "";
+  inset: 0;
+  position: absolute;
+}
+
+.overview-streaming .streaming-cover::after {
+  background:
+    linear-gradient(90deg, transparent 0 12%, rgba(255, 255, 255, 0.06) 12% 13%, transparent 13% 24%),
+    linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.64) 82%, rgba(0, 0, 0, 0.92) 100%);
+  opacity: 0.9;
+}
+
+.overview-streaming .streaming-cover .eyebrow {
+  color: #ffb1bb;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.overview-streaming .streaming-cover h2 {
+  color: #fff;
+  font-size: clamp(42px, 7.2vw, 92px);
+  letter-spacing: 0;
+  line-height: 0.9;
+  margin: 0 auto 14px;
+  max-width: 980px;
+  text-transform: uppercase;
+}
+
+.overview-streaming .streaming-cover p {
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 16px;
+  line-height: 1.55;
+  margin-inline: auto;
+  max-width: 720px;
+}
+
+.overview-streaming .hero-actions {
+  justify-content: center;
+  margin-top: 26px;
+}
+
+.overview-streaming .hero-actions button {
+  border-radius: 8px;
+  min-height: 48px;
+  min-width: 150px;
+  padding: 0 18px;
+}
+
+.overview-streaming .hero-actions button:first-child {
+  background: #fff;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32);
+  color: #101116;
+}
+
+.overview-streaming .hero-actions button.secondary {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+
+.overview-streaming .streaming-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(185px, 1fr);
+  grid-template-columns: none;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+}
+
+.overview-streaming .action-tile {
+  aspect-ratio: 0.78;
+  border-color: rgba(255, 255, 255, 0.12);
+  min-height: 210px;
+  overflow: hidden;
+  padding: 16px;
+  position: relative;
+  scroll-snap-align: start;
+}
+
+.overview-streaming .action-tile::before {
+  background:
+    radial-gradient(circle at 78% 14%, rgba(246, 198, 91, 0.3), transparent 22%),
+    linear-gradient(145deg, rgba(232, 58, 79, 0.28), transparent 58%);
+  content: "";
+  inset: 0;
+  opacity: 0.85;
+  position: absolute;
+}
+
+.overview-streaming .action-tile > * {
+  position: relative;
+  z-index: 1;
+}
+
+.overview-streaming .action-tile span {
+  color: #ffb1bb;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.overview-streaming .action-tile strong {
+  align-self: end;
+  font-size: clamp(34px, 5vw, 56px);
+  line-height: 0.9;
+}
+
+.overview-streaming .action-tile small {
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.35;
+}
+
+.overview-streaming .streaming-section {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.overview-streaming .agenda-preview .row-list,
+.overview-streaming .notices-preview .row-list,
+.overview-streaming .care-preview .row-list,
+.overview-streaming .mural-preview-panel .mural-stack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.overview-streaming .agenda-preview .data-row,
+.overview-streaming .notices-preview .data-row,
+.overview-streaming .care-preview .data-row,
+.overview-streaming .mural-preview-panel .mural-card {
+  align-items: flex-end;
+  aspect-ratio: 1 / 0.62;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.58) 72%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(232, 58, 79, 0.1));
+  min-height: 150px;
+  overflow: hidden;
+  position: relative;
+}
+
+.overview-streaming .mural-preview-panel .mural-card-media {
+  inset: 0;
+  margin: 0;
+  position: absolute;
+}
+
+.overview-streaming .mural-preview-panel .mural-card-media::after {
+  background: linear-gradient(180deg, transparent 25%, rgba(0, 0, 0, 0.78));
+  content: "";
+  inset: 0;
+  position: absolute;
+}
+
+.overview-streaming .mural-preview-panel .mural-card strong,
+.overview-streaming .mural-preview-panel .mural-card small,
+.overview-streaming .mural-preview-panel .mural-card .inline-link {
+  position: relative;
+  z-index: 1;
+}
+
+.overview-streaming .birthday-spotlight {
+  grid-column: 1 / -1;
+}
+
+.overview-streaming .birthday-spotlight-list {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.overview-streaming .devotional-card {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 1100px) {
   .access-page {
     grid-template-columns: 1fr;
@@ -2129,6 +2318,15 @@ textarea:focus {
 
   .action-strip {
     grid-template-columns: 1fr;
+  }
+
+  .overview-streaming .streaming-cover {
+    aspect-ratio: auto;
+    min-height: 360px;
+  }
+
+  .overview-streaming .streaming-rail {
+    grid-auto-columns: minmax(172px, 44vw);
   }
 
   .birthday-spotlight-list {
@@ -2293,8 +2491,40 @@ textarea:focus {
     font-size: 36px;
   }
 
+  .overview-streaming .streaming-cover {
+    min-height: 520px;
+    padding: 28px 18px;
+  }
+
+  .overview-streaming .streaming-cover h2 {
+    font-size: 42px;
+    max-width: 330px;
+  }
+
+  .overview-streaming .streaming-cover p {
+    font-size: 14px;
+  }
+
+  .overview-streaming .hero-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .overview-streaming .hero-actions button:first-child {
+    grid-column: 1 / -1;
+  }
+
   .action-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overview-streaming .streaming-rail {
+    grid-auto-columns: minmax(142px, 44vw);
+  }
+
+  .overview-streaming .action-tile {
+    min-height: 176px;
   }
 
   .action-tile {

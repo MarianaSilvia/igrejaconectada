@@ -3220,8 +3220,8 @@ export default function Home() {
           </header>
 
           {activeModule === "overview" && (isAdminView ? (
-            <section className="content-grid">
-              <div className="hero-panel">
+            <section className="content-grid overview-streaming admin-overview">
+              <div className="hero-panel streaming-cover">
                 <p className="eyebrow">Painel inteligente da igreja</p>
                 <h2>Prioridades, pessoas e grupos em tempo real.</h2>
                 <p>
@@ -3238,7 +3238,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="action-strip">
+              <div className="action-strip streaming-rail">
                 {actionHighlights.filter((item) => canAccessModule(currentAccessRole, item.module)).map((item) => (
                   <button className="action-tile" key={item.label} onClick={() => setActiveModule(item.module)} type="button">
                     <span>{item.label}</span>
@@ -3251,7 +3251,7 @@ export default function Home() {
               {birthdaySpotlightPanel}
 
               {publishedDevotional && (
-                <article className="surface wide devotional-card">
+                <article className="surface wide devotional-card streaming-section">
                   <div className="panel-heading">
                     <h2>{publishedDevotional.title}</h2>
                     <span>{formatDate(publishedDevotional.publishedAt)}</span>
@@ -3266,7 +3266,7 @@ export default function Home() {
                 </article>
               )}
 
-              <article className="surface wide">
+              <article className="surface wide streaming-section agenda-preview">
                 <div className="panel-heading">
                   <h2>Agenda da semana</h2>
                   <button onClick={() => setActiveModule("events")} type="button">
@@ -3287,7 +3287,7 @@ export default function Home() {
                 </div>
               </article>
 
-              <article className="surface">
+              <article className="surface streaming-section mural-preview-panel">
                 <div className="panel-heading">
                   <h2>Mural da igreja</h2>
                   <span>{data.mural.filter((item) => item.published).length} de 5 publicados</span>
@@ -3310,8 +3310,8 @@ export default function Home() {
               </article>
             </section>
           ) : (
-            <section className="content-grid">
-              <div className="hero-panel">
+            <section className="content-grid overview-streaming member-overview">
+              <div className="hero-panel streaming-cover">
                 <p className="eyebrow">Area do membro</p>
                 <h2>Bem-vindo, {profileName}.</h2>
                 <p>Veja sua ficha, acompanhe a agenda, leia os avisos e envie pedidos de atendimento pastoral ou oracao.</p>
@@ -3334,7 +3334,7 @@ export default function Home() {
               {birthdaySpotlightPanel}
 
               {publishedDevotional && (
-                <article className="surface wide devotional-card">
+                <article className="surface wide devotional-card streaming-section">
                   <div className="panel-heading">
                     <h2>{publishedDevotional.title}</h2>
                     <span>{formatDate(publishedDevotional.publishedAt)}</span>
@@ -3344,7 +3344,7 @@ export default function Home() {
                 </article>
               )}
 
-              <article className="surface">
+              <article className="surface streaming-section member-profile-preview">
                 <div className="panel-heading">
                   <h2>Minha ficha</h2>
                   <span>{currentMember ? "Cadastro localizado" : "Sem vinculo"}</span>
@@ -3365,7 +3365,7 @@ export default function Home() {
                 )}
               </article>
 
-              <article className="surface">
+              <article className="surface streaming-section agenda-preview">
                 <div className="panel-heading">
                   <h2>Agenda da semana</h2>
                   <button onClick={() => setActiveModule("events")} type="button">
@@ -3388,7 +3388,7 @@ export default function Home() {
                 </div>
               </article>
 
-              <article className="surface">
+              <article className="surface streaming-section notices-preview">
                 <div className="panel-heading">
                   <h2>Avisos gerais</h2>
                   <button onClick={() => setActiveModule("notices")} type="button">
@@ -3415,7 +3415,7 @@ export default function Home() {
                 </div>
               </article>
 
-              <article className="surface">
+              <article className="surface streaming-section mural-preview-panel">
                 <div className="panel-heading">
                   <h2>Mural da igreja</h2>
                   <button onClick={() => setActiveModule("mural")} type="button">
@@ -3448,7 +3448,7 @@ export default function Home() {
                 </div>
               </article>
 
-              <article className="surface">
+              <article className="surface streaming-section care-preview">
                 <div className="panel-heading">
                   <h2>Meus pedidos</h2>
                   <span>{filteredCareRequests.length} registros</span>
