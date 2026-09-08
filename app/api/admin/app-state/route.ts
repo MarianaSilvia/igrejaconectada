@@ -13,12 +13,40 @@ type AppStatePayload = {
   baseUpdatedAt?: string | null;
 };
 
+const appStateCollectionKeys = [
+  "careRequests",
+  "events",
+  "notices",
+  "mural",
+  "users",
+  "members",
+  "registrationRequests",
+  "visitors",
+  "kids",
+  "schoolClasses",
+  "discipleshipClasses",
+  "ministries",
+  "schedules",
+  "attendanceSessions",
+  "messageTemplates",
+  "messageCampaigns",
+  "transactions",
+  "assets",
+  "devotionals",
+  "audit",
+  "notificationReadIds",
+];
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
 function recordsFrom(value: unknown) {
   return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function emptyPayloadCollections() {
+  return appStateCollectionKeys.reduce<JsonRecord>((payload, key) => ({ ...payload, [key]: [] }), {});
 }
 
 function textValue(value: unknown) {
@@ -125,12 +153,20 @@ function payloadWithVisibleKeys(payload: JsonRecord, role: ChurchRole) {
       return { ...nextPayload, members: sanitizeMemberDirectoryForRole(recordsFrom(payload.members), role) };
     }
 
+    if (role === "PROFESSOR" && key === "notices") {
+      return { ...nextPayload, notices: recordsFrom(payload.notices).filter((notice) => textValue(notice.status) === "Publicado") };
+    }
+
+    if (role === "PROFESSOR" && key === "mural") {
+      return { ...nextPayload, mural: recordsFrom(payload.mural).filter((item) => item.published === true) };
+    }
+
     if (visiblePublishedOnlyKeys(role).includes(key)) {
       return { ...nextPayload, [key]: recordsFrom(payload[key]).filter((item) => textValue(item.status) === "Publicado") };
     }
 
     return { ...nextPayload, [key]: payload[key] };
-  }, {});
+  }, emptyPayloadCollections());
 }
 
 function sanitizedAdministrativePayloadForRole(payload: JsonRecord, role: ChurchRole) {
@@ -158,20 +194,19 @@ function sanitizeMemberPayloadForResponse(payload: unknown, user: User) {
   const currentMember = findCurrentMember(payload, user);
 
   return {
-    ...payload,
-    users: [],
+    ...emptyPayloadCollections(),
     members: currentMember ? [currentMember] : [],
-    registrationRequests: [],
-    visitors: [],
+    events: recordsFrom(payload.events),
+    notices: recordsFrom(payload.notices).filter((notice) => textValue(notice.status) === "Publicado"),
+    mural: recordsFrom(payload.mural).filter((item) => item.published === true),
+    schoolClasses: recordsFrom(payload.schoolClasses),
+    discipleshipClasses: recordsFrom(payload.discipleshipClasses),
+    ministries: recordsFrom(payload.ministries),
     kids: recordsFrom(payload.kids).filter((kid) => kidBelongsToMember(kid, currentMember, user)),
     careRequests: recordsFrom(payload.careRequests).filter((request) => careBelongsToMember(request, currentMember, user)),
-    schedules: [],
     attendanceSessions: filterAttendanceForMember(recordsFrom(payload.attendanceSessions), currentMember),
-    messageCampaigns: [],
-    transactions: [],
-    assets: [],
     devotionals: recordsFrom(payload.devotionals).filter((devotional) => textValue(devotional.status) === "Publicado"),
-    audit: [],
+    notificationReadIds: Array.isArray(payload.notificationReadIds) ? payload.notificationReadIds : [],
   };
 }
 
