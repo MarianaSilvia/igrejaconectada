@@ -1271,31 +1271,24 @@ export default function Home() {
   const canManageAssets = canManageModule(currentAccessRole, "assets");
   const canManageDevotional = canManageModule(currentAccessRole, "devotional");
   const canManageRegistrationRequests = currentAccessRole === "Administrador" || currentAccessRole === "Secretario";
-  useEffect(() => {
-    if (!hasSession || currentAccessRole !== "Administrador" || !isSupabaseConfigured()) {
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadMemberSyncStatus() {
+  const loadMemberSyncStatus = useCallback(
+    async (refreshMirror = false) => {
       setMemberSyncLoading(true);
       const supabase = getSupabaseClient();
       const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
       const token = sessionData.session?.access_token;
 
       if (!token) {
-        if (!cancelled) setMemberSyncLoading(false);
+        setMemberSyncLoading(false);
         return;
       }
 
       try {
         const response = await fetch("/api/admin/member-sync-status", {
+          method: refreshMirror ? "POST" : "GET",
           headers: { Authorization: `Bearer ${token}` },
         });
         const result = (await response.json()) as MemberSyncStatus | { error?: string };
-
-        if (cancelled) return;
 
         if (!response.ok || isMemberSyncError(result)) {
           const errorMessage = isMemberSyncError(result) ? result.error : undefined;
@@ -1315,17 +1308,27 @@ export default function Home() {
         }
 
         setMemberSyncStatus(result);
+        if (refreshMirror) setSyncStatus("Conferencia dos membros atualizada com o espelho da tabela members.");
       } finally {
-        if (!cancelled) setMemberSyncLoading(false);
+        setMemberSyncLoading(false);
       }
+    },
+    [data.members.length],
+  );
+
+  useEffect(() => {
+    if (!hasSession || currentAccessRole !== "Administrador" || !isSupabaseConfigured()) {
+      return;
     }
 
-    void loadMemberSyncStatus();
+    const timer = window.setTimeout(() => {
+      void loadMemberSyncStatus();
+    }, 0);
 
     return () => {
-      cancelled = true;
+      window.clearTimeout(timer);
     };
-  }, [currentAccessRole, data.members.length, hasSession, remoteUpdatedAt]);
+  }, [currentAccessRole, hasSession, loadMemberSyncStatus, remoteUpdatedAt]);
   useEffect(() => {
     if (!hasSession || !canManageMessages) return;
 
@@ -3849,6 +3852,7 @@ export default function Home() {
                 memberSyncLoading={currentAccessRole === "Administrador" ? memberSyncLoading : false}
                 memberSyncStatus={currentAccessRole === "Administrador" ? memberSyncStatus : null}
                 membersCount={data.members.length}
+                onMemberSyncRefresh={currentAccessRole === "Administrador" ? () => loadMemberSyncStatus(true) : undefined}
                 onReload={reloadRemoteStateNow}
                 pendingRegistrationsCount={pendingRegistrationRequests.length}
                 saveState={saveState}

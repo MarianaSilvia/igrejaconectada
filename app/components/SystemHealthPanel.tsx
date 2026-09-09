@@ -13,6 +13,7 @@ type SystemHealthPanelProps = {
   saveState: SaveState;
   syncStatus: string;
   visitorsCount: number;
+  onMemberSyncRefresh?: () => void | Promise<void>;
   onReload: () => void | Promise<void> | Promise<boolean>;
 };
 
@@ -37,6 +38,7 @@ export function SystemHealthPanel({
   saveState,
   syncStatus,
   visitorsCount,
+  onMemberSyncRefresh,
   onReload,
 }: SystemHealthPanelProps) {
   return (
@@ -92,6 +94,11 @@ export function SystemHealthPanel({
               <span>Faltando na tabela: {memberSyncStatus.missingInTableCount}</span>
               <span>Sobra na tabela: {memberSyncStatus.extraInTableCount}</span>
             </div>
+          )}
+          {onMemberSyncRefresh && (
+            <button className="secondary member-sync-action" disabled={memberSyncLoading} onClick={onMemberSyncRefresh} type="button">
+              Sincronizar espelho agora
+            </button>
           )}
         </div>
       )}

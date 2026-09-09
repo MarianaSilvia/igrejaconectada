@@ -1,5 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { syncMembersTable } from "../../../member-table-sync";
 import { adminClient, churchRoleFromLabel, requireSession } from "../auth";
 
 const stateId = "main";
@@ -63,7 +64,29 @@ async function readAllMemberRows(client: NonNullable<ReturnType<typeof adminClie
   return { rows };
 }
 
-export async function GET(request: Request) {
+async function readStoredPayload(client: NonNullable<ReturnType<typeof adminClient>>) {
+  const { data: stored, error } = await client.from("church_app_state").select("payload").eq("id", stateId).maybeSingle();
+
+  if (error) return { error: error.message };
+  return { payload: isRecord(stored?.payload) ? stored.payload : {} };
+}
+
+function unavailableStatus(jsonMembers: JsonRecord[], message: string) {
+  return {
+    status: "Indisponivel",
+    jsonTotal: jsonMembers.length,
+    tableTotal: 0,
+    missingCodeCount: jsonMembers.filter((member) => !textValue(member.memberCode)).length,
+    duplicateCpfCount: duplicateGroupCount(jsonMembers.map((member) => digitsOnly(member.cpf))),
+    duplicatePhoneCount: duplicateGroupCount(jsonMembers.map((member) => digitsOnly(member.phone))),
+    missingInTableCount: 0,
+    extraInTableCount: 0,
+    checkedAt: new Date().toISOString(),
+    message,
+  };
+}
+
+async function assertAdmin(request: Request) {
   const session = await requireSession(request);
   if (session.response || !session.user) return session.response;
 
@@ -72,35 +95,28 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
   }
 
-  const { data: stored, error: stateError } = await client.from("church_app_state").select("payload").eq("id", stateId).maybeSingle();
+  const stored = await readStoredPayload(client);
 
-  if (stateError) {
-    return NextResponse.json({ error: stateError.message }, { status: 400 });
+  if ("error" in stored) {
+    return NextResponse.json({ error: stored.error }, { status: 400 });
   }
 
-  const payload = isRecord(stored?.payload) ? stored.payload : {};
+  const payload = stored.payload;
   const effectiveRole = session.role === "ADMIN" ? "ADMIN" : roleFromPayload(payload, session.user);
 
   if (effectiveRole !== "ADMIN") {
     return NextResponse.json({ error: "Apenas administrador pode conferir a sincronizacao de membros." }, { status: 403 });
   }
 
+  return { client, payload };
+}
+
+async function memberSyncStatus(client: NonNullable<ReturnType<typeof adminClient>>, payload: JsonRecord, messageOverride?: string) {
   const jsonMembers = recordsFrom(payload.members);
   const tableResult = await readAllMemberRows(client);
 
   if ("error" in tableResult) {
-    return NextResponse.json({
-      status: "Indisponivel",
-      jsonTotal: jsonMembers.length,
-      tableTotal: 0,
-      missingCodeCount: jsonMembers.filter((member) => !textValue(member.memberCode)).length,
-      duplicateCpfCount: duplicateGroupCount(jsonMembers.map((member) => digitsOnly(member.cpf))),
-      duplicatePhoneCount: duplicateGroupCount(jsonMembers.map((member) => digitsOnly(member.phone))),
-      missingInTableCount: 0,
-      extraInTableCount: 0,
-      checkedAt: new Date().toISOString(),
-      message: tableResult.error,
-    });
+    return unavailableStatus(jsonMembers, tableResult.error ?? "Tabela members indisponivel.");
   }
 
   const tableRows = tableResult.rows;
@@ -120,7 +136,7 @@ export async function GET(request: Request) {
       duplicatePhoneCount,
   );
 
-  return NextResponse.json({
+  return {
     status: hasAttention ? "Atencao" : "Sincronizado",
     jsonTotal: jsonMembers.length,
     tableTotal: tableRows.length,
@@ -130,8 +146,35 @@ export async function GET(request: Request) {
     missingInTableCount,
     extraInTableCount,
     checkedAt: new Date().toISOString(),
-    message: hasAttention
+    message: messageOverride ?? (hasAttention
       ? "Confira diferencas antes de trocar a fonte principal dos membros."
-      : "JSON principal e tabela members estao alinhados.",
-  });
+      : "JSON principal e tabela members estao alinhados."),
+  };
+}
+
+export async function GET(request: Request) {
+  const authorized = await assertAdmin(request);
+  if (authorized instanceof NextResponse) return authorized;
+
+  return NextResponse.json(await memberSyncStatus(authorized.client, authorized.payload));
+}
+
+export async function POST(request: Request) {
+  const authorized = await assertAdmin(request);
+  if (authorized instanceof NextResponse) return authorized;
+
+  const jsonMembers = recordsFrom(authorized.payload.members);
+  const syncResult = await syncMembersTable(authorized.client, authorized.payload);
+
+  if ("error" in syncResult) {
+    return NextResponse.json(unavailableStatus(jsonMembers, syncResult.error ?? "Nao foi possivel atualizar o espelho de membros."), { status: 400 });
+  }
+
+  return NextResponse.json(
+    await memberSyncStatus(
+      authorized.client,
+      authorized.payload,
+      `Espelho de membros atualizado com ${syncResult.count} cadastro(s) a partir do JSON principal.`,
+    ),
+  );
 }

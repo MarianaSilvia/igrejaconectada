@@ -1141,6 +1141,10 @@ button:disabled {
   padding: 8px 10px;
 }
 
+.member-sync-action {
+  margin-top: 12px;
+}
+
 .system-health-footer {
   align-items: center;
   display: flex;

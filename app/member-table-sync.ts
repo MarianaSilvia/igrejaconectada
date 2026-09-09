@@ -84,6 +84,12 @@ function memberRow(member: JsonRecord) {
   };
 }
 
+function chunks<T>(items: T[], size: number) {
+  const grouped: T[][] = [];
+  for (let index = 0; index < items.length; index += size) grouped.push(items.slice(index, index + size));
+  return grouped;
+}
+
 export async function syncMembersTable(client: SupabaseClient, payload: JsonRecord) {
   const rows = recordsFrom(payload.members).map(memberRow).filter((row): row is NonNullable<ReturnType<typeof memberRow>> => Boolean(row));
   const memberIds = rows.map((row) => row.id);
@@ -93,8 +99,16 @@ export async function syncMembersTable(client: SupabaseClient, payload: JsonReco
     if (error) return { error: error.message ?? "Nao foi possivel sincronizar membros." };
   }
 
-  if (memberIds.length) {
-    const { error } = await client.from("members").delete().eq("mirror_source", "church_app_state").not("id", "in", `(${memberIds.join(",")})`);
+  const { data: mirroredRows, error: readError } = await client.from("members").select("id").eq("mirror_source", "church_app_state");
+  if (readError) return { error: readError.message ?? "Nao foi possivel conferir membros antigos do espelho." };
+
+  const activeIds = new Set(memberIds);
+  const staleIds = recordsFrom(mirroredRows)
+    .map((row) => textValue(row.id, 120))
+    .filter((id) => id && !activeIds.has(id));
+
+  for (const staleChunk of chunks(staleIds, 200)) {
+    const { error } = await client.from("members").delete().eq("mirror_source", "church_app_state").in("id", staleChunk);
     if (error) return { error: error.message ?? "Nao foi possivel limpar membros removidos do espelho." };
   }
 
