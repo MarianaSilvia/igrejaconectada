@@ -1,4 +1,4 @@
-import { birthdayLabel, formatDate } from "./app-helpers";
+import { birthdayLabel, formatDate, memberGroupLabel } from "./app-helpers";
 import { classNameById } from "./attendance-helpers";
 import type { AppData, ChurchEvent, MemberRecord, ReportKind } from "./types";
 
@@ -42,7 +42,8 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
         "Categorias",
         "Tipo",
         "Status",
-        "Grupo",
+        "Grupos",
+        "Funcao ministerial",
         "EBD",
         "Discipulado",
         "Situacao pastoral",
@@ -69,7 +70,8 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
         member.categories,
         member.memberType,
         member.status,
-        member.ministry || "Sem grupo",
+        memberGroupLabel(member),
+        member.ministerialFunction || "Nao informada",
         classNameById(data.schoolClasses, member.schoolClassId) || "Nao matriculado",
         classNameById(data.discipleshipClasses, member.discipleshipClassId) || "Nao matriculado",
         member.pastoralStatus || "Sem acompanhamento definido",
@@ -91,8 +93,8 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
     },
     birthdays: {
       title: "Aniversariantes do mes",
-      headers: ["Nome", "Data", "Telefone", "Grupo"],
-      rows: monthlyBirthdays.map((member) => [member.fullName, birthdayLabel(member.birthDate), member.phone, member.ministry || "Sem grupo"]),
+      headers: ["Nome", "Data", "Telefone", "Grupos"],
+      rows: monthlyBirthdays.map((member) => [member.fullName, birthdayLabel(member.birthDate), member.phone, memberGroupLabel(member)]),
     },
     kids: {
       title: "Criancas cadastradas",

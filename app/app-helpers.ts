@@ -1,4 +1,4 @@
-import type { ChurchEvent } from "./types";
+import type { ChurchEvent, MemberRecord } from "./types";
 
 export function formatDate(value: string) {
   if (!value) return "Sem data";
@@ -122,6 +122,56 @@ export function isEventInWeek(event: ChurchEvent, start: Date, end: Date) {
 
 export function sortEventsByDate(first: ChurchEvent, second: ChurchEvent) {
   return `${first.date} ${first.time}`.localeCompare(`${second.date} ${second.time}`);
+}
+
+export function normalizeTextList(values: unknown[]) {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  values.forEach((value) => {
+    if (Array.isArray(value)) {
+      normalizeTextList(value).forEach((item) => {
+        const key = normalizeSearchText(item);
+        if (!seen.has(key)) {
+          seen.add(key);
+          normalized.push(item);
+        }
+      });
+      return;
+    }
+
+    if (typeof value !== "string") return;
+    value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .forEach((item) => {
+        const key = normalizeSearchText(item);
+        if (!seen.has(key)) {
+          seen.add(key);
+          normalized.push(item);
+        }
+      });
+  });
+
+  return normalized;
+}
+
+export function memberGroupNames(member: Pick<MemberRecord, "ministry" | "ministries">) {
+  return normalizeTextList([member.ministries, member.ministry]);
+}
+
+export function memberGroupLabel(member: Pick<MemberRecord, "ministry" | "ministries">) {
+  const groups = memberGroupNames(member);
+  return groups.length ? groups.join(", ") : "Sem grupo";
+}
+
+export function memberMatchesGroup(member: Pick<MemberRecord, "ministry" | "ministries">, group: string) {
+  return group === "Todos" || memberGroupNames(member).includes(group);
+}
+
+export function sortMembersByName(first: Pick<MemberRecord, "fullName">, second: Pick<MemberRecord, "fullName">) {
+  return first.fullName.localeCompare(second.fullName, "pt-BR", { sensitivity: "base" });
 }
 
 export function currentDateKey() {

@@ -285,9 +285,16 @@ function serverAuditEntries(existingPayload: JsonRecord, nextPayload: JsonRecord
   deletedRecords(existingPayload, nextPayload, "members").forEach((record) =>
     entries.push(auditEntry(`Membro excluido: ${displayName(record)}`, actor, role, when)),
   );
-  changedRecords(existingPayload, nextPayload, "members", ["fullName", "phone", "email", "status", "memberType", "ministry"]).forEach((record) =>
-    entries.push(auditEntry(`Ficha atualizada: ${displayName(record)}`, actor, role, when)),
-  );
+  changedRecords(existingPayload, nextPayload, "members", [
+    "fullName",
+    "phone",
+    "email",
+    "status",
+    "memberType",
+    "ministry",
+    "ministries",
+    "ministerialFunction",
+  ]).forEach((record) => entries.push(auditEntry(`Ficha atualizada: ${displayName(record)}`, actor, role, when)));
 
   createdRecords(existingPayload, nextPayload, "users").forEach((record) =>
     entries.push(auditEntry(`Acesso criado: ${displayName(record)}`, actor, role, when)),

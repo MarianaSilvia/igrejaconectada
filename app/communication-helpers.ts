@@ -1,4 +1,4 @@
-import { birthdayLabel, normalizeSearchText, normalizeWhatsappPhone } from "./app-helpers";
+import { birthdayLabel, memberGroupLabel, memberGroupNames, normalizeSearchText, normalizeWhatsappPhone } from "./app-helpers";
 import { classNameById, type ClassNoticeArea } from "./attendance-helpers";
 import type { KidRecord, MemberRecord, MessageAudience, MessageRecipient, SchoolClass, VisitorRecord } from "./types";
 
@@ -29,7 +29,8 @@ export function messageRecipientsForAudience({
       id: member.id,
       name: member.fullName,
       phone: member.phone,
-      group: member.ministry || member.memberType,
+      group: memberGroupLabel(member),
+      groups: memberGroupNames(member),
     }));
 
   if (audience === "Todos os membros") return memberRecipients;
@@ -54,7 +55,7 @@ export function messageRecipientsForAudience({
       .map((member) => ({ id: member.id, name: member.fullName, phone: member.phone, group: classNameById(discipleshipClasses, member.discipleshipClassId) }));
   }
   if (audience === "Grupos") {
-    return memberRecipients.filter((recipient) => Boolean(recipient.group && recipient.group !== "Visitante"));
+    return memberRecipients.filter((recipient) => Boolean(recipient.groups?.length));
   }
   if (audience === "Visitantes") {
     return visitors
@@ -89,7 +90,7 @@ export function classWhatsappRecipients(members: MemberRecord[], classRecord: Sc
     .filter((member) => normalizeWhatsappPhone(member.phone))
     .filter((member) => {
       const memberText = normalizeSearchText(
-        [member.fullName, member.status, member.memberType, member.role, member.ministry, member.notes].join(" "),
+        [member.fullName, member.status, member.memberType, member.role, memberGroupLabel(member), member.ministerialFunction, member.notes].join(" "),
       );
       const matchesEnrollment = area === "EBD" ? member.schoolClassId === classRecord.id : member.discipleshipClassId === classRecord.id;
       const matchesArea = areaWords.some((word) => memberText.includes(word));

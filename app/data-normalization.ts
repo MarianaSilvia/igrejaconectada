@@ -1,4 +1,4 @@
-import { ageFromBirthDate, ageGroupFromBirthDate, dateAfterDays, isExpiredDate, replaceLegacyMinistryText } from "./app-helpers";
+import { ageFromBirthDate, ageGroupFromBirthDate, dateAfterDays, isExpiredDate, memberGroupNames, replaceLegacyMinistryText } from "./app-helpers";
 import type {
   AccessUserForm,
   AppData,
@@ -87,6 +87,8 @@ export const blankMember: Omit<MemberRecord, "id"> = {
   role: "",
   categories: "",
   ministry: "",
+  ministries: [],
+  ministerialFunction: "",
   schoolClassId: "",
   discipleshipClassId: "",
   photoDataUrl: "",
@@ -261,6 +263,10 @@ export function normalizeMember(member: Partial<MemberRecord>): MemberRecord {
     member.memberType ?? (status === "Visitante" ? "Visitante" : status === "Membro ativo" ? "Membro" : "Congregado");
   const automaticAge = ageFromBirthDate(member.birthDate ?? "");
   const automaticAgeGroup = ageGroupFromBirthDate(member.birthDate ?? "");
+  const ministries = memberGroupNames({
+    ministry: member.ministry ?? "",
+    ministries: Array.isArray(member.ministries) ? member.ministries : [],
+  } as Pick<MemberRecord, "ministry" | "ministries">);
 
   return {
     ...blankMember,
@@ -269,6 +275,9 @@ export function normalizeMember(member: Partial<MemberRecord>): MemberRecord {
     memberCode: member.memberCode ?? "",
     status,
     memberType,
+    ministry: ministries[0] ?? "",
+    ministries,
+    ministerialFunction: member.ministerialFunction ?? "",
     photoDataUrl: "",
     conversionDate: member.conversionDate ?? "",
     baptismDate: member.baptismDate ?? "",

@@ -261,6 +261,35 @@ button:disabled {
   width: 18px;
 }
 
+.field-block {
+  display: grid;
+  gap: 8px;
+}
+
+.field-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.checkbox-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.check-card.compact-check {
+  min-height: 48px;
+  padding: 10px 12px;
+}
+
+.check-card.compact-check:has(input:checked) {
+  background: rgba(20, 217, 196, 0.14);
+  border-color: rgba(20, 217, 196, 0.55);
+  color: #f8ffff;
+}
+
 .access-profile-note {
   align-items: flex-start;
   display: grid;

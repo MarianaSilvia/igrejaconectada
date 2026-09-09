@@ -50,8 +50,12 @@ import {
   isBirthdayThisWeek,
   isEventInWeek,
   isExpiredDate,
+  memberGroupLabel,
+  memberGroupNames,
+  memberMatchesGroup,
   normalizeEmail,
   normalizeSearchText,
+  sortMembersByName,
   sortEventsByDate,
   weekRangeWithOffset,
   whatsappUrl,
@@ -308,6 +312,8 @@ const initialData: AppData = {
       role: "Lider de familia",
       categories: "Membro",
       ministry: "Familia",
+      ministries: ["Familia"],
+      ministerialFunction: "Auxiliar oficial",
       schoolClassId: "class-adults",
       discipleshipClassId: "",
       photoDataUrl: "",
@@ -349,6 +355,8 @@ const initialData: AppData = {
       role: "Sem funcao definida",
       categories: "Visitante",
       ministry: "Recepcao",
+      ministries: ["Recepcao"],
+      ministerialFunction: "",
       schoolClassId: "",
       discipleshipClassId: "discipleship-new",
       photoDataUrl: "",
@@ -1659,19 +1667,17 @@ export default function Home() {
   }, [memberForm.role]);
   const selectedMemberRoles = useMemo(() => memberRolesFromText(memberForm.role), [memberForm.role]);
   const groupOptions = useMemo(() => {
-    const groups = data.ministries.map((group) => group.name).filter(Boolean);
-    if (memberForm.ministry.trim() && !groups.includes(memberForm.ministry.trim())) {
-      groups.push(memberForm.ministry.trim());
-    }
-    return groups;
-  }, [data.ministries, memberForm.ministry]);
+    const groups = new Set(data.ministries.map((group) => group.name.trim()).filter(Boolean));
+    memberGroupNames(memberForm).forEach((group) => groups.add(group));
+    return Array.from(groups).sort((first, second) => first.localeCompare(second, "pt-BR", { sensitivity: "base" }));
+  }, [data.ministries, memberForm]);
   const searchQuery = normalizeSearchText(globalSearch);
   const filteredMembers = useMemo(
     () =>
       visibleMembers
         .filter((member) => memberStatusFilter === "Todos" || member.status === memberStatusFilter)
         .filter((member) => memberTypeFilter === "Todos" || member.memberType === memberTypeFilter)
-        .filter((member) => memberGroupFilter === "Todos" || member.ministry === memberGroupFilter)
+        .filter((member) => memberMatchesGroup(member, memberGroupFilter))
         .filter((member) => memberSchoolFilter === "Todos" || member.schoolClassId === memberSchoolFilter)
         .filter((member) => memberDiscipleshipFilter === "Todos" || member.discipleshipClassId === memberDiscipleshipFilter)
         .filter((member) => memberPastoralFilter === "Todos" || member.pastoralStatus === memberPastoralFilter)
@@ -1699,14 +1705,16 @@ export default function Home() {
               member.status,
               member.memberType,
               member.role,
-              member.ministry,
+              memberGroupLabel(member),
+              member.ministerialFunction,
               schoolClassName,
               discipleshipClassName,
               member.pastoralStatus,
               member.registrationSource,
             ].join(" "),
           ).includes(searchQuery);
-        }),
+        })
+        .sort(sortMembersByName),
     [data.discipleshipClasses, data.schoolClasses, memberDiscipleshipFilter, memberGroupFilter, memberPastoralFilter, memberSchoolFilter, memberStatusFilter, memberTypeFilter, searchQuery, visibleMembers],
   );
   const filteredVisitors = useMemo(
@@ -1804,7 +1812,7 @@ export default function Home() {
       });
 
     if (messageAudience !== "Grupos" || messageGroupFilter === "Todos os grupos") return recipients;
-    return recipients.filter((recipient) => recipient.group === messageGroupFilter);
+    return recipients.filter((recipient) => (recipient.groups ?? [recipient.group]).includes(messageGroupFilter));
   }, [
     data.discipleshipClasses,
     data.kids,

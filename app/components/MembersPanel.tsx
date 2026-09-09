@@ -1,10 +1,20 @@
 import type { Dispatch, SetStateAction } from "react";
-import { ageFromBirthDate, ageGroupFromBirthDate, birthdayLabel, formatDate, normalizeWhatsappPhone, whatsappUrl } from "../app-helpers";
+import {
+  ageFromBirthDate,
+  ageGroupFromBirthDate,
+  birthdayLabel,
+  formatDate,
+  memberGroupLabel,
+  memberGroupNames,
+  normalizeWhatsappPhone,
+  whatsappUrl,
+} from "../app-helpers";
 import { classNameById } from "../attendance-helpers";
 import type { AppData, MemberFormTab, MemberRecord } from "../types";
 
 const generatedMemberEmailDomain = "gmail.com";
 const generatedMemberEmailDomains = [generatedMemberEmailDomain, "igrejaconectada.local"];
+const ministerialFunctionOptions = ["", "Auxiliar oficial", "Diácono", "Presbítero", "Evangelista", "Pastor"];
 
 type MemberForm = Omit<MemberRecord, "id">;
 type MemberCredentialForm = {
@@ -99,14 +109,14 @@ function generatedMemberEmail(fullName: string, members: MemberRecord[], editing
   return nextEmail;
 }
 
-function missingMemberFields(member: Pick<MemberRecord, "birthDate" | "categories" | "cpf" | "fullName" | "memberCode" | "ministry" | "phone">) {
+function missingMemberFields(member: Pick<MemberRecord, "birthDate" | "categories" | "cpf" | "fullName" | "memberCode" | "ministry" | "ministries" | "phone">) {
   return [
     !member.fullName.trim() ? "nome" : "",
     !member.phone.trim() ? "telefone" : "",
     !member.cpf.trim() ? "CPF" : "",
     !member.birthDate.trim() ? "nascimento" : "",
     !member.categories.trim() ? "categoria" : "",
-    !member.ministry.trim() ? "grupo" : "",
+    !memberGroupNames(member).length ? "grupo" : "",
     !member.memberCode.trim() ? "codigo" : "",
   ].filter(Boolean);
 }
@@ -174,6 +184,13 @@ export function MembersPanel({
       age: ageFromBirthDate(birthDate),
       ageGroup: ageGroupFromBirthDate(birthDate),
     }));
+  };
+  const toggleMemberGroup = (group: string) => {
+    setMemberForm((form) => {
+      const currentGroups = memberGroupNames(form);
+      const nextGroups = currentGroups.includes(group) ? currentGroups.filter((item) => item !== group) : [...currentGroups, group];
+      return { ...form, ministry: nextGroups[0] ?? "", ministries: nextGroups };
+    });
   };
 
   return (
@@ -376,6 +393,21 @@ export function MembersPanel({
             )}
             {canManageMembers && (
               <label data-member-section="Igreja">
+                Função ministerial
+                <select
+                  onChange={(event) => setMemberForm((form) => ({ ...form, ministerialFunction: event.target.value }))}
+                  value={memberForm.ministerialFunction}
+                >
+                  {ministerialFunctionOptions.map((option) => (
+                    <option key={option || "empty"} value={option}>
+                      {option || "Não informado"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {canManageMembers && (
+              <label data-member-section="Igreja">
                 Categorias
                 <select onChange={(event) => setMemberForm((form) => ({ ...form, categories: event.target.value }))} value={memberForm.categories}>
                   <option value="">Nao informado</option>
@@ -390,17 +422,22 @@ export function MembersPanel({
               </label>
             )}
             {canManageMembers && (
-              <label data-member-section="Igreja">
-                Grupo
-                <select onChange={(event) => setMemberForm((form) => ({ ...form, ministry: event.target.value }))} value={memberForm.ministry}>
-                  <option value="">Sem grupo definido</option>
-                  {groupOptions.map((group) => (
-                    <option key={group} value={group}>
-                      {group}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="field-block full" data-member-section="Igreja">
+                <span className="field-label">Grupos</span>
+                <div className="checkbox-grid">
+                  {groupOptions.map((group) => {
+                    const checked = memberGroupNames(memberForm).includes(group);
+                    return (
+                      <label className="check-card compact-check" key={group}>
+                        <input checked={checked} onChange={() => toggleMemberGroup(group)} type="checkbox" />
+                        {group}
+                      </label>
+                    );
+                  })}
+                  {!groupOptions.length && <small className="form-hint">Cadastre grupos no modulo Grupos para vincular membros.</small>}
+                </div>
+                <small className="form-hint">Marque todos os grupos em que este membro participa.</small>
+              </div>
             )}
             <label data-member-section="Classes">
               Classe EBD
@@ -616,6 +653,7 @@ export function MembersPanel({
             const schoolClassName = classNameById(data.schoolClasses, member.schoolClassId);
             const discipleshipClassName = classNameById(data.discipleshipClasses, member.discipleshipClassId);
             const missingFields = missingMemberFields(member);
+            const groupsLabel = memberGroupLabel(member);
 
             return (
               <div className="member-record" key={member.id}>
@@ -646,7 +684,10 @@ export function MembersPanel({
                       {member.zipCode ? ` - CEP ${member.zipCode}` : ""}
                     </small>
                     <small>
-                      {member.ministry || "Sem grupo"} - {member.congregation || "Congregacao nao informada"} - Aniv. {birthdayLabel(member.birthDate)}
+                      Grupos: {groupsLabel} - {member.congregation || "Congregacao nao informada"} - Aniv. {birthdayLabel(member.birthDate)}
+                    </small>
+                    <small>
+                      Função ministerial: {member.ministerialFunction || "Não informada"}
                     </small>
                     <small>
                       Cargos: {member.role || "Sem cargo"} - Categorias: {member.categories || "Nao informado"}

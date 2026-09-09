@@ -126,6 +126,8 @@ export type MemberRecord = {
   role: string;
   categories: string;
   ministry: string;
+  ministries: string[];
+  ministerialFunction: string;
   schoolClassId: string;
   discipleshipClassId: string;
   photoDataUrl: string;
@@ -222,6 +224,7 @@ export type MessageRecipient = {
   name: string;
   phone: string;
   group: string;
+  groups?: string[];
 };
 
 export type MessageTemplateItem = {

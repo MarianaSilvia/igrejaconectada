@@ -22,6 +22,31 @@ function booleanValue(value: unknown) {
   return value === true;
 }
 
+function textList(...values: unknown[]) {
+  const seen = new Set<string>();
+  const items: string[] = [];
+
+  values.forEach((value) => {
+    const rawItems = Array.isArray(value) ? value : [value];
+    rawItems.forEach((rawItem) => {
+      if (typeof rawItem !== "string") return;
+      rawItem
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .forEach((item) => {
+          const key = item.toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            items.push(item);
+          }
+        });
+    });
+  });
+
+  return items;
+}
+
 function uuidOrNull(value: unknown) {
   const text = textValue(value);
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text) ? text : null;
@@ -30,6 +55,8 @@ function uuidOrNull(value: unknown) {
 function memberRow(member: JsonRecord) {
   const id = textValue(member.id, 120);
   const fullName = textValue(member.fullName, 240);
+  const assignedMinistries = textList(member.ministries, member.ministry);
+  const primaryMinistry = assignedMinistries[0] ?? "";
 
   if (!id || !fullName) return null;
 
@@ -41,12 +68,12 @@ function memberRow(member: JsonRecord) {
     status: textValue(member.status, 80),
     congregation: textValue(member.congregation, 160),
     water_baptism_date: textValue(member.baptismDate, 40),
-    ministerial_role: textValue(member.role, 240),
+    ministerial_role: textValue(member.ministerialFunction, 240) || textValue(member.role, 240),
     birth_date: textValue(member.birthDate, 40),
     phone: textValue(member.phone, 60),
     email: textValue(member.email, 180).toLowerCase(),
     address: textValue(member.address, 260),
-    assigned_ministries: textValue(member.ministry) ? textValue(member.ministry).split(",").map((item) => item.trim()).filter(Boolean) : [],
+    assigned_ministries: assignedMinistries,
     notes: textValue(member.notes, 1200),
     created_at: textValue(member.createdAt, 60) || new Date().toISOString(),
     cpf: textValue(member.cpf, 40),
@@ -60,7 +87,7 @@ function memberRow(member: JsonRecord) {
     gender: textValue(member.gender, 60),
     member_type: textValue(member.memberType, 80),
     categories: textValue(member.categories, 180),
-    ministry: textValue(member.ministry, 180),
+    ministry: primaryMinistry,
     school_class_id: textValue(member.schoolClassId, 120),
     discipleship_class_id: textValue(member.discipleshipClassId, 120),
     zip_code: textValue(member.zipCode, 30),
@@ -79,7 +106,7 @@ function memberRow(member: JsonRecord) {
     updated_at: new Date().toISOString(),
     cpf_digits: digitsOnly(member.cpf),
     phone_digits: digitsOnly(member.phone),
-    app_payload: { ...member, photoDataUrl: "" },
+    app_payload: { ...member, ministry: primaryMinistry, ministries: assignedMinistries, ministerialFunction: textValue(member.ministerialFunction, 240), photoDataUrl: "" },
     mirror_source: "church_app_state",
   };
 }

@@ -1,4 +1,4 @@
-import { ageFromBirthDate, ageGroupFromBirthDate, currentDateKey, eventDate, isExpiredDate } from "./app-helpers";
+import { ageFromBirthDate, ageGroupFromBirthDate, currentDateKey, eventDate, isExpiredDate, memberGroupNames } from "./app-helpers";
 import { nextMemberCode } from "./data-normalization";
 import type {
   AccessUser,
@@ -99,10 +99,14 @@ export function upsertMemberData(data: AppData, form: MemberForm, editingMemberI
   const existingMember = editingMemberId ? data.members.find((item) => item.id === editingMemberId) : undefined;
   const automaticAge = ageFromBirthDate(form.birthDate);
   const automaticAgeGroup = ageGroupFromBirthDate(form.birthDate);
+  const ministries = memberGroupNames(form);
   const member: MemberRecord = {
     ...form,
     id: editingMemberId ?? createId("member"),
     memberCode: form.memberCode || existingMember?.memberCode || nextMemberCode(data.members),
+    ministry: ministries[0] ?? "",
+    ministries,
+    ministerialFunction: form.ministerialFunction || "",
     age: automaticAge || form.age,
     ageGroup: automaticAgeGroup || form.ageGroup,
     createdAt: form.createdAt || now,
@@ -362,14 +366,16 @@ export function upsertMinistryData(
 ): AppData {
   const previousMinistry = editingMinistryId ? data.ministries.find((ministry) => ministry.id === editingMinistryId) : undefined;
   const ministry: MinistryRecord = { ...form, id: editingMinistryId ?? createId("ministry") };
+  const renameMemberGroup = (member: MemberRecord) => {
+    if (!previousMinistry?.name || previousMinistry.name === ministry.name) return member;
+    const ministries = memberGroupNames(member).map((group) => (group === previousMinistry.name ? ministry.name : group));
+    return { ...member, ministry: ministries[0] ?? "", ministries };
+  };
 
   return {
     ...data,
     ministries: editingMinistryId ? data.ministries.map((item) => (item.id === editingMinistryId ? ministry : item)) : [ministry, ...data.ministries],
-    members:
-      previousMinistry?.name && previousMinistry.name !== ministry.name
-        ? data.members.map((member) => (member.ministry === previousMinistry.name ? { ...member, ministry: ministry.name } : member))
-        : data.members,
+    members: data.members.map(renameMemberGroup),
     events:
       previousMinistry?.name && previousMinistry.name !== ministry.name
         ? data.events.map((event) => (event.ministry === previousMinistry.name ? { ...event, ministry: ministry.name } : event))
@@ -385,7 +391,10 @@ export function deleteMinistryData(data: AppData, ministry: MinistryRecord, crea
   return {
     ...data,
     ministries: data.ministries.filter((item) => item.id !== ministry.id),
-    members: data.members.map((member) => (member.ministry === ministry.name ? { ...member, ministry: "" } : member)),
+    members: data.members.map((member) => {
+      const ministries = memberGroupNames(member).filter((group) => group !== ministry.name);
+      return { ...member, ministry: ministries[0] ?? "", ministries };
+    }),
     events: data.events.map((event) => (event.ministry === ministry.name ? { ...event, ministry: "Todos" } : event)),
     audit: [auditItem(createId, `Grupo excluido: ${ministry.name}`), ...data.audit].slice(0, 12),
   };
