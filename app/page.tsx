@@ -904,6 +904,7 @@ export default function Home() {
   const [schoolNoticeForm, setSchoolNoticeForm] = useState(blankSchoolNotice);
   const [discipleshipNoticeForm, setDiscipleshipNoticeForm] = useState({ ...blankSchoolNotice, classId: "discipleship-new" });
   const [attendanceEventSelection, setAttendanceEventSelection] = useState<Record<string, string>>({});
+  const [openAttendanceNoteIds, setOpenAttendanceNoteIds] = useState<Record<string, boolean>>({});
   const [selectedRequestId, setSelectedRequestId] = useState("care-1");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [messageAudience, setMessageAudience] = useState<MessageAudience>("Todos os membros");
@@ -1854,6 +1855,45 @@ export default function Home() {
           : [session, ...current.attendanceSessions],
       };
     });
+  }
+
+  function startAttendanceSession(area: AttendanceArea, classRecord: SchoolClass, event: ChurchEvent) {
+    if (!canManageAttendanceClass(classRecord)) {
+      setSyncStatus("Apenas o professor da turma ou a administracao pode iniciar a chamada.");
+      return;
+    }
+
+    const now = new Date().toISOString();
+    setData((current) => {
+      const existing = current.attendanceSessions.find(
+        (session) => session.area === area && session.classId === classRecord.id && session.eventId === event.id,
+      );
+      if (existing) return current;
+
+      const records = membersForAttendanceClass(current.members, area, classRecord.id).map((member) => ({
+        memberId: member.id,
+        status: "Presente" as AttendanceStatus,
+        note: "",
+      }));
+      const session: AttendanceSession = {
+        id: uid("attendance"),
+        area,
+        classId: classRecord.id,
+        eventId: event.id,
+        date: event.date,
+        title: event.title,
+        teacher: classRecord.teacher,
+        records,
+        updatedAt: now,
+      };
+
+      return {
+        ...current,
+        attendanceSessions: [session, ...current.attendanceSessions],
+        audit: [{ id: uid("audit"), action: `Chamada iniciada: ${classRecord.name} - ${event.title}`, when: now }, ...current.audit].slice(0, 12),
+      };
+    });
+    setSyncStatus(`Chamada iniciada para ${classRecord.name}. Ajuste apenas faltas e justificativas.`);
   }
 
   function printAttendanceSessionPdf(area: AttendanceArea, classRecord: SchoolClass, session: AttendanceSession) {
@@ -2881,6 +2921,7 @@ export default function Home() {
     setSchoolNoticeForm(blankSchoolNotice);
     setDiscipleshipNoticeForm({ ...blankSchoolNotice, classId: "discipleship-new" });
     setAttendanceEventSelection({});
+    setOpenAttendanceNoteIds({});
   }
 
   async function copyPublicRegistrationLink() {
@@ -3147,94 +3188,159 @@ export default function Home() {
     );
     const currentMemberHistory = currentMember ? memberAttendanceHistory(data.attendanceSessions, area, currentMember).filter((item) => item.session.classId === classRecord.id) : [];
     const areaLabel = area === "school" ? "EBD" : "Discipulado";
+    const classHistory = attendanceSessionsForClass(data.attendanceSessions, area, classRecord.id);
+    const statusOptions: { label: string; status: AttendanceStatus; style: string }[] = [
+      { label: "Presente", status: "Presente", style: "present" },
+      { label: "Faltou", status: "Falta", style: "absent" },
+      { label: "Justificou", status: "Justificado", style: "justified" },
+      { label: "Contato", status: "Precisa de contato", style: "contact" },
+    ];
 
     if (!canManage && !currentMemberIsStudent) return null;
 
     return (
-      <div className="credential-panel">
+      <div className="credential-panel attendance-panel">
         <div className="panel-heading compact-heading">
           <h2>{canManage ? `Chamada da aula - ${areaLabel}` : "Minha frequencia"}</h2>
           <span>{summary.total} aluno{summary.total === 1 ? "" : "s"}</span>
         </div>
 
         {canManage ? (
-          <div className="form-grid">
-            <label className="full">
-              Aula da agenda
-              <select
-                disabled={!events.length}
-                onChange={(event) =>
-                  setAttendanceEventSelection((current) => ({
-                    ...current,
-                    [attendanceKey(area, classRecord.id)]: event.target.value,
-                  }))
-                }
-                value={selectedEvent?.id ?? ""}
-              >
-                {events.length ? (
-                  events.map((event) => (
-                    <option key={event.id} value={event.id}>
-                      {formatDate(event.date)} - {event.title}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">Crie um evento de {areaLabel} na agenda</option>
-                )}
-              </select>
-            </label>
-
-            <div className="message-preview full">
-              <strong>
-                {summary.present} presentes, {summary.absent} faltas, {summary.justified} justificadas
-              </strong>
-              <span>{session ? `${summary.percent}% de frequencia registrada` : "Selecione a aula e marque os alunos para iniciar a chamada."}</span>
+          <div className="attendance-workflow">
+            <div className="attendance-class-summary">
+              <div>
+                <span>Classe</span>
+                <strong>{classRecord.name}</strong>
+                <small>Professor: {classRecord.teacher || "Nao informado"}</small>
+              </div>
+              <div>
+                <span>Aula selecionada</span>
+                <strong>{selectedEvent ? selectedEvent.title : "Nenhuma aula encontrada"}</strong>
+                <small>{selectedEvent ? `${formatDate(selectedEvent.date)} - ${selectedEvent.time || "Sem horario"}` : `Crie um evento de ${areaLabel} na agenda.`}</small>
+              </div>
+              <div className="attendance-score">
+                <strong>{summary.percent}%</strong>
+                <small>frequencia</small>
+              </div>
             </div>
 
-            <div className="row-list full">
-              {!classMembers.length && (
-                <div className="data-row">
-                  <span className="bullet-mark" />
-                  <div>
-                    <strong>Nenhum aluno matriculado</strong>
-                    <small>Vincule alunos a esta classe na ficha de membros.</small>
-                  </div>
-                </div>
+            <div className="attendance-metrics">
+              <span><strong>{summary.total}</strong> alunos</span>
+              <span><strong>{summary.present}</strong> presentes</span>
+              <span><strong>{summary.absent}</strong> faltas</span>
+              <span><strong>{summary.justified}</strong> justificadas</span>
+              <span><strong>{summary.contact}</strong> contato</span>
+            </div>
+
+            <div className="attendance-toolbar">
+              <label>
+                Aula da agenda
+                <select
+                  disabled={!events.length}
+                  onChange={(event) =>
+                    setAttendanceEventSelection((current) => ({
+                      ...current,
+                      [attendanceKey(area, classRecord.id)]: event.target.value,
+                    }))
+                  }
+                  value={selectedEvent?.id ?? ""}
+                >
+                  {events.length ? (
+                    events.map((event) => (
+                      <option key={event.id} value={event.id}>
+                        {formatDate(event.date)} - {event.title}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">Crie um evento de {areaLabel} na agenda</option>
+                  )}
+                </select>
+              </label>
+              {selectedEvent ? (
+                <button className="primary-action" disabled={!classMembers.length || Boolean(session)} onClick={() => startAttendanceSession(area, classRecord, selectedEvent)} type="button">
+                  {session ? "Chamada iniciada" : "Iniciar chamada de hoje"}
+                </button>
+              ) : (
+                <button className="primary-action" onClick={() => setActiveModule("events")} type="button">
+                  Criar aula na agenda
+                </button>
               )}
-
-              {selectedEvent &&
-                classMembers.map((member) => (
-                  <div className="data-row access-user-row" key={member.id}>
-                    <div>
-                      <strong>{member.fullName}</strong>
-                      <small>{member.phone} - {member.status}</small>
-                    </div>
-                    <select
-                      onChange={(event) =>
-                        updateAttendanceRecord(area, classRecord, selectedEvent, member, event.target.value as AttendanceStatus)
-                      }
-                      value={attendanceStatusForMember(session, member.id)}
-                    >
-                        <option>Presente</option>
-                        <option>Falta</option>
-                        <option>Justificado</option>
-                        <option>Precisa de contato</option>
-                      </select>
-                    <input
-                      onChange={(event) => updateAttendanceNote(area, classRecord, selectedEvent, member, event.target.value)}
-                      placeholder="Justificativa ou observacao"
-                      value={attendanceNoteForMember(session, member.id)}
-                    />
-                  </div>
-                ))}
+              {session && (
+                <button className="secondary" onClick={() => printAttendanceSessionPdf(area, classRecord, session)} type="button">
+                  Salvar PDF
+                </button>
+              )}
             </div>
 
-            <div className="row-list full">
-              <strong>Historico da turma</strong>
-              {attendanceSessionsForClass(data.attendanceSessions, area, classRecord.id).length ? (
-                attendanceSessionsForClass(data.attendanceSessions, area, classRecord.id).map((attendanceSession) => {
+            {!classMembers.length && (
+              <div className="data-row attendance-empty">
+                <span className="bullet-mark" />
+                <div>
+                  <strong>Nenhum aluno matriculado nesta classe</strong>
+                  <small>Vincule alunos a esta classe na ficha de membros para liberar a chamada.</small>
+                </div>
+              </div>
+            )}
+
+            {selectedEvent && classMembers.length > 0 && (
+              <div className="attendance-student-grid">
+                {classMembers.map((member) => {
+                  const status = attendanceStatusForMember(session, member.id);
+                  const note = attendanceNoteForMember(session, member.id);
+                  const noteKey = `${area}-${classRecord.id}-${selectedEvent.id}-${member.id}`;
+                  const noteOpen = Boolean(openAttendanceNoteIds[noteKey]);
+
+                  return (
+                    <div className={`attendance-student-card attendance-${status.toLowerCase().replaceAll(" ", "-")}`} key={member.id}>
+                      <div className="attendance-student-info">
+                        <span>{member.fullName.slice(0, 1)}</span>
+                        <div>
+                          <strong>{member.fullName}</strong>
+                          <small>{member.phone || "Telefone nao informado"} - {member.status}</small>
+                        </div>
+                      </div>
+                      <div className="attendance-status-buttons">
+                        {statusOptions.map((option) => (
+                          <button
+                            className={status === option.status ? `active ${option.style}` : option.style}
+                            key={option.status}
+                            onClick={() => updateAttendanceRecord(area, classRecord, selectedEvent, member, option.status)}
+                            type="button"
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        className="attendance-note-toggle"
+                        onClick={() => setOpenAttendanceNoteIds((current) => ({ ...current, [noteKey]: !current[noteKey] }))}
+                        type="button"
+                      >
+                        {note ? "Editar observacao" : "Observacao"}
+                      </button>
+                      {noteOpen && (
+                        <input
+                          onChange={(event) => updateAttendanceNote(area, classRecord, selectedEvent, member, event.target.value)}
+                          placeholder="Justificativa ou observacao"
+                          value={note}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="attendance-history">
+              <div className="panel-heading compact-heading">
+                <h2>Historico de chamadas</h2>
+                <span>{classHistory.length} registro{classHistory.length === 1 ? "" : "s"}</span>
+              </div>
+              {classHistory.length ? (
+                classHistory.map((attendanceSession) => {
                   const sessionSummary = attendanceSummary(attendanceSession, classMembers);
                   return (
-                    <div className="data-row access-user-row" key={attendanceSession.id}>
+                    <div className="data-row attendance-history-row" key={attendanceSession.id}>
                       <span className="date-box">{formatDate(attendanceSession.date)}</span>
                       <div>
                         <strong>{attendanceSession.title}</strong>
@@ -3257,10 +3363,17 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <div className="row-list">
+          <div className="member-attendance-view">
+            <div className="attendance-class-summary">
+              <div>
+                <span>Sua frequencia nesta classe</span>
+                <strong>{classRecord.name}</strong>
+                <small>{currentMemberHistory.length ? "Ultimas aulas registradas abaixo." : "Sua frequencia ainda nao foi registrada nesta classe."}</small>
+              </div>
+            </div>
             {currentMemberHistory.length ? (
               currentMemberHistory.map(({ session: attendanceSession, record }) => (
-                <div className="data-row" key={attendanceSession.id}>
+                <div className="data-row attendance-history-row" key={attendanceSession.id}>
                   <span className="date-box">{formatDate(attendanceSession.date)}</span>
                   <div>
                     <strong>{attendanceSession.title}</strong>

@@ -9,6 +9,7 @@ Sistema de gestao para igreja com Supabase, painel administrativo, area do membr
 - Blocos de resumo com proximo evento, aniversariantes, pre-cadastros, pendencias e avisos.
 - Cadastro de membros, visitantes, novos convertidos, Area Kids e grupos.
 - Agenda, comunicados, mural, atendimento pastoral, EBD, Discipulado e chamadas.
+- Chamada simplificada para EBD e Discipulado com cards de alunos, botoes grandes e historico separado.
 - Comunicacao manual por WhatsApp com modelos prontos e historico de campanhas.
 - Relatorios em PDF/CSV para membros, visitantes, Kids, agenda, presenca, faltosos, financeiro e patrimonio.
 - Login por Supabase Auth com perfis: administrador, lider, professor, secretario, tesoureiro e membro.
