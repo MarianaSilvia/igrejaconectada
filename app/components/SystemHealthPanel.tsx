@@ -1,4 +1,4 @@
-import type { SaveState } from "../types";
+import type { MemberSyncStatus, SaveState } from "../types";
 
 type SystemHealthPanelProps = {
   agendaCount: number;
@@ -6,6 +6,8 @@ type SystemHealthPanelProps = {
   isSupabaseReady: boolean;
   kidsCount: number;
   lastSavedAt: string;
+  memberSyncLoading: boolean;
+  memberSyncStatus: MemberSyncStatus | null;
   membersCount: number;
   pendingRegistrationsCount: number;
   saveState: SaveState;
@@ -28,6 +30,8 @@ export function SystemHealthPanel({
   isSupabaseReady,
   kidsCount,
   lastSavedAt,
+  memberSyncLoading,
+  memberSyncStatus,
   membersCount,
   pendingRegistrationsCount,
   saveState,
@@ -67,6 +71,30 @@ export function SystemHealthPanel({
           <small>Pre-cadastros</small>
         </div>
       </div>
+
+      {(memberSyncLoading || memberSyncStatus) && (
+        <div className={`member-sync-card member-sync-${memberSyncStatus?.status.toLowerCase() ?? "carregando"}`}>
+          <div>
+            <strong>Conferencia dos membros</strong>
+            <small>
+              {memberSyncLoading
+                ? "Conferindo tabela members..."
+                : `${memberSyncStatus?.status ?? "Indisponivel"} - ${memberSyncStatus?.message ?? "Nao foi possivel conferir agora."}`}
+            </small>
+          </div>
+          {memberSyncStatus && (
+            <div className="member-sync-grid">
+              <span>JSON: {memberSyncStatus.jsonTotal}</span>
+              <span>Tabela: {memberSyncStatus.tableTotal}</span>
+              <span>Sem codigo: {memberSyncStatus.missingCodeCount}</span>
+              <span>CPF duplicado: {memberSyncStatus.duplicateCpfCount}</span>
+              <span>Telefone duplicado: {memberSyncStatus.duplicatePhoneCount}</span>
+              <span>Faltando na tabela: {memberSyncStatus.missingInTableCount}</span>
+              <span>Sobra na tabela: {memberSyncStatus.extraInTableCount}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="system-health-footer">
         <div>

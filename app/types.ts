@@ -37,6 +37,19 @@ export type AttendanceStatus = "Presente" | "Falta" | "Justificado" | "Precisa d
 export type SaveState = "idle" | "saving" | "saved" | "error" | "conflict";
 export type MemberFormTab = "Dados" | "Igreja" | "Classes" | "Observacoes" | "Acesso";
 
+export type MemberSyncStatus = {
+  status: "Sincronizado" | "Atencao" | "Indisponivel";
+  jsonTotal: number;
+  tableTotal: number;
+  missingCodeCount: number;
+  duplicateCpfCount: number;
+  duplicatePhoneCount: number;
+  missingInTableCount: number;
+  extraInTableCount: number;
+  checkedAt: string;
+  message: string;
+};
+
 export type AttendanceRecord = {
   memberId: string;
   status: AttendanceStatus;

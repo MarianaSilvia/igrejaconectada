@@ -1097,6 +1097,50 @@ button:disabled {
   margin-top: 6px;
 }
 
+.member-sync-card {
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  margin-top: 12px;
+  padding: 14px;
+}
+
+.member-sync-sincronizado {
+  border-color: rgba(20, 217, 196, 0.36);
+}
+
+.member-sync-atencao,
+.member-sync-indisponivel {
+  border-color: rgba(246, 198, 91, 0.46);
+}
+
+.member-sync-card strong,
+.member-sync-card small {
+  display: block;
+}
+
+.member-sync-card small {
+  color: var(--muted);
+  font-weight: 800;
+  margin-top: 5px;
+}
+
+.member-sync-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.member-sync-grid span {
+  background: rgba(7, 17, 31, 0.48);
+  border-radius: 8px;
+  color: #d9eaff;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 8px 10px;
+}
+
 .system-health-footer {
   align-items: center;
   display: flex;

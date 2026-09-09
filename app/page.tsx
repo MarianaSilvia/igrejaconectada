@@ -129,6 +129,7 @@ import type {
   MemberRecord,
   MessageAudience,
   MessageCampaign,
+  MemberSyncStatus,
   MessageRecipient,
   MessageTemplateItem,
   MinistryRecord,
@@ -601,6 +602,10 @@ function memberRolesToText(values: string[]) {
   return values.map((role) => role.trim()).filter(Boolean).join(", ");
 }
 
+function isMemberSyncError(result: MemberSyncStatus | { error?: string }): result is { error?: string } {
+  return "error" in result;
+}
+
 const messageAudiences: MessageAudience[] = [
   "Todos os membros",
   "Aniversariantes da semana",
@@ -936,6 +941,8 @@ export default function Home() {
   const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Modo local: configure o Supabase no Vercel.");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState("");
+  const [memberSyncLoading, setMemberSyncLoading] = useState(false);
+  const [memberSyncStatus, setMemberSyncStatus] = useState<MemberSyncStatus | null>(null);
   const [remoteUpdatedAt, setRemoteUpdatedAt] = useState<string | null>(null);
   const [reportPreviewKind, setReportPreviewKind] = useState<ReportKind>("members");
 
@@ -1264,6 +1271,61 @@ export default function Home() {
   const canManageAssets = canManageModule(currentAccessRole, "assets");
   const canManageDevotional = canManageModule(currentAccessRole, "devotional");
   const canManageRegistrationRequests = currentAccessRole === "Administrador" || currentAccessRole === "Secretario";
+  useEffect(() => {
+    if (!hasSession || currentAccessRole !== "Administrador" || !isSupabaseConfigured()) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadMemberSyncStatus() {
+      setMemberSyncLoading(true);
+      const supabase = getSupabaseClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        if (!cancelled) setMemberSyncLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/admin/member-sync-status", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const result = (await response.json()) as MemberSyncStatus | { error?: string };
+
+        if (cancelled) return;
+
+        if (!response.ok || isMemberSyncError(result)) {
+          const errorMessage = isMemberSyncError(result) ? result.error : undefined;
+          setMemberSyncStatus({
+            status: "Indisponivel",
+            jsonTotal: data.members.length,
+            tableTotal: 0,
+            missingCodeCount: 0,
+            duplicateCpfCount: 0,
+            duplicatePhoneCount: 0,
+            missingInTableCount: 0,
+            extraInTableCount: 0,
+            checkedAt: new Date().toISOString(),
+            message: errorMessage ?? "Nao foi possivel consultar a tabela members.",
+          });
+          return;
+        }
+
+        setMemberSyncStatus(result);
+      } finally {
+        if (!cancelled) setMemberSyncLoading(false);
+      }
+    }
+
+    void loadMemberSyncStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentAccessRole, data.members.length, hasSession, remoteUpdatedAt]);
   useEffect(() => {
     if (!hasSession || !canManageMessages) return;
 
@@ -3784,6 +3846,8 @@ export default function Home() {
                 isSupabaseReady={isSupabaseConfigured()}
                 kidsCount={data.kids.length}
                 lastSavedAt={lastSavedAt}
+                memberSyncLoading={currentAccessRole === "Administrador" ? memberSyncLoading : false}
+                memberSyncStatus={currentAccessRole === "Administrador" ? memberSyncStatus : null}
                 membersCount={data.members.length}
                 onReload={reloadRemoteStateNow}
                 pendingRegistrationsCount={pendingRegistrationRequests.length}
