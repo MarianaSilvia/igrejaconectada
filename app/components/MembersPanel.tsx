@@ -426,7 +426,12 @@ export function MembersPanel({
             </label>
             <label data-member-section="Igreja">
               Congregacao
-              <input onChange={(event) => setMemberForm((form) => ({ ...form, congregation: event.target.value }))} placeholder="Ex.: Sede" value={memberForm.congregation} />
+              <select onChange={(event) => setMemberForm((form) => ({ ...form, congregation: event.target.value }))} value={memberForm.congregation}>
+                <option value="">Selecione a congregacao</option>
+                <option>sede/Farroupilha</option>
+                <option>Congre.Maringá</option>
+                <option>Congre.Pains</option>
+              </select>
             </label>
             <label data-member-section="Igreja">
               Desde
