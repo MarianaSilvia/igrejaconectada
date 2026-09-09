@@ -15,6 +15,21 @@ type GroupsPanelProps = {
   setMinistryForm: Dispatch<SetStateAction<MinistryForm>>;
 };
 
+const defaultGroupNames = [
+  "Louvor",
+  "Jovens",
+  "Intercessao",
+  "Recepcao",
+  "Kids",
+  "Senhoras",
+  "Obreiros",
+  "Evangelismo",
+  "Ensino/EBD",
+  "Discipulado",
+  "Midia",
+  "Diaconato",
+];
+
 export function GroupsPanel({
   canCreateMinistry,
   cancelMinistryEdit,
@@ -26,6 +41,10 @@ export function GroupsPanel({
   ministryForm,
   setMinistryForm,
 }: GroupsPanelProps) {
+  const groupNameOptions = Array.from(
+    new Set([...defaultGroupNames, ...ministries.map((ministry) => ministry.name).filter(Boolean), ministryForm.name].filter(Boolean)),
+  );
+
   return (
     <section className="content-grid">
       <article className="surface">
@@ -36,11 +55,17 @@ export function GroupsPanel({
         <div className="form-grid">
           <label className="full">
             Nome do grupo
-            <input
+            <select
               onChange={(event) => setMinistryForm((form) => ({ ...form, name: event.target.value }))}
-              placeholder="Ex.: Recepcao"
               value={ministryForm.name}
-            />
+            >
+              <option value="">Selecione o grupo</option>
+              {groupNameOptions.map((groupName) => (
+                <option key={groupName} value={groupName}>
+                  {groupName}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Lider
