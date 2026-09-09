@@ -7,9 +7,11 @@ type CommunicationPanelProps = {
   customTemplateLabel: string;
   customTemplateText: string;
   data: AppData;
+  groupOptions: string[];
   messageAudience: MessageAudience;
   messageAudiences: MessageAudience[];
   messageBatchLimit: number;
+  messageGroupFilter: string;
   messageRecipients: MessageRecipient[];
   messageTemplateId: string;
   messageText: string;
@@ -22,6 +24,7 @@ type CommunicationPanelProps = {
   setCustomTemplateText: Dispatch<SetStateAction<string>>;
   setMessageAudience: Dispatch<SetStateAction<MessageAudience>>;
   setMessageBatchLimit: Dispatch<SetStateAction<number>>;
+  setMessageGroupFilter: Dispatch<SetStateAction<string>>;
   setMessageText: Dispatch<SetStateAction<string>>;
   setSelectedMessageRecipientIds: Dispatch<SetStateAction<string[]>>;
 };
@@ -31,9 +34,11 @@ export function CommunicationPanel({
   customTemplateLabel,
   customTemplateText,
   data,
+  groupOptions,
   messageAudience,
   messageAudiences,
   messageBatchLimit,
+  messageGroupFilter,
   messageRecipients,
   messageTemplateId,
   messageText,
@@ -46,6 +51,7 @@ export function CommunicationPanel({
   setCustomTemplateText,
   setMessageAudience,
   setMessageBatchLimit,
+  setMessageGroupFilter,
   setMessageText,
   setSelectedMessageRecipientIds,
 }: CommunicationPanelProps) {
@@ -62,6 +68,7 @@ export function CommunicationPanel({
             <select
               onChange={(event) => {
                 setMessageAudience(event.target.value as MessageAudience);
+                setMessageGroupFilter("Todos os grupos");
                 setSelectedMessageRecipientIds([]);
               }}
               value={messageAudience}
@@ -71,6 +78,24 @@ export function CommunicationPanel({
               ))}
             </select>
           </label>
+          {messageAudience === "Grupos" && (
+            <label>
+              Grupo
+              <select
+                onChange={(event) => {
+                  setMessageGroupFilter(event.target.value);
+                  setSelectedMessageRecipientIds([]);
+                }}
+                value={messageGroupFilter}
+              >
+                <option>Todos os grupos</option>
+                {groupOptions.map((group) => (
+                  <option key={group}>{group}</option>
+                ))}
+              </select>
+              <small className="form-hint">Filtra somente os membros vinculados ao grupo escolhido.</small>
+            </label>
+          )}
           <label>
             Modelo pronto
             <select onChange={(event) => selectMessageTemplate(event.target.value)} value={messageTemplateId}>

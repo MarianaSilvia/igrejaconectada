@@ -1,4 +1,4 @@
-import { dateAfterDays, isExpiredDate, replaceLegacyMinistryText } from "./app-helpers";
+import { ageFromBirthDate, ageGroupFromBirthDate, dateAfterDays, isExpiredDate, replaceLegacyMinistryText } from "./app-helpers";
 import type {
   AccessUserForm,
   AppData,
@@ -259,6 +259,8 @@ export function normalizeMember(member: Partial<MemberRecord>): MemberRecord {
   const status = member.status ?? "Visitante";
   const memberType =
     member.memberType ?? (status === "Visitante" ? "Visitante" : status === "Membro ativo" ? "Membro" : "Congregado");
+  const automaticAge = ageFromBirthDate(member.birthDate ?? "");
+  const automaticAgeGroup = ageGroupFromBirthDate(member.birthDate ?? "");
 
   return {
     ...blankMember,
@@ -270,8 +272,8 @@ export function normalizeMember(member: Partial<MemberRecord>): MemberRecord {
     photoDataUrl: "",
     conversionDate: member.conversionDate ?? "",
     baptismDate: member.baptismDate ?? "",
-    ageGroup: member.ageGroup ?? "",
-    age: member.age ?? "",
+    ageGroup: automaticAgeGroup || member.ageGroup || "",
+    age: automaticAge || member.age || "",
     gender: member.gender ?? "",
     categories: member.categories ?? "",
     education: member.education ?? "",

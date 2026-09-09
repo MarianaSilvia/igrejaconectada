@@ -1660,17 +1660,18 @@ textarea {
 }
 
 select option {
-  background: #20212a;
-  color: #f8fafc;
+  background-color: #1b1d27 !important;
+  color: #f8fafc !important;
 }
 
 select option:checked {
-  background: #3a3f4d;
-  color: #ffffff;
+  background-color: #3a3f4d !important;
+  color: #ffffff !important;
 }
 
 select option:disabled {
-  color: #9ca3af;
+  background-color: #1b1d27 !important;
+  color: #aeb9c8 !important;
 }
 
 textarea {
@@ -1684,6 +1685,8 @@ select.multi-select {
 }
 
 select.multi-select option {
+  background-color: #1b1d27 !important;
+  color: #f8fafc !important;
   border-radius: 6px;
   padding: 8px 10px;
 }

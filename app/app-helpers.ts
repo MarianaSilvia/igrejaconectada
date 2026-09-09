@@ -43,6 +43,31 @@ export function birthdayLabel(value: string) {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long" }).format(date);
 }
 
+export function ageFromBirthDate(value: string, now = new Date()) {
+  if (!value) return "";
+  const birthDate = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(birthDate.getTime()) || birthDate > now) return "";
+
+  let age = now.getFullYear() - birthDate.getFullYear();
+  const monthDelta = now.getMonth() - birthDate.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < birthDate.getDate())) {
+    age -= 1;
+  }
+
+  return String(Math.max(age, 0));
+}
+
+export function ageGroupFromBirthDate(value: string, now = new Date()) {
+  const ageText = ageFromBirthDate(value, now);
+  if (!ageText) return "";
+  const age = Number(ageText);
+  if (age <= 12) return "Crianca";
+  if (age <= 17) return "Adolescente";
+  if (age <= 29) return "Jovem";
+  if (age >= 60) return "Idoso";
+  return "Adulto";
+}
+
 export function isBirthdayThisMonth(value: string) {
   const date = birthdayDateThisYear(value);
   if (!date) return false;

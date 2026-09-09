@@ -908,6 +908,7 @@ export default function Home() {
   const [selectedRequestId, setSelectedRequestId] = useState("care-1");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [messageAudience, setMessageAudience] = useState<MessageAudience>("Todos os membros");
+  const [messageGroupFilter, setMessageGroupFilter] = useState("Todos os grupos");
   const [messageTemplateId, setMessageTemplateId] = useState("general-invite");
   const [messageText, setMessageText] = useState(messageTemplates[4].text);
   const [selectedMessageRecipientIds, setSelectedMessageRecipientIds] = useState<string[]>([]);
@@ -1716,9 +1717,8 @@ export default function Home() {
       onOpenMessages={() => setActiveModule("messages")}
     />
   );
-  const messageRecipients = useMemo<MessageRecipient[]>(
-    () =>
-      messageRecipientsForAudience({
+  const messageRecipients = useMemo<MessageRecipient[]>(() => {
+    const recipients = messageRecipientsForAudience({
         audience: messageAudience,
         members: data.members,
         visitors: data.visitors,
@@ -1727,9 +1727,21 @@ export default function Home() {
         discipleshipClasses: data.discipleshipClasses,
         weeklyBirthdays,
         monthlyBirthdays,
-      }),
-    [data.discipleshipClasses, data.kids, data.members, data.schoolClasses, data.visitors, messageAudience, monthlyBirthdays, weeklyBirthdays],
-  );
+      });
+
+    if (messageAudience !== "Grupos" || messageGroupFilter === "Todos os grupos") return recipients;
+    return recipients.filter((recipient) => recipient.group === messageGroupFilter);
+  }, [
+    data.discipleshipClasses,
+    data.kids,
+    data.members,
+    data.schoolClasses,
+    data.visitors,
+    messageAudience,
+    messageGroupFilter,
+    monthlyBirthdays,
+    weeklyBirthdays,
+  ]);
   const selectedMessageRecipients = useMemo(() => {
     return selectedOrAllRecipients(messageRecipients, selectedMessageRecipientIds);
   }, [messageRecipients, selectedMessageRecipientIds]);
@@ -4319,6 +4331,8 @@ export default function Home() {
               messageAudience={messageAudience}
               messageAudiences={messageAudiences}
               messageBatchLimit={messageBatchLimit}
+              messageGroupFilter={messageGroupFilter}
+              groupOptions={groupOptions}
               messageRecipients={messageRecipients}
               messageTemplateId={messageTemplateId}
               messageText={messageText}
@@ -4331,6 +4345,7 @@ export default function Home() {
               setCustomTemplateText={setCustomTemplateText}
               setMessageAudience={setMessageAudience}
               setMessageBatchLimit={setMessageBatchLimit}
+              setMessageGroupFilter={setMessageGroupFilter}
               setMessageText={setMessageText}
               setSelectedMessageRecipientIds={setSelectedMessageRecipientIds}
             />

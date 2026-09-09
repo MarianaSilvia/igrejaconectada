@@ -1,9 +1,10 @@
 import type { Dispatch, SetStateAction } from "react";
-import { birthdayLabel, formatDate, normalizeWhatsappPhone, whatsappUrl } from "../app-helpers";
+import { ageFromBirthDate, ageGroupFromBirthDate, birthdayLabel, formatDate, normalizeWhatsappPhone, whatsappUrl } from "../app-helpers";
 import { classNameById } from "../attendance-helpers";
 import type { AppData, MemberFormTab, MemberRecord } from "../types";
 
-const generatedMemberEmailDomain = "igrejaconectada.local";
+const generatedMemberEmailDomain = "gmail.com";
+const generatedMemberEmailDomains = [generatedMemberEmailDomain, "igrejaconectada.local"];
 
 type MemberForm = Omit<MemberRecord, "id">;
 type MemberCredentialForm = {
@@ -73,7 +74,8 @@ function memberEmailBase(fullName: string) {
 }
 
 function isGeneratedMemberEmail(email: string) {
-  return email.trim().toLowerCase().endsWith(`@${generatedMemberEmailDomain}`);
+  const normalizedEmail = email.trim().toLowerCase();
+  return generatedMemberEmailDomains.some((domain) => normalizedEmail.endsWith(`@${domain}`));
 }
 
 function generatedMemberEmail(fullName: string, members: MemberRecord[], editingMemberId: string | null) {
@@ -165,6 +167,14 @@ export function MembersPanel({
       };
     });
   };
+  const updateMemberBirthDate = (birthDate: string) => {
+    setMemberForm((form) => ({
+      ...form,
+      birthDate,
+      age: ageFromBirthDate(birthDate),
+      ageGroup: ageGroupFromBirthDate(birthDate),
+    }));
+  };
 
   return (
     <section className="content-grid">
@@ -224,7 +234,8 @@ export function MembersPanel({
             </label>
             <label data-member-section="Dados">
               Data de nascimento
-              <input onChange={(event) => setMemberForm((form) => ({ ...form, birthDate: event.target.value }))} type="date" value={memberForm.birthDate} />
+              <input onChange={(event) => updateMemberBirthDate(event.target.value)} type="date" value={memberForm.birthDate} />
+              <small className="form-hint">Ao informar a data, idade e faixa etaria sao preenchidas automaticamente.</small>
             </label>
             <label data-member-section="Dados">
               Telefones
@@ -240,10 +251,11 @@ export function MembersPanel({
                 <option>Adulto</option>
                 <option>Idoso</option>
               </select>
+              <small className="form-hint">Preenchida automaticamente pela data de nascimento.</small>
             </label>
             <label data-member-section="Dados">
               Idade
-              <input min={0} onChange={(event) => setMemberForm((form) => ({ ...form, age: event.target.value }))} placeholder="Ex.: 35" type="number" value={memberForm.age} />
+              <input min={0} onChange={(event) => setMemberForm((form) => ({ ...form, age: event.target.value }))} placeholder="Ex.: 35" readOnly type="number" value={memberForm.age} />
             </label>
             <label data-member-section="Dados">
               Sexo

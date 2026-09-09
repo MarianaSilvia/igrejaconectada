@@ -1,4 +1,4 @@
-import { currentDateKey, eventDate, isExpiredDate } from "./app-helpers";
+import { ageFromBirthDate, ageGroupFromBirthDate, currentDateKey, eventDate, isExpiredDate } from "./app-helpers";
 import { nextMemberCode } from "./data-normalization";
 import type {
   AccessUser,
@@ -97,10 +97,14 @@ function visitorFromRegistration(request: RegistrationRequest, createId: IdFacto
 export function upsertMemberData(data: AppData, form: MemberForm, editingMemberId: string | null, createId: IdFactory): AppData {
   const now = new Date().toISOString();
   const existingMember = editingMemberId ? data.members.find((item) => item.id === editingMemberId) : undefined;
+  const automaticAge = ageFromBirthDate(form.birthDate);
+  const automaticAgeGroup = ageGroupFromBirthDate(form.birthDate);
   const member: MemberRecord = {
     ...form,
     id: editingMemberId ?? createId("member"),
     memberCode: form.memberCode || existingMember?.memberCode || nextMemberCode(data.members),
+    age: automaticAge || form.age,
+    ageGroup: automaticAgeGroup || form.ageGroup,
     createdAt: form.createdAt || now,
   };
   const shouldTrackAsVisitor = member.memberType === "Visitante" || member.status === "Visitante" || member.status === "Novo convertido";
