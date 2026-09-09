@@ -1387,6 +1387,15 @@ export default function Home() {
       })
       .sort(sortEventsByDate);
   }, [data.events, eventGroupFilter, eventStatusFilter, globalSearch, selectedWeekRange]);
+  const upcomingPanelEvents = useMemo(() => {
+    const today = eventDate(todayKey) ?? new Date();
+    const currentWeekRange = weekRangeWithOffset(0, today);
+
+    return data.events
+      .filter((event) => event.date >= todayKey)
+      .filter((event) => isEventInWeek(event, currentWeekRange.start, currentWeekRange.end))
+      .sort(sortEventsByDate);
+  }, [data.events, todayKey]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setTodayKey(currentDateKey()), 60 * 60 * 1000);
@@ -1410,7 +1419,7 @@ export default function Home() {
         module: "pastoral" as ModuleKey,
       }));
 
-    const upcomingEvents = weekEvents.slice(0, 3).map((event) => ({
+    const upcomingEvents = upcomingPanelEvents.slice(0, 3).map((event) => ({
       id: `event-${event.id}`,
       title: event.title,
       body: `${formatDate(event.date)} - ${event.ministry}`,
@@ -1434,7 +1443,7 @@ export default function Home() {
     }));
 
     return [...pendingRegistrations, ...pendingCare, ...upcomingEvents, ...publishedMural];
-  }, [data.mural, pendingRegistrationRequests, visibleCareRequests, weekEvents]);
+  }, [data.mural, pendingRegistrationRequests, upcomingPanelEvents, visibleCareRequests]);
 
   const unreadCount = notifications.filter((notice) => !data.notificationReadIds.includes(notice.id)).length;
   const activeNotices = data.notices.filter((notice) => !isExpiredDate(notice.expiresAt));
@@ -1705,7 +1714,7 @@ export default function Home() {
         .sort((first, second) => second.publishedAt.localeCompare(first.publishedAt))[0],
     [data.devotionals],
   );
-  const nextAgendaEvent = weekEvents[0];
+  const nextAgendaEvent = upcomingPanelEvents[0];
   const pendingCareCount = visibleCareRequests.filter((request) => request.status !== "Concluido").length;
   const unassignedCareCount = data.careRequests.filter((request) => !request.responsible && request.status !== "Concluido").length;
   const memberSchoolName = currentMember?.schoolClassId ? classNameById(data.schoolClasses, currentMember.schoolClassId) : "";
@@ -2971,8 +2980,8 @@ export default function Home() {
     },
     {
       label: "Agenda da semana",
-      value: weekEvents.length.toString(),
-      hint: "encontros desta semana",
+      value: upcomingPanelEvents.length.toString(),
+      hint: "encontros restantes",
       module: "events" as ModuleKey,
       cover: "agenda" as ModuleCoverKey,
     },
@@ -3821,7 +3830,7 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="row-list">
-                  {weekEvents.map((event) => (
+                  {upcomingPanelEvents.map((event) => (
                     <div className={`data-row ${agendaThemeClass(event)}`} key={event.id}>
                       <span className="date-box">{formatDate(event.date)}</span>
                       <div>
@@ -3830,7 +3839,7 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
-                  {!weekEvents.length && <p className="empty-state">Nenhum evento cadastrado para esta semana.</p>}
+                  {!upcomingPanelEvents.length && <p className="empty-state">Nenhum evento restante para esta semana.</p>}
                 </div>
               </article>
 
@@ -3998,7 +4007,7 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="row-list">
-                  {weekEvents.map((event) => (
+                  {upcomingPanelEvents.map((event) => (
                     <div className={`data-row ${agendaThemeClass(event)}`} key={event.id}>
                       <span className="date-box">{formatDate(event.date)}</span>
                       <div>
@@ -4009,7 +4018,7 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
-                  {!weekEvents.length && <p className="empty-state">Nenhum evento cadastrado para esta semana.</p>}
+                  {!upcomingPanelEvents.length && <p className="empty-state">Nenhum evento restante para esta semana.</p>}
                 </div>
               </article>
 
