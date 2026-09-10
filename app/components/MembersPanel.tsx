@@ -553,7 +553,7 @@ export function MembersPanel({
         </article>
       )}
 
-      <article className="surface">
+      <article className="surface member-list-panel">
         <div className="panel-heading">
           <h2>{canManageMembers ? "Membros cadastrados" : "Meu cadastro"}</h2>
           <span>
@@ -648,7 +648,7 @@ export function MembersPanel({
             </div>
           </div>
         )}
-        <div className="row-list">
+        <div className="row-list member-record-list">
           {filteredMembers.map((member) => {
             const schoolClassName = classNameById(data.schoolClasses, member.schoolClassId);
             const discipleshipClassName = classNameById(data.discipleshipClasses, member.discipleshipClassId);

@@ -1266,6 +1266,20 @@ button:disabled {
   gap: 10px;
 }
 
+.member-list-panel {
+  align-self: start;
+}
+
+@media (min-width: 721px) {
+  .member-record-list {
+    max-height: min(660px, calc(100dvh - 370px));
+    overflow-y: auto;
+    padding-right: 6px;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+}
+
 .audit-summary {
   display: grid;
   gap: 10px;
