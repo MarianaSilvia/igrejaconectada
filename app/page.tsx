@@ -1739,6 +1739,26 @@ export default function Home() {
     memberGroupNames(memberForm).forEach((group) => groups.add(group));
     return Array.from(groups).sort((first, second) => first.localeCompare(second, "pt-BR", { sensitivity: "base" }));
   }, [data.ministries, memberForm]);
+  const pastoralResponsibleOptions = useMemo(() => {
+    const leaderEmails = new Set(data.users.filter((user) => user.role === "Lider").map((user) => normalizeEmail(user.email)));
+    const leaderNames = new Set(data.users.filter((user) => user.role === "Lider").map((user) => normalizeSearchText(user.name)));
+    const allowedTerms = ["pastor", "presbitero", "dirigente", "lider"];
+    const names = new Set<string>();
+
+    data.members.forEach((member) => {
+      const memberText = normalizeSearchText(
+        [member.ministerialFunction, member.role, member.categories, member.memberType, member.pastoralStatus].join(" "),
+      );
+      const hasLeadershipAccess = leaderEmails.has(normalizeEmail(member.email)) || leaderNames.has(normalizeSearchText(member.fullName));
+      const hasLeadershipFunction = allowedTerms.some((term) => memberText.includes(term));
+
+      if ((hasLeadershipAccess || hasLeadershipFunction) && member.fullName.trim()) {
+        names.add(member.fullName.trim());
+      }
+    });
+
+    return Array.from(names).sort((first, second) => first.localeCompare(second, "pt-BR", { sensitivity: "base" }));
+  }, [data.members, data.users]);
   const searchQuery = normalizeSearchText(globalSearch);
   const filteredMembers = useMemo(
     () =>
@@ -2253,7 +2273,20 @@ export default function Home() {
   function updateCareRequest(id: string, patch: Partial<CareRequest>, action: string) {
     if (!requireModuleAccess("pastoral", action)) return;
 
-    setData((current) => updateCareRequestData(current, id, patch, action, uid));
+    let requestWasFound = false;
+    setData((current) => {
+      requestWasFound = current.careRequests.some((request) => request.id === id);
+      if (!requestWasFound) return current;
+      return updateCareRequestData(current, id, patch, action, uid);
+    });
+
+    if (!requestWasFound) {
+      setSyncStatus("Nao foi possivel localizar este atendimento. Recarregue os dados da base e tente novamente.");
+      return;
+    }
+
+    setSelectedRequestId(id);
+    setSyncStatus(action);
   }
 
   function toggleMural(id: string, field: "published" | "featured") {
@@ -4262,6 +4295,7 @@ export default function Home() {
               currentMemberPhone={currentMember?.phone ?? careForm.phone}
               filteredCareRequests={filteredCareRequests}
               memberFormTab={memberFormTab}
+              pastoralResponsibleOptions={pastoralResponsibleOptions}
               selectedRequest={selectedRequest}
               setCareForm={setCareForm}
               setCareStatusFilter={setCareStatusFilter}

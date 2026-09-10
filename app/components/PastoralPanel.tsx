@@ -12,6 +12,7 @@ type PastoralPanelProps = {
   currentMemberPhone: string;
   filteredCareRequests: CareRequest[];
   memberFormTab: MemberFormTab;
+  pastoralResponsibleOptions: string[];
   selectedRequest?: CareRequest;
   setCareForm: Dispatch<SetStateAction<CareForm>>;
   setCareStatusFilter: Dispatch<SetStateAction<string>>;
@@ -42,6 +43,7 @@ export function PastoralPanel({
   currentMemberPhone,
   filteredCareRequests,
   memberFormTab,
+  pastoralResponsibleOptions,
   selectedRequest,
   setCareForm,
   setCareStatusFilter,
@@ -49,6 +51,13 @@ export function PastoralPanel({
   statusFlow,
   updateCareRequest,
 }: PastoralPanelProps) {
+  function optionsWithCurrent(currentResponsible: string) {
+    const trimmed = currentResponsible.trim();
+    const options = [...pastoralResponsibleOptions];
+    if (trimmed && !options.includes(trimmed)) options.push(trimmed);
+    return options.sort((first, second) => first.localeCompare(second, "pt-BR", { sensitivity: "base" }));
+  }
+
   return (
     <section className="pastoral-layout">
       <article className="surface">
@@ -85,6 +94,17 @@ export function PastoralPanel({
               <option>Urgente</option>
             </select>
           </label>
+          <label>
+            Escolher responsavel
+            <select onChange={(event) => setCareForm((form) => ({ ...form, responsible: event.target.value }))} value={careForm.responsible}>
+              <option value="">Sem preferencia / Secretaria encaminha</option>
+              {optionsWithCurrent(careForm.responsible).map((responsible) => (
+                <option key={responsible} value={responsible}>
+                  {responsible}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="full">
             Descricao do pedido
             <textarea onChange={(event) => setCareForm((form) => ({ ...form, summary: event.target.value }))} placeholder="Escreva o motivo do atendimento" value={careForm.summary} />
@@ -118,6 +138,7 @@ export function PastoralPanel({
             <button className={request.id === selectedRequest?.id ? "care-list-item selected" : "care-list-item"} key={request.id} onClick={() => setSelectedRequestId(request.id)} type="button">
               <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>{request.status}</span>
               <strong>{request.member}</strong>
+              <small>{request.responsible || "Sem responsavel definido"}</small>
               <small>{suggestedNextStep(request)}</small>
             </button>
           ))}
@@ -142,7 +163,15 @@ export function PastoralPanel({
           <div className="detail-grid">
             <label>
               Responsavel
-              <input onChange={(event) => updateCareRequest(selectedRequest.id, { responsible: event.target.value }, "Responsavel pastoral atualizado")} placeholder="Nome do pastor ou lider" value={selectedRequest.responsible} />
+              <select onChange={(event) => updateCareRequest(selectedRequest.id, { responsible: event.target.value }, "Responsavel pastoral atualizado")} value={selectedRequest.responsible}>
+                <option value="">Sem preferencia / Secretaria encaminha</option>
+                {optionsWithCurrent(selectedRequest.responsible).map((responsible) => (
+                  <option key={responsible} value={responsible}>
+                    {responsible}
+                  </option>
+                ))}
+              </select>
+              <input onChange={(event) => updateCareRequest(selectedRequest.id, { responsible: event.target.value }, "Responsavel pastoral atualizado")} placeholder="Ou digite outro responsavel" value={selectedRequest.responsible} />
             </label>
             <label>
               Data
