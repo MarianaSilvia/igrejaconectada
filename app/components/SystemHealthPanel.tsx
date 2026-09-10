@@ -1,4 +1,4 @@
-import type { MemberSyncStatus, SaveState } from "../types";
+import type { MemberSyncStatus, PushSummary, SaveState } from "../types";
 
 type SystemHealthPanelProps = {
   agendaCount: number;
@@ -10,10 +10,12 @@ type SystemHealthPanelProps = {
   memberSyncStatus: MemberSyncStatus | null;
   membersCount: number;
   pendingRegistrationsCount: number;
+  pushSummary: PushSummary | null;
   saveState: SaveState;
   syncStatus: string;
   visitorsCount: number;
   onMemberSyncRefresh?: () => void | Promise<void>;
+  onPushSummaryRefresh?: () => void | Promise<void>;
   onReload: () => void | Promise<void> | Promise<boolean>;
 };
 
@@ -35,10 +37,12 @@ export function SystemHealthPanel({
   memberSyncStatus,
   membersCount,
   pendingRegistrationsCount,
+  pushSummary,
   saveState,
   syncStatus,
   visitorsCount,
   onMemberSyncRefresh,
+  onPushSummaryRefresh,
   onReload,
 }: SystemHealthPanelProps) {
   return (
@@ -98,6 +102,24 @@ export function SystemHealthPanel({
           {onMemberSyncRefresh && (
             <button className="secondary member-sync-action" disabled={memberSyncLoading} onClick={onMemberSyncRefresh} type="button">
               Sincronizar espelho agora
+            </button>
+          )}
+        </div>
+      )}
+
+      {pushSummary && (
+        <div className={`member-sync-card member-sync-${pushSummary.configured ? "sincronizado" : "atencao"}`}>
+          <div>
+            <strong>Notificacoes push</strong>
+            <small>{pushSummary.message}</small>
+          </div>
+          <div className="member-sync-grid">
+            <span>Status: {pushSummary.configured ? "Configurado" : "Pendente"}</span>
+            <span>Aparelhos ativos: {pushSummary.enabledSubscriptions}</span>
+          </div>
+          {onPushSummaryRefresh && (
+            <button className="secondary member-sync-action" onClick={onPushSummaryRefresh} type="button">
+              Atualizar notificacoes
             </button>
           )}
         </div>

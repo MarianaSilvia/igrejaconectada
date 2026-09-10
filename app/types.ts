@@ -50,6 +50,13 @@ export type MemberSyncStatus = {
   message: string;
 };
 
+export type PushSummary = {
+  configured: boolean;
+  enabledSubscriptions: number;
+  checkedAt: string;
+  message: string;
+};
+
 export type AttendanceRecord = {
   memberId: string;
   status: AttendanceStatus;

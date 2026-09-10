@@ -2,6 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { adminClient, administrativeRoles, churchRoleFromLabel, requireSession, type ChurchRole } from "../auth";
 import { syncMembersTable } from "../../../member-table-sync";
+import { notifyImportantStateChanges } from "../../../push-service";
 import { payloadKeysByRole, visiblePayloadKeysByRole, visiblePublishedOnlyKeys } from "../../../state-access-policy";
 
 const stateId = "main";
@@ -675,6 +676,7 @@ export async function PUT(request: Request) {
   }
 
   const memberSync = await syncMembersTable(stored.client, payloadWithAudit);
+  await notifyImportantStateChanges(stored.client, isRecord(stored.payload) ? stored.payload : {}, payloadWithAudit);
 
   return NextResponse.json({
     ok: true,

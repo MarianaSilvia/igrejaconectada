@@ -32,6 +32,7 @@ import { MembersPanel } from "./components/MembersPanel";
 import { MuralPanel } from "./components/MuralPanel";
 import { NoticesPanel } from "./components/NoticesPanel";
 import { PastoralPanel } from "./components/PastoralPanel";
+import { PushNotificationControl } from "./components/PushNotificationControl";
 import { ReportsPanel } from "./components/ReportsPanel";
 import { ResponsiveImage } from "./components/ResponsiveImage";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -140,6 +141,7 @@ import type {
   MuralImageResult,
   MuralItem,
   Notice,
+  PushSummary,
   RegistrationRequest,
   RemoteAppStateResponse,
   ReportKind,
@@ -951,6 +953,7 @@ export default function Home() {
   const [lastSavedAt, setLastSavedAt] = useState("");
   const [memberSyncLoading, setMemberSyncLoading] = useState(false);
   const [memberSyncStatus, setMemberSyncStatus] = useState<MemberSyncStatus | null>(null);
+  const [pushSummary, setPushSummary] = useState<PushSummary | null>(null);
   const [remoteUpdatedAt, setRemoteUpdatedAt] = useState<string | null>(null);
   const [reportPreviewKind, setReportPreviewKind] = useState<ReportKind>("members");
 
@@ -1079,6 +1082,20 @@ export default function Home() {
   }, [forceAccessLogout, hasSession]);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const moduleFromUrl = params.get("module") as ModuleKey | null;
+    if (moduleFromUrl && modules.some((module) => module.key === moduleFromUrl)) {
+      const timer = window.setTimeout(() => {
+        setActiveModule(moduleFromUrl);
+      }, 0);
+      params.delete("module");
+      const nextSearch = params.toString();
+      window.history.replaceState({}, "", `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}`);
+      return () => {
+        window.clearTimeout(timer);
+      };
+    }
+
     if (window.location.search.includes("cadastro=novo")) {
       window.history.replaceState({}, "", window.location.pathname);
     }
@@ -1279,6 +1296,8 @@ export default function Home() {
   const canManageAssets = canManageModule(currentAccessRole, "assets");
   const canManageDevotional = canManageModule(currentAccessRole, "devotional");
   const canManageRegistrationRequests = currentAccessRole === "Administrador" || currentAccessRole === "Secretario";
+  const isPushSummary = (value: PushSummary | { error?: string }): value is PushSummary =>
+    "configured" in value && "enabledSubscriptions" in value && "checkedAt" in value && "message" in value;
   const loadMemberSyncStatus = useCallback(
     async (refreshMirror = false) => {
       setMemberSyncLoading(true);
@@ -1324,6 +1343,40 @@ export default function Home() {
     [data.members.length],
   );
 
+  const loadPushSummary = useCallback(async () => {
+    const supabase = getSupabaseClient();
+    const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+    const token = sessionData.session?.access_token;
+
+    if (!token) return;
+
+    try {
+      const response = await fetch("/api/admin/push-summary", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = (await response.json()) as PushSummary | { error?: string };
+
+      if (!response.ok || !isPushSummary(result)) {
+        setPushSummary({
+          configured: false,
+          enabledSubscriptions: 0,
+          checkedAt: new Date().toISOString(),
+          message: "Nao foi possivel conferir as notificacoes agora.",
+        });
+        return;
+      }
+
+      setPushSummary(result);
+    } catch {
+      setPushSummary({
+        configured: false,
+        enabledSubscriptions: 0,
+        checkedAt: new Date().toISOString(),
+        message: "Nao foi possivel conferir as notificacoes agora.",
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (!hasSession || currentAccessRole !== "Administrador" || !isSupabaseConfigured()) {
       return;
@@ -1337,6 +1390,21 @@ export default function Home() {
       window.clearTimeout(timer);
     };
   }, [currentAccessRole, hasSession, loadMemberSyncStatus, remoteUpdatedAt]);
+
+  useEffect(() => {
+    if (!hasSession || !canManageRegistrationRequests || !isSupabaseConfigured()) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void loadPushSummary();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [canManageRegistrationRequests, hasSession, loadPushSummary, remoteUpdatedAt]);
+
   useEffect(() => {
     if (!hasSession || !canManageMessages) return;
 
@@ -3677,6 +3745,7 @@ export default function Home() {
                 <span>Acoes</span>
                 {unreadCount > 0 && <strong>{unreadCount}</strong>}
               </button>
+              <PushNotificationControl />
               {!isAdminView && (
                 <button
                   className={isSimpleView ? "simple-mode-toggle active" : "simple-mode-toggle"}
@@ -3861,8 +3930,10 @@ export default function Home() {
                 memberSyncStatus={currentAccessRole === "Administrador" ? memberSyncStatus : null}
                 membersCount={data.members.length}
                 onMemberSyncRefresh={currentAccessRole === "Administrador" ? () => loadMemberSyncStatus(true) : undefined}
+                onPushSummaryRefresh={canManageRegistrationRequests ? loadPushSummary : undefined}
                 onReload={reloadRemoteStateNow}
                 pendingRegistrationsCount={pendingRegistrationRequests.length}
+                pushSummary={canManageRegistrationRequests ? pushSummary : null}
                 saveState={saveState}
                 syncStatus={syncStatus}
                 visitorsCount={data.visitors.length}

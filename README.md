@@ -14,6 +14,7 @@ Sistema de gestao para igreja com Supabase, painel administrativo, area do membr
 - Relatorios em PDF/CSV para membros, visitantes, Kids, agenda, presenca, faltosos, financeiro e patrimonio.
 - Login por Supabase Auth com perfis: administrador, lider, professor, secretario, tesoureiro e membro.
 - PWA instalavel no celular, mantendo os dados online via Supabase.
+- Notificacoes Push Web para aparelhos/navegadores inscritos, com fallback pela central de acoes interna.
 - Painel de saude do sistema com status de salvamento, totais principais e atalho para recarregar dados da base.
 - Modo Visual simples para membros, com letras maiores, atalhos grandes e linguagem direta para terceira idade.
 - Backup completo em JSON pelo modulo Configuracoes antes de importacoes ou mudancas grandes.
@@ -51,9 +52,13 @@ Configure estas variaveis no Vercel em Production:
 NEXT_PUBLIC_SUPABASE_URL=https://bssrgotlvvexvrutshqz.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_publica_do_supabase
 SUPABASE_SERVICE_ROLE_KEY=sua_chave_service_role_privada
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=sua_chave_publica_vapid
+VAPID_PRIVATE_KEY=sua_chave_privada_vapid
+VAPID_SUBJECT=mailto:secretaria@igrejaconectada.app
 ```
 
 Sem Supabase, o sistema pode abrir em modo local, mas o uso real com membros deve acontecer com as variaveis configuradas.
+Sem VAPID, o app continua funcionando, mas notificacoes em segundo plano ficam indisponiveis.
 
 ## App instalavel
 

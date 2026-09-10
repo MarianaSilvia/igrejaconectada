@@ -648,6 +648,44 @@ button:disabled {
   padding: 2px 6px;
 }
 
+.push-control {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 210px;
+}
+
+.push-control button {
+  background: rgba(20, 217, 196, 0.12);
+  border: 1px solid rgba(20, 217, 196, 0.28);
+  border-radius: 8px;
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 900;
+  min-height: 44px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.push-control.enabled button:first-child {
+  background: rgba(74, 222, 128, 0.12);
+  border-color: rgba(74, 222, 128, 0.34);
+  color: #bbf7d0;
+}
+
+.push-control button.secondary {
+  background: rgba(72, 184, 255, 0.1);
+  border-color: rgba(72, 184, 255, 0.26);
+  color: #9bd7ff;
+}
+
+.push-control small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+  max-width: 170px;
+}
+
 .profile-pill {
   align-items: center;
   background: rgba(13, 28, 49, 0.86);
@@ -3519,7 +3557,7 @@ textarea:focus {
 
   .topbar-actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     width: 100%;
   }
 
@@ -3541,6 +3579,22 @@ textarea:focus {
   .command-search input,
   .notification-button {
     min-height: 46px;
+  }
+
+  .push-control {
+    align-items: stretch;
+    grid-column: 1 / -1;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .push-control button {
+    flex: 0 0 auto;
+  }
+
+  .push-control small {
+    align-self: center;
+    max-width: none;
   }
 
   .profile-pill {

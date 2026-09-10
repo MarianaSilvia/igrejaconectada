@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminClient } from "../../admin/auth";
+import { sendPushToRoles } from "../../../push-service";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -174,6 +175,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: "Nao foi possivel salvar o pre-cadastro." }, { status: 400 });
   }
+
+  await sendPushToRoles(client, ["ADMIN", "SECRETARY"], {
+    title: "Novo pre-cadastro",
+    body: `${fullName} esta aguardando analise.`,
+    module: "overview",
+  });
 
   return NextResponse.json({ ok: true });
 }
