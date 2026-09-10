@@ -1202,6 +1202,31 @@ button:disabled {
   box-shadow: 0 0 0 1px rgba(20, 217, 196, 0.18), 0 18px 56px rgba(20, 217, 196, 0.1);
 }
 
+@media (min-width: 721px) {
+  #member-form-panel {
+    max-height: min(760px, calc(100dvh - 132px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  #member-form-panel .panel-heading {
+    background: linear-gradient(180deg, rgba(31, 33, 42, 0.98), rgba(31, 33, 42, 0.88));
+    margin: -18px -18px 14px;
+    padding: 18px 18px 12px;
+    position: sticky;
+    top: -18px;
+    z-index: 4;
+  }
+
+  #member-form-panel .member-form-tabs {
+    backdrop-filter: blur(14px);
+    position: sticky;
+    top: 48px;
+    z-index: 3;
+  }
+}
+
 .surface.wide {
   grid-column: span 1;
 }

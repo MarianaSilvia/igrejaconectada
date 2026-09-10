@@ -201,7 +201,7 @@ export function MembersPanel({
             <h2>{editingMemberId ? "Editar ficha" : "Ficha completa"}</h2>
             <span>{canManageMembers ? (editingMemberId ? "Atualizando cadastro" : "Membro ou visitante") : "Meu cadastro"}</span>
           </div>
-          <div className="form-grid">
+          <div className="form-grid" data-current-member-tab={memberFormTab}>
             <div className="member-form-tabs full" role="tablist" aria-label="Secoes do cadastro">
               {availableMemberFormTabs.map((tab) => (
                 <button className={memberFormTab === tab ? "active" : ""} key={tab} onClick={() => setMemberFormTab(tab)} type="button">
