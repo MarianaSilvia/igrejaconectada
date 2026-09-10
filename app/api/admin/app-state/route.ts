@@ -546,7 +546,7 @@ function mergeCareRequest(existingRequest: JsonRecord | undefined, incomingReque
     return {
       ...incomingRequest,
       status: "Pendente",
-      responsible: "",
+      responsible: textValue(incomingRequest.responsible),
       scheduleDate: "",
       scheduleTime: "",
       returnNote: "",
