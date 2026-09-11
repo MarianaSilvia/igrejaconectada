@@ -316,6 +316,14 @@ export function updateCareRequestData(data: AppData, id: string, patch: Partial<
   };
 }
 
+export function deleteCareRequestData(data: AppData, request: CareRequest, createId: IdFactory): AppData {
+  return {
+    ...data,
+    careRequests: data.careRequests.filter((item) => item.id !== request.id),
+    audit: [auditItem(createId, `Atendimento pastoral excluido: ${request.member}`), ...data.audit].slice(0, 12),
+  };
+}
+
 export function upsertMuralItemData(data: AppData, form: MuralForm, createId: IdFactory): AppData {
   const item: MuralItem = { ...form, id: createId("mural") };
   return {

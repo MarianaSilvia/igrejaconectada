@@ -14,6 +14,7 @@ type PastoralPanelProps = {
   memberFormTab: MemberFormTab;
   pastoralResponsibleOptions: string[];
   selectedRequest?: CareRequest;
+  deleteCareRequest: (request: CareRequest) => void;
   setCareForm: Dispatch<SetStateAction<CareForm>>;
   setCareStatusFilter: Dispatch<SetStateAction<string>>;
   setSelectedRequestId: Dispatch<SetStateAction<string>>;
@@ -45,6 +46,7 @@ export function PastoralPanel({
   memberFormTab,
   pastoralResponsibleOptions,
   selectedRequest,
+  deleteCareRequest,
   setCareForm,
   setCareStatusFilter,
   setSelectedRequestId,
@@ -135,12 +137,24 @@ export function PastoralPanel({
         )}
         <div className="care-list">
           {filteredCareRequests.map((request) => (
-            <button className={request.id === selectedRequest?.id ? "care-list-item selected" : "care-list-item"} key={request.id} onClick={() => setSelectedRequestId(request.id)} type="button">
-              <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>{request.status}</span>
-              <strong>{request.member}</strong>
-              <small>{request.responsible || "Sem responsavel definido"}</small>
-              <small>{suggestedNextStep(request)}</small>
-            </button>
+            <article className={request.id === selectedRequest?.id ? "care-list-item selected" : "care-list-item"} key={request.id}>
+              <button className="care-list-main" onClick={() => setSelectedRequestId(request.id)} type="button">
+                <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>{request.status}</span>
+                <strong>{request.member}</strong>
+                <small>{request.responsible || "Sem responsavel definido"}</small>
+                <small>{suggestedNextStep(request)}</small>
+              </button>
+              {canManagePastoral && (
+                <div className="care-list-actions">
+                  <button onClick={() => setSelectedRequestId(request.id)} type="button">
+                    Editar
+                  </button>
+                  <button className="danger" onClick={() => deleteCareRequest(request)} type="button">
+                    Excluir
+                  </button>
+                </div>
+              )}
+            </article>
           ))}
           {!filteredCareRequests.length && <p className="empty-state">Nenhum pedido registrado para este filtro.</p>}
         </div>

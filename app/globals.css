@@ -2458,6 +2458,40 @@ textarea:focus {
   text-align: left;
 }
 
+.care-list-main {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  display: grid;
+  gap: 5px;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.care-list-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 8px;
+}
+
+.care-list-actions button {
+  background: rgba(72, 184, 255, 0.1);
+  border: 1px solid rgba(72, 184, 255, 0.28);
+  color: #b9e4ff;
+  font-size: 12px;
+  font-weight: 900;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.care-list-actions button.danger {
+  background: rgba(255, 79, 116, 0.1);
+  border-color: rgba(255, 79, 116, 0.32);
+  color: #ff9eb3;
+}
+
 .care-list-item.selected {
   border-color: var(--accent);
   box-shadow: inset 4px 0 0 var(--accent), 0 0 28px rgba(20, 217, 196, 0.1);

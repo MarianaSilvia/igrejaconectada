@@ -92,6 +92,7 @@ import {
   createNoticeData,
   deleteAccessUserData,
   deleteAssetData,
+  deleteCareRequestData,
   deleteEventData,
   deleteDevotionalData,
   deleteMemberData,
@@ -2289,6 +2290,17 @@ export default function Home() {
     setSyncStatus(action);
   }
 
+  function deleteCareRequest(request: CareRequest) {
+    if (!requireModuleAccess("pastoral", "excluir atendimento pastoral")) return;
+
+    setData((current) => deleteCareRequestData(current, request, uid));
+    setSelectedRequestId((currentId) => {
+      if (currentId !== request.id) return currentId;
+      return filteredCareRequests.find((item) => item.id !== request.id)?.id ?? "";
+    });
+    setSyncStatus(`Atendimento pastoral de ${request.member} excluido.`);
+  }
+
   function toggleMural(id: string, field: "published" | "featured") {
     if (!requireModuleAccess("mural", "alterar mural")) return;
 
@@ -4293,6 +4305,7 @@ export default function Home() {
               createCareRequest={createCareRequest}
               currentMemberName={currentMember?.fullName ?? profileName}
               currentMemberPhone={currentMember?.phone ?? careForm.phone}
+              deleteCareRequest={deleteCareRequest}
               filteredCareRequests={filteredCareRequests}
               memberFormTab={memberFormTab}
               pastoralResponsibleOptions={pastoralResponsibleOptions}
