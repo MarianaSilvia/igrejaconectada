@@ -1309,12 +1309,17 @@ button:disabled {
 }
 
 @media (min-width: 721px) {
-  .member-record-list {
+  .member-record-list,
+  .access-users-list {
     max-height: min(660px, calc(100dvh - 370px));
     overflow-y: auto;
     padding-right: 6px;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
+  }
+
+  .access-users-list {
+    max-height: min(620px, calc(100dvh - 260px));
   }
 }
 
@@ -1541,6 +1546,28 @@ button.data-row.active {
 
 .access-user-row > div:first-of-type {
   min-width: 0;
+}
+
+.access-user-row strong {
+  overflow-wrap: anywhere;
+}
+
+.access-status-mark {
+  background: rgba(20, 217, 196, 0.16);
+  border-color: rgba(20, 217, 196, 0.42);
+  box-shadow: 0 0 18px rgba(20, 217, 196, 0.16);
+}
+
+.access-status-pendente {
+  background: rgba(246, 198, 91, 0.18);
+  border-color: rgba(246, 198, 91, 0.48);
+  box-shadow: 0 0 18px rgba(246, 198, 91, 0.16);
+}
+
+.access-status-bloqueado {
+  background: rgba(255, 93, 112, 0.18);
+  border-color: rgba(255, 93, 112, 0.48);
+  box-shadow: 0 0 18px rgba(255, 93, 112, 0.16);
 }
 
 .selected-member-access {

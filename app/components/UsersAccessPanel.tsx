@@ -28,6 +28,8 @@ export function UsersAccessPanel({
   updateAccessUserStatus,
   userForm,
 }: UsersAccessPanelProps) {
+  const sortedUsers = [...data.users].sort((first, second) => first.name.localeCompare(second.name, "pt-BR", { sensitivity: "base" }));
+
   return (
     <section className="content-grid">
       <article className="surface">
@@ -111,10 +113,10 @@ export function UsersAccessPanel({
           <h2>Usuarios cadastrados</h2>
           <span>{data.users.length} acessos</span>
         </div>
-        <div className="row-list">
-          {data.users.map((user) => (
+        <div className="row-list access-users-list">
+          {sortedUsers.map((user) => (
             <div className="data-row access-user-row" key={user.id}>
-              <span className={user.status === "Bloqueado" ? "bullet-mark danger-mark" : "bullet-mark"} />
+              <span className={`bullet-mark access-status-mark access-status-${user.status.toLowerCase()}`} />
               <div>
                 <strong>{user.name}</strong>
                 <small>{user.role} - {user.status} - {user.email}</small>
