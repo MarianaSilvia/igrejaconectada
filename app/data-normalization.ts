@@ -1,4 +1,5 @@
 import { ageFromBirthDate, ageGroupFromBirthDate, dateAfterDays, isExpiredDate, memberGroupNames, replaceLegacyMinistryText } from "./app-helpers";
+import { globalCongregationScope, normalizeCongregationScope } from "./congregation-scope";
 import type {
   AccessUserForm,
   AppData,
@@ -20,6 +21,7 @@ import type {
 } from "./types";
 
 export const blankCare: Omit<CareRequest, "id" | "createdAt" | "updatedAt"> = {
+  congregation: "",
   member: "",
   phone: "",
   category: "Aconselhamento",
@@ -32,6 +34,7 @@ export const blankCare: Omit<CareRequest, "id" | "createdAt" | "updatedAt"> = {
 };
 
 export const blankEvent: Omit<ChurchEvent, "id"> = {
+  congregation: "",
   title: "",
   date: "",
   time: "",
@@ -43,6 +46,7 @@ export const blankEvent: Omit<ChurchEvent, "id"> = {
 };
 
 export const blankNotice: Omit<Notice, "id"> = {
+  congregation: globalCongregationScope,
   title: "",
   body: "",
   status: "Publicado",
@@ -53,6 +57,7 @@ export const blankNotice: Omit<Notice, "id"> = {
 };
 
 export const blankMinistry: Omit<MinistryRecord, "id"> = {
+  congregation: "",
   name: "",
   leader: "",
   assistant: "",
@@ -68,6 +73,7 @@ export const blankUser: AccessUserForm = {
   password: "123456",
   role: "Lider",
   status: "Pendente",
+  congregationScope: globalCongregationScope,
 };
 
 export const blankMember: Omit<MemberRecord, "id"> = {
@@ -118,6 +124,7 @@ export const blankMember: Omit<MemberRecord, "id"> = {
 };
 
 export const blankVisitor: Omit<VisitorRecord, "id"> = {
+  congregation: "",
   fullName: "",
   phone: "",
   firstVisitDate: "",
@@ -157,6 +164,7 @@ export const blankMemberCredential = {
 };
 
 export const blankKid: Omit<KidRecord, "id"> = {
+  congregation: "",
   childName: "",
   birthDate: "",
   ageGroup: "Kids",
@@ -204,6 +212,7 @@ export const blankDevotional: Omit<DevotionalRecord, "id"> = {
 };
 
 export const blankMuralItem: Omit<MuralItem, "id"> = {
+  congregation: globalCongregationScope,
   title: "",
   category: "Secretaria",
   published: true,
@@ -346,6 +355,17 @@ export function normalizeVisitor(visitor: Partial<VisitorRecord>): VisitorRecord
   };
 }
 
+function normalizeAccessUser(user: Partial<AppData["users"][number]>): AppData["users"][number] {
+  return {
+    id: user.id ?? uid("user"),
+    name: user.name ?? "",
+    email: user.email ?? "",
+    role: user.role ?? "Membro",
+    status: user.status ?? "Ativo",
+    congregationScope: normalizeCongregationScope(user.congregationScope),
+  };
+}
+
 export function normalizeRegistrationRequest(request: Partial<RegistrationRequest>): RegistrationRequest {
   return {
     ...blankRegistrationRequest,
@@ -389,6 +409,7 @@ export function visitorsFromMembers(members: MemberRecord[]): VisitorRecord[] {
     .filter((member) => member.memberType === "Visitante" || member.status === "Visitante" || member.status === "Novo convertido")
     .map((member) => ({
       id: `visitor-${member.id}`,
+      congregation: member.congregation,
       fullName: member.fullName,
       phone: member.phone,
       firstVisitDate: member.joinedAt,
@@ -455,7 +476,7 @@ export function normalizeAppData(value: LegacyAppData, initialData: AppData): Ap
     events: (safeValue.events ?? initialData.events).map((event) => normalizeEvent(event)),
     notices: (safeValue.notices ?? initialData.notices).map((notice) => normalizeNotice(notice)).filter((notice) => !isExpiredDate(notice.expiresAt)),
     mural: (safeValue.mural ?? initialData.mural).map((item) => normalizeMuralItem(item)),
-    users: safeValue.users ?? initialData.users,
+    users: (safeValue.users ?? initialData.users).map((user) => normalizeAccessUser(user)),
     members: normalizedMembers,
     registrationRequests: (safeValue.registrationRequests ?? initialData.registrationRequests ?? []).map((request) =>
       normalizeRegistrationRequest(request),

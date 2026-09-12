@@ -24,6 +24,7 @@ import { AgendaPanel } from "./components/AgendaPanel";
 import { AssetsPanel } from "./components/AssetsPanel";
 import { ClassModulePanel } from "./components/ClassModulePanel";
 import { CommunicationPanel } from "./components/CommunicationPanel";
+import { globalCongregationScope } from "./congregation-scope";
 import { DevotionalPanel } from "./components/DevotionalPanel";
 import { FinancePanel } from "./components/FinancePanel";
 import { GroupsPanel } from "./components/GroupsPanel";
@@ -2376,6 +2377,7 @@ export default function Home() {
       email: member.email,
       role: existingAccess?.role ?? "Lider",
       status: existingAccess?.status ?? "Ativo",
+      congregationScope: existingAccess?.congregationScope ?? member.congregation ?? globalCongregationScope,
     }));
     setSyncStatus(`Membro selecionado para acesso administrativo: ${member.fullName}.`);
   }
@@ -2448,6 +2450,7 @@ export default function Home() {
       email: userForm.email,
       role: userForm.role,
       status: userForm.status,
+      congregationScope: userForm.congregationScope ?? globalCongregationScope,
     };
 
     if (isSupabaseConfigured()) {
@@ -2514,6 +2517,7 @@ export default function Home() {
           email: user.email,
           role: user.role,
           status,
+          congregationScope: user.congregationScope ?? globalCongregationScope,
         }),
       });
       const result = (await response.json()) as { error?: string };

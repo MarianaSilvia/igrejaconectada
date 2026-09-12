@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
+import { congregationMatchesScope, isGlobalCongregationScope, normalizeCongregationScope } from "../../../congregation-scope";
 import { adminClient, requireSession, type ChurchRole } from "../auth";
 
 const bucketName = "member-photos";
@@ -49,7 +50,6 @@ function canManageAnyMemberPhoto(role: ChurchRole) {
 }
 
 async function canManagePhoto(memberId: string, role: ChurchRole, user: User) {
-  if (canManageAnyMemberPhoto(role)) return true;
   if (!memberId) return true;
 
   const client = adminClient();
@@ -60,7 +60,20 @@ async function canManagePhoto(memberId: string, role: ChurchRole, user: User) {
   if (!isRecord(payload)) return false;
 
   const member = recordsFrom(payload.members).find((item) => textValue(item.id) === memberId);
-  return Boolean(member && memberBelongsToUser(member, user));
+  if (!member) return false;
+
+  if (canManageAnyMemberPhoto(role)) {
+    const accessUser = recordsFrom(payload.users).find((item) => textValue(item.email).toLowerCase() === userEmail(user));
+    const scope = normalizeCongregationScope(
+      accessUser?.congregationScope ??
+        (user.app_metadata as JsonRecord | undefined)?.church_gp_congregation_scope ??
+        (user.app_metadata as JsonRecord | undefined)?.congregation_scope,
+    );
+
+    return isGlobalCongregationScope(scope) || congregationMatchesScope(member.congregation, scope);
+  }
+
+  return memberBelongsToUser(member, user);
 }
 
 function parseDataUrl(dataUrl?: string) {

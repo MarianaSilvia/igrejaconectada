@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { adminClient, administrativeRoles, churchRoleFromLabel, requireSession, type ChurchRole } from "../auth";
+import { congregationMatchesScope, isGlobalCongregationScope, normalizeCongregationScope } from "../../../congregation-scope";
 import { syncMembersTable } from "../../../member-table-sync";
 import { notifyImportantStateChanges } from "../../../push-service";
 import { payloadKeysByRole, visiblePayloadKeysByRole, visiblePublishedOnlyKeys } from "../../../state-access-policy";
@@ -36,6 +37,19 @@ const appStateCollectionKeys = [
   "audit",
   "notificationReadIds",
 ];
+
+const congregationScopedCollectionKeys = new Set([
+  "careRequests",
+  "events",
+  "notices",
+  "mural",
+  "users",
+  "members",
+  "visitors",
+  "kids",
+  "ministries",
+  "messageCampaigns",
+]);
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -105,6 +119,43 @@ function roleFromPayload(payload: unknown, user: User): ChurchRole {
 
   const accessUser = findAccessUser(payload, user);
   return accessUser ? churchRoleFromLabel(accessUser.role) : "MEMBER";
+}
+
+function congregationScopeFromMetadata(user: User) {
+  const metadata = user.app_metadata as JsonRecord | undefined;
+  return normalizeCongregationScope(metadata?.church_gp_congregation_scope ?? metadata?.congregation_scope);
+}
+
+function congregationScopeFromPayload(payload: JsonRecord, user: User) {
+  const accessUser = findAccessUser(payload, user);
+  return normalizeCongregationScope(accessUser?.congregationScope ?? congregationScopeFromMetadata(user));
+}
+
+function recordScopeValue(record: JsonRecord, key: string) {
+  return key === "users" ? record.congregationScope : record.congregation;
+}
+
+function recordMatchesScope(record: JsonRecord, key: string, scope: string) {
+  return congregationMatchesScope(recordScopeValue(record, key), scope);
+}
+
+function stampRecordScope(record: JsonRecord, key: string, scope: string) {
+  if (isGlobalCongregationScope(scope)) return record;
+  return key === "users" ? { ...record, congregationScope: scope } : { ...record, congregation: scope };
+}
+
+function filterRecordsByScope(records: JsonRecord[], key: string, scope: string) {
+  if (isGlobalCongregationScope(scope) || !congregationScopedCollectionKeys.has(key)) return records;
+  return records.filter((record) => recordMatchesScope(record, key, scope));
+}
+
+function filterPayloadByScope(payload: JsonRecord, scope: string) {
+  if (isGlobalCongregationScope(scope)) return payload;
+
+  return Object.entries(payload).reduce<JsonRecord>((nextPayload, [key, value]) => {
+    if (!congregationScopedCollectionKeys.has(key)) return { ...nextPayload, [key]: value };
+    return { ...nextPayload, [key]: filterRecordsByScope(recordsFrom(value), key, scope) };
+  }, {});
 }
 
 function careBelongsToMember(request: JsonRecord, member: JsonRecord | undefined, user: User) {
@@ -393,9 +444,10 @@ function payloadWithVisibleKeys(payload: JsonRecord, role: ChurchRole, user: Use
 
 function sanitizedAdministrativePayloadForRole(payload: JsonRecord, role: ChurchRole, user: User) {
   const strippedPayload = normalizeStatePayloadForStorage(payload);
-  if (role === "ADMIN") return strippedPayload;
+  const scope = congregationScopeFromPayload(strippedPayload, user);
+  if (role === "ADMIN") return filterPayloadByScope(strippedPayload, scope);
 
-  return payloadWithVisibleKeys(strippedPayload, role, user);
+  return filterPayloadByScope(payloadWithVisibleKeys(strippedPayload, role, user), scope);
 }
 
 function mergeProfessorPayload(existingPayload: JsonRecord, incomingPayload: JsonRecord, user: User) {
@@ -414,8 +466,36 @@ function mergeProfessorPayload(existingPayload: JsonRecord, incomingPayload: Jso
 
 function mergeAdministrativePayloadByRole(existingPayload: JsonRecord, incomingPayload: JsonRecord, role: ChurchRole, user: User) {
   const incoming = normalizeStatePayloadForStorage(incomingPayload);
-  if (role === "ADMIN") return incoming;
+  const existing = normalizeStatePayloadForStorage(existingPayload);
+  const scope = congregationScopeFromPayload(existing, user);
   if (role === "PROFESSOR") return mergeProfessorPayload(existingPayload, incomingPayload, user);
+  if (!isGlobalCongregationScope(scope)) {
+    const allowedKeys = role === "ADMIN" ? appStateCollectionKeys : payloadKeysByRole[role as Exclude<ChurchRole, "MEMBER">] ?? [];
+
+    return allowedKeys.reduce<JsonRecord>((nextPayload, key) => {
+      if (!(key in incoming)) return nextPayload;
+
+      if (!congregationScopedCollectionKeys.has(key)) {
+        return { ...nextPayload, [key]: incoming[key] };
+      }
+
+      const existingRows = recordsFrom(existing[key]);
+      const incomingRows =
+        role === "SECRETARY" && key === "members"
+          ? mergeMembersWithoutAccessFields(filterRecordsByScope(existingRows, key, scope), recordsFrom(incoming.members))
+          : recordsFrom(incoming[key]).map((record) => stampRecordScope(record, key, scope));
+
+      return {
+        ...nextPayload,
+        [key]: [
+          ...existingRows.filter((record) => !recordMatchesScope(record, key, scope)),
+          ...incomingRows.filter((record) => recordMatchesScope(record, key, scope)),
+        ],
+      };
+    }, existing);
+  }
+
+  if (role === "ADMIN") return incoming;
 
   const allowedKeys = payloadKeysByRole[role as Exclude<ChurchRole, "MEMBER">] ?? [];
 
@@ -432,7 +512,7 @@ function mergeAdministrativePayloadByRole(existingPayload: JsonRecord, incomingP
 
       return { ...nextPayload, [key]: incoming[key] };
     },
-    normalizeStatePayloadForStorage(existingPayload),
+    existing,
   );
 }
 
@@ -440,16 +520,17 @@ function sanitizeMemberPayloadForResponse(payload: unknown, user: User) {
   if (!isRecord(payload)) return payload;
 
   const currentMember = findCurrentMember(payload, user);
+  const memberScope = textValue(currentMember?.congregation);
 
   return {
     ...emptyPayloadCollections(),
     members: currentMember ? [currentMember] : [],
-    events: recordsFrom(payload.events),
-    notices: recordsFrom(payload.notices).filter((notice) => textValue(notice.status) === "Publicado"),
-    mural: recordsFrom(payload.mural).filter((item) => item.published === true),
+    events: filterRecordsByScope(recordsFrom(payload.events), "events", memberScope),
+    notices: filterRecordsByScope(recordsFrom(payload.notices), "notices", memberScope).filter((notice) => textValue(notice.status) === "Publicado"),
+    mural: filterRecordsByScope(recordsFrom(payload.mural), "mural", memberScope).filter((item) => item.published === true),
     schoolClasses: recordsFrom(payload.schoolClasses),
     discipleshipClasses: recordsFrom(payload.discipleshipClasses),
-    ministries: recordsFrom(payload.ministries),
+    ministries: filterRecordsByScope(recordsFrom(payload.ministries), "ministries", memberScope),
     kids: recordsFrom(payload.kids).filter((kid) => kidBelongsToMember(kid, currentMember, user)),
     careRequests: recordsFrom(payload.careRequests).filter((request) => careBelongsToMember(request, currentMember, user)),
     attendanceSessions: filterAttendanceForMember(recordsFrom(payload.attendanceSessions), currentMember),

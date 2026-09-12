@@ -6,6 +6,7 @@ export type CareStatus = "Pendente" | "Em analise" | "Agendado" | "Concluido";
 
 export type CareRequest = {
   id: string;
+  congregation?: string;
   member: string;
   phone: string;
   category: string;
@@ -21,6 +22,7 @@ export type CareRequest = {
 
 export type ChurchEvent = {
   id: string;
+  congregation?: string;
   title: string;
   date: string;
   time: string;
@@ -77,6 +79,7 @@ export type AttendanceSession = {
 
 export type Notice = {
   id: string;
+  congregation?: string;
   title: string;
   body: string;
   status: "Publicado" | "Rascunho";
@@ -88,6 +91,7 @@ export type Notice = {
 
 export type MuralItem = {
   id: string;
+  congregation?: string;
   title: string;
   category: string;
   published: boolean;
@@ -109,6 +113,7 @@ export type AccessUser = {
   email: string;
   role: AccessRole;
   status: "Ativo" | "Pendente" | "Bloqueado";
+  congregationScope?: string;
 };
 
 export type AccessUserForm = Omit<AccessUser, "id"> & {
@@ -191,6 +196,7 @@ export type RegistrationRequest = {
 
 export type VisitorRecord = {
   id: string;
+  congregation?: string;
   fullName: string;
   phone: string;
   firstVisitDate: string;
@@ -203,6 +209,7 @@ export type VisitorRecord = {
 
 export type KidRecord = {
   id: string;
+  congregation?: string;
   childName: string;
   birthDate: string;
   ageGroup: "Bercario" | "Maternal" | "Kids" | "Juniores";
@@ -247,6 +254,7 @@ export type MessageTemplateItem = {
 
 export type MessageCampaign = {
   id: string;
+  congregation?: string;
   audience: MessageAudience;
   templateId: string;
   text: string;
@@ -265,6 +273,7 @@ export type SchoolClass = {
 
 export type MinistryRecord = {
   id: string;
+  congregation?: string;
   name: string;
   leader: string;
   assistant: string;

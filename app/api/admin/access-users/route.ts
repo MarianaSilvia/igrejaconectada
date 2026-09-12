@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminClient, churchRoleFromLabel, requireSession } from "../auth";
+import { isGlobalCongregationScope, normalizeCongregationScope } from "../../../congregation-scope";
 import { churchRoleFromAccessRole, type AccessRole } from "../../../permissions";
 
 type AccessUserPayload = {
@@ -10,6 +11,7 @@ type AccessUserPayload = {
   password?: string;
   role?: string;
   status?: string;
+  congregationScope?: string;
 };
 
 type DeleteAccessUserPayload = {
@@ -64,15 +66,33 @@ function isSupabaseAuthId(value?: string) {
   return Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value));
 }
 
-async function canManageAccessUsers(client: NonNullable<ReturnType<typeof adminClient>>, email: string, metadataRole: string) {
-  if (metadataRole === "ADMIN") return true;
-
+async function accessManagerContext(client: NonNullable<ReturnType<typeof adminClient>>, email: string, metadataRole: string) {
   const { data } = await client.from("church_app_state").select("payload").eq("id", "main").maybeSingle();
-  const payload = data?.payload;
-  if (!isRecord(payload)) return false;
-
+  const payload = isRecord(data?.payload) ? data.payload : {};
   const localUser = recordsFrom(payload.users).find((user) => textValue(user.email).toLowerCase() === email.toLowerCase());
-  return Boolean(localUser && churchRoleFromLabel(localUser.role) === "ADMIN");
+  const canManage = metadataRole === "ADMIN" || Boolean(localUser && churchRoleFromLabel(localUser.role) === "ADMIN");
+  const scope = normalizeCongregationScope(
+    localUser?.congregationScope ??
+      (metadataRole === "ADMIN" ? undefined : "") ??
+      undefined,
+  );
+
+  return { canManage, payload, scope };
+}
+
+function targetAccessUser(payload: JsonRecord, userId?: string, email?: string) {
+  const normalizedEmail = email?.trim().toLowerCase();
+  return recordsFrom(payload.users).find((user) => {
+    const idMatches = Boolean(userId && textValue(user.id) === userId);
+    const emailMatches = Boolean(normalizedEmail && textValue(user.email).toLowerCase() === normalizedEmail);
+    return idMatches || emailMatches;
+  });
+}
+
+function canManageTargetScope(managerScope: string, target?: JsonRecord) {
+  if (isGlobalCongregationScope(managerScope)) return true;
+  if (!target) return true;
+  return normalizeCongregationScope(target.congregationScope) === managerScope;
 }
 
 async function findUserIdByEmail(client: NonNullable<ReturnType<typeof adminClient>>, email?: string) {
@@ -104,11 +124,12 @@ export async function POST(request: Request) {
 
   const client = adminClient();
   if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
-  const canManage = await canManageAccessUsers(client, session.user.email ?? "", session.role);
-  if (!canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
+  const manager = await accessManagerContext(client, session.user.email ?? "", session.role);
+  if (!manager.canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
 
   const role = normalizeAccessRole(payload.role ?? "Lider");
   const status = normalizeAccessStatus(payload.status ?? "Ativo");
+  const congregationScope = isGlobalCongregationScope(manager.scope) ? normalizeCongregationScope(payload.congregationScope) : manager.scope;
 
   const { data, error } = await client.auth.admin.createUser({
     email,
@@ -120,6 +141,8 @@ export async function POST(request: Request) {
       status,
       church_gp_role: toChurchRole(role),
       church_gp_access: toChurchAccess(status),
+      congregation_scope: congregationScope,
+      church_gp_congregation_scope: congregationScope,
       created_by: session.user.id,
     },
   });
@@ -155,13 +178,17 @@ export async function PATCH(request: Request) {
 
   const client = adminClient();
   if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
-  const canManage = await canManageAccessUsers(client, session.user.email ?? "", session.role);
-  if (!canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
+  const manager = await accessManagerContext(client, session.user.email ?? "", session.role);
+  if (!manager.canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
+  if (!canManageTargetScope(manager.scope, targetAccessUser(manager.payload, payload.userId, currentEmail ?? email))) {
+    return NextResponse.json({ error: "Voce nao pode alterar acesso de outra congregacao." }, { status: 403 });
+  }
 
   try {
     const userId = payload.userId ?? (await findUserIdByEmail(client, currentEmail ?? email));
     const role = normalizeAccessRole(payload.role ?? "Membro");
     const status = normalizeAccessStatus(payload.status ?? "Ativo");
+    const congregationScope = isGlobalCongregationScope(manager.scope) ? normalizeCongregationScope(payload.congregationScope) : manager.scope;
 
     if (userId === session.user.id && (role !== "Administrador" || status !== "Ativo")) {
       return NextResponse.json({ error: "Voce nao pode rebaixar ou bloquear o proprio acesso enquanto esta conectado." }, { status: 400 });
@@ -172,6 +199,8 @@ export async function PATCH(request: Request) {
       status,
       church_gp_role: toChurchRole(role),
       church_gp_access: toChurchAccess(status),
+      congregation_scope: congregationScope,
+      church_gp_congregation_scope: congregationScope,
       updated_by: session.user.id,
     };
 
@@ -226,8 +255,11 @@ export async function DELETE(request: Request) {
 
   const client = adminClient();
   if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
-  const canManage = await canManageAccessUsers(client, session.user.email ?? "", session.role);
-  if (!canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
+  const manager = await accessManagerContext(client, session.user.email ?? "", session.role);
+  if (!manager.canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
+  if (!canManageTargetScope(manager.scope, targetAccessUser(manager.payload, requestedUserId, email))) {
+    return NextResponse.json({ error: "Voce nao pode excluir acesso de outra congregacao." }, { status: 403 });
+  }
 
   try {
     if (!requestedUserId && !email) {

@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
+import { congregationOptions, globalCongregationScope } from "../congregation-scope";
 import type { AccessUser, AccessUserForm, AppData, MemberRecord } from "../types";
 
 type UsersAccessPanelProps = {
@@ -102,6 +103,21 @@ export function UsersAccessPanel({
               <option>Bloqueado</option>
             </select>
           </label>
+          <label className="full">
+            Congregação do acesso
+            <select
+              onChange={(event) => setUserForm((form) => ({ ...form, congregationScope: event.target.value }))}
+              value={userForm.congregationScope ?? globalCongregationScope}
+            >
+              <option value={globalCongregationScope}>Administrador geral / Todas as congregações</option>
+              {congregationOptions.map((congregation) => (
+                <option key={congregation} value={congregation}>
+                  {congregation}
+                </option>
+              ))}
+            </select>
+            <small>Perfis locais só devem receber a congregação que podem administrar.</small>
+          </label>
           <button className="primary-action" disabled={!canCreateUser} onClick={createUser} type="button">
             {selectedAccessExistingUser ? "Atualizar acesso" : "Adicionar usuario"}
           </button>
@@ -120,6 +136,7 @@ export function UsersAccessPanel({
               <div>
                 <strong>{user.name}</strong>
                 <small>{user.role} - {user.status} - {user.email}</small>
+                <small>Escopo: {user.congregationScope ?? globalCongregationScope}</small>
               </div>
               <div className="row-actions">
                 <button className={user.status === "Bloqueado" ? "secondary" : "danger-action"} onClick={() => updateAccessUserStatus(user, user.status === "Bloqueado" ? "Ativo" : "Bloqueado")} type="button">
