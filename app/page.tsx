@@ -320,6 +320,9 @@ const initialData: AppData = {
       schoolClassId: "class-adults",
       discipleshipClassId: "",
       photoDataUrl: "",
+      photoUrl: "",
+      photoFileKey: "",
+      photoConsent: false,
       birthDate: "1991-04-12",
       maritalStatus: "Casado(a)",
       education: "Ensino medio completo",
@@ -363,6 +366,9 @@ const initialData: AppData = {
       schoolClassId: "",
       discipleshipClassId: "discipleship-new",
       photoDataUrl: "",
+      photoUrl: "",
+      photoFileKey: "",
+      photoConsent: false,
       birthDate: "1988-10-08",
       maritalStatus: "Solteiro(a)",
       education: "",
@@ -836,7 +842,7 @@ async function optimizeProfilePhoto(file: File): Promise<MuralImageResult> {
 
   const originalDataUrl = await readImageFileAsDataUrl(file);
   const image = await loadImage(originalDataUrl);
-  const maxSide = 420;
+  const maxSide = 512;
   const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
   const width = Math.max(1, Math.round(image.width * scale));
   const height = Math.max(1, Math.round(image.height * scale));
@@ -848,11 +854,11 @@ async function optimizeProfilePhoto(file: File): Promise<MuralImageResult> {
   if (!context) throw new Error("Nao foi possivel preparar a foto.");
 
   context.drawImage(image, 0, 0, width, height);
-  const optimizedDataUrl = canvas.toDataURL("image/jpeg", 0.68);
+  const optimizedDataUrl = canvas.toDataURL("image/jpeg", 0.72);
   const chosenDataUrl = optimizedDataUrl.length < originalDataUrl.length ? optimizedDataUrl : originalDataUrl;
   const approxKb = Math.round((chosenDataUrl.length * 3) / 4 / 1024);
 
-  if (approxKb > 180) {
+  if (approxKb > 400) {
     throw new Error("Foto muito grande. Escolha uma foto menor ou recorte antes de enviar.");
   }
 
@@ -2201,6 +2207,125 @@ export default function Home() {
       .catch((error) => {
         setSyncStatus(error instanceof Error ? error.message : "Nao foi possivel carregar a foto selecionada.");
       });
+  }
+
+  async function uploadMemberPhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!canManageMembers && editingMemberId !== currentMember?.id) {
+      setSyncStatus("Acesso de membro: voce pode alterar apenas a foto do seu proprio cadastro.");
+      return;
+    }
+
+    if (!isSupabaseConfigured()) {
+      setSyncStatus("Supabase precisa estar configurado para salvar foto de membro.");
+      return;
+    }
+
+    try {
+      setSyncStatus("Preparando foto do membro...");
+      const optimized = await optimizeProfilePhoto(file);
+      const supabase = getSupabaseClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        setSyncStatus("Entre com uma conta Supabase antes de enviar foto de membro.");
+        return;
+      }
+
+      const response = await fetch("/api/admin/member-photo", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          memberId: editingMemberId ?? "",
+          existingFileKey: memberForm.photoFileKey,
+          dataUrl: optimized.dataUrl,
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as { photoUrl?: string; photoFileKey?: string; error?: string };
+
+      if (!response.ok || !result.photoUrl || !result.photoFileKey) {
+        setSyncStatus(result.error ?? "Nao foi possivel enviar a foto do membro.");
+        return;
+      }
+
+      setMemberForm((form) => ({
+        ...form,
+        photoDataUrl: "",
+        photoUrl: result.photoUrl ?? "",
+        photoFileKey: result.photoFileKey ?? "",
+      }));
+
+      if (editingMemberId) {
+        setData((current) => ({
+          ...current,
+          members: current.members.map((member) =>
+            member.id === editingMemberId
+              ? { ...member, photoDataUrl: "", photoUrl: result.photoUrl ?? "", photoFileKey: result.photoFileKey ?? "" }
+              : member,
+          ),
+        }));
+      }
+
+      setSyncStatus(`${optimized.message} Foto salva no armazenamento do Supabase.`);
+    } catch (error) {
+      setSyncStatus(error instanceof Error ? error.message : "Nao foi possivel preparar a foto do membro.");
+    }
+  }
+
+  async function removeMemberPhoto() {
+    if (!memberForm.photoFileKey && !memberForm.photoUrl && !memberForm.photoDataUrl) return;
+
+    if (!canManageMembers && editingMemberId !== currentMember?.id) {
+      setSyncStatus("Acesso de membro: voce pode remover apenas a foto do seu proprio cadastro.");
+      return;
+    }
+
+    if (memberForm.photoFileKey && isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        setSyncStatus("Entre com uma conta Supabase antes de remover foto de membro.");
+        return;
+      }
+
+      const response = await fetch("/api/admin/member-photo", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          memberId: editingMemberId ?? "",
+          fileKey: memberForm.photoFileKey,
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as { error?: string };
+
+      if (!response.ok) {
+        setSyncStatus(result.error ?? "Nao foi possivel remover a foto do membro.");
+        return;
+      }
+    }
+
+    setMemberForm((form) => ({ ...form, photoDataUrl: "", photoUrl: "", photoFileKey: "" }));
+    if (editingMemberId) {
+      setData((current) => ({
+        ...current,
+        members: current.members.map((member) =>
+          member.id === editingMemberId ? { ...member, photoDataUrl: "", photoUrl: "", photoFileKey: "" } : member,
+        ),
+      }));
+    }
+    setSyncStatus("Foto do membro removida.");
   }
 
   async function readMuralImage(event: ChangeEvent<HTMLInputElement>) {
@@ -4178,7 +4303,7 @@ export default function Home() {
                 {currentMember ? (
                   <div className="data-row member-row">
                     <div className="member-avatar">
-                      {currentMember.fullName.slice(0, 1)}
+                      {currentMember.photoUrl ? <ResponsiveImage alt={currentMember.fullName} sizes="76px" src={currentMember.photoUrl} /> : currentMember.fullName.slice(0, 1)}
                     </div>
                     <div>
                       <strong>{currentMember.fullName}</strong>
@@ -4441,6 +4566,7 @@ export default function Home() {
               memberStatusFilter={memberStatusFilter}
               memberTypeFilter={memberTypeFilter}
               monthlyBirthdays={monthlyBirthdays}
+              removeMemberPhoto={removeMemberPhoto}
               roleOptions={roleOptions}
               saveMemberAccess={saveMemberAccess}
               selectedMemberRoles={selectedMemberRoles}
@@ -4454,6 +4580,7 @@ export default function Home() {
               setMemberStatusFilter={setMemberStatusFilter}
               setMemberTypeFilter={setMemberTypeFilter}
               toggleMemberCredentials={toggleMemberCredentials}
+              uploadMemberPhoto={uploadMemberPhoto}
               weeklyBirthdays={weeklyBirthdays}
             />
           )}

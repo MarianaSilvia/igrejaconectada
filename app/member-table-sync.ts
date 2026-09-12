@@ -64,7 +64,7 @@ function memberRow(member: JsonRecord) {
     id,
     registration_number: textValue(member.memberCode, 80),
     full_name: fullName,
-    photo_url: null,
+    photo_url: textValue(member.photoUrl, 500) || null,
     status: textValue(member.status, 80),
     congregation: textValue(member.congregation, 160),
     water_baptism_date: textValue(member.baptismDate, 40),

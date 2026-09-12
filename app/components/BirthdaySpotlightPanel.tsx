@@ -1,5 +1,6 @@
 import { birthdayLabel } from "../app-helpers";
 import type { MemberRecord } from "../types";
+import { ResponsiveImage } from "./ResponsiveImage";
 
 type BirthdaySpotlightPanelProps = {
   canSendMessages: boolean;
@@ -25,7 +26,9 @@ export function BirthdaySpotlightPanel({ canSendMessages, monthlyBirthdays, onOp
         <div className="birthday-spotlight-list">
           {monthlyBirthdays.slice(0, 8).map((member) => (
             <div className="birthday-person-card" key={member.id}>
-              <div className="birthday-person-photo">{member.fullName.slice(0, 1)}</div>
+              <div className="birthday-person-photo">
+                {member.photoConsent && member.photoUrl ? <ResponsiveImage alt={member.fullName} sizes="52px" src={member.photoUrl} /> : member.fullName.slice(0, 1)}
+              </div>
               <div>
                 <strong>{member.fullName}</strong>
                 <small>{birthdayLabel(member.birthDate)}</small>

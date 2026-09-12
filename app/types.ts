@@ -138,6 +138,9 @@ export type MemberRecord = {
   schoolClassId: string;
   discipleshipClassId: string;
   photoDataUrl: string;
+  photoUrl: string;
+  photoFileKey: string;
+  photoConsent: boolean;
   birthDate: string;
   maritalStatus: string;
   education: string;

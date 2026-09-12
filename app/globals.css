@@ -1977,6 +1977,19 @@ textarea:focus {
   padding: 12px;
 }
 
+.photo-uploader-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.photo-uploader-actions .danger-action {
+  justify-self: start;
+}
+
+.member-photo-consent {
+  justify-content: flex-start;
+}
+
 .photo-preview,
 .member-avatar {
   align-items: center;

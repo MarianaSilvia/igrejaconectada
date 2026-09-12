@@ -149,7 +149,16 @@ function filterAttendanceForMember(sessions: JsonRecord[], member: JsonRecord | 
 }
 
 function sanitizeMemberDirectoryForRole(members: JsonRecord[], role: ChurchRole) {
-  if (role !== "PROFESSOR") return members;
+  if (role === "ADMIN" || role === "SECRETARY") return members.map((member) => ({ ...member, photoDataUrl: "" }));
+
+  if (role !== "PROFESSOR") {
+    return members.map((member) => ({
+      ...member,
+      photoDataUrl: "",
+      photoUrl: member.photoConsent === true ? textValue(member.photoUrl) : "",
+      photoFileKey: "",
+    }));
+  }
 
   return members.map((member) => ({
     id: textValue(member.id),
@@ -160,6 +169,9 @@ function sanitizeMemberDirectoryForRole(members: JsonRecord[], role: ChurchRole)
     memberType: textValue(member.memberType),
     schoolClassId: textValue(member.schoolClassId),
     discipleshipClassId: textValue(member.discipleshipClassId),
+    photoUrl: member.photoConsent === true ? textValue(member.photoUrl) : "",
+    photoFileKey: "",
+    photoConsent: member.photoConsent === true,
     photoDataUrl: "",
   }));
 }
@@ -470,6 +482,9 @@ function mergeMemberRecord(existingMember: JsonRecord, incomingMember: JsonRecor
     "baptismDate",
     "waterBaptized",
     "holySpiritBaptized",
+    "photoUrl",
+    "photoFileKey",
+    "photoConsent",
   ];
 
   return allowedFields.reduce<JsonRecord>(

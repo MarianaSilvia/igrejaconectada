@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from "react";
+import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 import {
   ageFromBirthDate,
   ageGroupFromBirthDate,
@@ -10,6 +10,7 @@ import {
   whatsappUrl,
 } from "../app-helpers";
 import { classNameById } from "../attendance-helpers";
+import { ResponsiveImage } from "./ResponsiveImage";
 import type { AppData, MemberFormTab, MemberRecord } from "../types";
 
 const generatedMemberEmailDomain = "gmail.com";
@@ -51,6 +52,7 @@ type MembersPanelProps = {
   memberStatusFilter: string;
   memberTypeFilter: string;
   monthlyBirthdays: MemberRecord[];
+  removeMemberPhoto: () => void | Promise<void>;
   roleOptions: string[];
   saveMemberAccess: (member: MemberRecord) => void | Promise<void>;
   selectedMemberRoles: string[];
@@ -64,6 +66,7 @@ type MembersPanelProps = {
   setMemberStatusFilter: Dispatch<SetStateAction<string>>;
   setMemberTypeFilter: Dispatch<SetStateAction<string>>;
   toggleMemberCredentials: (member: MemberRecord) => void;
+  uploadMemberPhoto: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
   weeklyBirthdays: MemberRecord[];
   createMember: () => void;
 };
@@ -149,6 +152,7 @@ export function MembersPanel({
   memberStatusFilter,
   memberTypeFilter,
   monthlyBirthdays,
+  removeMemberPhoto,
   roleOptions,
   saveMemberAccess,
   selectedMemberRoles,
@@ -162,6 +166,7 @@ export function MembersPanel({
   setMemberStatusFilter,
   setMemberTypeFilter,
   toggleMemberCredentials,
+  uploadMemberPhoto,
   weeklyBirthdays,
   createMember,
 }: MembersPanelProps) {
@@ -192,6 +197,9 @@ export function MembersPanel({
       return { ...form, ministry: nextGroups[0] ?? "", ministries: nextGroups };
     });
   };
+  const memberFormPhotoSrc = memberForm.photoUrl || memberForm.photoDataUrl;
+  const memberPhotoSrc = (member: MemberRecord) =>
+    canManageMembers || member.id === currentMember?.id || member.photoConsent ? member.photoUrl || member.photoDataUrl : "";
 
   return (
     <section className="content-grid">
@@ -240,6 +248,27 @@ export function MembersPanel({
                 <small>Faltam: {missingFormFields.join(", ")}.</small>
               </div>
             )}
+            <div className="photo-uploader full" data-member-section="Dados">
+              <div className="photo-preview member-photo-preview">
+                {memberFormPhotoSrc ? <ResponsiveImage alt={memberForm.fullName || "Foto do membro"} sizes="76px" src={memberFormPhotoSrc} /> : <span>Foto</span>}
+              </div>
+              <div className="photo-uploader-actions">
+                <label>
+                  Foto do membro
+                  <input accept="image/*" onChange={(event) => { void uploadMemberPhoto(event); }} type="file" />
+                  <small className="form-hint">A imagem sera reduzida automaticamente e salva fora do cadastro principal.</small>
+                </label>
+                <label className="check-card compact-check member-photo-consent">
+                  <input checked={memberForm.photoConsent} onChange={(event) => setMemberForm((form) => ({ ...form, photoConsent: event.target.checked }))} type="checkbox" />
+                  Autoriza exibir foto no sistema
+                </label>
+                {memberFormPhotoSrc && (
+                  <button className="danger-action" onClick={() => { void removeMemberPhoto(); }} type="button">
+                    Remover foto
+                  </button>
+                )}
+              </div>
+            </div>
             <label className="full" data-member-section="Dados">
               Nome completo
               <input id="member-full-name" onChange={(event) => updateMemberName(event.target.value)} placeholder="Ex.: Maria Oliveira" value={memberForm.fullName} />
@@ -658,7 +687,9 @@ export function MembersPanel({
             return (
               <div className="member-record" key={member.id}>
                 <div className="data-row member-row">
-                  <div className="member-avatar">{member.fullName.slice(0, 1)}</div>
+                  <div className="member-avatar">
+                    {memberPhotoSrc(member) ? <ResponsiveImage alt={member.fullName} sizes="76px" src={memberPhotoSrc(member)} /> : member.fullName.slice(0, 1)}
+                  </div>
                   <div>
                     <strong>{member.fullName}</strong>
                     <small className="member-code-line">Codigo: {member.memberCode || "Aguardando codigo"}</small>
