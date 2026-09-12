@@ -60,7 +60,11 @@ export function PushNotificationControl() {
     }
 
     setStatus(result.enabled ? "enabled" : "disabled");
-    setMessage(result.enabled ? "Notificacoes ativas neste aparelho." : "Ative para receber avisos importantes no celular ou navegador.");
+    setMessage(
+      result.enabled
+        ? "Notificacoes ativas. Som e vibracao dependem das permissoes e configuracoes do seu aparelho."
+        : "Ative para receber avisos importantes no celular ou navegador.",
+    );
   }, []);
 
   useEffect(() => {
@@ -125,7 +129,7 @@ export function PushNotificationControl() {
     }
 
     setStatus("enabled");
-    setMessage("Notificacoes ativas neste aparelho.");
+    setMessage("Notificacoes ativas. Som e vibracao dependem das permissoes e configuracoes do seu aparelho.");
   }
 
   async function sendTestNotification() {

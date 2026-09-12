@@ -1,4 +1,4 @@
-const STATIC_CACHE = "igreja-conectada-static-v3";
+const STATIC_CACHE = "igreja-conectada-static-v4";
 const STATIC_ASSETS = [
   "/favicon.png",
   "/icon-192.png",
@@ -63,16 +63,21 @@ self.addEventListener("push", (event) => {
   }
 
   const title = payload.title || "Igreja Conectada";
+  const targetModule = payload.module || "overview";
+  const importantModules = ["pastoral", "registrations", "registrationRequests"];
+  const isImportant = importantModules.includes(targetModule);
   const options = {
     body: payload.body || "Voce tem um novo aviso da igreja.",
     icon: "/icon-192.png",
     badge: "/icon-192.png",
     data: {
       url: payload.url || "/",
-      module: payload.module || "overview",
+      module: targetModule,
     },
-    tag: payload.module ? `igreja-conectada-${payload.module}` : "igreja-conectada",
+    tag: targetModule ? `igreja-conectada-${targetModule}` : "igreja-conectada",
     renotify: true,
+    requireInteraction: isImportant,
+    vibrate: isImportant ? [300, 120, 300, 120, 300] : [160, 80, 160],
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
