@@ -2702,6 +2702,7 @@ export default function Home() {
       cpf: request.cpf,
       phone: request.phone,
       email: request.email,
+      congregation: request.congregation ?? "",
       gender: request.gender,
       status,
       memberType,
@@ -4851,6 +4852,7 @@ function RegistrationRequestsPanel({
                 <small>
                   {request.city || "Cidade nao informada"} {request.neighborhood ? `- ${request.neighborhood}` : ""}
                 </small>
+                <small>Congregacao: {request.congregation || "Nao informada"}</small>
                 <small>Enviado em {formatDate(request.createdAt.slice(0, 10))}</small>
               </div>
               {request.notes && <p>{request.notes}</p>}

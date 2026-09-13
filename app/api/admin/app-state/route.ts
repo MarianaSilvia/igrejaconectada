@@ -595,6 +595,7 @@ function normalizeStatePayloadForStorage(payload: JsonRecord): JsonRecord {
 function toRegistrationRequest(row: JsonRecord) {
   return {
     id: textValue(row.id),
+    congregation: textValue(row.congregation),
     fullName: textValue(row.full_name),
     fatherName: textValue(row.father_name),
     motherName: textValue(row.mother_name),
@@ -620,21 +621,38 @@ function toRegistrationRequest(row: JsonRecord) {
   };
 }
 
-async function readRegistrationRequests(client: NonNullable<ReturnType<typeof adminClient>>, role: ChurchRole) {
+async function readRegistrationRequests(client: NonNullable<ReturnType<typeof adminClient>>, role: ChurchRole, scope: string) {
   if (role !== "ADMIN" && role !== "SECRETARY") return [];
 
-  const { data, error } = await client
+  const requestResult = await client
     .from("registration_requests")
     .select(
-      "id, full_name, father_name, mother_name, cpf, phone, email, birth_date, gender, address, zip_code, city, neighborhood, marital_status, education, spouse_name, requested_status, registration_source, notes, status, created_at, reviewed_at, review_note",
+      "id, congregation, full_name, father_name, mother_name, cpf, phone, email, birth_date, gender, address, zip_code, city, neighborhood, marital_status, education, spouse_name, requested_status, registration_source, notes, status, created_at, reviewed_at, review_note",
     )
     .in("status", ["Aguardando aprovacao", "Em analise"])
     .order("created_at", { ascending: false })
     .limit(100);
+  let data: unknown = requestResult.data;
+  let error = requestResult.error;
+
+  if (error && /congregation|schema cache|column/i.test(error.message)) {
+    const legacyResult = await client
+      .from("registration_requests")
+      .select(
+        "id, full_name, father_name, mother_name, cpf, phone, email, birth_date, gender, address, zip_code, city, neighborhood, marital_status, education, spouse_name, requested_status, registration_source, notes, status, created_at, reviewed_at, review_note",
+      )
+      .in("status", ["Aguardando aprovacao", "Em analise"])
+      .order("created_at", { ascending: false })
+      .limit(100);
+    data = legacyResult.data;
+    error = legacyResult.error;
+  }
 
   if (error) return [];
 
-  return recordsFrom(data).map(toRegistrationRequest);
+  return recordsFrom(data)
+    .filter((request) => congregationMatchesScope(request.congregation, scope))
+    .map(toRegistrationRequest);
 }
 
 function mergeCareRequest(existingRequest: JsonRecord | undefined, incomingRequest: JsonRecord) {
@@ -718,7 +736,11 @@ export async function GET(request: Request) {
 
   const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(stored.payload, session.user);
   const payload = sanitizePayloadForResponse(stored.payload, effectiveRole, session.user);
-  const registrationRequests = await readRegistrationRequests(stored.client, effectiveRole);
+  const registrationRequests = await readRegistrationRequests(
+    stored.client,
+    effectiveRole,
+    isRecord(stored.payload) ? congregationScopeFromPayload(stored.payload, session.user) : "",
+  );
 
   return NextResponse.json({
     payload: isRecord(payload) ? { ...payload, registrationRequests } : payload,

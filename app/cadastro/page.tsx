@@ -1,9 +1,11 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { congregationOptions } from "../congregation-scope";
 
 type PublicRegistrationForm = {
   fullName: string;
+  congregation: string;
   fatherName: string;
   motherName: string;
   cpf: string;
@@ -25,6 +27,7 @@ type PublicRegistrationForm = {
 
 const initialForm: PublicRegistrationForm = {
   fullName: "",
+  congregation: "",
   fatherName: "",
   motherName: "",
   cpf: "",
@@ -114,6 +117,17 @@ export default function PublicRegistrationPage() {
           <label>
             Nome completo *
             <input minLength={6} maxLength={140} required value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} />
+          </label>
+          <label>
+            Congregação *
+            <select required value={form.congregation} onChange={(event) => setForm((current) => ({ ...current, congregation: event.target.value }))}>
+              <option value="">Selecione</option>
+              {congregationOptions.map((congregation) => (
+                <option key={congregation} value={congregation}>
+                  {congregation}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Telefone/WhatsApp *

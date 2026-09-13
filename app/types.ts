@@ -170,6 +170,7 @@ export type MemberRecord = {
 
 export type RegistrationRequest = {
   id: string;
+  congregation?: string;
   fullName: string;
   fatherName: string;
   motherName: string;

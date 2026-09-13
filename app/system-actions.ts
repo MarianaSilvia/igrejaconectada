@@ -35,6 +35,7 @@ function auditItem(createId: IdFactory, action: string, when = new Date().toISOS
 function visitorFromMember(member: MemberRecord, today: string): VisitorRecord {
   return {
     id: `visitor-${member.id}`,
+    congregation: member.congregation,
     fullName: member.fullName,
     phone: member.phone,
     firstVisitDate: member.joinedAt || today,
@@ -60,6 +61,7 @@ function memberFromRegistration(request: RegistrationRequest, blankMember: Membe
     cpf: request.cpf,
     phone: request.phone,
     email: request.email,
+    congregation: request.congregation ?? "",
     gender: request.gender,
     status,
     memberType,
@@ -83,6 +85,7 @@ function memberFromRegistration(request: RegistrationRequest, blankMember: Membe
 function visitorFromRegistration(request: RegistrationRequest, createId: IdFactory): VisitorRecord {
   return {
     id: createId("visitor"),
+    congregation: request.congregation ?? "",
     fullName: request.fullName,
     phone: request.phone,
     firstVisitDate: request.createdAt.slice(0, 10),
@@ -208,6 +211,7 @@ export function convertVisitorToMemberData(data: AppData, visitor: VisitorRecord
     memberCode: nextMemberCode(data.members),
     fullName: visitor.fullName,
     phone: visitor.phone,
+    congregation: visitor.congregation ?? "",
     status: "Membro ativo",
     memberType: "Membro",
     registrationSource: "Visitante integrado",

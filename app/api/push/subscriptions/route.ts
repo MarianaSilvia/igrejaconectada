@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { normalizeCongregationScope } from "../../../congregation-scope";
 import { adminClient, requireSession } from "../../admin/auth";
 import { isPushConfigured } from "../../../push-service";
 
@@ -18,6 +19,21 @@ function validSubscription(value: unknown) {
   if (!textValue(value.endpoint, 2048)) return false;
   if (!isRecord(value.keys)) return false;
   return Boolean(textValue(value.keys.p256dh, 512) && textValue(value.keys.auth, 512));
+}
+
+function recordsFrom(value: unknown) {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+async function subscriptionCongregationScope(client: NonNullable<ReturnType<typeof adminClient>>, email: string, metadataScope: unknown) {
+  const fallback = normalizeCongregationScope(metadataScope);
+  if (!email) return fallback;
+
+  const { data } = await client.from("church_app_state").select("payload").eq("id", "main").maybeSingle();
+  const payload = isRecord(data?.payload) ? data.payload : {};
+  const accessUser = recordsFrom(payload.users).find((user) => textValue(user.email, 180).toLowerCase() === email.toLowerCase());
+
+  return normalizeCongregationScope(accessUser?.congregationScope ?? metadataScope);
 }
 
 export async function GET(request: Request) {
@@ -63,20 +79,34 @@ export async function POST(request: Request) {
   }
 
   const record = subscription as JsonRecord;
-  const { error } = await client.from("push_subscriptions").upsert(
-    {
-      user_id: session.user.id,
-      user_email: session.user.email ?? "",
-      church_role: session.role,
-      endpoint: textValue(record.endpoint, 2048),
-      subscription,
-      user_agent: textValue(body?.userAgent, 500),
-      enabled: true,
-      last_seen_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "endpoint" },
+  const congregationScope = await subscriptionCongregationScope(
+    client,
+    session.user.email ?? "",
+    session.user.app_metadata?.church_gp_congregation_scope,
   );
+  const subscriptionRow = {
+    user_id: session.user.id,
+    user_email: session.user.email ?? "",
+    church_role: session.role,
+    congregation_scope: congregationScope,
+    endpoint: textValue(record.endpoint, 2048),
+    subscription,
+    user_agent: textValue(body?.userAgent, 500),
+    enabled: true,
+    last_seen_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  let { error } = await client.from("push_subscriptions").upsert(subscriptionRow, { onConflict: "endpoint" });
+
+  if (error && /congregation_scope|schema cache|column/i.test(error.message)) {
+    const legacySubscriptionRow = { ...subscriptionRow } as Omit<typeof subscriptionRow, "congregation_scope"> & {
+      congregation_scope?: string;
+    };
+    delete legacySubscriptionRow.congregation_scope;
+    const legacyResult = await client.from("push_subscriptions").upsert(legacySubscriptionRow, { onConflict: "endpoint" });
+    error = legacyResult.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: "Nao foi possivel ativar notificacoes neste aparelho." }, { status: 400 });

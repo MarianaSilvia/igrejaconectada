@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { congregationOptions, normalizeCongregationScope } from "../../../congregation-scope";
 import { adminClient } from "../../admin/auth";
-import { sendPushToRoles } from "../../../push-service";
+import { sendPushToRolesByCongregation } from "../../../push-service";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -69,13 +70,15 @@ export async function POST(request: Request) {
   }
 
   const fullName = textValue(body.fullName);
+  const congregation = normalizeCongregationScope(body.congregation);
+  const isOfficialCongregation = congregationOptions.some((option) => option === congregation);
   const phone = textValue(body.phone, 40);
   const email = textValue(body.email, 140).toLowerCase();
   const cleanPhone = comparablePhone(phone);
   const cleanCpf = comparableCpf(body.cpf);
 
-  if (fullName.length < 6 || cleanPhone.length < 8 || cleanPhone.length > maxDigits.phone) {
-    return NextResponse.json({ error: "Informe nome completo e telefone para enviar o cadastro." }, { status: 400 });
+  if (fullName.length < 6 || cleanPhone.length < 8 || cleanPhone.length > maxDigits.phone || !isOfficialCongregation) {
+    return NextResponse.json({ error: "Informe nome completo, congregacao e telefone para enviar o cadastro." }, { status: 400 });
   }
 
   if (cleanCpf && cleanCpf.length !== maxDigits.cpf) {
@@ -139,6 +142,7 @@ export async function POST(request: Request) {
   const requestedStatus = allowedStatuses.has(textValue(body.requestedStatus)) ? textValue(body.requestedStatus) : "Visitante";
   const registrationRequest = {
     id: `registration-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    congregation,
     full_name: fullName,
     father_name: textValue(body.fatherName),
     mother_name: textValue(body.motherName),
@@ -163,7 +167,14 @@ export async function POST(request: Request) {
     created_at: now,
   };
 
-  const { error: saveError } = await client.from("registration_requests").insert(registrationRequest);
+  let { error: saveError } = await client.from("registration_requests").insert(registrationRequest);
+
+  if (saveError && /congregation|schema cache|column/i.test(saveError.message)) {
+    const legacyRequest = { ...registrationRequest } as Omit<typeof registrationRequest, "congregation"> & { congregation?: string };
+    delete legacyRequest.congregation;
+    const legacyResult = await client.from("registration_requests").insert(legacyRequest);
+    saveError = legacyResult.error;
+  }
 
   if (saveError) {
     if (saveError.code === "23505") {
@@ -176,9 +187,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nao foi possivel salvar o pre-cadastro." }, { status: 400 });
   }
 
-  await sendPushToRoles(client, ["ADMIN", "SECRETARY"], {
+  await sendPushToRolesByCongregation(client, ["ADMIN", "SECRETARY"], congregation, {
     title: "Novo pre-cadastro",
-    body: `${fullName} esta aguardando analise.`,
+    body: `${fullName} esta aguardando analise em ${congregation}.`,
     module: "overview",
   });
 

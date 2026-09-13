@@ -136,6 +136,7 @@ export const blankVisitor: Omit<VisitorRecord, "id"> = {
 };
 
 export const blankRegistrationRequest: Omit<RegistrationRequest, "id" | "createdAt" | "reviewedAt" | "reviewNote"> = {
+  congregation: "",
   fullName: "",
   fatherName: "",
   motherName: "",
@@ -371,6 +372,7 @@ export function normalizeRegistrationRequest(request: Partial<RegistrationReques
     ...blankRegistrationRequest,
     ...request,
     id: request.id ?? uid("registration"),
+    congregation: request.congregation ?? "",
     requestedStatus: request.requestedStatus ?? "Visitante",
     status: request.status ?? "Aguardando aprovacao",
     createdAt: request.createdAt ?? new Date().toISOString(),

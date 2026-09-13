@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 
+import { congregationMatchesScope, globalCongregationScope } from "./congregation-scope";
 import type { ChurchRole, ModuleKey } from "./permissions";
 
 type JsonRecord = Record<string, unknown>;
@@ -18,6 +19,7 @@ type PushSubscriptionRow = {
   endpoint: string;
   subscription: webpush.PushSubscription;
   failure_count: number;
+  congregation_scope?: string;
 };
 
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
@@ -115,15 +117,42 @@ export async function sendPushToUser(client: SupabaseClient, userId: string, pay
 }
 
 export async function sendPushToRoles(client: SupabaseClient, roles: ChurchRole[], payload: PushNotificationPayload) {
+  return sendPushToRolesByCongregation(client, roles, globalCongregationScope, payload);
+}
+
+export async function sendPushToRolesByCongregation(
+  client: SupabaseClient,
+  roles: ChurchRole[],
+  congregationScope: string,
+  payload: PushNotificationPayload,
+) {
   const { data, error } = await client
+    .from("push_subscriptions")
+    .select("id,user_id,endpoint,subscription,failure_count,congregation_scope")
+    .in("church_role", roles)
+    .eq("enabled", true)
+    .limit(500);
+
+  if (!error) {
+    const rows = ((data ?? []) as PushSubscriptionRow[]).filter((row) =>
+      congregationMatchesScope(row.congregation_scope, congregationScope),
+    );
+    return sendRows(client, rows, payload);
+  }
+
+  if (!/congregation_scope|schema cache|column/i.test(error.message)) {
+    return { sent: 0, failed: 0, configured: isPushConfigured(), error: error.message };
+  }
+
+  const legacyResult = await client
     .from("push_subscriptions")
     .select("id,user_id,endpoint,subscription,failure_count")
     .in("church_role", roles)
     .eq("enabled", true)
     .limit(500);
 
-  if (error) return { sent: 0, failed: 0, configured: isPushConfigured(), error: error.message };
-  return sendRows(client, (data ?? []) as PushSubscriptionRow[], payload);
+  if (legacyResult.error) return { sent: 0, failed: 0, configured: isPushConfigured(), error: legacyResult.error.message };
+  return sendRows(client, (legacyResult.data ?? []) as PushSubscriptionRow[], payload);
 }
 
 function recordIds(records: JsonRecord[]) {
@@ -193,7 +222,7 @@ export async function notifyImportantStateChanges(client: SupabaseClient, previo
   const discipleshipNotices = createdClassNotices(previous, next, "discipleshipClasses");
 
   for (const request of createdCareRequests) {
-    await sendPushToRoles(client, ["ADMIN", "LEADER"], {
+    await sendPushToRolesByCongregation(client, ["ADMIN", "LEADER"], textValue(request.congregation), {
       title: "Novo pedido recebido",
       body: `${textValue(request.category) || "Atendimento"} aguardando acompanhamento.`,
       module: "pastoral",
@@ -201,7 +230,7 @@ export async function notifyImportantStateChanges(client: SupabaseClient, previo
   }
 
   for (const item of publishedMural.slice(0, 3)) {
-    await sendPushToRoles(client, allRoles, {
+    await sendPushToRolesByCongregation(client, allRoles, textValue(item.congregation), {
       title: "Novo aviso no mural",
       body: textValue(item.title) || "A igreja publicou um novo aviso.",
       module: "mural",
@@ -209,7 +238,7 @@ export async function notifyImportantStateChanges(client: SupabaseClient, previo
   }
 
   for (const notice of publishedNotices.slice(0, 3)) {
-    await sendPushToRoles(client, allRoles, {
+    await sendPushToRolesByCongregation(client, allRoles, textValue(notice.congregation), {
       title: "Novo comunicado",
       body: textValue(notice.title) || "A igreja publicou um comunicado.",
       module: "notices",
@@ -217,7 +246,7 @@ export async function notifyImportantStateChanges(client: SupabaseClient, previo
   }
 
   for (const event of importantEvents.slice(0, 3)) {
-    await sendPushToRoles(client, allRoles, {
+    await sendPushToRolesByCongregation(client, allRoles, textValue(event.congregation), {
       title: "Agenda da igreja",
       body: `${textValue(event.title) || "Evento"} - ${textValue(event.time) || "horario a confirmar"}`,
       module: "events",

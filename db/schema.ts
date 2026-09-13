@@ -74,6 +74,7 @@ export const visitors = sqliteTable("visitors", {
 
 export const registrationRequests = sqliteTable("registration_requests", {
   id: text("id").primaryKey(),
+  congregation: text("congregation").notNull().default(""),
   fullName: text("full_name").notNull(),
   fatherName: text("father_name").notNull().default(""),
   motherName: text("mother_name").notNull().default(""),
