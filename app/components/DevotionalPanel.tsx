@@ -30,6 +30,8 @@ export function DevotionalPanel({
   setDevotionalForm,
   setEditingDevotionalId,
 }: DevotionalPanelProps) {
+  const sortedDevotionals = [...devotionals].sort((first, second) => first.publishedAt.localeCompare(second.publishedAt));
+
   return (
     <section className="content-grid">
       {canManageDevotional && (
@@ -40,15 +42,15 @@ export function DevotionalPanel({
           </div>
           <div className="form-grid">
             <label className="full">
-              Titulo
+              Título
               <input onChange={(event) => setDevotionalForm((form) => ({ ...form, title: event.target.value }))} placeholder="Ex.: Palavra do dia" value={devotionalForm.title} />
             </label>
             <label>
-              Versiculo
+              Versículo
               <input onChange={(event) => setDevotionalForm((form) => ({ ...form, verse: event.target.value }))} placeholder="Ex.: Salmo 23:1" value={devotionalForm.verse} />
             </label>
             <label>
-              Publicacao
+              Publicação
               <input onChange={(event) => setDevotionalForm((form) => ({ ...form, publishedAt: event.target.value }))} type="date" value={devotionalForm.publishedAt} />
             </label>
             <label>
@@ -83,12 +85,12 @@ export function DevotionalPanel({
           <span>{devotionals.length} registros</span>
         </div>
         <div className="row-list">
-          {devotionals.map((devotional) => (
+          {sortedDevotionals.map((devotional) => (
             <div className="data-row access-user-row" key={devotional.id}>
               <span className="date-box">{formatDate(devotional.publishedAt)}</span>
               <div>
                 <strong>{devotional.title}</strong>
-                <small>{devotional.verse || "Sem versiculo"} - {devotional.status}</small>
+                <small>{devotional.verse || "Sem versículo"} - {devotional.status}</small>
                 <small>{devotional.body}</small>
               </div>
               {canManageDevotional && (

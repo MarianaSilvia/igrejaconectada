@@ -1877,11 +1877,11 @@ export default function Home() {
         }),
     [assetConditionFilter, currentAccessRole, data.assets, searchQuery],
   );
-  const publishedDevotional = useMemo(
+  const publishedDevotionals = useMemo(
     () =>
       data.devotionals
         .filter((devotional) => devotional.status === "Publicado")
-        .sort((first, second) => second.publishedAt.localeCompare(first.publishedAt))[0],
+        .sort((first, second) => first.publishedAt.localeCompare(second.publishedAt)),
     [data.devotionals],
   );
   const nextAgendaEvent = upcomingPanelEvents[0];
@@ -4150,14 +4150,24 @@ export default function Home() {
 
               {birthdaySpotlightPanel}
 
-              {publishedDevotional && (
+              {publishedDevotionals.length > 0 && (
                 <article className="surface wide devotional-card streaming-section">
                   <div className="panel-heading">
-                    <h2>{publishedDevotional.title}</h2>
-                    <span>{formatDate(publishedDevotional.publishedAt)}</span>
+                    <h2>Devocional</h2>
+                    <span>{publishedDevotionals.length} palavra{publishedDevotionals.length === 1 ? "" : "s"} publicada{publishedDevotionals.length === 1 ? "" : "s"}</span>
                   </div>
-                  <strong>{publishedDevotional.verse}</strong>
-                  <p>{publishedDevotional.body}</p>
+                  <div className="devotional-timeline">
+                    {publishedDevotionals.map((devotional) => (
+                      <div className="devotional-day" key={devotional.id}>
+                        <span>{formatDate(devotional.publishedAt)}</span>
+                        <div>
+                          <strong>{devotional.title}</strong>
+                          {devotional.verse && <small>{devotional.verse}</small>}
+                          <p>{devotional.body}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                   {canManageDevotional && (
                     <button className="secondary" onClick={() => setActiveModule("devotional")} type="button">
                       Gerenciar palavra
@@ -4311,14 +4321,24 @@ export default function Home() {
 
               {birthdaySpotlightPanel}
 
-              {publishedDevotional && (
+              {publishedDevotionals.length > 0 && (
                 <article className="surface wide devotional-card streaming-section">
                   <div className="panel-heading">
-                    <h2>{publishedDevotional.title}</h2>
-                    <span>{formatDate(publishedDevotional.publishedAt)}</span>
+                    <h2>Devocional</h2>
+                    <span>{publishedDevotionals.length} palavra{publishedDevotionals.length === 1 ? "" : "s"} publicada{publishedDevotionals.length === 1 ? "" : "s"}</span>
                   </div>
-                  <strong>{publishedDevotional.verse}</strong>
-                  <p>{publishedDevotional.body}</p>
+                  <div className="devotional-timeline">
+                    {publishedDevotionals.map((devotional) => (
+                      <div className="devotional-day" key={devotional.id}>
+                        <span>{formatDate(devotional.publishedAt)}</span>
+                        <div>
+                          <strong>{devotional.title}</strong>
+                          {devotional.verse && <small>{devotional.verse}</small>}
+                          <p>{devotional.body}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </article>
               )}
 

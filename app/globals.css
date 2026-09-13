@@ -1768,6 +1768,42 @@ button.secondary.full {
   margin-bottom: 10px;
 }
 
+.devotional-timeline {
+  display: grid;
+  gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.devotional-day {
+  align-items: start;
+  background: rgba(8, 16, 29, 0.42);
+  border: 1px solid rgba(149, 185, 255, 0.18);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 92px minmax(0, 1fr);
+  padding: 12px;
+}
+
+.devotional-day > span {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.devotional-day strong,
+.devotional-day small {
+  display: block;
+}
+
+.devotional-day small {
+  color: #9ec6ff;
+  margin-top: 4px;
+}
+
 .devotional-card p {
   color: #d9eaff;
   line-height: 1.65;
