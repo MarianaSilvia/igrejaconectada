@@ -27,7 +27,7 @@ export function BirthdaySpotlightPanel({ canSendMessages, monthlyBirthdays, onOp
           {monthlyBirthdays.slice(0, 8).map((member) => (
             <div className="birthday-person-card" key={member.id}>
               <div className="birthday-person-photo">
-                {member.photoConsent && member.photoUrl ? <ResponsiveImage alt={member.fullName} sizes="52px" src={member.photoUrl} /> : member.fullName.slice(0, 1)}
+                {member.photoConsent && member.photoUrl ? <ResponsiveImage alt={member.fullName} sizes="36px" src={member.photoUrl} /> : member.fullName.slice(0, 1)}
               </div>
               <div>
                 <strong>{member.fullName}</strong>

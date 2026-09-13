@@ -2331,23 +2331,25 @@ textarea:focus {
 
 .birthday-person-photo {
   align-items: center;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  background:
+    linear-gradient(135deg, rgba(72, 184, 255, 0.2), rgba(246, 198, 91, 0.16)),
+    rgba(5, 24, 42, 0.72);
   border: 2px solid rgba(255, 255, 255, 0.22);
-  border-radius: 50%;
+  border-radius: 7px;
   color: #05182a;
   display: flex;
   flex-shrink: 0;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 900;
-  height: 52px;
+  height: 48px;
   justify-content: center;
   overflow: hidden;
-  width: 52px;
+  width: 36px;
 }
 
 .birthday-person-photo img {
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   width: 100%;
 }
 
@@ -3021,7 +3023,9 @@ button.data-row.active {
 }
 
 .birthday-person-photo {
-  background: linear-gradient(135deg, var(--accent), var(--gold));
+  background:
+    linear-gradient(135deg, rgba(232, 58, 79, 0.16), rgba(246, 198, 91, 0.14)),
+    rgba(15, 18, 26, 0.86);
   color: #fff;
 }
 
