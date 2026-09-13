@@ -37,9 +37,9 @@ export function birthdayDateThisYear(value: string) {
 }
 
 export function birthdayLabel(value: string) {
-  if (!value) return "Sem aniversario";
+  if (!value) return "Sem aniversário";
   const date = birthdayDateThisYear(value);
-  if (!date) return "Sem aniversario";
+  if (!date) return "Sem aniversário";
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long" }).format(date);
 }
 
@@ -61,7 +61,7 @@ export function ageGroupFromBirthDate(value: string, now = new Date()) {
   const ageText = ageFromBirthDate(value, now);
   if (!ageText) return "";
   const age = Number(ageText);
-  if (age <= 12) return "Crianca";
+  if (age <= 12) return "Criança";
   if (age <= 17) return "Adolescente";
   if (age <= 29) return "Jovem";
   if (age >= 60) return "Idoso";

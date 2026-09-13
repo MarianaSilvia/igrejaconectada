@@ -54,7 +54,7 @@ export function FinancePanel({
       {canManageFinance && (
         <article className={editingTransactionId ? "surface editing-surface" : "surface"}>
           <div className="panel-heading">
-            <h2>{editingTransactionId ? "Editar lancamento" : "Novo lancamento"}</h2>
+          <h2>{editingTransactionId ? "Editar lançamento" : "Novo lançamento"}</h2>
             <span>Tesouraria inicial</span>
           </div>
           <div className="form-grid">
@@ -66,30 +66,30 @@ export function FinancePanel({
               Tipo
               <select onChange={(event) => setTransactionForm((form) => ({ ...form, type: event.target.value as TransactionRecord["type"] }))} value={transactionForm.type}>
                 <option>Entrada</option>
-                <option>Saida</option>
-                <option>Dizimo</option>
+                <option value="Saida">Saída</option>
+                <option value="Dizimo">Dízimo</option>
                 <option>Oferta</option>
               </select>
             </label>
             <label>
               Categoria
-              <input onChange={(event) => setTransactionForm((form) => ({ ...form, category: event.target.value }))} placeholder="Ex.: Culto, manutencao, missao" value={transactionForm.category} />
+              <input onChange={(event) => setTransactionForm((form) => ({ ...form, category: event.target.value }))} placeholder="Ex.: Culto, manutenção, missão" value={transactionForm.category} />
             </label>
             <label>
               Valor
               <input min={0} onChange={(event) => setTransactionForm((form) => ({ ...form, amount: Number(event.target.value) }))} step="0.01" type="number" value={transactionForm.amount} />
             </label>
             <label className="full">
-              Descricao
-              <input onChange={(event) => setTransactionForm((form) => ({ ...form, description: event.target.value }))} placeholder="Resumo do lancamento" value={transactionForm.description} />
+              Descrição
+              <input onChange={(event) => setTransactionForm((form) => ({ ...form, description: event.target.value }))} placeholder="Resumo do lançamento" value={transactionForm.description} />
             </label>
             <label>
-              Metodo
+              Método
               <select onChange={(event) => setTransactionForm((form) => ({ ...form, method: event.target.value }))} value={transactionForm.method}>
                 <option>Pix</option>
                 <option>Dinheiro</option>
-                <option>Cartao</option>
-                <option>Transferencia</option>
+                <option value="Cartao">Cartão</option>
+                <option value="Transferencia">Transferência</option>
               </select>
             </label>
             <label>
@@ -102,7 +102,7 @@ export function FinancePanel({
             <label>
               Membro vinculado
               <select onChange={(event) => setTransactionForm((form) => ({ ...form, memberName: event.target.value }))} value={transactionForm.memberName}>
-                <option value="">Nao vinculado</option>
+                <option value="">Não vinculado</option>
                 {members.map((member) => (
                   <option key={member.id} value={member.fullName}>
                     {member.fullName}
@@ -111,12 +111,12 @@ export function FinancePanel({
               </select>
             </label>
             <label className="full">
-              Observacoes
-              <textarea onChange={(event) => setTransactionForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Observacoes internas da tesouraria" value={transactionForm.notes} />
+              Observações
+              <textarea onChange={(event) => setTransactionForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Observações internas da tesouraria" value={transactionForm.notes} />
             </label>
             <div className="form-actions full">
               <button className="primary-action" disabled={!canCreateTransaction} onClick={createTransaction} type="button">
-                {editingTransactionId ? "Atualizar lancamento" : "Salvar lancamento"}
+                {editingTransactionId ? "Atualizar lançamento" : "Salvar lançamento"}
               </button>
               {editingTransactionId && (
                 <button className="secondary" onClick={() => { setTransactionForm(blankTransaction); setEditingTransactionId(null); }} type="button">
@@ -131,7 +131,7 @@ export function FinancePanel({
       <article className="surface wide">
         <div className="panel-heading">
           <h2>Resumo financeiro</h2>
-          <span>{filteredTransactions.length} lancamentos</span>
+          <span>{filteredTransactions.length} lançamentos</span>
         </div>
         <div className="stats-row">
           <div className="stat-card">
@@ -139,7 +139,7 @@ export function FinancePanel({
             <strong>{incomingTotal}</strong>
           </div>
           <div className="stat-card">
-            <small>Saidas</small>
+            <small>Saídas</small>
             <strong>{outgoingTotal}</strong>
           </div>
         </div>
@@ -149,8 +149,8 @@ export function FinancePanel({
             <select onChange={(event) => setFinanceTypeFilter(event.target.value)} value={financeTypeFilter}>
               <option>Todos</option>
               <option>Entrada</option>
-              <option>Saida</option>
-              <option>Dizimo</option>
+              <option value="Saida">Saída</option>
+              <option value="Dizimo">Dízimo</option>
               <option>Oferta</option>
             </select>
           </label>
@@ -182,7 +182,7 @@ export function FinancePanel({
               )}
             </div>
           ))}
-          {!filteredTransactions.length && <p className="empty-state">Nenhum lancamento encontrado para este filtro.</p>}
+          {!filteredTransactions.length && <p className="empty-state">Nenhum lançamento encontrado para este filtro.</p>}
         </div>
       </article>
     </section>

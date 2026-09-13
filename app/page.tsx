@@ -84,7 +84,8 @@ import {
 } from "./data-normalization";
 import { accessRoleFromMetadata, canAccessModule, canManageModule, isAdministrativeRole, modules, type AccessRole, type ModuleKey } from "./permissions";
 import { buildReportDefinition } from "./report-builders";
-import { downloadCsv, escapeHtml, printHtmlReport } from "./report-helpers";
+import { downloadCsv, escapeHtml, printHtmlDocument, printHtmlReport } from "./report-helpers";
+import { buildPrintableDocument, type PrintableDocumentKind } from "./document-templates";
 import {
   convertVisitorToMemberData,
   approveRegistrationAsMemberData,
@@ -250,7 +251,7 @@ const initialData: AppData = {
     {
       id: "mural-1",
       title: "Campanha de arrecadacao",
-      category: "Acao social",
+      category: "Ação social",
       published: true,
       featured: true,
       expiresAt: "2026-09-20",
@@ -431,7 +432,7 @@ const initialData: AppData = {
       className: "Maternal",
       photoDataUrl: "",
       allergies: "Alergia a amendoim",
-      notes: "Avisar responsavel antes de lanche coletivo.",
+      notes: "Avisar responsável antes de lanche coletivo.",
       guardianName: "Carlos Lima",
       guardianPhone: "(21) 97777-5402",
       guardianEmail: "carlos@igreja.com",
@@ -558,7 +559,7 @@ const initialData: AppData = {
       method: "Dinheiro/Pix",
       status: "Pendente",
       memberName: "",
-      notes: "Modulo inicial preparado para a tesouraria.",
+      notes: "Módulo inicial preparado para a tesouraria.",
     },
   ],
   assets: [
@@ -570,7 +571,7 @@ const initialData: AppData = {
       responsible: "Equipe de midia",
       condition: "Bom",
       lastMaintenance: "",
-      notes: "Cadastro inicial para controle de patrimonio.",
+      notes: "Cadastro inicial para controle de patrimônio.",
     },
   ],
   devotionals: [
@@ -584,8 +585,8 @@ const initialData: AppData = {
     },
   ],
   audit: [
-    { id: "audit-1", action: "Central de notificacoes criada", when: "2026-09-02T15:10:00.000Z" },
-    { id: "audit-2", action: "Modulo de backup validado", when: "2026-09-02T14:42:00.000Z" },
+    { id: "audit-1", action: "Central de notificações criada", when: "2026-09-02T15:10:00.000Z" },
+    { id: "audit-2", action: "Módulo de backup validado", when: "2026-09-02T14:42:00.000Z" },
   ],
   attendanceSessions: [],
   messageTemplates: [],
@@ -604,7 +605,7 @@ const memberRoleOptions = [
   "Vice-secretaria",
   "Tesoureiro",
   "Vice-tesoureiro",
-  "Professor das criancas",
+  "Professor das crianças",
   "Maestro",
   "Vice-maestro",
 ];
@@ -627,31 +628,31 @@ function isMemberSyncError(result: MemberSyncStatus | { error?: string }): resul
 const messageAudiences: MessageAudience[] = [
   "Todos os membros",
   "Aniversariantes da semana",
-  "Aniversariantes do mes",
+  "Aniversariantes do mês",
   "EBD",
   "Discipulado",
   "Grupos",
   "Visitantes",
-  "Responsaveis Kids",
+  "Responsáveis Kids",
 ];
 
 const messageTemplates: MessageTemplateItem[] = [
   {
     id: "birthday-blessing",
-    label: "Aniversario - bencao biblica",
+    label: "Aniversário - bênção bíblica",
     text:
-      "Feliz aniversario, {nome}! Que o Senhor te abencoe e te guarde; que Ele faca resplandecer o rosto sobre voce e te conceda paz. Com carinho, {igreja}.",
+      "Feliz aniversário, {nome}! Que o Senhor te abençoe e te guarde; que Ele faça resplandecer o rosto sobre você e te conceda paz. Com carinho, {igreja}.",
   },
   {
     id: "birthday-purpose",
-    label: "Aniversario - proposito",
+    label: "Aniversário - propósito",
     text:
-      "Parabens, {nome}! Hoje celebramos sua vida e oramos para que este novo ciclo seja cheio da presenca de Deus, sabedoria e novos testemunhos. {igreja}.",
+      "Parabéns, {nome}! Hoje celebramos sua vida e oramos para que este novo ciclo seja cheio da presença de Deus, sabedoria e novos testemunhos. {igreja}.",
   },
   {
     id: "ebd-reminder",
     label: "EBD - lembrete de aula",
-    text: "Paz, {nome}! Passando para lembrar da nossa EBD. Sua presenca fortalece a classe e ajuda a igreja crescer na Palavra. {igreja}.",
+    text: "Paz, {nome}! Passando para lembrar da nossa EBD. Sua presença fortalece a classe e ajuda a igreja crescer na Palavra. {igreja}.",
   },
   {
     id: "ministry-call",
@@ -661,27 +662,27 @@ const messageTemplates: MessageTemplateItem[] = [
   {
     id: "general-invite",
     label: "Geral - convite",
-    text: "Paz, {nome}! Voce e nossa familia estao convidados para participar da programacao da igreja. Sera uma alegria receber voces. {igreja}.",
+    text: "Paz, {nome}! Você e nossa família estão convidados para participar da programação da igreja. Será uma alegria receber vocês. {igreja}.",
   },
   {
     id: "kids-note",
-    label: "Kids - responsaveis",
-    text: "Paz, {nome}! Temos um comunicado da Area Kids. Confira as orientacoes e, se precisar, fale com a coordenacao. {igreja}.",
+    label: "Kids - responsáveis",
+    text: "Paz, {nome}! Temos um comunicado da Área Kids. Confira as orientações e, se precisar, fale com a coordenação. {igreja}.",
   },
   {
     id: "visitor-follow-up",
     label: "Visitante - acompanhamento",
-    text: "Paz, {nome}! Foi uma alegria receber voce. Queremos caminhar com sua familia e estamos a disposicao para ajudar. {igreja}.",
+    text: "Paz, {nome}! Foi uma alegria receber você. Queremos caminhar com sua família e estamos à disposição para ajudar. {igreja}.",
   },
   {
     id: "absence-follow-up",
     label: "Faltoso - cuidado",
-    text: "Paz, {nome}! Sentimos sua falta na aula. Estamos orando por voce e queremos saber se podemos ajudar em algo. {igreja}.",
+    text: "Paz, {nome}! Sentimos sua falta na aula. Estamos orando por você e queremos saber se podemos ajudar em algo. {igreja}.",
   },
   {
     id: "class-notice",
     label: "Classe - aviso",
-    text: "Paz, {nome}! Temos um aviso importante para sua classe. Confira a orientacao e confirme leitura. {igreja}.",
+    text: "Paz, {nome}! Temos um aviso importante para sua classe. Confira a orientação e confirme leitura. {igreja}.",
   },
 ];
 
@@ -773,10 +774,10 @@ function similarNameScore(first: string, second: string) {
 }
 
 function suggestedNextStep(request: CareRequest) {
-  if (request.status === "Pendente") return "Definir responsavel";
+  if (request.status === "Pendente") return "Definir responsável";
   if (request.status === "Em analise") return "Agendar atendimento";
   if (request.status === "Agendado") return "Registrar retorno";
-  return "Arquivado no historico";
+  return "Arquivado no histórico";
 }
 
 function readImageFileAsDataUrl(file: File) {
@@ -787,9 +788,9 @@ function readImageFileAsDataUrl(file: File) {
         resolve(reader.result);
         return;
       }
-      reject(new Error("Imagem invalida."));
+      reject(new Error("Imagem inválida."));
     };
-    reader.onerror = () => reject(new Error("Nao foi possivel ler a imagem."));
+    reader.onerror = () => reject(new Error("Não foi possível ler a imagem."));
     reader.readAsDataURL(file);
   });
 }
@@ -798,14 +799,14 @@ function loadImage(dataUrl: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Nao foi possivel processar a imagem."));
+    image.onerror = () => reject(new Error("Não foi possível processar a imagem."));
     image.src = dataUrl;
   });
 }
 
 async function optimizeMuralImage(file: File): Promise<MuralImageResult> {
   if (!file.type.startsWith("image/")) {
-    throw new Error("Selecione um arquivo de imagem valido.");
+    throw new Error("Selecione um arquivo de imagem válido.");
   }
 
   const originalDataUrl = await readImageFileAsDataUrl(file);
@@ -819,7 +820,7 @@ async function optimizeMuralImage(file: File): Promise<MuralImageResult> {
   canvas.height = height;
 
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("Nao foi possivel preparar a imagem.");
+  if (!context) throw new Error("Não foi possível preparar a imagem.");
 
   context.drawImage(image, 0, 0, width, height);
   const optimizedDataUrl = canvas.toDataURL("image/jpeg", 0.72);
@@ -838,7 +839,7 @@ async function optimizeMuralImage(file: File): Promise<MuralImageResult> {
 
 async function optimizeProfilePhoto(file: File): Promise<MuralImageResult> {
   if (!file.type.startsWith("image/")) {
-    throw new Error("Selecione um arquivo de imagem valido.");
+    throw new Error("Selecione um arquivo de imagem válido.");
   }
 
   const originalDataUrl = await readImageFileAsDataUrl(file);
@@ -852,7 +853,7 @@ async function optimizeProfilePhoto(file: File): Promise<MuralImageResult> {
   canvas.height = height;
 
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("Nao foi possivel preparar a foto.");
+  if (!context) throw new Error("Não foi possível preparar a foto.");
 
   context.drawImage(image, 0, 0, width, height);
   const optimizedDataUrl = canvas.toDataURL("image/jpeg", 0.72);
@@ -1004,7 +1005,7 @@ export default function Home() {
 
     if (!token) {
       setSaveState("error");
-      setSyncStatus("Sessao expirada. Entre novamente para salvar cadastros na base.");
+      setSyncStatus("Sessão expirada. Entre novamente para salvar cadastros na base.");
       return false;
     }
 
@@ -1032,7 +1033,7 @@ export default function Home() {
       }
 
       setSaveState("error");
-      setSyncStatus(result.error ?? "Nao foi possivel salvar cadastros na base.");
+      setSyncStatus(result.error ?? "Não foi possível salvar cadastros na base.");
       return false;
     }
 
@@ -1056,7 +1057,7 @@ export default function Home() {
 
     if (!token) {
       setSaveState("error");
-      setSyncStatus("Sessao expirada. Entre novamente para recarregar dados da base.");
+      setSyncStatus("Sessão expirada. Entre novamente para recarregar dados da base.");
       return false;
     }
 
@@ -1072,7 +1073,7 @@ export default function Home() {
       }
 
       setSaveState("error");
-      setSyncStatus(result.error ?? "Nao foi possivel recarregar cadastros da base.");
+      setSyncStatus(result.error ?? "Não foi possível recarregar cadastros da base.");
       return false;
     }
 
@@ -1133,7 +1134,7 @@ export default function Home() {
         await supabase?.auth.signOut();
         if (!cancelled) {
           setRemoteStateReady(true);
-          setAccessMessage("Seu acesso ainda nao esta ativo. Fale com a administracao.");
+          setAccessMessage("Seu acesso ainda não está ativo. Fale com a administração.");
         }
         return;
       }
@@ -1145,7 +1146,7 @@ export default function Home() {
       setAccessMessage("");
       setAccessMode("login");
       setRemoteStateReady(false);
-      setSyncStatus("Sessao restaurada. Cadastros serao carregados da base Supabase.");
+      setSyncStatus("Sessão restaurada. Cadastros serão carregados da base Supabase.");
       setHasSession(true);
     }
 
@@ -1202,7 +1203,7 @@ export default function Home() {
         }
 
         setRemoteStateReady(true);
-        setSyncStatus(result.error ?? "Nao foi possivel carregar cadastros da base.");
+        setSyncStatus(result.error ?? "Não foi possível carregar cadastros da base.");
         return;
       }
 
@@ -1337,7 +1338,7 @@ export default function Home() {
             missingInTableCount: 0,
             extraInTableCount: 0,
             checkedAt: new Date().toISOString(),
-            message: errorMessage ?? "Nao foi possivel consultar a tabela members.",
+            message: errorMessage ?? "Não foi possível consultar a tabela members.",
           });
           return;
         }
@@ -1369,7 +1370,7 @@ export default function Home() {
           configured: false,
           enabledSubscriptions: 0,
           checkedAt: new Date().toISOString(),
-          message: "Nao foi possivel conferir as notificacoes agora.",
+          message: "Não foi possível conferir as notificações agora.",
         });
         return;
       }
@@ -1380,7 +1381,7 @@ export default function Home() {
         configured: false,
         enabledSubscriptions: 0,
         checkedAt: new Date().toISOString(),
-        message: "Nao foi possivel conferir as notificacoes agora.",
+        message: "Não foi possível conferir as notificações agora.",
       });
     }
   }, []);
@@ -1687,7 +1688,7 @@ export default function Home() {
         return sameCpf || samePhone || similarName;
       })
       .slice(0, 3)
-      .map((member) => `${member.fullName} (${member.memberCode || "sem codigo"}) ja parece estar cadastrado.`);
+      .map((member) => `${member.fullName} (${member.memberCode || "sem código"}) já parece estar cadastrado.`);
   }, [canManageMembers, data.members, editingMemberId, memberForm.cpf, memberForm.fullName, memberForm.phone]);
   const canCreateVisitor = canManageVisitors && Boolean(visitorForm.fullName.trim() && visitorForm.phone.trim());
   const canSaveMemberAccess = Boolean(
@@ -1932,7 +1933,7 @@ export default function Home() {
     const text = classNoticeWhatsappText(className, title, body);
 
     if (!recipients.length || !text.trim()) {
-      setSyncStatus(`Nenhum contato de WhatsApp encontrado para ${className}. Vincule membros pela funcao, grupo ou observacoes.`);
+      setSyncStatus(`Nenhum contato de WhatsApp encontrado para ${className}. Vincule membros pela função, grupo ou observações.`);
       return;
     }
 
@@ -1965,7 +1966,7 @@ export default function Home() {
 
   function updateAttendanceRecord(area: AttendanceArea, classRecord: SchoolClass, event: ChurchEvent, member: MemberRecord, status: AttendanceStatus) {
     if (!canManageAttendanceClass(classRecord)) {
-      setSyncStatus("Apenas o professor da turma ou a administracao pode registrar a chamada.");
+      setSyncStatus("Apenas o professor da turma ou a administração pode registrar a chamada.");
       return;
     }
 
@@ -2008,7 +2009,7 @@ export default function Home() {
 
   function updateAttendanceNote(area: AttendanceArea, classRecord: SchoolClass, event: ChurchEvent, member: MemberRecord, note: string) {
     if (!canManageAttendanceClass(classRecord)) {
-      setSyncStatus("Apenas o professor da turma ou a administracao pode justificar faltas.");
+      setSyncStatus("Apenas o professor da turma ou a administração pode justificar faltas.");
       return;
     }
 
@@ -2049,7 +2050,7 @@ export default function Home() {
 
   function startAttendanceSession(area: AttendanceArea, classRecord: SchoolClass, event: ChurchEvent) {
     if (!canManageAttendanceClass(classRecord)) {
-      setSyncStatus("Apenas o professor da turma ou a administracao pode iniciar a chamada.");
+      setSyncStatus("Apenas o professor da turma ou a administração pode iniciar a chamada.");
       return;
     }
 
@@ -2098,7 +2099,7 @@ export default function Home() {
           <tr>
             <td>${index + 1}</td>
             <td>${escapeHtml(member.fullName)}</td>
-            <td>${escapeHtml(member.phone || "Nao informado")}</td>
+            <td>${escapeHtml(member.phone || "Não informado")}</td>
             <td>${escapeHtml(status)}</td>
             <td>${escapeHtml(note || "-")}</td>
           </tr>
@@ -2108,7 +2109,7 @@ export default function Home() {
     const reportWindow = window.open("", "_blank", "noopener,noreferrer,width=980,height=720");
 
     if (!reportWindow) {
-      setSyncStatus("Nao foi possivel abrir o PDF. Libere pop-ups para salvar o historico.");
+      setSyncStatus("Não foi possível abrir o PDF. Libere pop-ups para salvar o histórico.");
       return;
     }
 
@@ -2117,7 +2118,7 @@ export default function Home() {
       <html lang="pt-BR">
         <head>
           <meta charset="utf-8" />
-          <title>Historico da aula - ${escapeHtml(classRecord.name)}</title>
+          <title>Histórico da aula - ${escapeHtml(classRecord.name)}</title>
           <style>
             * { box-sizing: border-box; }
             body { color: #111827; font-family: Arial, sans-serif; margin: 32px; }
@@ -2138,14 +2139,14 @@ export default function Home() {
         <body>
           <button onclick="window.print()">Salvar em PDF / Imprimir</button>
           <header>
-            <h1>Historico da aula - ${escapeHtml(areaLabel)}</h1>
+          <h1>Histórico da aula - ${escapeHtml(areaLabel)}</h1>
             <p>Igreja Conectada</p>
           </header>
           <section class="meta">
             <div class="box">Classe<strong>${escapeHtml(classRecord.name)}</strong></div>
             <div class="box">Aula<strong>${escapeHtml(session.title)}</strong></div>
             <div class="box">Data<strong>${escapeHtml(formatDate(session.date))}</strong></div>
-            <div class="box">Professor<strong>${escapeHtml(session.teacher || classRecord.teacher || "Nao informado")}</strong></div>
+            <div class="box">Professor<strong>${escapeHtml(session.teacher || classRecord.teacher || "Não informado")}</strong></div>
           </section>
           <section class="summary">
             <div class="box">Alunos<strong>${summary.total}</strong></div>
@@ -2153,7 +2154,7 @@ export default function Home() {
             <div class="box">Faltas<strong>${summary.absent}</strong></div>
             <div class="box">Justificadas<strong>${summary.justified}</strong></div>
           </section>
-          <h2>Lista de frequencia</h2>
+          <h2>Lista de frequência</h2>
           <table>
             <thead>
               <tr>
@@ -2161,12 +2162,12 @@ export default function Home() {
                 <th>Aluno</th>
                 <th>Telefone</th>
                 <th>Status</th>
-                <th>Observacao</th>
+            <th>Observação</th>
               </tr>
             </thead>
             <tbody>${rows || '<tr><td colspan="5">Nenhum aluno matriculado nesta classe.</td></tr>'}</tbody>
           </table>
-          <footer>Relatorio gerado em ${escapeHtml(new Date().toLocaleString("pt-BR"))}.</footer>
+          <footer>Relatório gerado em ${escapeHtml(new Date().toLocaleString("pt-BR"))}.</footer>
           <script>
             window.addEventListener("load", () => setTimeout(() => window.print(), 250));
           </script>
@@ -2174,7 +2175,7 @@ export default function Home() {
       </html>
     `);
     reportWindow.document.close();
-    setSyncStatus(`Historico em PDF preparado para ${classRecord.name}.`);
+    setSyncStatus(`Histórico em PDF preparado para ${classRecord.name}.`);
   }
 
   function exportReport(kind: ReportKind, format: "pdf" | "csv") {
@@ -2188,10 +2189,31 @@ export default function Home() {
     }
 
     if (!printHtmlReport(report.title, subtitle, report.headers, report.rows)) {
-      setSyncStatus("Nao foi possivel abrir o relatorio. Libere pop-ups para imprimir ou salvar em PDF.");
+      setSyncStatus("Não foi possível abrir o relatório. Libere pop-ups para imprimir ou salvar em PDF.");
       return;
     }
     log(`PDF preparado: ${report.title}`);
+  }
+
+  function generatePrintableDocument(kind: PrintableDocumentKind, targetId: string) {
+    if (currentAccessRole !== "Administrador" && currentAccessRole !== "Secretario") {
+      setSyncStatus("Apenas administração e secretaria podem gerar documentos cadastrais.");
+      return;
+    }
+
+    const document = buildPrintableDocument(data, kind, targetId);
+    if (!document) {
+      setSyncStatus("Não foi possível localizar o cadastro para este documento.");
+      return;
+    }
+
+    if (!printHtmlDocument(document.title, document.bodyHtml)) {
+      setSyncStatus("Não foi possível abrir o documento. Libere pop-ups para imprimir ou salvar em PDF.");
+      return;
+    }
+
+    log(`Documento preparado: ${document.title}`);
+    setSyncStatus(`Documento preparado: ${document.title}.`);
   }
 
   function readPhoto(event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) {
@@ -2206,7 +2228,7 @@ export default function Home() {
         setSyncStatus(result.message);
       })
       .catch((error) => {
-        setSyncStatus(error instanceof Error ? error.message : "Nao foi possivel carregar a foto selecionada.");
+        setSyncStatus(error instanceof Error ? error.message : "Não foi possível carregar a foto selecionada.");
       });
   }
 
@@ -2216,7 +2238,7 @@ export default function Home() {
     if (!file) return;
 
     if (!canManageMembers && editingMemberId !== currentMember?.id) {
-      setSyncStatus("Acesso de membro: voce pode alterar apenas a foto do seu proprio cadastro.");
+      setSyncStatus("Acesso de membro: você pode alterar apenas a foto do seu próprio cadastro.");
       return;
     }
 
@@ -2252,7 +2274,7 @@ export default function Home() {
       const result = (await response.json().catch(() => ({}))) as { photoUrl?: string; photoFileKey?: string; error?: string };
 
       if (!response.ok || !result.photoUrl || !result.photoFileKey) {
-        setSyncStatus(result.error ?? "Nao foi possivel enviar a foto do membro.");
+        setSyncStatus(result.error ?? "Não foi possível enviar a foto do membro.");
         return;
       }
 
@@ -2276,7 +2298,7 @@ export default function Home() {
 
       setSyncStatus(`${optimized.message} Foto salva no armazenamento do Supabase.`);
     } catch (error) {
-      setSyncStatus(error instanceof Error ? error.message : "Nao foi possivel preparar a foto do membro.");
+      setSyncStatus(error instanceof Error ? error.message : "Não foi possível preparar a foto do membro.");
     }
   }
 
@@ -2284,7 +2306,7 @@ export default function Home() {
     if (!memberForm.photoFileKey && !memberForm.photoUrl && !memberForm.photoDataUrl) return;
 
     if (!canManageMembers && editingMemberId !== currentMember?.id) {
-      setSyncStatus("Acesso de membro: voce pode remover apenas a foto do seu proprio cadastro.");
+      setSyncStatus("Acesso de membro: você pode remover apenas a foto do seu próprio cadastro.");
       return;
     }
 
@@ -2312,7 +2334,7 @@ export default function Home() {
       const result = (await response.json().catch(() => ({}))) as { error?: string };
 
       if (!response.ok) {
-        setSyncStatus(result.error ?? "Nao foi possivel remover a foto do membro.");
+        setSyncStatus(result.error ?? "Não foi possível remover a foto do membro.");
         return;
       }
     }
@@ -2342,7 +2364,7 @@ export default function Home() {
       setMuralImageMessage(result.message);
     } catch (error) {
       setMuralForm((form) => ({ ...form, imageDataUrl: "" }));
-      setMuralImageMessage(error instanceof Error ? error.message : "Nao foi possivel carregar a imagem.");
+      setMuralImageMessage(error instanceof Error ? error.message : "Não foi possível carregar a imagem.");
     }
   }
 
@@ -2355,7 +2377,7 @@ export default function Home() {
 
   function requireModuleAccess(moduleKey: ModuleKey, action: string) {
     if (canManageModule(currentAccessRole, moduleKey)) return true;
-    setSyncStatus(`${currentAccessRole}: ${action} nao esta liberado para este perfil.`);
+    setSyncStatus(`${currentAccessRole}: ${action} não está liberado para este perfil.`);
     return false;
   }
 
@@ -2409,7 +2431,7 @@ export default function Home() {
     });
 
     if (!requestWasFound) {
-      setSyncStatus("Nao foi possivel localizar este atendimento. Recarregue os dados da base e tente novamente.");
+      setSyncStatus("Não foi possível localizar este atendimento. Recarregue os dados da base e tente novamente.");
       return;
     }
 
@@ -2478,7 +2500,7 @@ export default function Home() {
       const result = (await response.json()) as { id?: string; error?: string };
 
       if (!response.ok) {
-        setSyncStatus(result.error ?? "Nao foi possivel criar o acesso no Supabase.");
+        setSyncStatus(result.error ?? "Não foi possível criar o acesso no Supabase.");
         return;
       }
 
@@ -2523,7 +2545,7 @@ export default function Home() {
       const result = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setSyncStatus(result.error ?? "Nao foi possivel alterar o acesso no Supabase.");
+        setSyncStatus(result.error ?? "Não foi possível alterar o acesso no Supabase.");
         return;
       }
     }
@@ -2560,7 +2582,7 @@ export default function Home() {
       const result = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setSyncStatus(result.error ?? "Nao foi possivel excluir o acesso no Supabase.");
+        setSyncStatus(result.error ?? "Não foi possível excluir o acesso no Supabase.");
         return;
       }
     }
@@ -2572,7 +2594,7 @@ export default function Home() {
   async function createMember() {
     if (!memberForm.fullName.trim() || !memberForm.phone.trim()) return;
     if (!canManageMembers && editingMemberId !== currentMember?.id) {
-      setSyncStatus("Acesso de membro: voce pode atualizar apenas o seu proprio cadastro.");
+      setSyncStatus("Acesso de membro: você pode atualizar apenas o seu próprio cadastro.");
       return;
     }
 
@@ -2652,7 +2674,7 @@ export default function Home() {
     const token = sessionData.session?.access_token;
 
     if (!token) {
-      setSyncStatus("Entre com uma conta Supabase antes de revisar pre-cadastros.");
+      setSyncStatus("Entre com uma conta Supabase antes de revisar pré-cadastros.");
       return false;
     }
 
@@ -2667,7 +2689,7 @@ export default function Home() {
     const result = (await response.json()) as { error?: string };
 
     if (!response.ok) {
-      setSyncStatus(result.error ?? "Nao foi possivel atualizar o pre-cadastro.");
+      setSyncStatus(result.error ?? "Não foi possível atualizar o pré-cadastro.");
       return false;
     }
 
@@ -2676,18 +2698,18 @@ export default function Home() {
 
   async function markRegistrationInReview(request: RegistrationRequest) {
     if (!canManageRegistrationRequests || request.status === "Em analise") return;
-    const updated = await updateRegistrationRequestStatus(request.id, "Em analise", "Marcado para analise da administracao");
+    const updated = await updateRegistrationRequestStatus(request.id, "Em analise", "Marcado para análise da administração");
     if (!updated) return;
     const now = new Date().toISOString();
     setData((current) => ({
       ...current,
       registrationRequests: current.registrationRequests.map((item) =>
         item.id === request.id
-          ? { ...item, status: "Em analise", reviewedAt: now, reviewNote: "Marcado para analise da administracao" }
+          ? { ...item, status: "Em analise", reviewedAt: now, reviewNote: "Marcado para análise da administração" }
           : item,
       ),
     }));
-    setSyncStatus(`Pre-cadastro de ${request.fullName} marcado como em analise.`);
+    setSyncStatus(`Pré-cadastro de ${request.fullName} marcado como em análise.`);
   }
 
   function memberFormFromRegistration(request: RegistrationRequest, memberType: MemberRecord["memberType"] = "Membro"): Omit<MemberRecord, "id"> {
@@ -2876,7 +2898,7 @@ export default function Home() {
       const result = (await response.json()) as { id?: string; email?: string; error?: string; created?: boolean };
 
       if (!response.ok) {
-        setSyncStatus(result.error ?? "Nao foi possivel salvar o acesso do membro.");
+        setSyncStatus(result.error ?? "Não foi possível salvar o acesso do membro.");
         return;
       }
 
@@ -2918,7 +2940,7 @@ export default function Home() {
     setData((current) => ({
       ...current,
       kids: [kid, ...current.kids],
-      audit: [{ id: uid("audit"), action: `Crianca cadastrada no Kids: ${kid.childName}`, when: now }, ...current.audit].slice(0, 12),
+      audit: [{ id: uid("audit"), action: `Criança cadastrada no Kids: ${kid.childName}`, when: now }, ...current.audit].slice(0, 12),
     }));
     void saveKidToSupabase(kid);
     setKidForm(blankKid);
@@ -2931,9 +2953,9 @@ export default function Home() {
     setData((current) => ({
       ...current,
       kids: current.kids.filter((item) => item.id !== kid.id),
-      audit: [{ id: uid("audit"), action: `Cadastro Kids excluido: ${kid.childName}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
+      audit: [{ id: uid("audit"), action: `Cadastro Kids excluído: ${kid.childName}`, when: new Date().toISOString() }, ...current.audit].slice(0, 12),
     }));
-    setSyncStatus(`Cadastro Kids de ${kid.childName} excluido.`);
+    setSyncStatus(`Cadastro Kids de ${kid.childName} excluído.`);
   }
 
   function createMuralItem() {
@@ -3016,26 +3038,26 @@ export default function Home() {
   }
 
   function createTransaction() {
-    if (!requireModuleAccess("finance", editingTransactionId ? "editar lancamento financeiro" : "criar lancamento financeiro")) return;
+    if (!requireModuleAccess("finance", editingTransactionId ? "editar lançamento financeiro" : "criar lançamento financeiro")) return;
     if (!canCreateTransaction) return;
 
     setData((current) => upsertTransactionData(current, transactionForm, editingTransactionId, uid));
     setTransactionForm(blankTransaction);
     setEditingTransactionId(null);
-    setSyncStatus(editingTransactionId ? "Lancamento financeiro atualizado." : "Lancamento financeiro cadastrado.");
+    setSyncStatus(editingTransactionId ? "Lançamento financeiro atualizado." : "Lançamento financeiro cadastrado.");
   }
 
   function editTransaction(transaction: TransactionRecord) {
-    if (!requireModuleAccess("finance", "editar lancamento financeiro")) return;
+    if (!requireModuleAccess("finance", "editar lançamento financeiro")) return;
     const { id, ...form } = transaction;
     setTransactionForm(form);
     setEditingTransactionId(id);
-    setSyncStatus(`Editando lancamento financeiro: ${transaction.description}.`);
+    setSyncStatus(`Editando lançamento financeiro: ${transaction.description}.`);
   }
 
   function deleteTransaction(transaction: TransactionRecord) {
-    if (!requireModuleAccess("finance", "excluir lancamento financeiro")) return;
-    if (!window.confirm(`Excluir o lancamento "${transaction.description}"?`)) return;
+    if (!requireModuleAccess("finance", "excluir lançamento financeiro")) return;
+    if (!window.confirm(`Excluir o lançamento "${transaction.description}"?`)) return;
 
     setData((current) => deleteTransactionData(current, transaction, uid));
     if (editingTransactionId === transaction.id) {
@@ -3045,7 +3067,7 @@ export default function Home() {
   }
 
   function createAsset() {
-    if (!requireModuleAccess("assets", editingAssetId ? "editar patrimonio" : "criar patrimonio")) return;
+    if (!requireModuleAccess("assets", editingAssetId ? "editar patrimônio" : "criar patrimônio")) return;
     if (!canCreateAsset) return;
 
     setData((current) => upsertAssetData(current, assetForm, editingAssetId, uid));
@@ -3055,16 +3077,16 @@ export default function Home() {
   }
 
   function editAsset(asset: AssetRecord) {
-    if (!requireModuleAccess("assets", "editar patrimonio")) return;
+    if (!requireModuleAccess("assets", "editar patrimônio")) return;
     const { id, ...form } = asset;
     setAssetForm(form);
     setEditingAssetId(id);
-    setSyncStatus(`Editando patrimonio: ${asset.name}.`);
+    setSyncStatus(`Editando patrimônio: ${asset.name}.`);
   }
 
   function deleteAsset(asset: AssetRecord) {
-    if (!requireModuleAccess("assets", "excluir patrimonio")) return;
-    if (!window.confirm(`Excluir o patrimonio "${asset.name}"?`)) return;
+    if (!requireModuleAccess("assets", "excluir patrimônio")) return;
+    if (!window.confirm(`Excluir o patrimônio "${asset.name}"?`)) return;
 
     setData((current) => deleteAssetData(current, asset, uid));
     if (editingAssetId === asset.id) {
@@ -3264,7 +3286,7 @@ export default function Home() {
   async function copyPublicRegistrationLink() {
     const link = `${window.location.origin}/cadastro`;
     await navigator.clipboard.writeText(link);
-    setSyncStatus("Link de cadastro copiado. Agora voce pode enviar pelo WhatsApp.");
+    setSyncStatus("Link de cadastro copiado. Agora você pode enviar pelo WhatsApp.");
   }
 
   function downloadCurrentBackup(reason = "backup-manual") {
@@ -3276,21 +3298,21 @@ export default function Home() {
     link.download = `igreja-conectada-${reason}-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    setSyncStatus("Backup desta tela baixado. Agora voce pode atualizar os dados da base com mais seguranca.");
+    setSyncStatus("Backup desta tela baixado. Agora você pode atualizar os dados da base com mais segurança.");
   }
 
   const actionHighlights = [
     {
-      label: "Pre-cadastros",
+      label: "Pré-cadastros",
       value: pendingRegistrationRequests.length.toString(),
-      hint: "aguardando analise",
+      hint: "aguardando análise",
       module: "overview" as ModuleKey,
       cover: "registrations" as ModuleCoverKey,
     },
     {
-      label: "Atencao pastoral",
+      label: "Atenção pastoral",
       value: data.careRequests.filter((request) => !request.responsible && request.status !== "Concluido").length.toString(),
-      hint: "sem responsavel",
+      hint: "sem responsável",
       module: "pastoral" as ModuleKey,
       cover: "pastoral" as ModuleCoverKey,
     },
@@ -3316,9 +3338,9 @@ export default function Home() {
       cover: "notices" as ModuleCoverKey,
     },
     {
-      label: "Area Kids",
+      label: "Área Kids",
       value: data.kids.length.toString(),
-      hint: "criancas cadastradas",
+      hint: "crianças cadastradas",
       module: "kids" as ModuleKey,
       cover: "kids" as ModuleCoverKey,
     },
@@ -3358,16 +3380,16 @@ export default function Home() {
       cover: "mural" as ModuleCoverKey,
     },
     {
-      label: "Comunicacao",
+      label: "Comunicação",
       value: data.messageCampaigns.length.toString(),
       hint: "campanhas registradas",
       module: "messages" as ModuleKey,
       cover: "messages" as ModuleCoverKey,
     },
     {
-      label: "Relatorios",
+      label: "Relatórios",
       value: "8",
-      hint: "modelos disponiveis",
+      hint: "modelos disponíveis",
       module: "reports" as ModuleKey,
       cover: "reports" as ModuleCoverKey,
     },
@@ -3399,20 +3421,20 @@ export default function Home() {
     if (supabase) {
       const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        setAccessMessage("Nao foi possivel entrar pelo Supabase. Verifique e-mail, senha e usuario cadastrado.");
+        setAccessMessage("Não foi possível entrar pelo Supabase. Verifique e-mail, senha e usuário cadastrado.");
         return;
       }
       const metadata = authData.user?.app_metadata ?? {};
       const accessStatus = metadata.church_gp_access ?? metadata.status;
       if (!isApprovedAccessStatus(accessStatus)) {
         await supabase.auth.signOut();
-        setAccessMessage("Seu acesso ainda nao esta ativo. Fale com a administracao.");
+        setAccessMessage("Seu acesso ainda não está ativo. Fale com a administração.");
         return;
       }
       resolvedUserId = authData.user?.id ?? "";
       resolvedRole = accessRoleForSession(data.users, authData.user?.email ?? loginEmail, metadata);
       setRemoteStateReady(false);
-      setSyncStatus("Sessao Supabase ativa. Novos dados serao sincronizados.");
+      setSyncStatus("Sessão Supabase ativa. Novos dados serão sincronizados.");
     }
 
     setSessionUserId(resolvedUserId);
@@ -3440,7 +3462,7 @@ export default function Home() {
     setAccessMode("login");
     setRemoteStateReady(true);
     lastSavedPayloadRef.current = "";
-    setAccessMessage("Voce saiu do sistema com seguranca.");
+    setAccessMessage("Você saiu do sistema com segurança.");
 
     void (async () => {
       try {
@@ -3451,7 +3473,7 @@ export default function Home() {
         const supabase = getSupabaseClient();
         if (supabase) await supabase.auth.signOut();
       } catch {
-        setSyncStatus("Voce saiu do sistema. Se havia alguma alteracao pendente, confira a base no proximo acesso.");
+        setSyncStatus("Você saiu do sistema. Se havia alguma alteração pendente, confira a base no próximo acesso.");
       } finally {
         logoutInProgressRef.current = false;
       }
@@ -3538,7 +3560,7 @@ export default function Home() {
     return (
       <div className="credential-panel attendance-panel">
         <div className="panel-heading compact-heading">
-          <h2>{canManage ? `Chamada da aula - ${areaLabel}` : "Minha frequencia"}</h2>
+          <h2>{canManage ? `Chamada da aula - ${areaLabel}` : "Minha frequência"}</h2>
           <span>{summary.total} aluno{summary.total === 1 ? "" : "s"}</span>
         </div>
 
@@ -3548,16 +3570,16 @@ export default function Home() {
               <div>
                 <span>Classe</span>
                 <strong>{classRecord.name}</strong>
-                <small>Professor: {classRecord.teacher || "Nao informado"}</small>
+                <small>Professor: {classRecord.teacher || "Não informado"}</small>
               </div>
               <div>
                 <span>Aula selecionada</span>
                 <strong>{selectedEvent ? selectedEvent.title : "Nenhuma aula encontrada"}</strong>
-                <small>{selectedEvent ? `${formatDate(selectedEvent.date)} - ${selectedEvent.time || "Sem horario"}` : `Crie um evento de ${areaLabel} na agenda.`}</small>
+                <small>{selectedEvent ? `${formatDate(selectedEvent.date)} - ${selectedEvent.time || "Sem horário"}` : `Crie um evento de ${areaLabel} na agenda.`}</small>
               </div>
               <div className="attendance-score">
                 <strong>{summary.percent}%</strong>
-                <small>frequencia</small>
+                <small>frequência</small>
               </div>
             </div>
 
@@ -3633,7 +3655,7 @@ export default function Home() {
                         <span>{member.fullName.slice(0, 1)}</span>
                         <div>
                           <strong>{member.fullName}</strong>
-                          <small>{member.phone || "Telefone nao informado"} - {member.status}</small>
+                          <small>{member.phone || "Telefone não informado"} - {member.status}</small>
                         </div>
                       </div>
                       <div className="attendance-status-buttons">
@@ -3653,12 +3675,12 @@ export default function Home() {
                         onClick={() => setOpenAttendanceNoteIds((current) => ({ ...current, [noteKey]: !current[noteKey] }))}
                         type="button"
                       >
-                        {note ? "Editar observacao" : "Observacao"}
+                        {note ? "Editar observação" : "Observação"}
                       </button>
                       {noteOpen && (
                         <input
                           onChange={(event) => updateAttendanceNote(area, classRecord, selectedEvent, member, event.target.value)}
-                          placeholder="Justificativa ou observacao"
+                          placeholder="Justificativa ou observação"
                           value={note}
                         />
                       )}
@@ -3670,7 +3692,7 @@ export default function Home() {
 
             <div className="attendance-history">
               <div className="panel-heading compact-heading">
-                <h2>Historico de chamadas</h2>
+                <h2>Histórico de chamadas</h2>
                 <span>{classHistory.length} registro{classHistory.length === 1 ? "" : "s"}</span>
               </div>
               {classHistory.length ? (
@@ -3684,7 +3706,7 @@ export default function Home() {
                         <small>
                           {sessionSummary.present} presentes - {sessionSummary.absent} faltas - {sessionSummary.justified} justificadas
                         </small>
-                        <small>{sessionSummary.percent}% de frequencia</small>
+                        <small>{sessionSummary.percent}% de frequência</small>
                       </div>
                       <div className="row-actions">
                         <button className="secondary" onClick={() => printAttendanceSessionPdf(area, classRecord, attendanceSession)} type="button">
@@ -3703,9 +3725,9 @@ export default function Home() {
           <div className="member-attendance-view">
             <div className="attendance-class-summary">
               <div>
-                <span>Sua frequencia nesta classe</span>
+                <span>Sua frequência nesta classe</span>
                 <strong>{classRecord.name}</strong>
-                <small>{currentMemberHistory.length ? "Ultimas aulas registradas abaixo." : "Sua frequencia ainda nao foi registrada nesta classe."}</small>
+                <small>{currentMemberHistory.length ? "Últimas aulas registradas abaixo." : "Sua frequência ainda não foi registrada nesta classe."}</small>
               </div>
             </div>
             {currentMemberHistory.length ? (
@@ -3714,13 +3736,13 @@ export default function Home() {
                   <span className="date-box">{formatDate(attendanceSession.date)}</span>
                   <div>
                     <strong>{attendanceSession.title}</strong>
-                    <small>{record?.status ?? "Nao registrado"}</small>
+                    <small>{record?.status ?? "Não registrado"}</small>
                     {record?.note && <small>{record.note}</small>}
                   </div>
                 </div>
               ))
             ) : (
-              <p className="empty-state">Sua frequencia ainda nao foi registrada nesta classe.</p>
+              <p className="empty-state">Sua frequência ainda não foi registrada nesta classe.</p>
             )}
           </div>
         )}
@@ -3749,7 +3771,7 @@ export default function Home() {
       body: JSON.stringify(kid),
     });
 
-    setSyncStatus(response.ok ? "Cadastro Kids sincronizado com Supabase." : "Kids salvo localmente; nao foi possivel sincronizar agora.");
+    setSyncStatus(response.ok ? "Cadastro Kids sincronizado com Supabase." : "Kids salvo localmente; não foi possível sincronizar agora.");
   }
 
   async function saveMessageCampaignToSupabase(recipients: MessageRecipient[]) {
@@ -3776,12 +3798,12 @@ export default function Home() {
       }),
     });
 
-    setSyncStatus(response.ok ? "Campanha registrada no Supabase." : "Mensagens abertas; campanha nao foi salva no Supabase.");
+    setSyncStatus(response.ok ? "Campanha registrada no Supabase." : "Mensagens abertas; campanha não foi salva no Supabase.");
   }
 
   function handleRecover(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setAccessMessage("Se o e-mail estiver cadastrado, a administracao recebera o pedido de recuperacao.");
+    setAccessMessage("Se o e-mail estiver cadastrado, a administração receberá o pedido de recuperação.");
   }
 
   if (!hasSession) {
@@ -3801,16 +3823,16 @@ export default function Home() {
   return (
     <main className={`min-h-screen bg-[var(--background)] text-[var(--foreground)]${isSimpleView ? " simple-view" : ""}`}>
       <div className="app-shell">
-        <aside className="sidebar" aria-label="Navegacao principal">
+        <aside className="sidebar" aria-label="Navegação principal">
           <div className="brand-block">
             <div className="brand-mark">IG</div>
             <div>
               <p className="brand-name">Igreja Conectada</p>
-              <p className="brand-caption">{isAdminView ? "Painel administrativo" : "Area do membro"}</p>
+              <p className="brand-caption">{isAdminView ? "Painel administrativo" : "Área do membro"}</p>
             </div>
           </div>
 
-          <nav className="module-list" aria-label="Modulos do sistema">
+          <nav className="module-list" aria-label="Módulos do sistema">
             {visibleModules.map((module) => (
               <button
                 className={activeModule === module.key ? "module-button active" : "module-button"}
@@ -3977,8 +3999,8 @@ export default function Home() {
           {saveState === "conflict" && (
             <div className="conflict-banner" role="alert">
               <div>
-                <strong>Existe uma versao mais recente salva na base.</strong>
-                <span>Outro aparelho salvou antes de voce. Para proteger os cadastros, baixe um backup desta tela se precisar e atualize os dados da base.</span>
+                <strong>Existe uma versão mais recente salva na base.</strong>
+                <span>Outro aparelho salvou antes de você. Para proteger os cadastros, baixe um backup desta tela se precisar e atualize os dados da base.</span>
               </div>
               <div className="conflict-actions">
                 <button className="secondary" onClick={() => downloadCurrentBackup("conflito")} type="button">
@@ -4010,22 +4032,22 @@ export default function Home() {
                   <button onClick={() => setActiveModule("events")} type="button">
                     <span>Hoje na igreja</span>
                     <strong>{nextAgendaEvent ? nextAgendaEvent.title : "Sem evento na semana"}</strong>
-                    <small>{nextAgendaEvent ? `${formatDate(nextAgendaEvent.date)} - ${nextAgendaEvent.time || "Sem horario"}` : "Cadastre a agenda para aparecer aqui"}</small>
+                    <small>{nextAgendaEvent ? `${formatDate(nextAgendaEvent.date)} - ${nextAgendaEvent.time || "Sem horário"}` : "Cadastre a agenda para aparecer aqui"}</small>
                   </button>
                   <button onClick={() => setActiveModule("members")} type="button">
                     <span>Aniversariantes</span>
                     <strong>{monthlyBirthdays.length}</strong>
-                    <small>do mes em destaque</small>
+                    <small>do mês em destaque</small>
                   </button>
                   <button onClick={() => setActiveModule("overview")} type="button">
-                    <span>Pre-cadastros</span>
+                    <span>Pré-cadastros</span>
                     <strong>{pendingRegistrationRequests.length}</strong>
-                    <small>aguardando analise</small>
+                    <small>aguardando análise</small>
                   </button>
                   <button onClick={() => setActiveModule("pastoral")} type="button">
                     <span>Pastoral</span>
                     <strong>{unassignedCareCount}</strong>
-                    <small>sem responsavel</small>
+                    <small>sem responsável</small>
                   </button>
                 </div>
                 <div className="hero-actions">
@@ -4033,7 +4055,7 @@ export default function Home() {
                     Abrir fila pastoral
                   </button>
                   <button className="secondary" onClick={() => setNotificationsOpen(true)} type="button">
-                    Ver acoes de hoje
+                    Ver ações de hoje
                   </button>
                 </div>
               </div>
@@ -4057,9 +4079,9 @@ export default function Home() {
                 </div>
                 <div className="today-grid">
                   <div>
-                    <span>Proximo compromisso</span>
+                    <span>Próximo compromisso</span>
                     <strong>{nextAgendaEvent ? nextAgendaEvent.title : "Nenhum evento nesta semana"}</strong>
-                    <small>{nextAgendaEvent ? `${formatDate(nextAgendaEvent.date)} - ${nextAgendaEvent.location || "Local nao informado"}` : "Quando a agenda for preenchida, o proximo evento aparece aqui."}</small>
+                    <small>{nextAgendaEvent ? `${formatDate(nextAgendaEvent.date)} - ${nextAgendaEvent.location || "Local não informado"}` : "Quando a agenda for preenchida, o próximo evento aparece aqui."}</small>
                   </div>
                   <div>
                     <span>Mural publicado</span>
@@ -4067,26 +4089,26 @@ export default function Home() {
                     <small>{featuredMuralItem ? featuredMuralItem.title : "Nenhum destaque publicado"}</small>
                   </div>
                   <div>
-                    <span>Acoes pendentes</span>
+                    <span>Ações pendentes</span>
                     <strong>{pendingRegistrationRequests.length + unassignedCareCount}</strong>
-                    <small>pre-cadastros e pedidos sem responsavel</small>
+                    <small>pré-cadastros e pedidos sem responsável</small>
                   </div>
                 </div>
               </article>
 
               <article className="surface wide streaming-section priority-panel">
                 <div className="panel-heading">
-                  <h2>Pendencias importantes</h2>
+                  <h2>Pendências importantes</h2>
                   <span>Para revisar primeiro</span>
                 </div>
                 <div className="priority-grid">
                   <button onClick={() => setActiveModule("overview")} type="button">
                     <strong>{pendingRegistrationRequests.length}</strong>
-                    <span>pre-cadastros aguardando</span>
+                    <span>pré-cadastros aguardando</span>
                   </button>
                   <button onClick={() => setActiveModule("pastoral")} type="button">
                     <strong>{unassignedCareCount}</strong>
-                    <span>pedidos pastorais sem responsavel</span>
+                    <span>pedidos pastorais sem responsável</span>
                   </button>
                   <button onClick={() => setActiveModule("visitors")} type="button">
                     <strong>{data.visitors.filter((visitor) => !visitor.contactMade).length}</strong>
@@ -4194,15 +4216,15 @@ export default function Home() {
                     <ResponsiveImage src={featuredMuralImage} />
                   </div>
                 )}
-                <p className="eyebrow">Area do membro</p>
+                <p className="eyebrow">Área do membro</p>
                 <h2>Bem-vindo, {profileName}.</h2>
-                <p>Veja sua ficha, acompanhe a agenda, leia os avisos e envie pedidos de atendimento pastoral ou oracao.</p>
+                <p>Veja sua ficha, acompanhe a agenda, leia os avisos e envie pedidos de atendimento pastoral ou oração.</p>
                 {featuredMuralItem && <span className="mural-hero-label">Destaque do mural: {featuredMuralItem.title}</span>}
-                <div className="smart-hero-strip" aria-label="Resumo da area do membro">
+                <div className="smart-hero-strip" aria-label="Resumo da área do membro">
                   <button onClick={() => setActiveModule("events")} type="button">
                     <span>Agenda da igreja</span>
                     <strong>{nextAgendaEvent ? nextAgendaEvent.title : "Nada nesta semana"}</strong>
-                    <small>{nextAgendaEvent ? formatDate(nextAgendaEvent.date) : "A secretaria ainda nao publicou evento"}</small>
+                    <small>{nextAgendaEvent ? formatDate(nextAgendaEvent.date) : "A secretaria ainda não publicou evento"}</small>
                   </button>
                   <button onClick={() => setActiveModule("mural")} type="button">
                     <span>Avisos e mural</span>
@@ -4212,7 +4234,7 @@ export default function Home() {
                   <button onClick={() => setActiveModule("pastoral")} type="button">
                     <span>Meus pedidos</span>
                     <strong>{pendingCareCount}</strong>
-                    <small>Clique aqui para pedir oracao</small>
+                    <small>Clique aqui para pedir oração</small>
                   </button>
                 </div>
                 <div className="hero-actions">
@@ -4234,8 +4256,8 @@ export default function Home() {
               {isSimpleView && (
                 <article className="surface wide simple-shortcuts-panel">
                   <div className="panel-heading">
-                    <h2>Acesso facil</h2>
-                    <span>Toque em um botao para abrir</span>
+                    <h2>Acesso fácil</h2>
+                    <span>Toque em um botão para abrir</span>
                   </div>
                   <div className="simple-shortcuts-grid">
                     <button onClick={() => setActiveModule("members")} type="button">
@@ -4251,8 +4273,8 @@ export default function Home() {
                       <span>Ver avisos da igreja</span>
                     </button>
                     <button onClick={() => setActiveModule("pastoral")} type="button">
-                      <strong>Pedido de oracao</strong>
-                      <span>Clique aqui para pedir oracao</span>
+                      <strong>Pedido de oração</strong>
+                      <span>Clique aqui para pedir oração</span>
                     </button>
                     <button className="simple-logout" onClick={handleLogout} type="button">
                       <strong>Sair</strong>
@@ -4264,25 +4286,25 @@ export default function Home() {
 
               <article className="surface wide streaming-section member-home-panel">
                 <div className="panel-heading">
-                  <h2>Para voce</h2>
-                  <span>Informacoes principais do seu acesso</span>
+                  <h2>Para você</h2>
+                  <span>Informações principais do seu acesso</span>
                 </div>
                 <div className="member-home-grid">
                   <button onClick={() => setActiveModule("events")} type="button">
                     <strong>{nextAgendaEvent ? nextAgendaEvent.title : "Agenda livre"}</strong>
-                    <span>{nextAgendaEvent ? `${formatDate(nextAgendaEvent.date)} - ${nextAgendaEvent.time || "Sem horario"}` : "Nenhum evento publicado para esta semana."}</span>
+                    <span>{nextAgendaEvent ? `${formatDate(nextAgendaEvent.date)} - ${nextAgendaEvent.time || "Sem horário"}` : "Nenhum evento publicado para esta semana."}</span>
                   </button>
                   <button onClick={() => setActiveModule("mural")} type="button">
                     <strong>{featuredMuralItem ? featuredMuralItem.title : "Avisos da igreja"}</strong>
                     <span>{featuredMuralItem ? featuredMuralItem.category : "Nenhum aviso publicado hoje."}</span>
                   </button>
                   <button onClick={() => setActiveModule("school")} type="button">
-                    <strong>{memberSchoolName || "Classe EBD nao vinculada"}</strong>
-                    <span>Sua classe ainda nao foi vinculada se aparecer este aviso.</span>
+                    <strong>{memberSchoolName || "Classe EBD não vinculada"}</strong>
+                    <span>Sua classe ainda não foi vinculada se aparecer este aviso.</span>
                   </button>
                   <button onClick={() => setActiveModule("discipleship")} type="button">
-                    <strong>{memberDiscipleshipName || "Discipulado nao vinculado"}</strong>
-                    <span>Acompanhe sua turma e frequencia.</span>
+                    <strong>{memberDiscipleshipName || "Discipulado não vinculado"}</strong>
+                    <span>Acompanhe sua turma e frequência.</span>
                   </button>
                 </div>
               </article>
@@ -4303,7 +4325,7 @@ export default function Home() {
               <article className="surface streaming-section member-profile-preview">
                 <div className="panel-heading">
                   <h2>Minha ficha</h2>
-                  <span>{currentMember ? "Cadastro localizado" : "Sem vinculo"}</span>
+                  <span>{currentMember ? "Cadastro localizado" : "Sem vínculo"}</span>
                 </div>
                 {currentMember ? (
                   <div className="data-row member-row">
@@ -4313,11 +4335,11 @@ export default function Home() {
                     <div>
                       <strong>{currentMember.fullName}</strong>
                       <small>{currentMember.memberType} - {currentMember.status}</small>
-                      <small>{currentMember.phone} - {currentMember.email || "E-mail nao informado"}</small>
+                      <small>{currentMember.phone} - {currentMember.email || "E-mail não informado"}</small>
                     </div>
                   </div>
                 ) : (
-                  <p className="empty-state">Nao encontramos uma ficha vinculada a este login. Fale com a secretaria para vincular seu cadastro.</p>
+                  <p className="empty-state">Não encontramos uma ficha vinculada a este login. Fale com a secretaria para vincular seu cadastro.</p>
                 )}
               </article>
 
@@ -4335,7 +4357,7 @@ export default function Home() {
                       <div>
                         <strong>{event.title}</strong>
                         <small>
-                          {event.time || "Sem horario"} - {event.ministry} - {event.location || "Local nao informado"}
+                          {event.time || "Sem horário"} - {event.ministry} - {event.location || "Local não informado"}
                         </small>
                       </div>
                     </div>
@@ -4745,6 +4767,7 @@ export default function Home() {
               currentAccessRole={currentAccessRole}
               data={data}
               exportReport={exportReport}
+              generatePrintableDocument={generatePrintableDocument}
               monthlyBirthdays={monthlyBirthdays}
               reportPreviewKind={reportPreviewKind}
               selectedReportPreview={selectedReportPreview}
@@ -4798,7 +4821,7 @@ function RegistrationRequestsPanel({
     { label: "Ativos", value: "Ativos" },
     { label: "Todos", value: "Todos" },
     { label: "Aguardando", value: "Aguardando aprovacao" },
-    { label: "Em analise", value: "Em analise" },
+    { label: "Em análise", value: "Em analise" },
     { label: "Aprovados", value: "Aprovado" },
     { label: "Recusados", value: "Recusado" },
   ];
@@ -4807,7 +4830,7 @@ function RegistrationRequestsPanel({
     <article className="surface wide streaming-section registration-queue-panel" id="registration-queue-panel">
       <div className="panel-heading">
         <div>
-          <h2>Pre-cadastros</h2>
+          <h2>Pré-cadastros</h2>
           <span>{activeRequests.length} ficha{activeRequests.length === 1 ? "" : "s"} em andamento</span>
         </div>
         <button className="secondary" onClick={copyPublicRegistrationLink} type="button">
@@ -4848,18 +4871,18 @@ function RegistrationRequestsPanel({
                 <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>
                   {request.status}
                 </span>
-                <small>{request.phone} - {request.email || "E-mail nao informado"}</small>
+                <small>{request.phone} - {request.email || "E-mail não informado"}</small>
                 <small>
-                  {request.city || "Cidade nao informada"} {request.neighborhood ? `- ${request.neighborhood}` : ""}
+                  {request.city || "Cidade não informada"} {request.neighborhood ? `- ${request.neighborhood}` : ""}
                 </small>
-                <small>Congregacao: {request.congregation || "Nao informada"}</small>
+                <small>Congregação: {request.congregation || "Não informada"}</small>
                 <small>Enviado em {formatDate(request.createdAt.slice(0, 10))}</small>
               </div>
               {request.notes && <p>{request.notes}</p>}
               <div className="card-actions">
                 {request.status === "Aguardando aprovacao" && (
                   <button className="secondary" onClick={() => onMarkInReview(request)} type="button">
-                    Marcar em analise
+                    Marcar em análise
                   </button>
                 )}
                 {(request.status === "Aguardando aprovacao" || request.status === "Em analise") && (
@@ -4933,7 +4956,7 @@ function AccessScreen({
 
       <section className="access-panel" aria-label={title}>
         <div className="access-copy">
-          <p className="eyebrow">Area segura</p>
+          <p className="eyebrow">Área segura</p>
           <h2>{title}</h2>
           <p>{description}</p>
         </div>
@@ -4948,7 +4971,7 @@ function AccessScreen({
           <form className="access-form" method="post" onSubmit={onLogin}>
             <label>
               E-mail
-              <input autoComplete="email" name="email" placeholder="voce@email.com" required type="email" />
+              <input autoComplete="email" name="email" placeholder="seunome@email.com" required type="email" />
             </label>
             <label>
               Senha
@@ -4979,10 +5002,10 @@ function AccessScreen({
           <form className="access-form" method="post" onSubmit={onRecover}>
             <label>
               E-mail
-              <input autoComplete="email" name="recovery_email" placeholder="voce@email.com" required type="email" />
+              <input autoComplete="email" name="recovery_email" placeholder="seunome@email.com" required type="email" />
             </label>
             <button className="access-primary" type="submit">
-              Enviar instrucoes
+              Enviar instruções
             </button>
           </form>
         )}

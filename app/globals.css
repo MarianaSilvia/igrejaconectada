@@ -1799,6 +1799,21 @@ button.secondary.full {
   color: var(--muted);
 }
 
+.document-tool-grid {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.4fr) auto;
+}
+
+.document-tool-grid label {
+  min-width: 0;
+}
+
+.document-tool-grid button {
+  min-height: 48px;
+}
+
 .preview-table {
   display: grid;
   gap: 6px;
@@ -3712,6 +3727,7 @@ textarea:focus {
   .birthday-grid,
   .birthday-spotlight-list,
   .report-grid,
+  .document-tool-grid,
   .filter-bar,
     .stats-row,
   .system-health-grid,

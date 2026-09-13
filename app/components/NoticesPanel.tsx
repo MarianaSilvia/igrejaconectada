@@ -25,11 +25,11 @@ export function NoticesPanel({ activeNotices, canCreateNotice, canManageNotices,
           </div>
           <div className="form-grid">
             <label className="full">
-              Titulo
-              <input onChange={(event) => setNoticeForm((form) => ({ ...form, title: event.target.value }))} placeholder="Ex.: Reuniao de lideres" value={noticeForm.title} />
+              Título
+              <input onChange={(event) => setNoticeForm((form) => ({ ...form, title: event.target.value }))} placeholder="Ex.: Reunião de líderes" value={noticeForm.title} />
             </label>
             <label>
-              Publico
+              Público
               <input onChange={(event) => setNoticeForm((form) => ({ ...form, audience: event.target.value }))} placeholder="Ex.: Toda igreja" value={noticeForm.audience} />
             </label>
             <label>

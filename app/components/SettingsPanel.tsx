@@ -83,7 +83,7 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
   );
 
   function exportAudit(format: "pdf" | "csv") {
-    const headers = ["Data e hora", "Modulo", "Acao"];
+    const headers = ["Data e hora", "Módulo", "Ação"];
     const rows = auditRows(filteredAudit);
     const subtitle = `Auditoria filtrada em ${new Date().toLocaleString("pt-BR")} - ${filteredAudit.length} evento(s).`;
 
@@ -94,7 +94,7 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
     }
 
     const opened = printHtmlReport("Auditoria - Igreja Conectada", subtitle, headers, rows);
-    log(opened ? "Auditoria preparada em PDF" : "Falha ao abrir relatorio de auditoria");
+    log(opened ? "Auditoria preparada em PDF" : "Falha ao abrir relatório de auditoria");
   }
 
   function downloadFullBackup() {
@@ -113,21 +113,21 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
     <section className="content-grid">
       <article className="surface wide">
         <div className="panel-heading">
-          <h2>Backup e recuperacao local</h2>
+          <h2>Backup e recuperação local</h2>
           <span>JSON validado</span>
         </div>
         <p className="body-copy">
-          Antes de importacoes, migracoes ou mudancas grandes, baixe um backup completo. Ele representa a copia atual carregada neste painel e serve como ponto de seguranca para conferencia.
+          Antes de importações, migrações ou mudanças grandes, baixe um backup completo. Ele representa a cópia atual carregada neste painel e serve como ponto de segurança para conferência.
         </p>
         <div className="backup-box">
           <strong>Cobertura do backup</strong>
           <span>100%</span>
           <small>
-            {data.members.length} membros, {monthlyBirthdays.length} aniversariantes no mes, {data.kids.length} criancas no Kids,{" "}
-            {data.visitors.length} visitantes, {monthlyKidsBirthdays.length} aniversariantes Kids no mes,{" "}
+            {data.members.length} membros, {monthlyBirthdays.length} aniversariantes no mês, {data.kids.length} crianças no Kids,{" "}
+            {data.visitors.length} visitantes, {monthlyKidsBirthdays.length} aniversariantes Kids no mês,{" "}
             {data.users.length} usuarios, {data.careRequests.length} atendimentos, {data.events.length} eventos, {data.schoolClasses.length} classes EBD,{" "}
             {data.discipleshipClasses.length} classes Discipulado, {activeNotices.length} comunicados ativos, {data.mural.length} itens de mural,{" "}
-            {data.transactions.length} lancamentos financeiros, {data.assets.length} itens de patrimonio, {data.devotionals.length} devocionais e{" "}
+            {data.transactions.length} lançamentos financeiros, {data.assets.length} itens de patrimônio, {data.devotionals.length} devocionais e{" "}
             {data.audit.length} auditorias.
           </small>
         </div>
@@ -137,7 +137,7 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
             Baixar backup completo
           </button>
           <button className="secondary" onClick={() => log("Backup conferido antes de alteracao grande")} type="button">
-            Registrar conferencia
+            Registrar conferência
           </button>
           <button className="secondary" onClick={resetLocalData} type="button">
             Restaurar dados exemplo
@@ -163,10 +163,10 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
         <div className="filter-bar">
           <label>
             Buscar
-            <input placeholder="Acao, modulo ou data" value={auditSearch} onChange={(event) => setAuditSearch(event.target.value)} />
+            <input placeholder="Ação, módulo ou data" value={auditSearch} onChange={(event) => setAuditSearch(event.target.value)} />
           </label>
           <label>
-            Modulo
+            Módulo
             <select value={auditModule} onChange={(event) => setAuditModule(event.target.value as AuditModuleFilter)}>
               {auditModuleOptions.map((option) => (
                 <option key={option}>{option}</option>
@@ -174,7 +174,7 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
             </select>
           </label>
           <label>
-            Periodo
+            Período
             <select value={auditPeriod} onChange={(event) => setAuditPeriod(event.target.value as AuditPeriodFilter)}>
               {auditPeriodOptions.map((option) => (
                 <option key={option}>{option}</option>

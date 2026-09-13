@@ -29,7 +29,7 @@ function nextStatus(status: CareStatus): CareStatus {
 }
 
 function suggestedNextStep(request: CareRequest) {
-  if (request.status === "Pendente") return "Definir responsavel";
+  if (request.status === "Pendente") return "Definir responsável";
   if (request.status === "Em analise") return "Agendar conversa";
   if (request.status === "Agendado") return request.scheduleDate ? `Atendimento em ${request.scheduleDate}` : "Confirmar data";
   return "Registrar encerramento";
@@ -64,7 +64,7 @@ export function PastoralPanel({
     <section className="pastoral-layout">
       <article className="surface">
         <div className="panel-heading">
-          <h2>{canManagePastoral ? "Novo pedido pastoral" : "Solicitar atendimento ou oracao"}</h2>
+        <h2>{canManagePastoral ? "Novo pedido pastoral" : "Solicitar atendimento ou oração"}</h2>
           <span>{canManagePastoral ? "Fluxo real" : "Pedido pessoal"}</span>
         </div>
         <div className="form-grid" data-current-member-tab={memberFormTab}>
@@ -91,15 +91,15 @@ export function PastoralPanel({
             <select onChange={(event) => setCareForm((form) => ({ ...form, category: event.target.value }))} value={careForm.category}>
               <option>Aconselhamento</option>
               <option>Pedido de visita</option>
-              <option>Oracao</option>
-              <option>Familia</option>
+              <option>Oração</option>
+              <option>Família</option>
               <option>Urgente</option>
             </select>
           </label>
           <label>
-            Escolher responsavel
+            Escolher responsável
             <select onChange={(event) => setCareForm((form) => ({ ...form, responsible: event.target.value }))} value={careForm.responsible}>
-              <option value="">Sem preferencia / Secretaria encaminha</option>
+              <option value="">Sem preferência / Secretaria encaminha</option>
               {optionsWithCurrent(careForm.responsible).map((responsible) => (
                 <option key={responsible} value={responsible}>
                   {responsible}
@@ -108,7 +108,7 @@ export function PastoralPanel({
             </select>
           </label>
           <label className="full">
-            Descricao do pedido
+            Descrição do pedido
             <textarea onChange={(event) => setCareForm((form) => ({ ...form, summary: event.target.value }))} placeholder="Escreva o motivo do atendimento" value={careForm.summary} />
           </label>
           <button className="primary-action" onClick={createCareRequest} type="button">
@@ -141,7 +141,7 @@ export function PastoralPanel({
               <button className="care-list-main" onClick={() => setSelectedRequestId(request.id)} type="button">
                 <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>{request.status}</span>
                 <strong>{request.member}</strong>
-                <small>{request.responsible || "Sem responsavel definido"}</small>
+                <small>{request.responsible || "Sem responsável definido"}</small>
                 <small>{suggestedNextStep(request)}</small>
               </button>
               {canManagePastoral && (
@@ -176,35 +176,35 @@ export function PastoralPanel({
           </div>
           <div className="detail-grid">
             <label>
-              Responsavel
-              <select onChange={(event) => updateCareRequest(selectedRequest.id, { responsible: event.target.value }, "Responsavel pastoral atualizado")} value={selectedRequest.responsible}>
-                <option value="">Sem preferencia / Secretaria encaminha</option>
+              Responsável
+              <select onChange={(event) => updateCareRequest(selectedRequest.id, { responsible: event.target.value }, "Responsável pastoral atualizado")} value={selectedRequest.responsible}>
+                <option value="">Sem preferência / Secretaria encaminha</option>
                 {optionsWithCurrent(selectedRequest.responsible).map((responsible) => (
                   <option key={responsible} value={responsible}>
                     {responsible}
                   </option>
                 ))}
               </select>
-              <input onChange={(event) => updateCareRequest(selectedRequest.id, { responsible: event.target.value }, "Responsavel pastoral atualizado")} placeholder="Ou digite outro responsavel" value={selectedRequest.responsible} />
+              <input onChange={(event) => updateCareRequest(selectedRequest.id, { responsible: event.target.value }, "Responsável pastoral atualizado")} placeholder="Ou digite outro responsável" value={selectedRequest.responsible} />
             </label>
             <label>
               Data
               <input onChange={(event) => updateCareRequest(selectedRequest.id, { scheduleDate: event.target.value }, "Data do atendimento atualizada")} type="date" value={selectedRequest.scheduleDate} />
             </label>
             <label>
-              Horario
-              <input onChange={(event) => updateCareRequest(selectedRequest.id, { scheduleTime: event.target.value }, "Horario do atendimento atualizado")} type="time" value={selectedRequest.scheduleTime} />
+              Horário
+              <input onChange={(event) => updateCareRequest(selectedRequest.id, { scheduleTime: event.target.value }, "Horário do atendimento atualizado")} type="time" value={selectedRequest.scheduleTime} />
             </label>
             <label className="full">
               Retorno e encaminhamento
-              <textarea onChange={(event) => updateCareRequest(selectedRequest.id, { returnNote: event.target.value }, "Retorno pastoral registrado")} placeholder="Registre conversa, retorno, decisao e proximo passo" value={selectedRequest.returnNote} />
+              <textarea onChange={(event) => updateCareRequest(selectedRequest.id, { returnNote: event.target.value }, "Retorno pastoral registrado")} placeholder="Registre conversa, retorno, decisão e próximo passo" value={selectedRequest.returnNote} />
             </label>
           </div>
           <div className="detail-actions">
             <button onClick={() => updateCareRequest(selectedRequest.id, { status: nextStatus(selectedRequest.status) }, `Status alterado para ${nextStatus(selectedRequest.status)}`)} type="button">
-              Avancar etapa
+              Avançar etapa
             </button>
-            <button className="secondary" onClick={() => updateCareRequest(selectedRequest.id, { status: "Concluido" }, "Atendimento pastoral concluido")} type="button">
+            <button className="secondary" onClick={() => updateCareRequest(selectedRequest.id, { status: "Concluido" }, "Atendimento pastoral concluído")} type="button">
               Concluir
             </button>
           </div>

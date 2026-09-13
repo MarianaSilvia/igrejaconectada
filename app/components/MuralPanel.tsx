@@ -160,7 +160,7 @@ export function MuralPanel({
                   <small>
                     Evento - {event.time || "Sem horario"} - {event.ministry} - {event.status}
                   </small>
-                  <small>{event.location || "Local nao informado"} - {event.responsible || "Sem responsavel"}</small>
+                  <small>{event.location || "Local não informado"} - {event.responsible || "Sem responsável"}</small>
                 </div>
               </div>
             ))}

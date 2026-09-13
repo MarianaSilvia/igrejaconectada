@@ -43,18 +43,18 @@ export function KidsPanel({
         <article className="surface">
           <div className="panel-heading">
             <h2>Cadastro Kids</h2>
-            <span>Crianca e responsavel</span>
+            <span>Criança e responsável</span>
           </div>
           <div className="form-grid">
             <div className="photo-uploader full">
               <div className="photo-preview kids-preview">{kidForm.photoDataUrl ? <ResponsiveImage sizes="76px" src={kidForm.photoDataUrl} /> : <span>Kids</span>}</div>
               <label>
-                Foto da crianca
+                Foto da criança
                 <input accept="image/*" onChange={(event) => readPhoto(event, (photoDataUrl) => setKidForm((form) => ({ ...form, photoDataUrl })))} type="file" />
               </label>
             </div>
             <label className="full">
-              Nome da crianca
+              Nome da criança
               <input onChange={(event) => setKidForm((form) => ({ ...form, childName: event.target.value }))} placeholder="Ex.: Julia Santos" value={kidForm.childName} />
             </label>
             <label>
@@ -64,7 +64,7 @@ export function KidsPanel({
             <label>
               Faixa
               <select onChange={(event) => setKidForm((form) => ({ ...form, ageGroup: event.target.value as KidRecord["ageGroup"] }))} value={kidForm.ageGroup}>
-                <option>Bercario</option>
+                <option>Berçário</option>
                 <option>Maternal</option>
                 <option>Kids</option>
                 <option>Juniores</option>
@@ -80,35 +80,35 @@ export function KidsPanel({
             </label>
             <label className="full">
               Alergias ou cuidados
-              <input onChange={(event) => setKidForm((form) => ({ ...form, allergies: event.target.value }))} placeholder="Ex.: alergia alimentar, medicamento, observacao medica" value={kidForm.allergies} />
+              <input onChange={(event) => setKidForm((form) => ({ ...form, allergies: event.target.value }))} placeholder="Ex.: alergia alimentar, medicamento, observação médica" value={kidForm.allergies} />
             </label>
             <label>
-              Responsavel
-              <input onChange={(event) => setKidForm((form) => ({ ...form, guardianName: event.target.value }))} placeholder="Nome do responsavel" value={kidForm.guardianName} />
+              Responsável
+              <input onChange={(event) => setKidForm((form) => ({ ...form, guardianName: event.target.value }))} placeholder="Nome do responsável" value={kidForm.guardianName} />
             </label>
             <label>
               Parentesco
-              <input onChange={(event) => setKidForm((form) => ({ ...form, relationship: event.target.value }))} placeholder="Mae, pai, avo, tutor" value={kidForm.relationship} />
+              <input onChange={(event) => setKidForm((form) => ({ ...form, relationship: event.target.value }))} placeholder="Mãe, pai, avó, tutor" value={kidForm.relationship} />
             </label>
             <label>
-              Telefone do responsavel
+              Telefone do responsável
               <input onChange={(event) => setKidForm((form) => ({ ...form, guardianPhone: event.target.value }))} placeholder="(00) 00000-0000" value={kidForm.guardianPhone} />
             </label>
             <label>
-              E-mail do responsavel
+              E-mail do responsável
               <input onChange={(event) => setKidForm((form) => ({ ...form, guardianEmail: event.target.value }))} placeholder="responsavel@email.com" type="email" value={kidForm.guardianEmail} />
             </label>
             <label className="full">
               Pessoas autorizadas a buscar
-              <input onChange={(event) => setKidForm((form) => ({ ...form, authorizedPickup: event.target.value }))} placeholder="Informe quem pode retirar a crianca" value={kidForm.authorizedPickup} />
+              <input onChange={(event) => setKidForm((form) => ({ ...form, authorizedPickup: event.target.value }))} placeholder="Informe quem pode retirar a criança" value={kidForm.authorizedPickup} />
             </label>
             <label className="check-card full">
               <input checked={kidForm.consentImage} onChange={(event) => setKidForm((form) => ({ ...form, consentImage: event.target.checked }))} type="checkbox" />
-              Responsavel autorizou uso de imagem
+              Responsável autorizou uso de imagem
             </label>
             <label className="full">
-              Observacoes
-              <textarea onChange={(event) => setKidForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Rotina, restricoes, acompanhamento ou informacoes para professores" value={kidForm.notes} />
+              Observações
+              <textarea onChange={(event) => setKidForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Rotina, restrições, acompanhamento ou informações para professores" value={kidForm.notes} />
             </label>
             <button className="primary-action" disabled={!canCreateKid} onClick={createKid} type="button">
               Salvar Kids
@@ -119,9 +119,9 @@ export function KidsPanel({
 
       <article className="surface">
         <div className="panel-heading">
-          <h2>{canManageKids ? "Kids cadastrados" : "Area Kids vinculada"}</h2>
+          <h2>{canManageKids ? "Kids cadastrados" : "Área Kids vinculada"}</h2>
           <span>
-            {filteredKids.length} crianca{filteredKids.length === 1 ? "" : "s"}
+            {filteredKids.length} criança{filteredKids.length === 1 ? "" : "s"}
           </span>
         </div>
         {canManageKids && (
@@ -140,14 +140,14 @@ export function KidsPanel({
         {canManageKids && (
           <div className="birthday-grid">
             <div className="birthday-card kids-birthday">
-              <strong>Aniversariantes Kids do mes</strong>
+              <strong>Aniversariantes Kids do mês</strong>
               <span>{monthlyKidsBirthdays.length}</span>
               <small>
-                {monthlyKidsBirthdays.length ? monthlyKidsBirthdays.map((kid) => `${kid.childName} (${birthdayLabel(kid.birthDate)})`).join(", ") : "Nenhum aniversario Kids neste mes."}
+                {monthlyKidsBirthdays.length ? monthlyKidsBirthdays.map((kid) => `${kid.childName} (${birthdayLabel(kid.birthDate)})`).join(", ") : "Nenhum aniversário Kids neste mês."}
               </small>
             </div>
             <div className="birthday-card kids-birthday">
-              <strong>Responsaveis</strong>
+              <strong>Responsáveis</strong>
               <span>{guardianCount}</span>
               <small>Contatos para check-in, retirada e avisos do departamento.</small>
             </div>
@@ -161,10 +161,10 @@ export function KidsPanel({
                 <div>
                   <strong>{kid.childName}</strong>
                   <small>
-                    {kid.ageGroup} - {kid.className || "Turma nao informada"} - Aniv. {birthdayLabel(kid.birthDate)}
+                    {kid.ageGroup} - {kid.className || "Turma não informada"} - Aniv. {birthdayLabel(kid.birthDate)}
                   </small>
                   <small>
-                    Resp. {kid.guardianName} - {kid.guardianPhone} - Retirada: {kid.authorizedPickup || "nao informada"}
+                    Resp. {kid.guardianName} - {kid.guardianPhone} - Retirada: {kid.authorizedPickup || "não informada"}
                   </small>
                 </div>
               </div>

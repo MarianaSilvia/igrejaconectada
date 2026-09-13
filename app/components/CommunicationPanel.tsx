@@ -59,12 +59,12 @@ export function CommunicationPanel({
     <section className="content-grid">
       <article className="surface">
         <div className="panel-heading">
-          <h2>Comunicacao por WhatsApp</h2>
+          <h2>Comunicação por WhatsApp</h2>
           <span>{messageRecipients.length} contatos</span>
         </div>
         <div className="form-grid">
           <label>
-            Publico
+            Público
             <select
               onChange={(event) => {
                 setMessageAudience(event.target.value as MessageAudience);
@@ -119,12 +119,12 @@ export function CommunicationPanel({
             />
           </label>
           <div className="message-preview full">
-            <strong>Previa individual</strong>
+            <strong>Prévia individual</strong>
             <small>
               {selectedMessageRecipients.length} selecionado{selectedMessageRecipients.length === 1 ? "" : "s"} de {messageRecipients.length} contato
               {messageRecipients.length === 1 ? "" : "s"}
             </small>
-            <span>{selectedMessageRecipients[0] ? messageFor(messageText, selectedMessageRecipients[0].name) : "Nenhum contato encontrado para este publico."}</span>
+            <span>{selectedMessageRecipients[0] ? messageFor(messageText, selectedMessageRecipients[0].name) : "Nenhum contato encontrado para este público."}</span>
           </div>
           <div className="form-actions full">
             <button className="primary-action" disabled={!selectedMessageRecipients.length || !messageText.trim()} onClick={openBulkWhatsapp} type="button">
@@ -153,14 +153,14 @@ export function CommunicationPanel({
           <h2>Lista de envio</h2>
           <span>{selectedMessageRecipients.length} no lote atual</span>
         </div>
-        <p className="body-copy">O WhatsApp pode bloquear muitas abas ao mesmo tempo. Se necessario, envie pela lista individual abaixo.</p>
+        <p className="body-copy">O WhatsApp pode bloquear muitas abas ao mesmo tempo. Se necessário, envie pela lista individual abaixo.</p>
         <div className="row-list">
           {messageRecipients.length === 0 ? (
             <div className="data-row">
               <span className="bullet-mark" />
               <div>
                 <strong>Nenhum contato encontrado</strong>
-                <small>Cadastre telefone nos membros, professores, grupos ou responsaveis Kids.</small>
+                <small>Cadastre telefone nos membros, professores, grupos ou responsáveis Kids.</small>
               </div>
             </div>
           ) : (
@@ -192,7 +192,7 @@ export function CommunicationPanel({
 
       <article className="surface">
         <div className="panel-heading">
-          <h2>Historico de campanhas</h2>
+          <h2>Histórico de campanhas</h2>
           <span>{data.messageCampaigns.length} registros</span>
         </div>
         <div className="row-list">

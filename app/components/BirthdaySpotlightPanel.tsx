@@ -13,8 +13,8 @@ export function BirthdaySpotlightPanel({ canSendMessages, monthlyBirthdays, onOp
     <article className="surface birthday-spotlight wide">
       <div className="panel-heading">
         <div>
-          <h2>Aniversariantes do mes</h2>
-          <span>{monthlyBirthdays.length ? `${monthlyBirthdays.length} pessoas para celebrar` : "Nenhum aniversario neste mes"}</span>
+          <h2>Aniversariantes do mês</h2>
+          <span>{monthlyBirthdays.length ? `${monthlyBirthdays.length} pessoas para celebrar` : "Nenhum aniversário neste mês"}</span>
         </div>
         {canSendMessages && (
           <button onClick={onOpenMessages} type="button">
@@ -37,7 +37,7 @@ export function BirthdaySpotlightPanel({ canSendMessages, monthlyBirthdays, onOp
           ))}
         </div>
       ) : (
-        <p className="empty-state">Assim que houver aniversariantes cadastrados neste mes, eles aparecem aqui com nome em destaque.</p>
+        <p className="empty-state">Assim que houver aniversariantes cadastrados neste mês, eles aparecem aqui com nome em destaque.</p>
       )}
     </article>
   );

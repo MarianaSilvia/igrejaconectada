@@ -66,7 +66,7 @@ export default function PublicRegistrationPage() {
 
     if (!response.ok) {
       setStatus("error");
-      setMessage(result.error ?? "Nao foi possivel enviar o cadastro.");
+      setMessage(result.error ?? "Não foi possível enviar o cadastro.");
       return;
     }
 
@@ -85,7 +85,7 @@ export default function PublicRegistrationPage() {
         <div>
           <p className="access-kicker">Cadastro online</p>
           <h1>Envie seus dados para a secretaria.</h1>
-          <p>Preencha a ficha com calma. O envio nao cria login no sistema; a equipe da igreja confere os dados depois.</p>
+          <p>Preencha a ficha com calma. O envio não cria login no sistema; a equipe da igreja confere os dados depois.</p>
         </div>
       </section>
 

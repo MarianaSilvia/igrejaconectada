@@ -18,15 +18,15 @@ type GroupsPanelProps = {
 const defaultGroupNames = [
   "Louvor",
   "Jovens",
-  "Intercessao",
-  "Recepcao",
+  "Intercessão",
+  "Recepção",
   "Kids",
   "Senhoras",
   "Obreiros",
   "Evangelismo",
   "Ensino/EBD",
   "Discipulado",
-  "Midia",
+  "Mídia",
   "Diaconato",
 ];
 
@@ -68,10 +68,10 @@ export function GroupsPanel({
             </select>
           </label>
           <label>
-            Lider
+            Líder
             <input
               onChange={(event) => setMinistryForm((form) => ({ ...form, leader: event.target.value }))}
-              placeholder="Nome do lider"
+              placeholder="Nome do líder"
               value={ministryForm.leader}
             />
           </label>
@@ -84,7 +84,7 @@ export function GroupsPanel({
             />
           </label>
           <label>
-            Dia de reuniao
+            Dia de reunião
             <input
               onChange={(event) => setMinistryForm((form) => ({ ...form, meetingDay: event.target.value }))}
               placeholder="Ex.: Quinta-feira"
@@ -92,7 +92,7 @@ export function GroupsPanel({
             />
           </label>
           <label>
-            Voluntarios
+            Voluntários
             <input
               min={0}
               onChange={(event) => setMinistryForm((form) => ({ ...form, volunteers: Number(event.target.value) }))}
@@ -107,15 +107,15 @@ export function GroupsPanel({
               value={ministryForm.status}
             >
               <option>Ativo</option>
-              <option>Em formacao</option>
+              <option value="Em formacao">Em formação</option>
               <option>Pausado</option>
             </select>
           </label>
           <label className="full">
-            Observacoes
+            Observações
             <textarea
               onChange={(event) => setMinistryForm((form) => ({ ...form, notes: event.target.value }))}
-              placeholder="Necessidades, atividades ou observacoes"
+              placeholder="Necessidades, atividades ou observações"
               value={ministryForm.notes}
             />
           </label>
@@ -145,10 +145,10 @@ export function GroupsPanel({
                 <div>
                   <strong>{ministry.name}</strong>
                   <small>
-                    {ministry.status} - Lider: {ministry.leader}
+                    {ministry.status} - Líder: {ministry.leader}
                     {ministry.assistant ? ` - Auxiliar: ${ministry.assistant}` : ""}
                   </small>
-                  <small>{ministry.meetingDay || "Reuniao nao definida"} - {ministry.notes || "Sem observacoes"}</small>
+                  <small>{ministry.meetingDay || "Reunião não definida"} - {ministry.notes || "Sem observações"}</small>
                 </div>
               </div>
               <div className="record-actions">

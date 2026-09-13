@@ -65,7 +65,7 @@ export function VisitorsPanel({
           <div className="form-grid">
             <label className="full">
               Nome completo
-              <input onChange={(event) => setVisitorForm((form) => ({ ...form, fullName: event.target.value }))} placeholder="Ex.: Joao Pereira" value={visitorForm.fullName} />
+              <input onChange={(event) => setVisitorForm((form) => ({ ...form, fullName: event.target.value }))} placeholder="Ex.: João Pereira" value={visitorForm.fullName} />
             </label>
             <label>
               WhatsApp
@@ -84,7 +84,7 @@ export function VisitorsPanel({
               <input onChange={(event) => setVisitorForm((form) => ({ ...form, invitedBy: event.target.value }))} placeholder="Nome, grupo ou evento" value={visitorForm.invitedBy} />
             </label>
             <label>
-              Integracao
+              Integração
               <select onChange={(event) => setVisitorForm((form) => ({ ...form, integrationStatus: event.target.value as VisitorRecord["integrationStatus"] }))} value={visitorForm.integrationStatus}>
                 <option>Primeira visita</option>
                 <option>Retornou</option>
@@ -97,8 +97,8 @@ export function VisitorsPanel({
               Contato feito
             </label>
             <label className="full">
-              Observacoes
-              <textarea onChange={(event) => setVisitorForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Primeira impressao, necessidade pastoral, retorno ou decisao" value={visitorForm.notes} />
+              Observações
+              <textarea onChange={(event) => setVisitorForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Primeira impressão, necessidade pastoral, retorno ou decisão" value={visitorForm.notes} />
             </label>
             <div className="form-actions full">
               <button className="primary-action" disabled={!canCreateVisitor} onClick={createVisitor} type="button">
@@ -165,7 +165,7 @@ export function VisitorsPanel({
                 <small>
                   {visitor.integrationStatus} - {visitor.contactMade ? "contato feito" : "contato pendente"} - {visitor.phone}
                 </small>
-                <small>Convidado por: {visitor.invitedBy || "Nao informado"}</small>
+                <small>Convidado por: {visitor.invitedBy || "Não informado"}</small>
                 {visitor.notes && <small>{visitor.notes}</small>}
               </div>
               <div className="row-actions">

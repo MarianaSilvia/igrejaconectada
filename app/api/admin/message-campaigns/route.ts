@@ -64,14 +64,14 @@ export async function POST(request: Request) {
   });
 
   if (campaignError) {
-    return NextResponse.json({ error: "Nao foi possivel registrar a campanha." }, { status: 400 });
+    return NextResponse.json({ error: "Não foi possível registrar a campanha." }, { status: 400 });
   }
 
   const { error: recipientsError } = await client.from("message_recipients").insert(
     recipients.map((recipient) => ({
       id: `recipient-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       campaign_id: campaignId,
-      recipient_type: audience === "Responsaveis Kids" ? "kid_guardian" : "member",
+      recipient_type: audience === "Responsáveis Kids" ? "kid_guardian" : "member",
       recipient_id: recipient.id,
       recipient_name: recipient.name,
       phone: recipient.phone,
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
   );
 
   if (recipientsError) {
-    return NextResponse.json({ error: "Campanha criada, mas destinatarios nao foram registrados." }, { status: 400 });
+    return NextResponse.json({ error: "Campanha criada, mas destinatários não foram registrados." }, { status: 400 });
   }
 
   return NextResponse.json({ id: campaignId, recipientCount: recipients.length });

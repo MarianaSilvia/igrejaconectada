@@ -26,25 +26,25 @@ async function notificationSupport() {
 
 export function PushNotificationControl() {
   const [status, setStatus] = useState<PushStatus>("checking");
-  const [message, setMessage] = useState("Conferindo notificacoes...");
+  const [message, setMessage] = useState("Conferindo notificações...");
 
   const refreshStatus = useCallback(async () => {
     if (!(await notificationSupport())) {
       setStatus("unsupported");
-      setMessage("Este aparelho nao permite notificacoes em segundo plano. Voce ainda vera os avisos dentro do app.");
+      setMessage("Este aparelho não permite notificações em segundo plano. Você ainda verá os avisos dentro do app.");
       return;
     }
 
     if (Notification.permission === "denied") {
       setStatus("denied");
-      setMessage("Notificacoes bloqueadas no navegador. Libere nas configuracoes do aparelho para receber avisos.");
+      setMessage("Notificações bloqueadas no navegador. Libere nas configurações do aparelho para receber avisos.");
       return;
     }
 
     const token = await currentToken();
     if (!token) {
       setStatus("disabled");
-      setMessage("Entre no sistema para ativar notificacoes neste aparelho.");
+      setMessage("Entre no sistema para ativar notificações neste aparelho.");
       return;
     }
 
@@ -55,14 +55,14 @@ export function PushNotificationControl() {
 
     if (!result.configured) {
       setStatus("missing-config");
-      setMessage("Notificacoes push ainda precisam das chaves VAPID no servidor.");
+      setMessage("Notificações push ainda precisam das chaves VAPID no servidor.");
       return;
     }
 
     setStatus(result.enabled ? "enabled" : "disabled");
     setMessage(
       result.enabled
-        ? "Notificacoes ativas. Som e vibracao dependem das permissoes e configuracoes do seu aparelho."
+        ? "Notificações ativas. Som e vibração dependem das permissões e configurações do seu aparelho."
         : "Ative para receber avisos importantes no celular ou navegador.",
     );
   }, []);
@@ -80,7 +80,7 @@ export function PushNotificationControl() {
   async function enableNotifications() {
     if (!(await notificationSupport())) {
       setStatus("unsupported");
-      setMessage("Este aparelho nao permite notificacoes em segundo plano. Voce ainda vera os avisos dentro do app.");
+      setMessage("Este aparelho não permite notificações em segundo plano. Você ainda verá os avisos dentro do app.");
       return;
     }
 
@@ -88,14 +88,14 @@ export function PushNotificationControl() {
     const keyResult = (await keyResponse.json().catch(() => ({}))) as { configured?: boolean; publicKey?: string };
     if (!keyResult.configured || !keyResult.publicKey) {
       setStatus("missing-config");
-      setMessage("Notificacoes push ainda precisam das chaves VAPID no servidor.");
+      setMessage("Notificações push ainda precisam das chaves VAPID no servidor.");
       return;
     }
 
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
       setStatus(permission === "denied" ? "denied" : "disabled");
-      setMessage("Permissao nao concedida. Voce ainda vera os avisos dentro do app.");
+      setMessage("Permissão não concedida. Você ainda verá os avisos dentro do app.");
       return;
     }
 
@@ -111,7 +111,7 @@ export function PushNotificationControl() {
 
     if (!token) {
       setStatus("error");
-      setMessage("Sessao expirada. Entre novamente para ativar notificacoes.");
+      setMessage("Sessão expirada. Entre novamente para ativar notificações.");
       return;
     }
 
@@ -124,12 +124,12 @@ export function PushNotificationControl() {
 
     if (!response.ok) {
       setStatus("error");
-      setMessage(result.error ?? "Nao foi possivel ativar notificacoes neste aparelho.");
+      setMessage(result.error ?? "Não foi possível ativar notificações neste aparelho.");
       return;
     }
 
     setStatus("enabled");
-    setMessage("Notificacoes ativas. Som e vibracao dependem das permissoes e configuracoes do seu aparelho.");
+    setMessage("Notificações ativas. Som e vibração dependem das permissões e configurações do seu aparelho.");
   }
 
   async function sendTestNotification() {
@@ -140,13 +140,13 @@ export function PushNotificationControl() {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
-    setMessage(response.ok ? "Teste enviado. Confira a notificacao do aparelho." : "Nao foi possivel enviar o teste agora.");
+    setMessage(response.ok ? "Teste enviado. Confira a notificação do aparelho." : "Não foi possível enviar o teste agora.");
   }
 
   return (
     <div className={`push-control ${status}`}>
       <button disabled={status === "checking" || status === "unsupported" || status === "denied"} onClick={enableNotifications} type="button">
-        {status === "enabled" ? "Notificacoes ativas" : "Ativar notificacoes"}
+        {status === "enabled" ? "Notificações ativas" : "Ativar notificações"}
       </button>
       {status === "enabled" && (
         <button className="secondary" onClick={sendTestNotification} type="button">

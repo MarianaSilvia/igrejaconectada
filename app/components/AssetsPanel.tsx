@@ -41,7 +41,7 @@ export function AssetsPanel({
       {canManageAssets && (
         <article className={editingAssetId ? "surface editing-surface" : "surface"}>
           <div className="panel-heading">
-            <h2>{editingAssetId ? "Editar patrimonio" : "Novo patrimonio"}</h2>
+            <h2>{editingAssetId ? "Editar patrimônio" : "Novo patrimônio"}</h2>
             <span>Equipamentos e bens</span>
           </div>
           <div className="form-grid">
@@ -51,14 +51,14 @@ export function AssetsPanel({
             </label>
             <label>
               Categoria
-              <input onChange={(event) => setAssetForm((form) => ({ ...form, category: event.target.value }))} placeholder="Som, musica, moveis" value={assetForm.category} />
+              <input onChange={(event) => setAssetForm((form) => ({ ...form, category: event.target.value }))} placeholder="Som, música, móveis" value={assetForm.category} />
             </label>
             <label>
               Local
               <input onChange={(event) => setAssetForm((form) => ({ ...form, location: event.target.value }))} placeholder="Templo, sala Kids, secretaria" value={assetForm.location} />
             </label>
             <label>
-              Responsavel
+              Responsável
               <input onChange={(event) => setAssetForm((form) => ({ ...form, responsible: event.target.value }))} placeholder="Pessoa ou equipe" value={assetForm.responsible} />
             </label>
             <label>
@@ -66,21 +66,21 @@ export function AssetsPanel({
               <select onChange={(event) => setAssetForm((form) => ({ ...form, condition: event.target.value as AssetRecord["condition"] }))} value={assetForm.condition}>
                 <option>Novo</option>
                 <option>Bom</option>
-                <option>Manutencao</option>
+                <option value="Manutencao">Manutenção</option>
                 <option>Baixado</option>
               </select>
             </label>
             <label>
-              Ultima manutencao
+              Última manutenção
               <input onChange={(event) => setAssetForm((form) => ({ ...form, lastMaintenance: event.target.value }))} type="date" value={assetForm.lastMaintenance} />
             </label>
             <label className="full">
-              Observacoes
-              <textarea onChange={(event) => setAssetForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Estado de conservacao, manutencao, compra ou observacao" value={assetForm.notes} />
+              Observações
+              <textarea onChange={(event) => setAssetForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Estado de conservação, manutenção, compra ou observação" value={assetForm.notes} />
             </label>
             <div className="form-actions full">
               <button className="primary-action" disabled={!canCreateAsset} onClick={createAsset} type="button">
-                {editingAssetId ? "Atualizar patrimonio" : "Salvar patrimonio"}
+                {editingAssetId ? "Atualizar patrimônio" : "Salvar patrimônio"}
               </button>
               {editingAssetId && (
                 <button className="secondary" onClick={() => { setAssetForm(blankAsset); setEditingAssetId(null); }} type="button">
@@ -94,7 +94,7 @@ export function AssetsPanel({
 
       <article className="surface wide">
         <div className="panel-heading">
-          <h2>Patrimonio cadastrado</h2>
+          <h2>Patrimônio cadastrado</h2>
           <span>{filteredAssets.length} itens</span>
         </div>
         <div className="filter-bar">
@@ -104,7 +104,7 @@ export function AssetsPanel({
               <option>Todos</option>
               <option>Novo</option>
               <option>Bom</option>
-              <option>Manutencao</option>
+              <option value="Manutencao">Manutenção</option>
               <option>Baixado</option>
             </select>
           </label>
@@ -121,8 +121,8 @@ export function AssetsPanel({
               <span className="status-chip">{asset.condition}</span>
               <div>
                 <strong>{asset.name}</strong>
-                <small>{asset.category} - {asset.location || "Sem local"} - {asset.responsible || "Sem responsavel"}</small>
-                <small>{asset.lastMaintenance ? `Manutencao: ${formatDate(asset.lastMaintenance)}` : "Sem manutencao registrada"}</small>
+                <small>{asset.category} - {asset.location || "Sem local"} - {asset.responsible || "Sem responsável"}</small>
+                <small>{asset.lastMaintenance ? `Manutenção: ${formatDate(asset.lastMaintenance)}` : "Sem manutenção registrada"}</small>
                 {asset.notes && <small>{asset.notes}</small>}
               </div>
               {canManageAssets && (
@@ -137,7 +137,7 @@ export function AssetsPanel({
               )}
             </div>
           ))}
-          {!filteredAssets.length && <p className="empty-state">Nenhum item de patrimonio encontrado para este filtro.</p>}
+          {!filteredAssets.length && <p className="empty-state">Nenhum item de patrimônio encontrado para este filtro.</p>}
         </div>
       </article>
     </section>

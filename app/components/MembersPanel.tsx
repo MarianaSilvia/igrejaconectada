@@ -120,7 +120,7 @@ function missingMemberFields(member: Pick<MemberRecord, "birthDate" | "categorie
     !member.birthDate.trim() ? "nascimento" : "",
     !member.categories.trim() ? "categoria" : "",
     !memberGroupNames(member).length ? "grupo" : "",
-    !member.memberCode.trim() ? "codigo" : "",
+    !member.memberCode.trim() ? "código" : "",
   ].filter(Boolean);
 }
 
@@ -210,7 +210,7 @@ export function MembersPanel({
             <span>{canManageMembers ? (editingMemberId ? "Atualizando cadastro" : "Membro ou visitante") : "Meu cadastro"}</span>
           </div>
           <div className="form-grid" data-current-member-tab={memberFormTab}>
-            <div className="member-form-tabs full" role="tablist" aria-label="Secoes do cadastro">
+            <div className="member-form-tabs full" role="tablist" aria-label="Seções do cadastro">
               {availableMemberFormTabs.map((tab) => (
                 <button className={memberFormTab === tab ? "active" : ""} key={tab} onClick={() => setMemberFormTab(tab)} type="button">
                   {tab}
@@ -220,20 +220,20 @@ export function MembersPanel({
             <div className="member-section-banner full">
               <strong>{memberFormTab}</strong>
               <small>
-                {memberFormTab === "Dados" && "Revise nome, filiacao, CPF, contato, nascimento e endereco."}
-                {memberFormTab === "Igreja" && "Revise tipo, status, funcoes, grupo, congregacao, datas espirituais e batismos."}
-                {memberFormTab === "Classes" && "Revise matricula na EBD e no Discipulado."}
-                {memberFormTab === "Observacoes" && "Revise observacoes visiveis ao membro e registros internos."}
-                {memberFormTab === "Acesso" && "O login e senha sao enviados pelo card do membro ja salvo."}
+                {memberFormTab === "Dados" && "Revise nome, filiação, CPF, contato, nascimento e endereço."}
+                {memberFormTab === "Igreja" && "Revise tipo, status, funções, grupo, congregação, datas espirituais e batismos."}
+                {memberFormTab === "Classes" && "Revise matrícula na EBD e no Discipulado."}
+                {memberFormTab === "Observacoes" && "Revise observações visíveis ao membro e registros internos."}
+                {memberFormTab === "Acesso" && "O login e senha são enviados pelo card do membro já salvo."}
               </small>
             </div>
             <div className="member-access-note full" data-member-section="Acesso">
               <strong>Acesso do membro</strong>
-              <small>O login e a senha ficam no card do cadastro ja salvo, com envio pelo WhatsApp e link do sistema.</small>
+              <small>O login e a senha ficam no card do cadastro já salvo, com envio pelo WhatsApp e link do sistema.</small>
             </div>
             {memberDuplicateWarnings.length > 0 && (
               <div className="duplicate-alert full">
-                <strong>Possivel cadastro ja existente</strong>
+                <strong>Possível cadastro já existente</strong>
                 <small>{memberDuplicateWarnings.join(" ")}</small>
                 {memberDuplicateCandidate && (
                   <button className="secondary" onClick={() => editMember(memberDuplicateCandidate)} type="button">
@@ -256,7 +256,7 @@ export function MembersPanel({
                 <label>
                   Foto do membro
                   <input accept="image/*" onChange={(event) => { void uploadMemberPhoto(event); }} type="file" />
-                  <small className="form-hint">A imagem sera reduzida automaticamente e salva fora do cadastro principal.</small>
+                  <small className="form-hint">A imagem será reduzida automaticamente e salva fora do cadastro principal.</small>
                 </label>
                 <label className="check-card compact-check member-photo-consent">
                   <input checked={memberForm.photoConsent} onChange={(event) => setMemberForm((form) => ({ ...form, photoConsent: event.target.checked }))} type="checkbox" />
@@ -274,24 +274,24 @@ export function MembersPanel({
               <input id="member-full-name" onChange={(event) => updateMemberName(event.target.value)} placeholder="Ex.: Maria Oliveira" value={memberForm.fullName} />
             </label>
             <label data-member-section="Dados">
-              Codigo de membro
+              Código de membro
               <input readOnly value={memberForm.memberCode || "Gerado automaticamente ao salvar"} />
-              <small className="form-hint">Sequencia padrao CDG0001, CDG0002, CDG0003...</small>
+              <small className="form-hint">Sequência padrão CDG0001, CDG0002, CDG0003...</small>
             </label>
             <label data-member-section="Dados">
               Data de nascimento
               <input onChange={(event) => updateMemberBirthDate(event.target.value)} type="date" value={memberForm.birthDate} />
-              <small className="form-hint">Ao informar a data, idade e faixa etaria sao preenchidas automaticamente.</small>
+              <small className="form-hint">Ao informar a data, idade e faixa etária são preenchidas automaticamente.</small>
             </label>
             <label data-member-section="Dados">
               Telefones
               <input onChange={(event) => setMemberForm((form) => ({ ...form, phone: event.target.value }))} placeholder="(00) 00000-0000 / (00) 00000-0000" value={memberForm.phone} />
             </label>
             <label data-member-section="Dados">
-              Faixa etaria
+              Faixa etária
               <select onChange={(event) => setMemberForm((form) => ({ ...form, ageGroup: event.target.value }))} value={memberForm.ageGroup}>
-                <option value="">Nao informado</option>
-                <option>Crianca</option>
+                <option value="">Não informado</option>
+                <option>Criança</option>
                 <option>Adolescente</option>
                 <option>Jovem</option>
                 <option>Adulto</option>
@@ -306,14 +306,14 @@ export function MembersPanel({
             <label data-member-section="Dados">
               Sexo
               <select onChange={(event) => setMemberForm((form) => ({ ...form, gender: event.target.value }))} value={memberForm.gender}>
-                <option value="">Nao informado</option>
+                <option value="">Não informado</option>
                 <option>Feminino</option>
                 <option>Masculino</option>
               </select>
             </label>
             <label className="full" data-member-section="Dados">
-              Endereco
-              <input onChange={(event) => setMemberForm((form) => ({ ...form, address: event.target.value }))} placeholder="Rua, numero e complemento" value={memberForm.address} />
+              Endereço
+              <input onChange={(event) => setMemberForm((form) => ({ ...form, address: event.target.value }))} placeholder="Rua, número e complemento" value={memberForm.address} />
             </label>
             <label data-member-section="Dados">
               CEP
@@ -332,8 +332,8 @@ export function MembersPanel({
               <input onChange={(event) => setMemberForm((form) => ({ ...form, fatherName: event.target.value }))} placeholder="Nome completo do pai" value={memberForm.fatherName} />
             </label>
             <label data-member-section="Dados">
-              Nome da mae
-              <input onChange={(event) => setMemberForm((form) => ({ ...form, motherName: event.target.value }))} placeholder="Nome completo da mae" value={memberForm.motherName} />
+              Nome da mãe
+              <input onChange={(event) => setMemberForm((form) => ({ ...form, motherName: event.target.value }))} placeholder="Nome completo da mãe" value={memberForm.motherName} />
             </label>
             <label data-member-section="Dados">
               CPF
@@ -344,26 +344,26 @@ export function MembersPanel({
               <select onChange={(event) => setMemberForm((form) => ({ ...form, maritalStatus: event.target.value }))} value={memberForm.maritalStatus}>
                 <option>Solteiro(a)</option>
                 <option>Casado(a)</option>
-                <option>Viuvo(a)</option>
+                <option>Viúvo(a)</option>
                 <option>Divorciado(a)</option>
               </select>
             </label>
             <label data-member-section="Dados">
               Escolaridade
               <select onChange={(event) => setMemberForm((form) => ({ ...form, education: event.target.value }))} value={memberForm.education}>
-                <option value="">Nao informado</option>
+                <option value="">Não informado</option>
                 <option>Ensino fundamental incompleto</option>
                 <option>Ensino fundamental completo</option>
-                <option>Ensino medio incompleto</option>
-                <option>Ensino medio completo</option>
+                <option>Ensino médio incompleto</option>
+                <option>Ensino médio completo</option>
                 <option>Ensino superior incompleto</option>
                 <option>Ensino superior completo</option>
-                <option>Pos-graduacao</option>
+                <option>Pós-graduação</option>
               </select>
             </label>
             <label data-member-section="Dados">
-              Nome do conjuge
-              <input onChange={(event) => setMemberForm((form) => ({ ...form, spouseName: event.target.value }))} placeholder="Nome completo do conjuge" value={memberForm.spouseName} />
+              Nome do cônjuge
+              <input onChange={(event) => setMemberForm((form) => ({ ...form, spouseName: event.target.value }))} placeholder="Nome completo do cônjuge" value={memberForm.spouseName} />
             </label>
             <label data-member-section="Dados">
               Criado em
@@ -372,7 +372,7 @@ export function MembersPanel({
             <label data-member-section="Dados">
               E-mail
               <input onChange={(event) => setMemberForm((form) => ({ ...form, email: event.target.value }))} placeholder={`nome.sobrenome@${generatedMemberEmailDomain}`} type="email" value={memberForm.email} />
-              <small className="form-hint">Gerado automaticamente pelo nome. Se precisar, voce ainda pode editar manualmente.</small>
+              <small className="form-hint">Gerado automaticamente pelo nome. Se precisar, você ainda pode editar manualmente.</small>
             </label>
             {canManageMembers && (
               <label data-member-section="Igreja">
@@ -417,7 +417,7 @@ export function MembersPanel({
                     </option>
                   ))}
                 </select>
-                <small className="form-hint">No computador, segure Ctrl para marcar mais de uma funcao; no celular, toque nas funcoes desejadas.</small>
+                <small className="form-hint">No computador, segure Ctrl para marcar mais de uma função; no celular, toque nas funções desejadas.</small>
               </label>
             )}
             {canManageMembers && (
@@ -439,7 +439,7 @@ export function MembersPanel({
               <label data-member-section="Igreja">
                 Categorias
                 <select onChange={(event) => setMemberForm((form) => ({ ...form, categories: event.target.value }))} value={memberForm.categories}>
-                  <option value="">Nao informado</option>
+                  <option value="">Não informado</option>
                   <option>Membro</option>
                   <option>Visitante</option>
                   <option>Novo convertido</option>
@@ -463,7 +463,7 @@ export function MembersPanel({
                       </label>
                     );
                   })}
-                  {!groupOptions.length && <small className="form-hint">Cadastre grupos no modulo Grupos para vincular membros.</small>}
+                  {!groupOptions.length && <small className="form-hint">Cadastre grupos no módulo Grupos para vincular membros.</small>}
                 </div>
                 <small className="form-hint">Marque todos os grupos em que este membro participa.</small>
               </div>
@@ -471,7 +471,7 @@ export function MembersPanel({
             <label data-member-section="Classes">
               Classe EBD
               <select onChange={(event) => setMemberForm((form) => ({ ...form, schoolClassId: event.target.value }))} value={memberForm.schoolClassId}>
-                <option value="">Nao matriculado</option>
+                <option value="">Não matriculado</option>
                 {data.schoolClasses.map((schoolClass) => (
                   <option key={schoolClass.id} value={schoolClass.id}>
                     {schoolClass.name}
@@ -482,7 +482,7 @@ export function MembersPanel({
             <label data-member-section="Classes">
               Classe Discipulado
               <select onChange={(event) => setMemberForm((form) => ({ ...form, discipleshipClassId: event.target.value }))} value={memberForm.discipleshipClassId}>
-                <option value="">Nao matriculado</option>
+                <option value="">Não matriculado</option>
                 {data.discipleshipClasses.map((discipleshipClass) => (
                   <option key={discipleshipClass.id} value={discipleshipClass.id}>
                     {discipleshipClass.name}
@@ -491,9 +491,9 @@ export function MembersPanel({
               </select>
             </label>
             <label data-member-section="Igreja">
-              Congregacao
+              Congregação
               <select onChange={(event) => setMemberForm((form) => ({ ...form, congregation: event.target.value }))} value={memberForm.congregation}>
-                <option value="">Selecione a congregacao</option>
+                <option value="">Selecione a congregação</option>
                 <option>sede/Farroupilha</option>
                 <option>Congre.Maringá</option>
                 <option>Congre.Pains</option>
@@ -508,7 +508,7 @@ export function MembersPanel({
               <input onChange={(event) => setMemberForm((form) => ({ ...form, previousChurch: event.target.value }))} placeholder="Opcional" value={memberForm.previousChurch} />
             </label>
             <label data-member-section="Igreja">
-              Data de conversao
+              Data de conversão
               <input onChange={(event) => setMemberForm((form) => ({ ...form, conversionDate: event.target.value }))} type="date" value={memberForm.conversionDate} />
             </label>
             <label data-member-section="Igreja">
@@ -518,10 +518,10 @@ export function MembersPanel({
             <label data-member-section="Igreja">
               Origem do cadastro
               <select onChange={(event) => setMemberForm((form) => ({ ...form, registrationSource: event.target.value }))} value={memberForm.registrationSource}>
-                <option value="">Nao informado</option>
+                <option value="">Não informado</option>
                 <option>Cadastro interno</option>
                 <option>Visita presencial</option>
-                <option>Indicacao</option>
+                <option>Indicação</option>
                 <option>Evento</option>
                 <option>Transferencia</option>
               </select>
@@ -539,21 +539,21 @@ export function MembersPanel({
               </label>
             )}
             <label className="full" data-member-section="Observacoes">
-              Observacao visivel ao membro
-              <textarea onChange={(event) => setMemberForm((form) => ({ ...form, memberVisibleNotes: event.target.value }))} placeholder="Mensagem ou orientacao que o membro pode visualizar" value={memberForm.memberVisibleNotes} />
+              Observação visível ao membro
+              <textarea onChange={(event) => setMemberForm((form) => ({ ...form, memberVisibleNotes: event.target.value }))} placeholder="Mensagem ou orientação que o membro pode visualizar" value={memberForm.memberVisibleNotes} />
             </label>
             <label className="check-card" data-member-section="Igreja">
               <input checked={memberForm.waterBaptized} onChange={(event) => setMemberForm((form) => ({ ...form, waterBaptized: event.target.checked }))} type="checkbox" />
-              Batizado em aguas
+              Batizado em águas
             </label>
             <label className="check-card" data-member-section="Igreja">
               <input checked={memberForm.holySpiritBaptized} onChange={(event) => setMemberForm((form) => ({ ...form, holySpiritBaptized: event.target.checked }))} type="checkbox" />
-              Batizado no Espirito Santo
+              Batizado no Espírito Santo
             </label>
             {canManageMembers && (
               <label className="full" data-member-section="Observacoes">
-                Observacoes internas
-                <textarea onChange={(event) => setMemberForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Historico, acompanhamento, restricoes ou observacoes pastorais" value={memberForm.notes} />
+                Observações internas
+                <textarea onChange={(event) => setMemberForm((form) => ({ ...form, notes: event.target.value }))} placeholder="Histórico, acompanhamento, restrições ou observações pastorais" value={memberForm.notes} />
               </label>
             )}
             <div className="form-actions full">
@@ -572,12 +572,12 @@ export function MembersPanel({
         <article className="surface" id="member-form-panel">
           <div className="panel-heading">
             <h2>Meu cadastro</h2>
-            <span>{currentMember ? "Visualizacao pessoal" : "Nao vinculado"}</span>
+            <span>{currentMember ? "Visualização pessoal" : "Não vinculado"}</span>
           </div>
           <p className="empty-state">
             {currentMember
-              ? "Use o botao Editar ficha no seu cadastro para atualizar seus dados pessoais."
-              : "Nao encontramos uma ficha vinculada a este login. Fale com a secretaria para revisar o acesso."}
+              ? "Use o botão Editar ficha no seu cadastro para atualizar seus dados pessoais."
+              : "Não encontramos uma ficha vinculada a este login. Fale com a secretaria para revisar o acesso."}
           </p>
         </article>
       )}
@@ -663,16 +663,16 @@ export function MembersPanel({
               <small>
                 {weeklyBirthdays.length
                   ? weeklyBirthdays.map((member) => `${member.fullName} (${birthdayLabel(member.birthDate)})`).join(", ")
-                  : "Nenhum aniversario nesta semana."}
+                  : "Nenhum aniversário nesta semana."}
               </small>
             </div>
             <div className="birthday-card">
-              <strong>Aniversariantes do mes</strong>
+              <strong>Aniversariantes do mês</strong>
               <span>{monthlyBirthdays.length}</span>
               <small>
                 {monthlyBirthdays.length
                   ? monthlyBirthdays.map((member) => `${member.fullName} (${birthdayLabel(member.birthDate)})`).join(", ")
-                  : "Nenhum aniversario neste mes."}
+                  : "Nenhum aniversário neste mês."}
               </small>
             </div>
           </div>
@@ -692,46 +692,46 @@ export function MembersPanel({
                   </div>
                   <div>
                     <strong>{member.fullName}</strong>
-                    <small className="member-code-line">Codigo: {member.memberCode || "Aguardando codigo"}</small>
+                    <small className="member-code-line">Código: {member.memberCode || "Aguardando código"}</small>
                     <small>
-                      {member.memberType} - {member.status} - {member.role || "Sem funcao"} - {member.phone}
+                      {member.memberType} - {member.status} - {member.role || "Sem função"} - {member.phone}
                     </small>
                     <small>
-                      CPF: {member.cpf || "Nao informado"} - Sexo: {member.gender || "Nao informado"} - Idade: {member.age || "Nao informada"}
+                      CPF: {member.cpf || "Não informado"} - Sexo: {member.gender || "Não informado"} - Idade: {member.age || "Não informada"}
                     </small>
                     <small>
-                      Faixa etaria: {member.ageGroup || "Nao informada"} - Escolaridade: {member.education || "Nao informada"}
+                      Faixa etária: {member.ageGroup || "Não informada"} - Escolaridade: {member.education || "Não informada"}
                     </small>
                     {(member.fatherName || member.motherName) && (
                       <small>
-                        Filiacao: {member.fatherName || "Pai nao informado"} / {member.motherName || "Mae nao informada"}
+                        Filiação: {member.fatherName || "Pai não informado"} / {member.motherName || "Mãe não informada"}
                       </small>
                     )}
-                    {member.spouseName && <small>Conjuge: {member.spouseName}</small>}
+                    {member.spouseName && <small>Cônjuge: {member.spouseName}</small>}
                     <small>
-                      Endereco: {member.address || "Nao informado"}
+                      Endereço: {member.address || "Não informado"}
                       {member.neighborhood ? ` - ${member.neighborhood}` : ""}
                       {member.city ? ` - ${member.city}` : ""}
                       {member.zipCode ? ` - CEP ${member.zipCode}` : ""}
                     </small>
                     <small>
-                      Grupos: {groupsLabel} - {member.congregation || "Congregacao nao informada"} - Aniv. {birthdayLabel(member.birthDate)}
+                      Grupos: {groupsLabel} - {member.congregation || "Congregação não informada"} - Aniv. {birthdayLabel(member.birthDate)}
                     </small>
                     <small>
                       Função ministerial: {member.ministerialFunction || "Não informada"}
                     </small>
                     <small>
-                      Cargos: {member.role || "Sem cargo"} - Categorias: {member.categories || "Nao informado"}
+                      Cargos: {member.role || "Sem cargo"} - Categorias: {member.categories || "Não informado"}
                     </small>
                     <small>
-                      EBD: {schoolClassName || "Nao matriculado"} - Discipulado: {discipleshipClassName || "Nao matriculado"}
+                      EBD: {schoolClassName || "Não matriculado"} - Discipulado: {discipleshipClassName || "Não matriculado"}
                     </small>
                     <small>
-                      Origem: {member.registrationSource || "Nao informada"} - Situacao: {member.pastoralStatus || "Sem acompanhamento definido"}
+                      Origem: {member.registrationSource || "Não informada"} - Situação: {member.pastoralStatus || "Sem acompanhamento definido"}
                     </small>
                     {(member.conversionDate || member.baptismDate) && (
                       <small>
-                        Conversao: {formatDate(member.conversionDate)} - Batismo: {formatDate(member.baptismDate)}
+                        Conversão: {formatDate(member.conversionDate)} - Batismo: {formatDate(member.baptismDate)}
                       </small>
                     )}
                     {member.createdAt && <small>Criado em: {formatDate(member.createdAt.slice(0, 10))}</small>}
@@ -770,7 +770,7 @@ export function MembersPanel({
                       <label>
                         Senha
                         <input onChange={(event) => setMemberCredentialForm((form) => ({ ...form, password: event.target.value }))} placeholder="123456" type="text" value={memberCredentialForm.password} />
-                        <small className="form-hint">Senha inicial padrao para o primeiro envio.</small>
+                        <small className="form-hint">Senha inicial padrão para o primeiro envio.</small>
                       </label>
                       <button className="primary-action" disabled={!canSaveMemberAccess} onClick={() => { void saveMemberAccess(member); }} type="button">
                         Criar ou atualizar login

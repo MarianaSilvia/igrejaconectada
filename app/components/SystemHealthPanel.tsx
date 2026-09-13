@@ -27,6 +27,12 @@ function saveStateLabel(saveState: SaveState) {
   return "Pronto";
 }
 
+function memberSyncStatusLabel(status?: MemberSyncStatus["status"]) {
+  if (status === "Atencao") return "Atenção";
+  if (status === "Indisponivel") return "Indisponível";
+  return status ?? "Indisponível";
+}
+
 export function SystemHealthPanel({
   agendaCount,
   canReload,
@@ -49,8 +55,8 @@ export function SystemHealthPanel({
     <article className={`surface wide system-health-panel system-health-${saveState}`}>
       <div className="panel-heading">
         <div>
-          <h2>Saude do sistema</h2>
-          <span>{isSupabaseReady ? "Base Supabase ativa" : "Modo local sem sincronizacao"}</span>
+          <h2>Saúde do sistema</h2>
+          <span>{isSupabaseReady ? "Base Supabase ativa" : "Modo local sem sincronização"}</span>
         </div>
         <strong className={`status-chip ${saveState}`}>{saveStateLabel(saveState)}</strong>
       </div>
@@ -74,25 +80,25 @@ export function SystemHealthPanel({
         </div>
         <div>
           <strong>{pendingRegistrationsCount}</strong>
-          <small>Pre-cadastros</small>
+          <small>Pré-cadastros</small>
         </div>
       </div>
 
       {(memberSyncLoading || memberSyncStatus) && (
         <div className={`member-sync-card member-sync-${memberSyncStatus?.status.toLowerCase() ?? "carregando"}`}>
           <div>
-            <strong>Conferencia dos membros</strong>
+            <strong>Conferência dos membros</strong>
             <small>
               {memberSyncLoading
                 ? "Conferindo tabela members..."
-                : `${memberSyncStatus?.status ?? "Indisponivel"} - ${memberSyncStatus?.message ?? "Nao foi possivel conferir agora."}`}
+                : `${memberSyncStatusLabel(memberSyncStatus?.status)} - ${memberSyncStatus?.message ?? "Não foi possível conferir agora."}`}
             </small>
           </div>
           {memberSyncStatus && (
             <div className="member-sync-grid">
               <span>JSON: {memberSyncStatus.jsonTotal}</span>
               <span>Tabela: {memberSyncStatus.tableTotal}</span>
-              <span>Sem codigo: {memberSyncStatus.missingCodeCount}</span>
+              <span>Sem código: {memberSyncStatus.missingCodeCount}</span>
               <span>CPF duplicado: {memberSyncStatus.duplicateCpfCount}</span>
               <span>Telefone duplicado: {memberSyncStatus.duplicatePhoneCount}</span>
               <span>Faltando na tabela: {memberSyncStatus.missingInTableCount}</span>
@@ -110,7 +116,7 @@ export function SystemHealthPanel({
       {pushSummary && (
         <div className={`member-sync-card member-sync-${pushSummary.configured ? "sincronizado" : "atencao"}`}>
           <div>
-            <strong>Notificacoes push</strong>
+            <strong>Notificações push</strong>
             <small>{pushSummary.message}</small>
           </div>
           <div className="member-sync-grid">
@@ -119,7 +125,7 @@ export function SystemHealthPanel({
           </div>
           {onPushSummaryRefresh && (
             <button className="secondary member-sync-action" onClick={onPushSummaryRefresh} type="button">
-              Atualizar notificacoes
+              Atualizar notificações
             </button>
           )}
         </div>
@@ -128,7 +134,7 @@ export function SystemHealthPanel({
       <div className="system-health-footer">
         <div>
           <strong>{syncStatus}</strong>
-          <small>{lastSavedAt ? `Ultimo salvamento confirmado as ${lastSavedAt}.` : "Nenhum salvamento confirmado nesta sessao."}</small>
+          <small>{lastSavedAt ? `Último salvamento confirmado às ${lastSavedAt}.` : "Nenhum salvamento confirmado nesta sessão."}</small>
         </div>
         {canReload && (
           <button className="secondary" onClick={onReload} type="button">

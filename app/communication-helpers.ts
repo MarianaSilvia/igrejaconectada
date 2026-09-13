@@ -39,7 +39,7 @@ export function messageRecipientsForAudience({
       .filter((member) => normalizeWhatsappPhone(member.phone))
       .map((member) => ({ id: member.id, name: member.fullName, phone: member.phone, group: birthdayLabel(member.birthDate) }));
   }
-  if (audience === "Aniversariantes do mes") {
+  if (audience === "Aniversariantes do mês") {
     return monthlyBirthdays
       .filter((member) => normalizeWhatsappPhone(member.phone))
       .map((member) => ({ id: member.id, name: member.fullName, phone: member.phone, group: birthdayLabel(member.birthDate) }));

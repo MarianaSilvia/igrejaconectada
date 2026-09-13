@@ -35,7 +35,7 @@ export const modules: { key: ModuleKey; label: string; short: string }[] = [
   { key: "pastoral", label: "Atendimento pastoral", short: "Pastoral" },
   { key: "school", label: "Escola Biblica", short: "EBD" },
   { key: "discipleship", label: "Discipulado", short: "Discipulado" },
-  { key: "reports", label: "Relatorios", short: "Relatorios" },
+  { key: "reports", label: "Relatórios", short: "Relatórios" },
   { key: "finance", label: "Financeiro", short: "Financeiro" },
   { key: "assets", label: "Patrimonio", short: "Patrimonio" },
   { key: "devotional", label: "Devocional", short: "Palavra" },

@@ -230,12 +230,12 @@ export type KidRecord = {
 export type MessageAudience =
   | "Todos os membros"
   | "Aniversariantes da semana"
-  | "Aniversariantes do mes"
+  | "Aniversariantes do mês"
   | "EBD"
   | "Discipulado"
   | "Grupos"
   | "Visitantes"
-  | "Responsaveis Kids";
+  | "Responsáveis Kids";
 
 export type MessageRecipient = {
   id: string;

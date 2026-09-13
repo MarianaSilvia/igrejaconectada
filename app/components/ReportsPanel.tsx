@@ -1,4 +1,7 @@
+import { useMemo, useState } from "react";
+
 import { whatsappUrl } from "../app-helpers";
+import { printableDocumentDefinitions, type PrintableDocumentKind } from "../document-templates";
 import { canAccessModule, type AccessRole } from "../permissions";
 import type { AppData, ChurchEvent, MemberRecord, ReportKind } from "../types";
 import type { ReportDefinition } from "../report-builders";
@@ -10,6 +13,7 @@ type ReportsPanelProps = {
   currentAccessRole: AccessRole;
   data: AppData;
   exportReport: (kind: ReportKind, format: "pdf" | "csv") => void;
+  generatePrintableDocument: (kind: PrintableDocumentKind, targetId: string) => void;
   monthlyBirthdays: MemberRecord[];
   reportPreviewKind: ReportKind;
   selectedReportPreview: ReportDefinition;
@@ -22,29 +26,54 @@ export function ReportsPanel({
   currentAccessRole,
   data,
   exportReport,
+  generatePrintableDocument,
   monthlyBirthdays,
   reportPreviewKind,
   selectedReportPreview,
   setReportPreviewKind,
   weekEvents,
 }: ReportsPanelProps) {
+  const [documentKind, setDocumentKind] = useState<PrintableDocumentKind>("member-file");
+  const selectedDocument = printableDocumentDefinitions.find((document) => document.kind === documentKind) ?? printableDocumentDefinitions[0];
+  const documentTargets = useMemo(() => {
+    if (selectedDocument.target === "kid") {
+      return data.kids.map((kid) => ({ id: kid.id, label: kid.childName }));
+    }
+
+    if (documentKind === "school-certificate") {
+      return data.members
+        .filter((member) => member.schoolClassId)
+        .map((member) => ({ id: member.id, label: member.fullName }));
+    }
+
+    if (documentKind === "discipleship-certificate") {
+      return data.members
+        .filter((member) => member.discipleshipClassId)
+        .map((member) => ({ id: member.id, label: member.fullName }));
+    }
+
+    return data.members.map((member) => ({ id: member.id, label: member.fullName }));
+  }, [data.kids, data.members, documentKind, selectedDocument.target]);
+  const [documentTargetId, setDocumentTargetId] = useState("");
+  const selectedTargetId = documentTargets.some((target) => target.id === documentTargetId) ? documentTargetId : (documentTargets[0]?.id ?? "");
+  const canGenerateDocuments = currentAccessRole === "Administrador" || currentAccessRole === "Secretario";
   const reportCards: ReportCardDefinition[] = [
     ["members", "Membros por tipo", `${data.members.length} cadastros`],
     ["visitors", "Visitantes", `${data.visitors.length} acompanhamentos`],
-    ["birthdays", "Aniversariantes", `${monthlyBirthdays.length} no mes`],
-    ["kids", "Area Kids", `${data.kids.length} criancas`],
+    ["birthdays", "Aniversariantes", `${monthlyBirthdays.length} no mês`],
+    ["kids", "Área Kids", `${data.kids.length} crianças`],
     ["agenda", "Agenda semanal", `${weekEvents.length} eventos na semana`],
-    ["attendance", "Presenca EBD/Discipulado", `${data.attendanceSessions.length} chamadas`],
+    ["attendance", "Presença EBD/Discipulado", `${data.attendanceSessions.length} chamadas`],
     ["absences", "Faltosos recentes", `${absentRows.length} alertas`],
-    ["finance", "Financeiro", `${data.transactions.length} lancamentos`],
-    ["assets", "Patrimonio", `${data.assets.length} itens`],
+    ["finance", "Financeiro", `${data.transactions.length} lançamentos`],
+    ["assets", "Patrimônio", `${data.assets.length} itens`],
   ];
 
   return (
     <section className="content-grid">
       <article className="surface wide">
         <div className="panel-heading">
-          <h2>Relatorios operacionais</h2>
+          <h2>Relatórios operacionais</h2>
           <span>PDF e Excel/CSV</span>
         </div>
         <div className="report-grid">
@@ -60,7 +89,7 @@ export function ReportsPanel({
                 <small>{count}</small>
                 <div className="row-actions">
                   <button className="secondary" onClick={() => setReportPreviewKind(kind)} type="button">
-                    Previa
+                    Prévia
                   </button>
                   <button className="secondary" onClick={() => exportReport(kind, "pdf")} type="button">
                     PDF
@@ -74,9 +103,52 @@ export function ReportsPanel({
         </div>
       </article>
 
+      {canGenerateDocuments && (
+        <article className="surface wide">
+          <div className="panel-heading">
+            <div>
+              <h2>Documentos prontos</h2>
+              <span>Cartas, certificados e ficha cadastral em PDF</span>
+            </div>
+          </div>
+          <div className="document-tool-grid">
+            <label>
+              Modelo
+              <select
+                onChange={(event) => {
+                  setDocumentKind(event.target.value as PrintableDocumentKind);
+                  setDocumentTargetId("");
+                }}
+                value={documentKind}
+              >
+                {printableDocumentDefinitions.map((document) => (
+                  <option key={document.kind} value={document.kind}>
+                    {document.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {selectedDocument.target === "kid" ? "Criança" : "Membro"}
+              <select onChange={(event) => setDocumentTargetId(event.target.value)} value={selectedTargetId}>
+                {documentTargets.map((target) => (
+                  <option key={target.id} value={target.id}>
+                    {target.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button disabled={!selectedTargetId} onClick={() => generatePrintableDocument(documentKind, selectedTargetId)} type="button">
+              Gerar PDF / Imprimir
+            </button>
+          </div>
+          {!documentTargets.length && <p className="empty-state">Nenhum cadastro disponível para este modelo.</p>}
+        </article>
+      )}
+
       <article className="surface wide">
         <div className="panel-heading">
-          <h2>Previa do relatorio</h2>
+          <h2>Prévia do relatório</h2>
           <span>{selectedReportPreview.title}</span>
         </div>
         <div className="preview-table">
@@ -92,13 +164,13 @@ export function ReportsPanel({
               ))}
             </div>
           ))}
-          {!selectedReportPreview.rows.length && <p className="empty-state">Nenhum dado encontrado para este relatorio.</p>}
+          {!selectedReportPreview.rows.length && <p className="empty-state">Nenhum dado encontrado para este relatório.</p>}
         </div>
       </article>
 
       <article className="surface">
         <div className="panel-heading">
-          <h2>Previa de faltosos</h2>
+          <h2>Prévia de faltosos</h2>
           <span>{absentRows.length} alertas</span>
         </div>
         <div className="row-list">
@@ -108,10 +180,10 @@ export function ReportsPanel({
               <div>
                 <strong>{String(name)}</strong>
                 <small>
-                  {String(status)} - {String(recent)} faltas recentes - {String(month)} no mes
+                  {String(status)} - {String(recent)} faltas recentes - {String(month)} no mês
                 </small>
               </div>
-              <a className="whatsapp-link" href={whatsappUrl(String(phone), "Ola, {nome}! Sentimos sua falta na aula. Podemos ajudar em algo?", String(name))} rel="noreferrer" target="_blank">
+              <a className="whatsapp-link" href={whatsappUrl(String(phone), "Olá, {nome}! Sentimos sua falta na aula. Podemos ajudar em algo?", String(name))} rel="noreferrer" target="_blank">
                 WhatsApp
               </a>
             </div>
