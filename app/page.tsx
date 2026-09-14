@@ -87,6 +87,7 @@ import { accessRoleFromMetadata, canAccessModule, canManageModule, isAdministrat
 import { buildReportDefinition } from "./report-builders";
 import { downloadCsv, escapeHtml, printHtmlDocument, printHtmlReport } from "./report-helpers";
 import { buildPrintableDocument, type PrintableDocumentKind } from "./document-templates";
+import { agendaEventShareText, dailyAgendaShareText, muralShareText, publicAgendaUrl, publicMuralUrl, sharePublicContent } from "./share-helpers";
 import {
   convertVisitorToMemberData,
   approveRegistrationAsMemberData,
@@ -1547,6 +1548,10 @@ export default function Home() {
       .filter((event) => isEventInWeek(event, currentWeekRange.start, currentWeekRange.end))
       .sort(sortEventsByDate);
   }, [data.events, todayKey]);
+  const todayAgendaEvents = useMemo(
+    () => data.events.filter((event) => event.date === todayKey && event.status !== "Concluido").sort(sortEventsByDate),
+    [data.events, todayKey],
+  );
 
   useEffect(() => {
     const timer = window.setInterval(() => setTodayKey(currentDateKey()), 60 * 60 * 1000);
@@ -2196,6 +2201,68 @@ export default function Home() {
       return;
     }
     log(`PDF preparado: ${report.title}`);
+  }
+
+  async function applyShareFeedback(result: "shared" | "copied" | "cancelled", label: string) {
+    if (result === "shared") {
+      setSyncStatus(`${label} pronto para compartilhar.`);
+      return;
+    }
+
+    if (result === "copied") {
+      setSyncStatus(`${label} copiado. Agora você pode colar no WhatsApp ou nas redes sociais.`);
+      return;
+    }
+
+    setSyncStatus("Compartilhamento cancelado.");
+  }
+
+  async function shareMuralItem(item: MuralItem) {
+    const url = publicMuralUrl(item.id);
+    const result = await sharePublicContent({
+      title: item.title || "Mural Igreja Conectada",
+      text: muralShareText(item, url),
+      url,
+    }).catch(() => null);
+
+    if (!result) {
+      setSyncStatus("Não foi possível compartilhar ou copiar o link do mural neste navegador.");
+      return;
+    }
+
+    await applyShareFeedback(result, "Link do mural");
+  }
+
+  async function shareTodayAgenda() {
+    const url = publicAgendaUrl();
+    const result = await sharePublicContent({
+      title: "Agenda do dia - Igreja Conectada",
+      text: dailyAgendaShareText(todayAgendaEvents, url),
+      url,
+    }).catch(() => null);
+
+    if (!result) {
+      setSyncStatus("Não foi possível compartilhar ou copiar a agenda neste navegador.");
+      return;
+    }
+
+    await applyShareFeedback(result, "Agenda do dia");
+  }
+
+  async function shareAgendaEvent(event: ChurchEvent) {
+    const url = publicAgendaUrl(event.date);
+    const result = await sharePublicContent({
+      title: event.title || "Agenda Igreja Conectada",
+      text: agendaEventShareText(event, url),
+      url,
+    }).catch(() => null);
+
+    if (!result) {
+      setSyncStatus("Não foi possível compartilhar ou copiar o evento neste navegador.");
+      return;
+    }
+
+    await applyShareFeedback(result, "Evento da agenda");
   }
 
   function generatePrintableDocument(kind: PrintableDocumentKind, targetId: string) {
@@ -4499,6 +4566,7 @@ export default function Home() {
               muralImageMessage={muralImageMessage}
               readMuralImage={readMuralImage}
               setMuralForm={setMuralForm}
+              shareMuralItem={shareMuralItem}
               toggleMural={toggleMural}
               totalPublishedMuralItems={data.mural.filter((item) => item.published).length}
               weekEvents={weekEvents}
@@ -4524,6 +4592,8 @@ export default function Home() {
               setEventGroupFilter={setEventGroupFilter}
               setEventStatusFilter={setEventStatusFilter}
               setEventWeekOffset={setEventWeekOffset}
+              shareEvent={shareAgendaEvent}
+              shareTodayAgenda={shareTodayAgenda}
               totalEvents={data.events.length}
               updateEventStatus={updateEventStatus}
               weekEvents={weekEvents}

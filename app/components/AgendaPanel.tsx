@@ -25,6 +25,8 @@ type AgendaPanelProps = {
   setEventGroupFilter: Dispatch<SetStateAction<string>>;
   setEventStatusFilter: Dispatch<SetStateAction<string>>;
   setEventWeekOffset: Dispatch<SetStateAction<number>>;
+  shareEvent: (event: ChurchEvent) => void | Promise<void>;
+  shareTodayAgenda: () => void | Promise<void>;
   weekEvents: ChurchEvent[];
 };
 
@@ -48,6 +50,8 @@ export function AgendaPanel({
   setEventGroupFilter,
   setEventStatusFilter,
   setEventWeekOffset,
+  shareEvent,
+  shareTodayAgenda,
   weekEvents,
 }: AgendaPanelProps) {
   return (
@@ -151,6 +155,9 @@ export function AgendaPanel({
           <button className="secondary" onClick={() => exportReport("agenda", "pdf")} type="button">
             Imprimir semana
           </button>
+          <button className="secondary" onClick={shareTodayAgenda} type="button">
+            Compartilhar agenda do dia
+          </button>
         </div>
         <div className="row-list">
           {weekEvents.map((event) => (
@@ -163,8 +170,12 @@ export function AgendaPanel({
                 </small>
                 <small>{event.location || "Local não informado"} - {event.responsible || "Sem responsável"}</small>
               </div>
-              {canManageEvents && (
-                <div className="row-actions">
+              <div className="row-actions">
+                <button className="secondary" onClick={() => shareEvent(event)} type="button">
+                  Compartilhar
+                </button>
+                {canManageEvents && (
+                  <>
                   <button className="secondary" onClick={() => editEvent(event)} type="button">
                     Editar
                   </button>
@@ -181,8 +192,9 @@ export function AgendaPanel({
                   <button className="danger-action" onClick={() => deleteEvent(event)} type="button">
                     Excluir
                   </button>
-                </div>
-              )}
+                  </>
+                )}
+              </div>
             </div>
           ))}
           {!weekEvents.length && <p className="empty-state">Nenhum evento cadastrado para esta semana.</p>}

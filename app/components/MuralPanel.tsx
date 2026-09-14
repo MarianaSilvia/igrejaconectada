@@ -1,5 +1,5 @@
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
-import { formatDate } from "../app-helpers";
+import { formatDate, isExpiredDate } from "../app-helpers";
 import type { ChurchEvent, MuralItem, Notice } from "../types";
 import { ResponsiveImage } from "./ResponsiveImage";
 
@@ -16,6 +16,7 @@ type MuralPanelProps = {
   muralImageMessage: string;
   readMuralImage: (event: ChangeEvent<HTMLInputElement>) => void;
   setMuralForm: Dispatch<SetStateAction<MuralForm>>;
+  shareMuralItem: (item: MuralItem) => void | Promise<void>;
   toggleMural: (id: string, field: "published" | "featured") => void;
   totalPublishedMuralItems: number;
   weekEvents: ChurchEvent[];
@@ -32,6 +33,7 @@ export function MuralPanel({
   muralImageMessage,
   readMuralImage,
   setMuralForm,
+  shareMuralItem,
   toggleMural,
   totalPublishedMuralItems,
   weekEvents,
@@ -124,6 +126,11 @@ export function MuralPanel({
                   Destaque
                   <input checked={item.featured} onChange={() => toggleMural(item.id, "featured")} type="checkbox" />
                 </label>
+              )}
+              {item.published && !isExpiredDate(item.expiresAt) && (
+                <button className="secondary" onClick={() => shareMuralItem(item)} type="button">
+                  Compartilhar
+                </button>
               )}
               {canManageMural && (
                 <button className="danger-action" onClick={() => deleteMuralItem(item)} type="button">
