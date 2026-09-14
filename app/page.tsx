@@ -22,6 +22,7 @@ import {
 import { BirthdaySpotlightPanel } from "./components/BirthdaySpotlightPanel";
 import { AgendaPanel } from "./components/AgendaPanel";
 import { AssetsPanel } from "./components/AssetsPanel";
+import { ChatPanel } from "./components/ChatPanel";
 import { ClassModulePanel } from "./components/ClassModulePanel";
 import { CommunicationPanel } from "./components/CommunicationPanel";
 import { globalCongregationScope } from "./congregation-scope";
@@ -3389,6 +3390,13 @@ export default function Home() {
       cover: "messages" as ModuleCoverKey,
     },
     {
+      label: "Chat",
+      value: "90d",
+      hint: "por congregação",
+      module: "chat" as ModuleKey,
+      cover: "chat" as ModuleCoverKey,
+    },
+    {
       label: "Relatórios",
       value: "8",
       hint: "modelos disponíveis",
@@ -3892,6 +3900,13 @@ export default function Home() {
             type="button"
           >
             Agenda
+          </button>}
+          {canAccessModule(currentAccessRole, "chat") && <button
+            className={activeModule === "chat" ? "active" : ""}
+            onClick={() => setActiveModule("chat")}
+            type="button"
+          >
+            Chat
           </button>}
           {canAccessModule(currentAccessRole, "visitors") && <button
             className={activeModule === "visitors" ? "active" : ""}
@@ -4709,6 +4724,8 @@ export default function Home() {
               setSelectedMessageRecipientIds={setSelectedMessageRecipientIds}
             />
           )}
+
+          {activeModule === "chat" && <ChatPanel />}
 
           {activeModule === "finance" && (
             <FinancePanel

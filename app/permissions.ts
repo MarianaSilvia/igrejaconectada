@@ -8,6 +8,7 @@ export type ModuleKey =
   | "ministries"
   | "notices"
   | "messages"
+  | "chat"
   | "mural"
   | "pastoral"
   | "school"
@@ -31,6 +32,7 @@ export const modules: { key: ModuleKey; label: string; short: string }[] = [
   { key: "ministries", label: "Grupos", short: "Grupos" },
   { key: "notices", label: "Comunicados", short: "Avisos" },
   { key: "messages", label: "Comunicacao", short: "Mensagens" },
+  { key: "chat", label: "Chat", short: "Chat" },
   { key: "mural", label: "Mural", short: "Mural" },
   { key: "pastoral", label: "Atendimento pastoral", short: "Pastoral" },
   { key: "school", label: "Escola Biblica", short: "EBD" },
@@ -48,6 +50,7 @@ export const memberVisibleModuleKeys: ModuleKey[] = [
   "events",
   "notices",
   "mural",
+  "chat",
   "pastoral",
   "school",
   "discipleship",
@@ -92,9 +95,9 @@ const roleByLabel: Record<string, ChurchRole> = {
 
 export const moduleAccessByRole: Record<AccessRole, ModuleKey[]> = {
   Administrador: modules.map((module) => module.key),
-  Lider: ["overview", "members", "visitors", "events", "ministries", "notices", "messages", "mural", "pastoral", "school", "discipleship", "reports", "devotional"],
-  Professor: ["overview", "events", "notices", "mural", "school", "discipleship"],
-  Secretario: ["overview", "members", "visitors", "kids", "events", "notices", "messages", "mural", "reports"],
+  Lider: ["overview", "members", "visitors", "events", "ministries", "notices", "messages", "chat", "mural", "pastoral", "school", "discipleship", "reports", "devotional"],
+  Professor: ["overview", "events", "notices", "chat", "mural", "school", "discipleship"],
+  Secretario: ["overview", "members", "visitors", "kids", "events", "notices", "messages", "chat", "mural", "reports"],
   Tesoureiro: ["overview", "reports", "finance"],
   Membro: memberVisibleModuleKeys,
 };
@@ -128,8 +131,8 @@ export function canAccessModule(role: AccessRole, moduleKey: ModuleKey) {
 
 export function canManageModule(role: AccessRole, moduleKey: ModuleKey) {
   if (role === "Administrador") return true;
-  if (role === "Secretario") return ["members", "visitors", "kids", "events", "notices", "messages", "mural", "reports"].includes(moduleKey);
-  if (role === "Lider") return ["ministries", "pastoral", "visitors", "events", "notices", "messages", "mural", "reports", "devotional"].includes(moduleKey);
+  if (role === "Secretario") return ["members", "visitors", "kids", "events", "notices", "messages", "chat", "mural", "reports"].includes(moduleKey);
+  if (role === "Lider") return ["ministries", "pastoral", "visitors", "events", "notices", "messages", "chat", "mural", "reports", "devotional"].includes(moduleKey);
   if (role === "Professor") return ["school", "discipleship"].includes(moduleKey);
   if (role === "Tesoureiro") return moduleKey === "reports" || moduleKey === "finance";
   return false;

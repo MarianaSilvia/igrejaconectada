@@ -8,13 +8,14 @@ Sistema de gestao para igreja com Supabase, painel administrativo, area do membr
 - Painel inteligente com destaque rotativo do mural ao fundo quando houver banner publicado.
 - Blocos de resumo com proximo evento, aniversariantes, pre-cadastros, pendencias e avisos.
 - Cadastro de membros, visitantes, novos convertidos, Area Kids e grupos.
-- Agenda, comunicados, mural, atendimento pastoral, EBD, Discipulado e chamadas.
+- Agenda, comunicados, mural, atendimento pastoral, EBD, Discipulado, chamadas e chat por congregação.
 - Chamada simplificada para EBD e Discipulado com cards de alunos, botoes grandes e historico separado.
 - Comunicacao manual por WhatsApp com modelos prontos e historico de campanhas.
 - Relatorios em PDF/CSV para membros, visitantes, Kids, agenda, presenca, faltosos, financeiro e patrimonio.
 - Login por Supabase Auth com perfis: administrador, lider, professor, secretario, tesoureiro e membro.
 - PWA instalavel no celular, mantendo os dados online via Supabase.
 - Notificacoes Push Web para aparelhos/navegadores inscritos, com fallback pela central de acoes interna.
+- Chat por congregação com mensagens em tempo real, denúncia, moderação e retenção de 90 dias.
 - Painel de saude do sistema com status de salvamento, totais principais e atalho para recarregar dados da base.
 - Modo Visual simples para membros, com letras maiores, atalhos grandes e linguagem direta para terceira idade.
 - Backup completo em JSON pelo modulo Configuracoes antes de importacoes ou mudancas grandes.
@@ -25,7 +26,8 @@ Sistema de gestao para igreja com Supabase, painel administrativo, area do membr
 - Membros tambem sao espelhados na tabela `members` para busca e preparacao da futura normalizacao.
 - `SUPABASE_SERVICE_ROLE_KEY` deve ficar somente no servidor/Vercel e nunca no frontend.
 - Membro comum recebe apenas propria ficha, agenda, mural publicado, pedidos proprios, classes, frequencia e devocional publicado.
-- Fotos de membros permanecem removidas. Fotos continuam permitidas apenas no Kids.
+- Fotos de membros usam Supabase Storage no bucket `member-photos`, salvando no cadastro apenas URL/chave da imagem.
+- Fotos Kids e imagens do Mural ainda devem migrar futuramente para Supabase Storage para reduzir peso do JSON.
 - O modulo Escalas foi retirado da experiencia ativa e do modelo principal do app.
 
 ## Como rodar localmente
@@ -55,10 +57,23 @@ SUPABASE_SERVICE_ROLE_KEY=sua_chave_service_role_privada
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=sua_chave_publica_vapid
 VAPID_PRIVATE_KEY=sua_chave_privada_vapid
 VAPID_SUBJECT=mailto:secretaria@igrejaconectada.app
+CRON_SECRET=segredo_forte_para_rotinas_automaticas
 ```
 
 Sem Supabase, o sistema pode abrir em modo local, mas o uso real com membros deve acontecer com as variaveis configuradas.
 Sem VAPID, o app continua funcionando, mas notificacoes em segundo plano ficam indisponiveis.
+
+## Chat por congregação
+
+Antes de liberar o Chat para os membros, execute no Supabase SQL Editor:
+
+```sql
+-- arquivo do projeto
+db/supabase-chat.sql
+```
+
+O chat usa tabelas próprias (`chat_rooms`, `chat_messages` e `chat_moderation`) e não grava mensagens dentro do `church_app_state`.
+As mensagens com mais de 90 dias são removidas pela rota `/api/chat/cleanup`, preparada para Vercel Cron usando `CRON_SECRET`.
 
 ## App instalavel
 
