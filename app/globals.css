@@ -1542,6 +1542,50 @@ button.data-row.active {
   padding: 0 20px;
 }
 
+.floating-chat-button {
+  align-items: center;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.34), transparent 0 22%, transparent 23%),
+    linear-gradient(135deg, #12c8b4, #2386ff 58%, #8f7cff);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  bottom: 28px;
+  box-shadow: 0 18px 48px rgba(18, 200, 180, 0.26), 0 8px 24px rgba(0, 0, 0, 0.36);
+  color: #fff;
+  display: inline-flex;
+  gap: 10px;
+  min-height: 58px;
+  padding: 8px 18px 8px 9px;
+  position: fixed;
+  right: 28px;
+  text-transform: none;
+  z-index: 35;
+}
+
+.floating-chat-button:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.floating-chat-button span {
+  align-items: center;
+  background: rgba(7, 8, 13, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 18px;
+  font-weight: 950;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.floating-chat-button strong {
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
 .agenda-cover {
   isolation: isolate;
   overflow: hidden;
@@ -3930,6 +3974,22 @@ textarea:focus {
   .chat-composer > div {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .floating-chat-button {
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    min-height: 52px;
+    padding: 7px 12px 7px 8px;
+    right: 14px;
+  }
+
+  .floating-chat-button span {
+    height: 36px;
+    width: 36px;
+  }
+
+  .floating-chat-button strong {
+    font-size: 13px;
   }
 
   .conflict-banner button,

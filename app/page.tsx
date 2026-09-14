@@ -4806,6 +4806,18 @@ export default function Home() {
             />
           )}
 
+          {canAccessModule(currentAccessRole, "chat") && activeModule !== "chat" && (
+            <button
+              aria-label="Abrir chat da congregação"
+              className="floating-chat-button"
+              onClick={() => setActiveModule("chat")}
+              type="button"
+            >
+              <span aria-hidden="true">C</span>
+              <strong>Chat</strong>
+            </button>
+          )}
+
         </section>
       </div>
     </main>
