@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { MinistryRecord } from "../types";
+import { ResponsiveImage } from "./ResponsiveImage";
 
 type MinistryForm = Omit<MinistryRecord, "id">;
 
@@ -28,7 +29,14 @@ const defaultGroupNames = [
   "Discipulado",
   "Mídia",
   "Diaconato",
+  "Coral Remidos por Cristo",
+  "Coral RENASCER",
 ];
+
+const groupCoverImages: Record<string, string> = {
+  "Coral Remidos por Cristo": "/group-covers/remidos_por_cristo_card_320.webp",
+  "Coral RENASCER": "/group-covers/coral-renascer.png",
+};
 
 export function GroupsPanel({
   canCreateMinistry,
@@ -139,7 +147,12 @@ export function GroupsPanel({
         </div>
         <div className="row-list">
           {ministries.map((ministry) => (
-            <div className="member-record" key={ministry.id}>
+            <div className={groupCoverImages[ministry.name] ? "member-record group-record with-cover" : "member-record group-record"} key={ministry.id}>
+              {groupCoverImages[ministry.name] && (
+                <div className="group-cover">
+                  <ResponsiveImage alt={`Card do grupo ${ministry.name}`} sizes="96px" src={groupCoverImages[ministry.name]} />
+                </div>
+              )}
               <div className="data-row">
                 <span className="date-box">{ministry.volunteers}</span>
                 <div>
