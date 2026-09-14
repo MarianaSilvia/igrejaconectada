@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
+import { normalizeSearchText } from "../app-helpers";
 import type { MinistryRecord } from "../types";
 import { ResponsiveImage } from "./ResponsiveImage";
 
@@ -34,9 +35,13 @@ const defaultGroupNames = [
 ];
 
 const groupCoverImages: Record<string, string> = {
-  "Coral Remidos por Cristo": "/group-covers/remidos_por_cristo_card_320.webp",
-  "Coral RENASCER": "/group-covers/coral-renascer.png",
+  [normalizeSearchText("Coral Remidos por Cristo")]: "/group-covers/remidos_por_cristo_card_320.webp",
+  [normalizeSearchText("Coral RENASCER")]: "/group-covers/coral-renascer.png",
 };
+
+function groupCoverFor(name: string) {
+  return groupCoverImages[normalizeSearchText(name)];
+}
 
 export function GroupsPanel({
   canCreateMinistry,
@@ -146,34 +151,38 @@ export function GroupsPanel({
           <span>{ministries.length} grupo{ministries.length === 1 ? "" : "s"}</span>
         </div>
         <div className="row-list">
-          {ministries.map((ministry) => (
-            <div className={groupCoverImages[ministry.name] ? "member-record group-record with-cover" : "member-record group-record"} key={ministry.id}>
-              {groupCoverImages[ministry.name] && (
-                <div className="group-cover">
-                  <ResponsiveImage alt={`Card do grupo ${ministry.name}`} sizes="96px" src={groupCoverImages[ministry.name]} />
+          {ministries.map((ministry) => {
+            const groupCover = groupCoverFor(ministry.name);
+
+            return (
+              <div className={groupCover ? "member-record group-record with-cover" : "member-record group-record"} key={ministry.id}>
+                {groupCover && (
+                  <div className="group-cover">
+                    <ResponsiveImage alt={`Card do grupo ${ministry.name}`} sizes="96px" src={groupCover} />
+                  </div>
+                )}
+                <div className="data-row">
+                  <span className="date-box">{ministry.volunteers}</span>
+                  <div>
+                    <strong>{ministry.name}</strong>
+                    <small>
+                      {ministry.status} - Líder: {ministry.leader}
+                      {ministry.assistant ? ` - Auxiliar: ${ministry.assistant}` : ""}
+                    </small>
+                    <small>{ministry.meetingDay || "Reunião não definida"} - {ministry.notes || "Sem observações"}</small>
+                  </div>
                 </div>
-              )}
-              <div className="data-row">
-                <span className="date-box">{ministry.volunteers}</span>
-                <div>
-                  <strong>{ministry.name}</strong>
-                  <small>
-                    {ministry.status} - Líder: {ministry.leader}
-                    {ministry.assistant ? ` - Auxiliar: ${ministry.assistant}` : ""}
-                  </small>
-                  <small>{ministry.meetingDay || "Reunião não definida"} - {ministry.notes || "Sem observações"}</small>
+                <div className="record-actions">
+                  <button className="secondary" onClick={() => editMinistry(ministry)} type="button">
+                    Editar grupo
+                  </button>
+                  <button className="danger-action" onClick={() => deleteMinistry(ministry)} type="button">
+                    Excluir grupo
+                  </button>
                 </div>
               </div>
-              <div className="record-actions">
-                <button className="secondary" onClick={() => editMinistry(ministry)} type="button">
-                  Editar grupo
-                </button>
-                <button className="danger-action" onClick={() => deleteMinistry(ministry)} type="button">
-                  Excluir grupo
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </article>
     </section>
