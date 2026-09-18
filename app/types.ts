@@ -324,8 +324,13 @@ export type DevotionalRecord = {
   title: string;
   verse: string;
   body: string;
-  status: "Publicado" | "Rascunho" | "Arquivado";
+  status: "Publicado" | "Rascunho" | "Aprovado" | "Arquivado";
   publishedAt: string;
+  theme: string;
+  source: "manual" | "automatic";
+  weekKey: string;
+  createdByAutomation: boolean;
+  usedAt: string;
 };
 
 export type AuditItem = {

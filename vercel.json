@@ -7,6 +7,10 @@
     {
       "path": "/api/chat/cleanup",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/devotionals-weekly",
+      "schedule": "0 6 * * 1"
     }
   ]
 }

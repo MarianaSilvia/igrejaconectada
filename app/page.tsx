@@ -584,6 +584,11 @@ const initialData: AppData = {
       body: "O Senhor e o nosso pastor. Hoje, caminhe com confianca, cuidado e gratidao.",
       status: "Publicado",
       publishedAt: "2026-09-06",
+      theme: "Confiança",
+      source: "manual",
+      weekKey: "",
+      createdByAutomation: false,
+      usedAt: "",
     },
   ],
   audit: [

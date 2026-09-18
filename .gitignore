@@ -41,3 +41,15 @@ tsconfig.tsbuildinfo
 /package-stage/
 /site-package.tgz
 /gerador-carteirinha-digital/
+
+# local Codex/generated artifacts
+/.codex-finalizer/
+/.codex-remote-attachments/
+/output/
+/tmp/
+/scripts/
+/inspect_workbook.mjs
+/modernize_dashboard.mjs
+/render_current_dashboard.mjs
+/verify_modern_dashboard.mjs
+/Controle_de_Debitos_Pessoais_Com_Perfis.xlsx

@@ -23,25 +23,25 @@ export type AccessRole = "Administrador" | "Lider" | "Professor" | "Secretario" 
 export type ChurchRole = "ADMIN" | "LEADER" | "PROFESSOR" | "SECRETARY" | "TREASURER" | "MEMBER";
 
 export const modules: { key: ModuleKey; label: string; short: string }[] = [
-  { key: "overview", label: "Visao geral", short: "Painel" },
-  { key: "users", label: "Usuarios e acessos", short: "Acessos" },
+  { key: "overview", label: "Visão geral", short: "Painel" },
+  { key: "users", label: "Usuários e acessos", short: "Acessos" },
   { key: "members", label: "Membros", short: "Membros" },
   { key: "visitors", label: "Visitantes", short: "Visitantes" },
-  { key: "kids", label: "Area Kids", short: "Kids" },
+  { key: "kids", label: "Área Kids", short: "Kids" },
   { key: "events", label: "Agenda", short: "Agenda" },
   { key: "ministries", label: "Grupos", short: "Grupos" },
   { key: "notices", label: "Comunicados", short: "Avisos" },
-  { key: "messages", label: "Comunicacao", short: "Mensagens" },
+  { key: "messages", label: "Comunicação", short: "Mensagens" },
   { key: "chat", label: "Chat", short: "Chat" },
   { key: "mural", label: "Mural", short: "Mural" },
   { key: "pastoral", label: "Atendimento pastoral", short: "Pastoral" },
-  { key: "school", label: "Escola Biblica", short: "EBD" },
+  { key: "school", label: "Escola Bíblica", short: "EBD" },
   { key: "discipleship", label: "Discipulado", short: "Discipulado" },
   { key: "reports", label: "Relatórios", short: "Relatórios" },
   { key: "finance", label: "Financeiro", short: "Financeiro" },
-  { key: "assets", label: "Patrimonio", short: "Patrimonio" },
+  { key: "assets", label: "Patrimônio", short: "Patrimônio" },
   { key: "devotional", label: "Devocional", short: "Palavra" },
-  { key: "settings", label: "Configuracoes", short: "Config" },
+  { key: "settings", label: "Configurações", short: "Config" },
 ];
 
 export const memberVisibleModuleKeys: ModuleKey[] = [

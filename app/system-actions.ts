@@ -468,7 +468,10 @@ export function upsertDevotionalData(
   const devotional: DevotionalRecord = {
     ...form,
     id: editingDevotionalId ?? createId("devotional"),
-    publishedAt: form.publishedAt || currentDateKey(),
+    publishedAt: form.status === "Aprovado" ? form.publishedAt : form.publishedAt || currentDateKey(),
+    source: form.source || "manual",
+    weekKey: form.source === "automatic" ? form.weekKey : "",
+    createdByAutomation: Boolean(form.createdByAutomation),
   };
   return {
     ...data,

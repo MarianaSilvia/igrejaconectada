@@ -210,6 +210,11 @@ export const blankDevotional: Omit<DevotionalRecord, "id"> = {
   body: "",
   status: "Rascunho",
   publishedAt: "",
+  theme: "",
+  source: "manual",
+  weekKey: "",
+  createdByAutomation: false,
+  usedAt: "",
 };
 
 export const blankMuralItem: Omit<MuralItem, "id"> = {

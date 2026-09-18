@@ -16,6 +16,7 @@ Sistema de gestao para igreja com Supabase, painel administrativo, area do membr
 - PWA instalavel no celular, mantendo os dados online via Supabase.
 - Notificacoes Push Web para aparelhos/navegadores inscritos, com fallback pela central de acoes interna.
 - Chat por congregação com mensagens em tempo real, denúncia, moderação e retenção de 90 dias.
+- Devocionais semanais automáticos a partir de um banco interno de textos aprovados.
 - Painel de saude do sistema com status de salvamento, totais principais e atalho para recarregar dados da base.
 - Modo Visual simples para membros, com letras maiores, atalhos grandes e linguagem direta para terceira idade.
 - Backup completo em JSON pelo modulo Configuracoes antes de importacoes ou mudancas grandes.
@@ -74,6 +75,15 @@ db/supabase-chat.sql
 
 O chat usa tabelas próprias (`chat_rooms`, `chat_messages` e `chat_moderation`) e não grava mensagens dentro do `church_app_state`.
 As mensagens com mais de 90 dias são removidas pela rota `/api/chat/cleanup`, preparada para Vercel Cron usando `CRON_SECRET`.
+
+## Rotinas automaticas
+
+O projeto usa Vercel Cron para:
+
+- `/api/chat/cleanup`: limpeza diaria de mensagens antigas do chat.
+- `/api/cron/devotionals-weekly`: preparacao semanal dos devocionais publicados, usando apenas textos com status `Aprovado` no Banco de devocionais.
+
+No plano Hobby da Vercel, o limite e de 2 cron jobs. Se novas rotinas forem criadas, consolide em uma unica rota orquestradora antes de adicionar outro item ao `vercel.json`.
 
 ## App instalavel
 

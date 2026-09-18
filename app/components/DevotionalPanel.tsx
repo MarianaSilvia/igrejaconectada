@@ -30,7 +30,12 @@ export function DevotionalPanel({
   setDevotionalForm,
   setEditingDevotionalId,
 }: DevotionalPanelProps) {
-  const sortedDevotionals = [...devotionals].sort((first, second) => first.publishedAt.localeCompare(second.publishedAt));
+  const libraryDevotionals = [...devotionals]
+    .filter((devotional) => devotional.status === "Aprovado")
+    .sort((first, second) => first.title.localeCompare(second.title, "pt-BR", { sensitivity: "base" }));
+  const scheduledDevotionals = [...devotionals]
+    .filter((devotional) => devotional.status !== "Aprovado")
+    .sort((first, second) => first.publishedAt.localeCompare(second.publishedAt));
 
   return (
     <section className="content-grid">
@@ -50,6 +55,10 @@ export function DevotionalPanel({
               <input onChange={(event) => setDevotionalForm((form) => ({ ...form, verse: event.target.value }))} placeholder="Ex.: Salmo 23:1" value={devotionalForm.verse} />
             </label>
             <label>
+              Tema
+              <input onChange={(event) => setDevotionalForm((form) => ({ ...form, theme: event.target.value }))} placeholder="Ex.: Fé, família, oração" value={devotionalForm.theme} />
+            </label>
+            <label>
               Publicação
               <input onChange={(event) => setDevotionalForm((form) => ({ ...form, publishedAt: event.target.value }))} type="date" value={devotionalForm.publishedAt} />
             </label>
@@ -58,6 +67,7 @@ export function DevotionalPanel({
               <select onChange={(event) => setDevotionalForm((form) => ({ ...form, status: event.target.value as DevotionalRecord["status"] }))} value={devotionalForm.status}>
                 <option>Publicado</option>
                 <option>Rascunho</option>
+                <option>Aprovado</option>
                 <option>Arquivado</option>
               </select>
             </label>
@@ -81,16 +91,20 @@ export function DevotionalPanel({
 
       <article className="surface wide">
         <div className="panel-heading">
-          <h2>Devocionais</h2>
-          <span>{devotionals.length} registros</span>
+          <h2>Devocionais publicados</h2>
+          <span>{scheduledDevotionals.length} registros</span>
         </div>
         <div className="row-list">
-          {sortedDevotionals.map((devotional) => (
+          {scheduledDevotionals.map((devotional) => (
             <div className="data-row access-user-row" key={devotional.id}>
               <span className="date-box">{formatDate(devotional.publishedAt)}</span>
               <div>
                 <strong>{devotional.title}</strong>
-                <small>{devotional.verse || "Sem versículo"} - {devotional.status}</small>
+                <small>
+                  {devotional.verse || "Sem versículo"} - {devotional.status}
+                  {devotional.createdByAutomation ? " - Automático" : ""}
+                </small>
+                {devotional.theme && <small>Tema: {devotional.theme}</small>}
                 <small>{devotional.body}</small>
               </div>
               {canManageDevotional && (
@@ -105,9 +119,41 @@ export function DevotionalPanel({
               )}
             </div>
           ))}
-          {!devotionals.length && <p className="empty-state">Nenhuma palavra cadastrada ainda.</p>}
+          {!scheduledDevotionals.length && <p className="empty-state">Nenhuma palavra publicada ou agendada ainda.</p>}
         </div>
       </article>
+
+      {canManageDevotional && (
+        <article className="surface wide">
+          <div className="panel-heading">
+            <h2>Banco de devocionais</h2>
+            <span>{libraryDevotionals.length} aprovados</span>
+          </div>
+          <p className="form-hint">Textos com status Aprovado entram na seleção automática semanal.</p>
+          <div className="row-list">
+            {libraryDevotionals.map((devotional) => (
+              <div className="data-row access-user-row" key={devotional.id}>
+                <span className="date-box">{devotional.usedAt ? "Usado" : "Novo"}</span>
+                <div>
+                  <strong>{devotional.title}</strong>
+                  <small>{devotional.verse || "Sem versículo"} - {devotional.theme || "Sem tema"}</small>
+                  <small>{devotional.usedAt ? `Último uso: ${formatDate(devotional.usedAt)}` : "Ainda não usado pela automação"}</small>
+                  <small>{devotional.body}</small>
+                </div>
+                <div className="row-actions">
+                  <button className="secondary" onClick={() => editDevotional(devotional)} type="button">
+                    Editar
+                  </button>
+                  <button className="danger-action" onClick={() => deleteDevotional(devotional)} type="button">
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            ))}
+            {!libraryDevotionals.length && <p className="empty-state">Nenhum devocional aprovado no banco ainda.</p>}
+          </div>
+        </article>
+      )}
     </section>
   );
 }
