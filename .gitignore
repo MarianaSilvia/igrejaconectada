@@ -53,3 +53,5 @@ tsconfig.tsbuildinfo
 /render_current_dashboard.mjs
 /verify_modern_dashboard.mjs
 /Controle_de_Debitos_Pessoais_Com_Perfis.xlsx
+
+.env*
