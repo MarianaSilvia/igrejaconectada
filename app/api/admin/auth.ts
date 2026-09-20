@@ -34,7 +34,11 @@ export function hasApprovedAccess(user: User) {
   const access = String(metadata.church_gp_access ?? "").toLowerCase();
   const status = String(metadata.status ?? "").toLowerCase();
 
-  return access === "approved" && (status === "ativo" || status === "active");
+  if (access !== "approved") return false;
+  if (["bloqueado", "blocked", "cancelado", "canceled", "inativo", "inactive"].includes(status)) return false;
+
+  // Older approved accounts may not have received the newer status metadata yet.
+  return !status || status === "ativo" || status === "active";
 }
 
 export async function requireSession(request: Request, allowedRoles?: Iterable<ChurchRole>) {
