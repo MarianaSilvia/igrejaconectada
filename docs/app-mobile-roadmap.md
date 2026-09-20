@@ -7,8 +7,8 @@ Este documento registra o estado real da transicao do Igreja Conectada para Andr
 - PWA com manifesto, icones, service worker e aviso de nova versao.
 - Login obrigatorio pelo Supabase, sem acesso administrativo local alternativo.
 - Nenhum cadastro completo e mantido no `localStorage`.
-- Politica de privacidade, termos, regras da comunidade e solicitacao de exclusao de conta.
-- Bloqueio e denuncia no Chat.
+- Politica de privacidade, termos, regras de comunicacao e solicitacao de exclusao de conta.
+- Canal privado `Fale com a lideranca`, com ajuda administrativa e retencao de 90 dias apos a conclusao.
 - Fotos de membros em bucket privado, entregues por URL assinada.
 - Cabecalhos de seguranca e politicas de congregacao reforcados.
 

@@ -5,7 +5,7 @@
   "devCommand": "pnpm run dev",
   "crons": [
     {
-      "path": "/api/chat/cleanup",
+      "path": "/api/contact/maintenance",
       "schedule": "0 3 * * *"
     },
     {

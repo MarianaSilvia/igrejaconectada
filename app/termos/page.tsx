@@ -9,8 +9,9 @@ export default function TermsPage() {
         <p>Última atualização: 19 de setembro de 2026.</p>
         <h2>Uso responsável</h2>
         <p>Use o sistema para comunicação, comunhão e atividades da igreja. Não publique ofensas, ameaças, conteúdo ilegal, dados pessoais de terceiros, propaganda indevida ou mensagens que exponham aconselhamentos e pedidos pastorais.</p>
-        <h2>Chat e conteúdo</h2>
-        <p>Mensagens podem ser denunciadas, ocultadas pela liderança e removidas após 90 dias. Contas que violem estas regras podem ser bloqueadas. O usuário pode bloquear mensagens de outra pessoa no chat.</p>
+        <h2>Fale com a liderança</h2>
+        <p>As conversas são privadas entre o membro, o responsável designado e o administrador geral para segurança e auditoria. A secretaria acessa apenas conversas ainda aguardando encaminhamento. Conversas concluídas são removidas após 90 dias.</p>
+        <p>Use o canal com respeito. O recurso “Solicitar ajuda” permite encaminhar situações inadequadas ao administrador geral.</p>
         <h2>Conta e senha</h2>
         <p>Cada acesso é pessoal. O usuário deve proteger sua senha e avisar a secretaria em caso de perda, uso indevido ou troca de aparelho.</p>
         <h2>Exclusão</h2>

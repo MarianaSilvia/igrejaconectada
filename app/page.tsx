@@ -22,7 +22,7 @@ import {
 import { BirthdaySpotlightPanel } from "./components/BirthdaySpotlightPanel";
 import { AgendaPanel } from "./components/AgendaPanel";
 import { AssetsPanel } from "./components/AssetsPanel";
-import { ChatPanel } from "./components/ChatPanel";
+import { ContactLeadershipPanel, ContactUnreadBadge } from "./components/ContactLeadershipPanel";
 import { ClassModulePanel } from "./components/ClassModulePanel";
 import { CommunicationPanel } from "./components/CommunicationPanel";
 import { globalCongregationScope } from "./congregation-scope";
@@ -3394,11 +3394,11 @@ export default function Home() {
       cover: "messages" as ModuleCoverKey,
     },
     {
-      label: "Chat",
-      value: "90d",
-      hint: "por congregação",
-      module: "chat" as ModuleKey,
-      cover: "chat" as ModuleCoverKey,
+      label: "Fale com a liderança",
+      value: "Privado",
+      hint: "mensagens por área",
+      module: "contact" as ModuleKey,
+      cover: "contact" as ModuleCoverKey,
     },
     {
       label: "Relatórios",
@@ -3977,12 +3977,12 @@ export default function Home() {
           >
             Agenda
           </button>}
-          {canAccessModule(currentAccessRole, "chat") && <button
-            className={activeModule === "chat" ? "active" : ""}
-            onClick={() => setActiveModule("chat")}
+          {canAccessModule(currentAccessRole, "contact") && <button
+            className={activeModule === "contact" ? "active" : ""}
+            onClick={() => setActiveModule("contact")}
             type="button"
           >
-            Chat
+            Liderança
           </button>}
           {canAccessModule(currentAccessRole, "visitors") && <button
             className={activeModule === "visitors" ? "active" : ""}
@@ -4804,7 +4804,7 @@ export default function Home() {
             />
           )}
 
-          {activeModule === "chat" && <ChatPanel />}
+          {activeModule === "contact" && <ContactLeadershipPanel openPastoral={() => setActiveModule("pastoral")} />}
 
           {activeModule === "finance" && (
             <FinancePanel
@@ -4885,15 +4885,16 @@ export default function Home() {
             />
           )}
 
-          {canAccessModule(currentAccessRole, "chat") && activeModule !== "chat" && (
+          {canAccessModule(currentAccessRole, "contact") && activeModule !== "contact" && (
             <button
-              aria-label="Abrir chat da congregação"
-              className="floating-chat-button"
-              onClick={() => setActiveModule("chat")}
+              aria-label="Falar com a liderança"
+              className="floating-contact-button"
+              onClick={() => setActiveModule("contact")}
               type="button"
             >
-              <span aria-hidden="true">C</span>
-              <strong>Chat</strong>
+              <span aria-hidden="true">F</span>
+              <strong>Fale com a liderança</strong>
+              <ContactUnreadBadge />
             </button>
           )}
 
