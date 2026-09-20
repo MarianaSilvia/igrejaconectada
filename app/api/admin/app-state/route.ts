@@ -580,8 +580,30 @@ function stripMemberPhotos(payload: JsonRecord): JsonRecord {
 
   return {
     ...payloadWithoutLegacySchedules,
-    members: recordsFrom(payloadWithoutLegacySchedules.members).map((member) => ({ ...member, photoDataUrl: "" })),
+    members: recordsFrom(payloadWithoutLegacySchedules.members).map((member) => ({
+      ...member,
+      photoDataUrl: "",
+      photoUrl: textValue(member.photoFileKey) ? "" : textValue(member.photoUrl),
+    })),
     registrationRequests: [],
+  };
+}
+
+async function withSignedMemberPhotos(client: NonNullable<ReturnType<typeof adminClient>>, payload: JsonRecord) {
+  const members = recordsFrom(payload.members);
+  const fileKeys = [...new Set(members.map((member) => textValue(member.photoFileKey)).filter(Boolean))];
+  if (!fileKeys.length) return payload;
+
+  const { data, error } = await client.storage.from("member-photos").createSignedUrls(fileKeys, 60 * 60);
+  if (error || !data) return payload;
+  const signedByKey = new Map(data.map((item, index) => [fileKeys[index], item.signedUrl ?? ""]));
+
+  return {
+    ...payload,
+    members: members.map((member) => {
+      const fileKey = textValue(member.photoFileKey);
+      return fileKey ? { ...member, photoUrl: signedByKey.get(fileKey) ?? "", photoDataUrl: "" } : member;
+    }),
   };
 }
 
@@ -609,6 +631,9 @@ function toRegistrationRequest(row: JsonRecord) {
     city: textValue(row.city),
     neighborhood: textValue(row.neighborhood),
     maritalStatus: textValue(row.marital_status) || "Solteiro(a)",
+    privacyConsent: row.privacy_consent === true,
+    privacyConsentAt: textValue(row.privacy_consent_at),
+    privacyPolicyVersion: textValue(row.privacy_policy_version),
     education: textValue(row.education),
     spouseName: textValue(row.spouse_name),
     requestedStatus: textValue(row.requested_status) || "Visitante",
@@ -627,7 +652,7 @@ async function readRegistrationRequests(client: NonNullable<ReturnType<typeof ad
   const requestResult = await client
     .from("registration_requests")
     .select(
-      "id, congregation, full_name, father_name, mother_name, cpf, phone, email, birth_date, gender, address, zip_code, city, neighborhood, marital_status, education, spouse_name, requested_status, registration_source, notes, status, created_at, reviewed_at, review_note",
+      "id, congregation, full_name, father_name, mother_name, cpf, phone, email, birth_date, gender, address, zip_code, city, neighborhood, marital_status, education, spouse_name, requested_status, registration_source, notes, status, created_at, reviewed_at, review_note, privacy_consent, privacy_consent_at, privacy_policy_version",
     )
     .in("status", ["Aguardando aprovacao", "Em analise"])
     .order("created_at", { ascending: false })
@@ -735,7 +760,8 @@ export async function GET(request: Request) {
   if (stored.response || !stored.client) return stored.response;
 
   const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(stored.payload, session.user);
-  const payload = sanitizePayloadForResponse(stored.payload, effectiveRole, session.user);
+  const sanitizedPayload = sanitizePayloadForResponse(stored.payload, effectiveRole, session.user);
+  const payload = isRecord(sanitizedPayload) ? await withSignedMemberPhotos(stored.client, sanitizedPayload) : sanitizedPayload;
   const registrationRequests = await readRegistrationRequests(
     stored.client,
     effectiveRole,

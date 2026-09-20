@@ -63,7 +63,7 @@ function roleCanModerate(role: ChurchRole) {
 
 function setupRequired(error: unknown) {
   const message = error && typeof error === "object" && "message" in error ? String(error.message) : "";
-  return /chat_rooms|chat_messages|chat_moderation|schema cache|relation .* does not exist/i.test(message);
+  return /chat_rooms|chat_messages|chat_moderation|chat_blocks|schema cache|relation .* does not exist/i.test(message);
 }
 
 async function chatContext(request: Request) {
@@ -188,6 +188,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ rooms: [], messages: [], retentionDays: 90, canModerate: context.canModerate });
   }
 
+  const { data: blockRows } = await context.client
+    .from("chat_blocks")
+    .select("blocked_user_id,blocked_name")
+    .eq("blocker_id", context.user.id);
+  const blockedUserIds = new Set((blockRows ?? []).map((row) => String(row.blocked_user_id)));
+
   let query = context.client
     .from("chat_messages")
     .select("id,room_id,congregation,user_id,author_name,author_role,body,status,report_count,created_at,hidden_at")
@@ -203,10 +209,11 @@ export async function GET(request: Request) {
   return NextResponse.json({
     rooms: roomsResult.rooms,
     selectedRoomId: selectedRoom.id,
-    messages: (data ?? []).reverse(),
+    messages: (data ?? []).filter((message) => !blockedUserIds.has(String(message.user_id))).reverse(),
     retentionDays: 90,
     canModerate: context.canModerate,
     currentUserId: context.user.id,
+    blockedUsers: (blockRows ?? []).map((row) => ({ blockedUserId: row.blocked_user_id, blockedName: row.blocked_name ?? "" })),
   });
 }
 
@@ -262,7 +269,13 @@ export async function PATCH(request: Request) {
   const messageId = textValue(body?.messageId, 120);
   const note = textValue(body?.note, 300);
 
-  if (!messageId || !["report", "hide"].includes(action)) {
+  const blockedUserId = textValue(body?.blockedUserId, 120);
+  if (action === "unblock" && blockedUserId) {
+    const { error } = await context.client.from("chat_blocks").delete().eq("blocker_id", context.user.id).eq("blocked_user_id", blockedUserId);
+    return error ? NextResponse.json({ error: "Não foi possível desbloquear o usuário." }, { status: 400 }) : NextResponse.json({ ok: true });
+  }
+
+  if (!messageId || !["report", "hide", "block"].includes(action)) {
     return NextResponse.json({ error: "Ação inválida para o chat." }, { status: 400 });
   }
 
@@ -275,6 +288,23 @@ export async function PATCH(request: Request) {
   if (messageError || !message) return NextResponse.json({ error: "Mensagem não encontrada." }, { status: 404 });
   if (!congregationMatchesScope(message.congregation, context.scope)) {
     return NextResponse.json({ error: "Você não tem permissão para alterar mensagem desta congregação." }, { status: 403 });
+  }
+
+  if (action === "block") {
+    if (!blockedUserId || blockedUserId === context.user.id) {
+      return NextResponse.json({ error: "Usuário inválido para bloqueio." }, { status: 400 });
+    }
+    const { data: target } = await context.client.from("chat_messages").select("user_id,author_name,congregation").eq("id", messageId).maybeSingle();
+    if (!target || String(target.user_id) !== blockedUserId || !congregationMatchesScope(target.congregation, context.scope)) {
+      return NextResponse.json({ error: "Usuário inválido para bloqueio." }, { status: 400 });
+    }
+    const { error } = await context.client.from("chat_blocks").upsert({
+      blocker_id: context.user.id,
+      blocked_user_id: blockedUserId,
+      blocked_name: target.author_name,
+      congregation: target.congregation,
+    }, { onConflict: "blocker_id,blocked_user_id" });
+    return error ? NextResponse.json({ error: "Não foi possível bloquear o usuário." }, { status: 400 }) : NextResponse.json({ ok: true });
   }
 
   if (action === "hide" && !context.canModerate) {

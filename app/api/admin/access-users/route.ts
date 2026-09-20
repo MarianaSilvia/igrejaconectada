@@ -114,8 +114,8 @@ export async function POST(request: Request) {
   const email = payload.email?.trim().toLowerCase();
   const password = payload.password?.trim();
 
-  if (!name || !email || !password || password.length < 6) {
-    return NextResponse.json({ error: "Informe nome, e-mail e senha com pelo menos 6 caracteres." }, { status: 400 });
+  if (!name || !email || !password || password.length < 8) {
+    return NextResponse.json({ error: "Informe nome, e-mail e senha com pelo menos 8 caracteres." }, { status: 400 });
   }
 
   if (hasInvalidRoleOrStatus(payload)) {
@@ -143,6 +143,7 @@ export async function POST(request: Request) {
       church_gp_access: toChurchAccess(status),
       congregation_scope: congregationScope,
       church_gp_congregation_scope: congregationScope,
+      must_change_password: true,
       created_by: session.user.id,
     },
   });
@@ -168,8 +169,8 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Informe nome e e-mail para atualizar o acesso." }, { status: 400 });
   }
 
-  if (password && password.length < 6) {
-    return NextResponse.json({ error: "A senha precisa ter pelo menos 6 caracteres." }, { status: 400 });
+  if (password && password.length < 8) {
+    return NextResponse.json({ error: "A senha precisa ter pelo menos 8 caracteres." }, { status: 400 });
   }
 
   if (hasInvalidRoleOrStatus(payload)) {
@@ -201,6 +202,7 @@ export async function PATCH(request: Request) {
       church_gp_access: toChurchAccess(status),
       congregation_scope: congregationScope,
       church_gp_congregation_scope: congregationScope,
+      ...(password ? { must_change_password: true } : {}),
       updated_by: session.user.id,
     };
 
@@ -229,7 +231,7 @@ export async function PATCH(request: Request) {
       password,
       email_confirm: true,
       user_metadata: { name },
-      app_metadata: { ...appMetadata, created_by: session.user.id },
+      app_metadata: { ...appMetadata, must_change_password: true, created_by: session.user.id },
     });
 
     if (error) {

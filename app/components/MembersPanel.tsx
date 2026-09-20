@@ -13,8 +13,6 @@ import { classNameById } from "../attendance-helpers";
 import { ResponsiveImage } from "./ResponsiveImage";
 import type { AppData, MemberFormTab, MemberRecord } from "../types";
 
-const generatedMemberEmailDomain = "gmail.com";
-const generatedMemberEmailDomains = [generatedMemberEmailDomain, "igrejaconectada.local"];
 const ministerialFunctionOptions = ["", "Auxiliar oficial", "Diácono", "Presbítero", "Evangelista", "Pastor"];
 
 type MemberForm = Omit<MemberRecord, "id">;
@@ -70,47 +68,6 @@ type MembersPanelProps = {
   weeklyBirthdays: MemberRecord[];
   createMember: () => void;
 };
-
-function memberEmailBase(fullName: string) {
-  const parts = fullName
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (!parts.length) return "";
-  if (parts.length === 1) return parts[0];
-  return `${parts[0]}.${parts[parts.length - 1]}`;
-}
-
-function isGeneratedMemberEmail(email: string) {
-  const normalizedEmail = email.trim().toLowerCase();
-  return generatedMemberEmailDomains.some((domain) => normalizedEmail.endsWith(`@${domain}`));
-}
-
-function generatedMemberEmail(fullName: string, members: MemberRecord[], editingMemberId: string | null) {
-  const base = memberEmailBase(fullName);
-  if (!base) return "";
-
-  const usedEmails = new Set(
-    members
-      .filter((member) => member.id !== editingMemberId)
-      .map((member) => member.email.trim().toLowerCase())
-      .filter(Boolean),
-  );
-
-  let nextEmail = `${base}@${generatedMemberEmailDomain}`;
-  let suffix = 2;
-  while (usedEmails.has(nextEmail)) {
-    nextEmail = `${base}${suffix}@${generatedMemberEmailDomain}`;
-    suffix += 1;
-  }
-
-  return nextEmail;
-}
 
 function missingMemberFields(member: Pick<MemberRecord, "birthDate" | "categories" | "cpf" | "fullName" | "memberCode" | "ministry" | "ministries" | "phone">) {
   return [
@@ -173,14 +130,7 @@ export function MembersPanel({
   const canShowForm = canManageMembers || editingMemberId === currentMember?.id;
   const missingFormFields = missingMemberFields(memberForm);
   const updateMemberName = (fullName: string) => {
-    setMemberForm((form) => {
-      const shouldGenerateEmail = !form.email.trim() || isGeneratedMemberEmail(form.email);
-      return {
-        ...form,
-        fullName,
-        email: shouldGenerateEmail ? generatedMemberEmail(fullName, data.members, editingMemberId) : form.email,
-      };
-    });
+    setMemberForm((form) => ({ ...form, fullName }));
   };
   const updateMemberBirthDate = (birthDate: string) => {
     setMemberForm((form) => ({
@@ -371,7 +321,8 @@ export function MembersPanel({
             </label>
             <label data-member-section="Dados">
               E-mail
-              <input onChange={(event) => setMemberForm((form) => ({ ...form, email: event.target.value }))} placeholder={`nome.sobrenome@${generatedMemberEmailDomain}`} type="email" value={memberForm.email} />
+              <input onChange={(event) => setMemberForm((form) => ({ ...form, email: event.target.value }))} placeholder="E-mail real do membro (opcional)" type="email" value={memberForm.email} />
+              <small>Não use e-mail fictício. Sem e-mail, o acesso poderá ser feito pelo código do membro.</small>
               <small className="form-hint">Gerado automaticamente pelo nome. Se precisar, você ainda pode editar manualmente.</small>
             </label>
             {canManageMembers && (
@@ -769,7 +720,7 @@ export function MembersPanel({
                       </label>
                       <label>
                         Senha
-                        <input onChange={(event) => setMemberCredentialForm((form) => ({ ...form, password: event.target.value }))} placeholder="123456" type="text" value={memberCredentialForm.password} />
+                        <input autoComplete="new-password" minLength={8} onChange={(event) => setMemberCredentialForm((form) => ({ ...form, password: event.target.value }))} placeholder="Senha temporária individual" type="password" value={memberCredentialForm.password} />
                         <small className="form-hint">Senha inicial padrão para o primeiro envio.</small>
                       </label>
                       <button className="primary-action" disabled={!canSaveMemberAccess} onClick={() => { void saveMemberAccess(member); }} type="button">

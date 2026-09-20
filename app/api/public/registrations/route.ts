@@ -7,6 +7,8 @@ type JsonRecord = Record<string, unknown>;
 
 const allowedStatuses = new Set(["Visitante", "Novo convertido", "Membro ativo"]);
 const maxBodyBytes = 24_000;
+const privacyPolicyVersion = "2026-09-19";
+const attempts = new Map<string, { count: number; resetAt: number }>();
 const maxDigits = {
   cpf: 11,
   phone: 13,
@@ -36,6 +38,36 @@ function hasValidEmail(value: string) {
   return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function requestAddress(request: Request) {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+}
+
+function isRateLimited(address: string) {
+  const now = Date.now();
+  const current = attempts.get(address);
+  if (!current || current.resetAt <= now) {
+    attempts.set(address, { count: 1, resetAt: now + 60 * 60 * 1000 });
+    return false;
+  }
+  current.count += 1;
+  attempts.set(address, current);
+  return current.count > 5;
+}
+
+async function validTurnstileToken(token: string, address: string) {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) return true;
+  if (!token) return false;
+
+  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ secret, response: token, remoteip: address }),
+  });
+  const result = (await response.json().catch(() => null)) as { success?: boolean } | null;
+  return result?.success === true;
+}
+
 function hasDuplicate(payload: JsonRecord, cpf: string, phone: string) {
   const allRecords = [
     ...recordsFrom(payload.visitors),
@@ -50,6 +82,10 @@ function hasDuplicate(payload: JsonRecord, cpf: string, phone: string) {
 }
 
 export async function POST(request: Request) {
+  const address = requestAddress(request);
+  if (isRateLimited(address)) {
+    return NextResponse.json({ error: "Muitos cadastros enviados deste aparelho. Aguarde e tente novamente." }, { status: 429 });
+  }
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > maxBodyBytes) {
     return NextResponse.json({ error: "Cadastro muito grande. Revise os campos e tente novamente." }, { status: 413 });
@@ -67,6 +103,14 @@ export async function POST(request: Request) {
 
   if (textValue(body.website)) {
     return NextResponse.json({ ok: true });
+  }
+
+  if (body.privacyConsent !== true) {
+    return NextResponse.json({ error: "Confirme a Política de Privacidade para enviar o cadastro." }, { status: 400 });
+  }
+
+  if (!(await validTurnstileToken(textValue(body.turnstileToken, 3000), address))) {
+    return NextResponse.json({ error: "Não foi possível validar a proteção antispam. Atualize a página e tente novamente." }, { status: 400 });
   }
 
   const fullName = textValue(body.fullName);
@@ -164,6 +208,9 @@ export async function POST(request: Request) {
     registration_source: "Cadastro via link WhatsApp",
     notes: textValue(body.notes, 600),
     status: "Aguardando aprovacao",
+    privacy_consent: true,
+    privacy_consent_at: now,
+    privacy_policy_version: privacyPolicyVersion,
     created_at: now,
   };
 

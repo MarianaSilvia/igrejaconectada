@@ -70,7 +70,7 @@ export const blankMinistry: Omit<MinistryRecord, "id"> = {
 export const blankUser: AccessUserForm = {
   name: "",
   email: "",
-  password: "123456",
+  password: "",
   role: "Lider",
   status: "Pendente",
   congregationScope: globalCongregationScope,
@@ -156,12 +156,15 @@ export const blankRegistrationRequest: Omit<RegistrationRequest, "id" | "created
   registrationSource: "Cadastro via link WhatsApp",
   notes: "",
   status: "Aguardando aprovacao",
+  privacyConsent: false,
+  privacyConsentAt: "",
+  privacyPolicyVersion: "",
 };
 
 export const blankMemberCredential = {
   memberId: "",
   email: "",
-  password: "123456",
+  password: "",
 };
 
 export const blankKid: Omit<KidRecord, "id"> = {

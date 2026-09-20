@@ -27,6 +27,9 @@ type RegistrationRequestRow = {
   created_at: string;
   reviewed_at: string;
   review_note: string;
+  privacy_consent?: boolean;
+  privacy_consent_at?: string;
+  privacy_policy_version?: string;
 };
 
 const registrationRequestColumns = [
@@ -54,11 +57,14 @@ const registrationRequestColumns = [
   "created_at",
   "reviewed_at",
   "review_note",
+  "privacy_consent",
+  "privacy_consent_at",
+  "privacy_policy_version",
 ].join(",");
 
 const legacyRegistrationRequestColumns = registrationRequestColumns
   .split(",")
-  .filter((column) => column !== "congregation")
+  .filter((column) => !["congregation", "privacy_consent", "privacy_consent_at", "privacy_policy_version"].includes(column))
   .join(",");
 
 function toRegistrationRequest(row: RegistrationRequestRow) {
@@ -87,6 +93,9 @@ function toRegistrationRequest(row: RegistrationRequestRow) {
     createdAt: row.created_at,
     reviewedAt: row.reviewed_at,
     reviewNote: row.review_note,
+    privacyConsent: row.privacy_consent === true,
+    privacyConsentAt: row.privacy_consent_at ?? "",
+    privacyPolicyVersion: row.privacy_policy_version ?? "",
   };
 }
 

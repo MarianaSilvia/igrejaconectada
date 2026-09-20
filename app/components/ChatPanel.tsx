@@ -34,6 +34,7 @@ type ChatResponse = {
   retentionDays?: number;
   canModerate?: boolean;
   currentUserId?: string;
+  blockedUsers?: Array<{ blockedUserId: string; blockedName: string }>;
   message?: string;
   error?: string;
 };
@@ -66,6 +67,7 @@ export function ChatPanel() {
   const [retentionDays, setRetentionDays] = useState(90);
   const [canModerate, setCanModerate] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
+  const [blockedUsers, setBlockedUsers] = useState<Array<{ blockedUserId: string; blockedName: string }>>([]);
 
   const selectedRoom = useMemo(
     () => rooms.find((room) => room.id === selectedRoomId) ?? rooms[0],
@@ -112,6 +114,7 @@ export function ChatPanel() {
     setRetentionDays(result.retentionDays ?? 90);
     setCanModerate(Boolean(result.canModerate));
     setCurrentUserId(result.currentUserId ?? "");
+    setBlockedUsers(result.blockedUsers ?? []);
     setSelectedRoomId(result.selectedRoomId ?? result.rooms?.[0]?.id ?? "");
     setStatusMessage((result.rooms?.length ?? 0) ? "Chat atualizado." : "Nenhuma sala disponível para este acesso.");
     setIsLoading(false);
@@ -180,15 +183,27 @@ export function ChatPanel() {
     await loadChat(selectedRoom.id, { quiet: true });
   }
 
-  async function updateMessage(messageId: string, action: "report" | "hide") {
+  async function updateMessage(messageId: string, action: "report" | "hide" | "block", blockedUserId?: string) {
     const token = await currentToken();
     const response = await fetch("/api/chat", {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ messageId, action }),
+      body: JSON.stringify({ messageId, action, blockedUserId }),
     });
     const result = (await response.json().catch(() => ({}))) as { error?: string };
-    setStatusMessage(response.ok ? (action === "hide" ? "Mensagem ocultada." : "Mensagem denunciada para a liderança.") : result.error ?? "Não foi possível atualizar a mensagem.");
+    setStatusMessage(response.ok ? (action === "hide" ? "Mensagem ocultada." : action === "block" ? "Usuário bloqueado. As mensagens dele foram ocultadas para você." : "Mensagem denunciada para a liderança.") : result.error ?? "Não foi possível atualizar a mensagem.");
+    await loadChat(selectedRoom?.id ?? "", { quiet: true });
+  }
+
+  async function unblockUser(blockedUserId: string) {
+    const token = await currentToken();
+    const response = await fetch("/api/chat", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "unblock", blockedUserId }),
+    });
+    const result = (await response.json().catch(() => ({}))) as { error?: string };
+    setStatusMessage(response.ok ? "Usuário desbloqueado." : result.error ?? "Não foi possível desbloquear o usuário.");
     await loadChat(selectedRoom?.id ?? "", { quiet: true });
   }
 
@@ -205,6 +220,17 @@ export function ChatPanel() {
           As mensagens ficam disponíveis por até <strong>{retentionDays} dias</strong>. Depois disso, o histórico antigo é removido automaticamente para manter o sistema leve e preservar a privacidade.
         </p>
         <small>Use o chat para avisos rápidos e comunhão. Informações oficiais continuam nos módulos Agenda, Mural, Pastoral e Comunicados.</small>
+        <p><a href="/termos" target="_blank">Regras da comunidade</a></p>
+        {blockedUsers.length > 0 && (
+          <div className="chat-blocked-users">
+            <strong>Usuários bloqueados</strong>
+            {blockedUsers.map((blocked) => (
+              <button className="link-button" key={blocked.blockedUserId} onClick={() => unblockUser(blocked.blockedUserId)} type="button">
+                Desbloquear {blocked.blockedName || "usuário"}
+              </button>
+            ))}
+          </div>
+        )}
       </article>
 
       <article className="surface wide chat-panel">
@@ -258,6 +284,11 @@ export function ChatPanel() {
                     {message.status === "visible" && (
                       <button className="link-button" onClick={() => updateMessage(message.id, "report")} type="button">
                         Denunciar
+                      </button>
+                    )}
+                    {message.status === "visible" && message.user_id !== currentUserId && (
+                      <button className="link-button" onClick={() => updateMessage(message.id, "block", message.user_id)} type="button">
+                        Bloquear usuário
                       </button>
                     )}
                     {canModerate && message.status === "visible" && (

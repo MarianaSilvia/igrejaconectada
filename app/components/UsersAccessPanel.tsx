@@ -78,9 +78,9 @@ export function UsersAccessPanel({
             {selectedAccessExistingUser ? "Nova senha (opcional)" : "Senha inicial"}
             <input
               autoComplete="new-password"
-              minLength={6}
+              minLength={8}
               onChange={(event) => setUserForm((form) => ({ ...form, password: event.target.value }))}
-              placeholder={selectedAccessExistingUser ? "Preencha somente se quiser trocar" : "Minimo de 6 caracteres"}
+              placeholder={selectedAccessExistingUser ? "Preencha somente se quiser trocar" : "Mínimo de 8 caracteres"}
               type="password"
               value={userForm.password}
             />

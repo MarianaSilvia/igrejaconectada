@@ -107,10 +107,20 @@ async function ensureBucket() {
   if (!client) return { error: "Supabase administrativo nao configurado." };
 
   const { data: bucket } = await client.storage.getBucket(bucketName);
-  if (bucket) return { client };
+  if (bucket) {
+    if (bucket.public) {
+      const { error } = await client.storage.updateBucket(bucketName, {
+        public: false,
+        allowedMimeTypes: Array.from(allowedMimeTypes),
+        fileSizeLimit: "1MB",
+      });
+      if (error) return { error: "Não foi possível proteger o armazenamento de fotos." };
+    }
+    return { client };
+  }
 
   const { error } = await client.storage.createBucket(bucketName, {
-    public: true,
+    public: false,
     allowedMimeTypes: Array.from(allowedMimeTypes),
     fileSizeLimit: "1MB",
   });
@@ -154,9 +164,10 @@ export async function POST(request: Request) {
     await bucket.client.storage.from(bucketName).remove([previousFileKey]);
   }
 
-  const { data } = bucket.client.storage.from(bucketName).getPublicUrl(fileKey);
+  const { data, error: signedUrlError } = await bucket.client.storage.from(bucketName).createSignedUrl(fileKey, 60 * 60);
+  if (signedUrlError) return NextResponse.json({ error: "Foto enviada, mas não foi possível preparar a visualização segura." }, { status: 400 });
 
-  return NextResponse.json({ photoUrl: data.publicUrl, photoFileKey: fileKey });
+  return NextResponse.json({ photoUrl: data.signedUrl, photoFileKey: fileKey });
 }
 
 export async function DELETE(request: Request) {

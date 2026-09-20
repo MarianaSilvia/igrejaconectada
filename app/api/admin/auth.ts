@@ -34,9 +34,7 @@ export function hasApprovedAccess(user: User) {
   const access = String(metadata.church_gp_access ?? "").toLowerCase();
   const status = String(metadata.status ?? "").toLowerCase();
 
-  if (!access && !status) return true;
-
-  return access === "approved" || status === "ativo" || status === "active";
+  return access === "approved" && (status === "ativo" || status === "active");
 }
 
 export async function requireSession(request: Request, allowedRoles?: Iterable<ChurchRole>) {

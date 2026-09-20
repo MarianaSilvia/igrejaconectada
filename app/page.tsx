@@ -78,7 +78,6 @@ import {
   blankTransaction,
   blankUser,
   blankVisitor,
-  createLocalBackupData,
   hasPersistedPayload,
   normalizeAppData as normalizeAppDataWithDefaults,
   normalizeMessageTemplate,
@@ -156,8 +155,7 @@ import type {
   VisitorRecord,
 } from "./types";
 
-const storageKey = "igreja-gestao-local-v1";
-const photoCacheKey = "igreja-conectada-photo-cache-v1";
+const legacyStorageKeys = ["igreja-gestao-local-v1", "igreja-conectada-photo-cache-v1"];
 
 const statusFlow: CareStatus[] = ["Pendente", "Em analise", "Agendado", "Concluido"];
 
@@ -693,65 +691,20 @@ const messageTemplates: MessageTemplateItem[] = [
   },
 ];
 
-type PhotoCache = {
-  members: Record<string, string>;
-  kids: Record<string, string>;
-};
-
-function emptyPhotoCache(): PhotoCache {
-  return { members: {}, kids: {} };
-}
-
-function loadPhotoCache(): PhotoCache {
-  if (typeof window === "undefined") return emptyPhotoCache();
-
-  try {
-    const stored = window.localStorage.getItem(photoCacheKey);
-    if (!stored) return emptyPhotoCache();
-    const parsed = JSON.parse(stored) as Partial<PhotoCache>;
-    return {
-      members: parsed.members ?? {},
-      kids: parsed.kids ?? {},
-    };
-  } catch {
-    window.localStorage.removeItem(photoCacheKey);
-    return emptyPhotoCache();
-  }
-}
-
-function savePhotoCache(data: AppData) {
-  if (typeof window === "undefined") return;
-
-  const cache: PhotoCache = {
-    members: {},
-    kids: Object.fromEntries(data.kids.filter((kid) => kid.photoDataUrl).map((kid) => [kid.id, kid.photoDataUrl])),
-  };
-
-  try {
-    window.localStorage.setItem(photoCacheKey, JSON.stringify(cache));
-  } catch {
-    // Se o navegador negar espaco, o salvamento remoto continua sendo a fonte principal.
-  }
-}
-
-function mergePhotoCache(data: AppData, cache: PhotoCache) {
-  return {
-    ...data,
-    members: data.members.map((member) => ({
-      ...member,
-      photoDataUrl: "",
-    })),
-    kids: data.kids.map((kid) => ({
-      ...kid,
-      photoDataUrl: kid.photoDataUrl || cache.kids[kid.id] || "",
-    })),
-  };
-}
-
 function isApprovedAccessStatus(value: unknown) {
-  if (!value) return true;
   const status = String(value).toLowerCase();
   return status === "approved" || status === "ativo" || status === "active";
+}
+
+function temporaryPassword() {
+  const bytes = new Uint32Array(3);
+  window.crypto.getRandomValues(bytes);
+  return `Ic!${Array.from(bytes, (value) => value.toString(36)).join("").slice(0, 10)}9`;
+}
+
+function internalMemberEmail(member: Pick<MemberRecord, "memberCode" | "id">) {
+  const loginId = (member.memberCode || member.id).replace(/[^a-z0-9]/gi, "").toLowerCase();
+  return `${loginId}@acesso.igrejaconectada.invalid`;
 }
 
 function accessRoleForSession(users: AccessUser[], email: string, metadata: Record<string, unknown> | undefined) {
@@ -895,19 +848,7 @@ export default function Home() {
   const [activeModule, setActiveModule] = useState<ModuleKey>("overview");
   const [simpleViewEnabled, setSimpleViewEnabled] = useState(false);
   const [muralSpotlightIndex, setMuralSpotlightIndex] = useState(0);
-  const [data, setData] = useState<AppData>(() => {
-    if (typeof window === "undefined") return initialData;
-
-    const stored = window.localStorage.getItem(storageKey);
-    if (!stored) return initialData;
-
-    try {
-      return mergePhotoCache(normalizeAppData(JSON.parse(stored) as Partial<AppData>), loadPhotoCache());
-    } catch {
-      window.localStorage.removeItem(storageKey);
-      return initialData;
-    }
-  });
+  const [data, setData] = useState<AppData>(initialData);
   const [careForm, setCareForm] = useState(blankCare);
   const [eventForm, setEventForm] = useState(blankEvent);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -964,7 +905,7 @@ export default function Home() {
   const [assetConditionFilter, setAssetConditionFilter] = useState("Todos");
   const [remoteMessageTemplates, setRemoteMessageTemplates] = useState<MessageTemplateItem[]>([]);
   const [remoteStateReady, setRemoteStateReady] = useState(!isSupabaseConfigured());
-  const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Modo local: configure o Supabase no Vercel.");
+  const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Acesso bloqueado: configure o Supabase no ambiente de produção.");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState("");
   const [memberSyncLoading, setMemberSyncLoading] = useState(false);
@@ -1085,9 +1026,8 @@ export default function Home() {
     }
 
     const normalizedRemoteData = normalizeAppData(result.payload ?? {});
-    const remoteData = mergePhotoCache(normalizedRemoteData, loadPhotoCache());
     lastSavedPayloadRef.current = JSON.stringify(normalizedRemoteData);
-    setData(remoteData);
+    setData(normalizedRemoteData);
     setRemoteUpdatedAt(result.updatedAt ?? null);
     const savedAt = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     setLastSavedAt(savedAt);
@@ -1150,6 +1090,12 @@ export default function Home() {
       setSessionUserId(session.user.id);
       setSessionEmail(restoredEmail);
       setSessionRole(accessRoleForSession(data.users, restoredEmail, metadata));
+      if (new URLSearchParams(window.location.search).get("recuperar") === "senha" || metadata.must_change_password === true) {
+        setAccessMode("reset");
+        setAccessMessage("Crie uma nova senha pessoal para continuar.");
+        setRemoteStateReady(true);
+        return;
+      }
       setAccessMessage("");
       setAccessMode("login");
       setRemoteStateReady(false);
@@ -1165,21 +1111,8 @@ export default function Home() {
   }, [data.users, hasSession]);
 
   useEffect(() => {
-    savePhotoCache(data);
-
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(data));
-    } catch {
-      let statusMessage = "O navegador esta sem espaco local. Os cadastros continuam sendo enviados para a base quando houver sessao ativa.";
-      try {
-        window.localStorage.setItem(storageKey, JSON.stringify(createLocalBackupData(data)));
-        statusMessage = "Backup local salvo sem imagens pesadas. A base Supabase continua preservando os cadastros.";
-      } catch {
-        // Mantem a tela funcionando mesmo quando o navegador recusa qualquer novo backup local.
-      }
-      window.setTimeout(() => setSyncStatus(statusMessage), 0);
-    }
-  }, [data]);
+    legacyStorageKeys.forEach((key) => window.localStorage.removeItem(key));
+  }, []);
 
   useEffect(() => {
     if (!hasSession || !isSupabaseConfigured()) return;
@@ -1216,12 +1149,11 @@ export default function Home() {
 
       if (hasPersistedPayload(result.payload)) {
         const normalizedRemoteData = normalizeAppData(result.payload ?? {});
-        const remoteData = mergePhotoCache(normalizedRemoteData, loadPhotoCache());
         lastSavedPayloadRef.current = JSON.stringify(normalizedRemoteData);
         setLastSavedAt(new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
         setRemoteUpdatedAt(result.updatedAt ?? null);
         setSaveState("saved");
-        setData(remoteData);
+        setData(normalizedRemoteData);
         setSyncStatus("Cadastros carregados da base Supabase.");
       } else {
         setRemoteUpdatedAt(result.updatedAt ?? null);
@@ -1663,7 +1595,7 @@ export default function Home() {
     canManageUsers &&
       userForm.name.trim() &&
       userForm.email.trim() &&
-      (selectedAccessExistingUser || userForm.password.trim().length >= 6),
+      (selectedAccessExistingUser || userForm.password.trim().length >= 8),
   );
   const canCreateMember = Boolean(memberForm.fullName.trim() && memberForm.phone.trim()) && (canManageMembers || editingMemberId === currentMember?.id);
   const memberDuplicateCandidate = useMemo(() => {
@@ -1706,7 +1638,7 @@ export default function Home() {
     canManageUsers &&
       memberCredentialForm.memberId &&
       memberCredentialForm.email.trim() &&
-      (!memberCredentialForm.password.trim() || memberCredentialForm.password.trim().length >= 6),
+      (!memberCredentialForm.password.trim() || memberCredentialForm.password.trim().length >= 8),
   );
   const canCreateKid = canManageKids && Boolean(kidForm.childName.trim() && kidForm.guardianName.trim() && kidForm.guardianPhone.trim());
   const canCreateMuralItem = canManageMural && Boolean(muralForm.title.trim() && muralForm.expiresAt);
@@ -2471,7 +2403,7 @@ export default function Home() {
     setUserForm((form) => ({
       ...form,
       name: member.fullName,
-      email: member.email,
+      email: member.email || internalMemberEmail(member),
       role: existingAccess?.role ?? "Lider",
       status: existingAccess?.status ?? "Ativo",
       congregationScope: existingAccess?.congregationScope ?? member.congregation ?? globalCongregationScope,
@@ -2534,8 +2466,8 @@ export default function Home() {
   async function createUser() {
     if (!requireModuleAccess("users", "criar usuarios")) return;
     if (!userForm.name.trim() || !userForm.email.trim()) return;
-    if (!selectedAccessExistingUser && userForm.password.trim().length < 6) {
-      setSyncStatus("Informe uma senha inicial com pelo menos 6 caracteres.");
+    if (!selectedAccessExistingUser && userForm.password.trim().length < 8) {
+      setSyncStatus("Informe uma senha temporária individual com pelo menos 8 caracteres.");
       return;
     }
 
@@ -2919,8 +2851,8 @@ export default function Home() {
         ? blankMemberCredential
         : {
             memberId: member.id,
-            email: member.email,
-            password: "123456",
+            email: member.email || internalMemberEmail(member),
+            password: temporaryPassword(),
           },
     );
   }
@@ -2929,9 +2861,9 @@ export default function Home() {
     return [
       "Ola, {nome}! Seu acesso ao Igreja Conectada foi preparado.",
       "Acesse: https://igrejaconectada-kappa.vercel.app",
-      `Login: ${memberCredentialForm.email.trim() || member.email}`,
-      `Senha inicial: ${memberCredentialForm.password.trim() || "123456"}`,
-      "Acesse o sistema e altere sua senha se solicitado pela secretaria.",
+      `Login: ${member.memberCode || memberCredentialForm.email.trim() || member.email}`,
+      `Senha temporária: ${memberCredentialForm.password.trim()}`,
+      "No primeiro acesso, o sistema pedirá a criação de uma nova senha.",
     ].join("\n");
   }
 
@@ -3002,7 +2934,7 @@ export default function Home() {
       };
     });
 
-    setMemberCredentialForm((form) => ({ ...form, password: "123456" }));
+    setMemberCredentialForm((form) => ({ ...form, password: temporaryPassword() }));
   }
 
   function createKid() {
@@ -3493,35 +3425,59 @@ export default function Home() {
     event.preventDefault();
     setAccessMessage("");
     const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") ?? "");
+    const identifier = String(form.get("identifier") ?? "").trim();
     const password = String(form.get("password") ?? "");
     const supabase = getSupabaseClient();
-    const loginEmail = normalizeEmail(email);
-    let resolvedUserId = "";
-    let resolvedRole: AccessRole = data.users.find((user) => normalizeEmail(user.email) === loginEmail)?.role ?? "Administrador";
-
-    if (supabase) {
-      const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setAccessMessage("Não foi possível entrar pelo Supabase. Verifique e-mail, senha e usuário cadastrado.");
-        return;
-      }
-      const metadata = authData.user?.app_metadata ?? {};
-      const accessStatus = metadata.church_gp_access ?? metadata.status;
-      if (!isApprovedAccessStatus(accessStatus)) {
-        await supabase.auth.signOut();
-        setAccessMessage("Seu acesso ainda não está ativo. Fale com a administração.");
-        return;
-      }
-      resolvedUserId = authData.user?.id ?? "";
-      resolvedRole = accessRoleForSession(data.users, authData.user?.email ?? loginEmail, metadata);
-      setRemoteStateReady(false);
-      setSyncStatus("Sessão Supabase ativa. Novos dados serão sincronizados.");
+    if (!supabase || !isSupabaseConfigured()) {
+      setAccessMessage("O acesso seguro está indisponível. Verifique a configuração do Supabase antes de entrar.");
+      return;
     }
 
-    setSessionUserId(resolvedUserId);
+    if (/^CDG\d{4,}$/i.test(identifier)) {
+      const response = await fetch("/api/auth/member-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberCode: identifier, password }),
+      });
+      const result = (await response.json().catch(() => ({}))) as { accessToken?: string; refreshToken?: string; error?: string };
+      if (!response.ok || !result.accessToken || !result.refreshToken) {
+        setAccessMessage(result.error ?? "Não foi possível entrar. Confira o código e a senha.");
+        return;
+      }
+      const { error } = await supabase.auth.setSession({ access_token: result.accessToken, refresh_token: result.refreshToken });
+      if (error) {
+        setAccessMessage("Não foi possível concluir o acesso com o código informado.");
+        return;
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email: normalizeEmail(identifier), password });
+      if (error) {
+        setAccessMessage("Não foi possível entrar. Verifique seu e-mail ou código e a senha.");
+        return;
+      }
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+    const metadata = user?.app_metadata ?? {};
+    const accessStatus = metadata.church_gp_access ?? metadata.status;
+    if (!user || !isApprovedAccessStatus(accessStatus)) {
+      await supabase.auth.signOut();
+      setAccessMessage("Seu acesso ainda não está ativo. Fale com a administração.");
+      return;
+    }
+
+    const loginEmail = normalizeEmail(user.email ?? "");
+    setSessionUserId(user.id);
     setSessionEmail(loginEmail);
-    setSessionRole(resolvedRole);
+    setSessionRole(accessRoleForSession(data.users, loginEmail, metadata));
+    setRemoteStateReady(false);
+    setSyncStatus("Sessão Supabase ativa. Novos dados serão sincronizados.");
+    if (metadata.must_change_password === true) {
+      setAccessMode("reset");
+      setAccessMessage("Crie uma nova senha pessoal antes de continuar.");
+      return;
+    }
     setHasSession(true);
   }
 
@@ -3883,9 +3839,55 @@ export default function Home() {
     setSyncStatus(response.ok ? "Campanha registrada no Supabase." : "Mensagens abertas; campanha não foi salva no Supabase.");
   }
 
-  function handleRecover(event: FormEvent<HTMLFormElement>) {
+  async function handleRecover(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setAccessMessage("Se o e-mail estiver cadastrado, a administração receberá o pedido de recuperação.");
+    const supabase = getSupabaseClient();
+    const form = new FormData(event.currentTarget);
+    const email = normalizeEmail(String(form.get("recovery_email") ?? ""));
+    if (!supabase || !email) {
+      setAccessMessage("A recuperação está indisponível. Fale com a secretaria da igreja.");
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/?recuperar=senha`,
+    });
+    setAccessMessage(
+      error
+        ? "Não foi possível enviar a recuperação. Confirme se este é um e-mail real ou fale com a secretaria."
+        : "Se o e-mail estiver cadastrado, você receberá as instruções para criar uma nova senha.",
+    );
+  }
+
+  async function handlePasswordUpdate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const password = String(form.get("new_password") ?? "");
+    const confirmation = String(form.get("confirm_password") ?? "");
+    if (password.length < 8 || password !== confirmation) {
+      setAccessMessage("Use pelo menos 8 caracteres e repita a mesma senha.");
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+    const { error } = supabase ? await supabase.auth.updateUser({ password, data: { password_changed_at: new Date().toISOString() } }) : { error: new Error("Supabase indisponível") };
+    if (error) {
+      setAccessMessage("Não foi possível atualizar a senha. Solicite um novo link ou fale com a secretaria.");
+      return;
+    }
+
+    const { data: sessionData } = await supabase!.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (token) {
+      await fetch("/api/auth/password-changed", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+
+    setAccessMode("login");
+    setAccessMessage("Senha atualizada. Entre novamente usando sua nova senha.");
+    await supabase?.auth.signOut();
   }
 
   if (!hasSession) {
@@ -3895,6 +3897,7 @@ export default function Home() {
         loginPasswordVisible={loginPasswordVisible}
         mode={accessMode}
         onLogin={handleLogin}
+        onPasswordUpdate={handlePasswordUpdate}
         onRecover={handleRecover}
         onSwitchMode={switchAccessMode}
         setLoginPasswordVisible={setLoginPasswordVisible}
@@ -3931,7 +3934,7 @@ export default function Home() {
           <div className="connection-card">
             <span className={`status-dot ${saveState}`} />
             <div>
-              <strong>{isSupabaseConfigured() ? "Supabase preparado" : "Modo local ativo"}</strong>
+              <strong>{isSupabaseConfigured() ? "Supabase preparado" : "Supabase obrigatório"}</strong>
               <span>{syncStatus}</span>
               {lastSavedAt && <small>Ultimo salvamento: {lastSavedAt}</small>}
               {saveState === "conflict" && <small>Salvamento pausado para proteger os dados.</small>}
@@ -3940,6 +3943,7 @@ export default function Home() {
                   {saveState === "conflict" ? "Recarregar antes de continuar" : "Recarregar dados da base"}
                 </button>
               )}
+              <small><a href="/excluir-conta">Privacidade e exclusão de conta</a></small>
             </div>
           </div>
         </aside>
@@ -5023,6 +5027,7 @@ function AccessScreen({
   loginPasswordVisible,
   mode,
   onLogin,
+  onPasswordUpdate,
   onRecover,
   onSwitchMode,
   setLoginPasswordVisible,
@@ -5031,16 +5036,20 @@ function AccessScreen({
   loginPasswordVisible: boolean;
   mode: AccessMode;
   onLogin: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
-  onRecover: (event: FormEvent<HTMLFormElement>) => void;
+  onPasswordUpdate: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
+  onRecover: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
   onSwitchMode: (mode: AccessMode) => void;
   setLoginPasswordVisible: Dispatch<SetStateAction<boolean>>;
 }) {
   const isLogin = mode === "login";
   const isRecover = mode === "recover";
-  const title = isRecover ? "Recuperar acesso" : "Bem-vindo de volta";
+  const isReset = mode === "reset";
+  const title = isRecover ? "Recuperar acesso" : isReset ? "Criar nova senha" : "Bem-vindo de volta";
   const description = isLogin
-    ? "Use seu e-mail e senha para acessar o painel correto."
-    : "Informe seu e-mail para pedir a redefinicao da senha.";
+    ? "Use seu e-mail ou código de membro e sua senha para acessar."
+    : isReset
+      ? "Escolha uma senha pessoal com pelo menos 8 caracteres."
+      : "Informe seu e-mail real para receber a redefinição da senha.";
 
   return (
     <main className="access-page">
@@ -5076,8 +5085,8 @@ function AccessScreen({
         {isLogin && (
           <form className="access-form" method="post" onSubmit={onLogin}>
             <label>
-              E-mail
-              <input autoComplete="email" name="email" placeholder="seunome@email.com" required type="email" />
+              E-mail ou código de membro
+              <input autoCapitalize="characters" autoComplete="username" name="identifier" placeholder="seunome@email.com ou CDG0001" required type="text" />
             </label>
             <label>
               Senha
@@ -5116,17 +5125,37 @@ function AccessScreen({
           </form>
         )}
 
+        {isReset && (
+          <form className="access-form" method="post" onSubmit={onPasswordUpdate}>
+            <label>
+              Nova senha
+              <input autoComplete="new-password" minLength={8} name="new_password" required type="password" />
+            </label>
+            <label>
+              Repetir nova senha
+              <input autoComplete="new-password" minLength={8} name="confirm_password" required type="password" />
+            </label>
+            <button className="access-primary" type="submit">Salvar nova senha</button>
+          </form>
+        )}
+
         <div className="access-links">
           {!isRecover && (
             <button onClick={() => onSwitchMode("recover")} type="button">
               Esqueci minha senha
             </button>
           )}
-          {!isLogin && (
+          {!isLogin && !isReset && (
             <button onClick={() => onSwitchMode("login")} type="button">
               Voltar ao login
             </button>
           )}
+        </div>
+
+        <div className="access-links legal-links">
+          <a href="/privacidade">Privacidade</a>
+          <a href="/termos">Termos de uso</a>
+          <a href="/excluir-conta">Excluir minha conta</a>
         </div>
 
         <div className="access-profile-note">

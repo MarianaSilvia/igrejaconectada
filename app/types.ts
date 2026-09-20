@@ -1,6 +1,6 @@
 import type { AccessRole } from "./permissions";
 
-export type AccessMode = "login" | "recover";
+export type AccessMode = "login" | "recover" | "reset";
 
 export type CareStatus = "Pendente" | "Em analise" | "Agendado" | "Concluido";
 
@@ -193,6 +193,9 @@ export type RegistrationRequest = {
   createdAt: string;
   reviewedAt: string;
   reviewNote: string;
+  privacyConsent: boolean;
+  privacyConsentAt: string;
+  privacyPolicyVersion: string;
 };
 
 export type VisitorRecord = {

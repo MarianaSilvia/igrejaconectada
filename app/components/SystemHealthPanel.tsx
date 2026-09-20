@@ -56,7 +56,7 @@ export function SystemHealthPanel({
       <div className="panel-heading">
         <div>
           <h2>Saúde do sistema</h2>
-          <span>{isSupabaseReady ? "Base Supabase ativa" : "Modo local sem sincronização"}</span>
+          <span>{isSupabaseReady ? "Base Supabase ativa" : "Supabase obrigatório e não configurado"}</span>
         </div>
         <strong className={`status-chip ${saveState}`}>{saveStateLabel(saveState)}</strong>
       </div>

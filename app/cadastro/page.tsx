@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import Script from "next/script";
+import { FormEvent, useRef, useState } from "react";
 import { congregationOptions } from "../congregation-scope";
 
 type PublicRegistrationForm = {
@@ -23,6 +24,8 @@ type PublicRegistrationForm = {
   requestedStatus: string;
   notes: string;
   website: string;
+  privacyConsent: boolean;
+  turnstileToken: string;
 };
 
 const initialForm: PublicRegistrationForm = {
@@ -45,12 +48,27 @@ const initialForm: PublicRegistrationForm = {
   requestedStatus: "Visitante",
   notes: "",
   website: "",
+  privacyConsent: false,
+  turnstileToken: "",
 };
 
 export default function PublicRegistrationPage() {
   const [form, setForm] = useState(initialForm);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
+  const turnstileContainer = useRef<HTMLDivElement>(null);
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  function renderTurnstile() {
+    const api = (window as unknown as { turnstile?: { render: (target: HTMLElement, options: Record<string, unknown>) => void } }).turnstile;
+    if (!api || !turnstileContainer.current || !turnstileSiteKey || turnstileContainer.current.childElementCount) return;
+    api.render(turnstileContainer.current, {
+      sitekey: turnstileSiteKey,
+      theme: "auto",
+      callback: (token: string) => setForm((current) => ({ ...current, turnstileToken: token })),
+      "expired-callback": () => setForm((current) => ({ ...current, turnstileToken: "" })),
+    });
+  }
 
   async function submitRegistration(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,6 +95,7 @@ export default function PublicRegistrationPage() {
 
   return (
     <main className="public-registration-page">
+      {turnstileSiteKey && <Script onLoad={renderTurnstile} src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" />}
       <section className="public-registration-hero">
         <div className="brand-block">
           <div className="brand-mark">IC</div>
@@ -206,12 +225,23 @@ export default function PublicRegistrationPage() {
             Observacoes
             <textarea maxLength={600} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} />
           </label>
+          <label className="span-2 consent-field">
+            <input
+              checked={form.privacyConsent}
+              onChange={(event) => setForm((current) => ({ ...current, privacyConsent: event.target.checked }))}
+              required
+              type="checkbox"
+            />
+            <span>Li e concordo com a <a href="/privacidade" target="_blank">Política de Privacidade</a> e autorizo o tratamento destes dados pela igreja para fins cadastrais e pastorais.</span>
+          </label>
+          {turnstileSiteKey && <div className="span-2" ref={turnstileContainer} />}
         </div>
 
-        <button disabled={status === "sending"} type="submit">
+        <button disabled={status === "sending" || !form.privacyConsent || Boolean(turnstileSiteKey && !form.turnstileToken)} type="submit">
           {status === "sending" ? "Enviando..." : "Enviar cadastro"}
         </button>
       </form>
+      <p className="public-legal-note"><a href="/termos">Termos de uso</a> · <a href="/privacidade">Privacidade</a> · <a href="/excluir-conta">Exclusão de conta</a></p>
     </main>
   );
 }
