@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html data-scroll-behavior="smooth" lang="pt-BR">
       <body>
         <PwaBoot />
         {children}

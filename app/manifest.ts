@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Igreja Conectada",
     short_name: "Igreja",
     description: "Sistema conectado da igreja para membros, agenda, mural, pedidos, EBD e Discipulado.",
-    start_url: "/",
+    start_url: "/sistema",
     scope: "/",
     display: "standalone",
     orientation: "portrait-primary",
