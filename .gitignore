@@ -42,6 +42,9 @@ tsconfig.tsbuildinfo
 /package-stage/
 /site-package.tgz
 /gerador-carteirinha-digital/
+/app/fluxo-caixa/
+/fluxo-caixa-site-completo.zip
+/planilhas/
 
 # local Codex/generated artifacts
 /.codex-finalizer/

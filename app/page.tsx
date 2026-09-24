@@ -34,6 +34,13 @@ const steps = [
   "A secretaria aprova e libera o acesso",
 ];
 
+const footerLinks = [
+  { href: "/sistema", label: "Entrar no sistema" },
+  { href: "/cadastro", label: "Pré-cadastro" },
+  { href: "/privacidade", label: "Privacidade" },
+  { href: "/termos", label: "Termos de uso" },
+];
+
 export default function LandingPage() {
   return (
     <main className="landing-page">
@@ -151,6 +158,15 @@ export default function LandingPage() {
           <Link className="landing-secondary" href="/cadastro">Fazer pré-cadastro</Link>
         </div>
       </section>
+
+      <footer className="landing-footer">
+        <strong>Igreja Conectada</strong>
+        <nav aria-label="Links institucionais">
+          {footerLinks.map((link) => (
+            <Link href={link.href} key={link.href}>{link.label}</Link>
+          ))}
+        </nav>
+      </footer>
     </main>
   );
 }

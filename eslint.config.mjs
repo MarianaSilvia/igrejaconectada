@@ -5,7 +5,17 @@ import nextTs from 'eslint-config-next/typescript';
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'dist/**', 'package-stage/**', 'tmp/**', 'next-env.d.ts']),
+  globalIgnores([
+    '.next/**',
+    'out/**',
+    'build/**',
+    'dist/**',
+    'package-stage/**',
+    'tmp/**',
+    'app/fluxo-caixa/**',
+    'planilhas/**',
+    'next-env.d.ts',
+  ]),
 ]);
 
 export default eslintConfig;
