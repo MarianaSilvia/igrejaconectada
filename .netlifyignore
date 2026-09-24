@@ -1,0 +1,8 @@
+app/fluxo-caixa/
+planilhas/
+fluxo-caixa-site-completo.zip
+.pnpm-store/
+.next/
+node_modules/
+output/
+tmp/
