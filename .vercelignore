@@ -1,0 +1,32 @@
+.git
+.next
+node_modules
+tsconfig.tsbuildinfo
+
+# Local build/package outputs
+dist
+package-stage
+site-package.tgz
+fluxo-caixa-site-completo.zip
+
+# Generated local artifacts
+output
+outputs
+tmp
+.codex-finalizer
+.codex-remote-attachments
+
+# Legacy/local platform state
+.wrangler
+.netlify
+.vinext
+
+# Local spreadsheets and side projects
+planilhas
+Controle_de_Debitos_Pessoais_Com_Perfis.xlsx
+
+# Local helper scripts not needed by Vercel
+modernize_dashboard.mjs
+verify_modern_dashboard.mjs
+render_current_dashboard.mjs
+inspect_workbook.mjs
