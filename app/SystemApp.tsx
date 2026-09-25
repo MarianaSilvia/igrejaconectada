@@ -38,7 +38,6 @@ import { PushNotificationControl } from "./components/PushNotificationControl";
 import { ReportsPanel } from "./components/ReportsPanel";
 import { ResponsiveImage } from "./components/ResponsiveImage";
 import { SettingsPanel } from "./components/SettingsPanel";
-import { SystemHealthPanel } from "./components/SystemHealthPanel";
 import { UsersAccessPanel } from "./components/UsersAccessPanel";
 import { VisitorsPanel } from "./components/VisitorsPanel";
 import {
@@ -120,7 +119,7 @@ import {
   upsertVisitorData,
 } from "./system-actions";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
-import { agendaThemeClass, moduleCoverClass, type ModuleCoverKey } from "./visual-covers";
+import { agendaThemeClass, agendaThemeKey, moduleCoverClass, type ModuleCoverKey } from "./visual-covers";
 import type {
   AccessMode,
   AccessUser,
@@ -138,14 +137,12 @@ import type {
   MemberRecord,
   MessageAudience,
   MessageCampaign,
-  MemberSyncStatus,
   MessageRecipient,
   MessageTemplateItem,
   MinistryRecord,
   MuralImageResult,
   MuralItem,
   Notice,
-  PushSummary,
   RegistrationRequest,
   RemoteAppStateResponse,
   ReportKind,
@@ -626,10 +623,6 @@ function memberRolesToText(values: string[]) {
   return values.map((role) => role.trim()).filter(Boolean).join(", ");
 }
 
-function isMemberSyncError(result: MemberSyncStatus | { error?: string }): result is { error?: string } {
-  return "error" in result;
-}
-
 const messageAudiences: MessageAudience[] = [
   "Todos os membros",
   "Aniversariantes da semana",
@@ -904,9 +897,6 @@ export default function Home() {
   const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Acesso bloqueado: configure o Supabase no ambiente de produção.");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState("");
-  const [memberSyncLoading, setMemberSyncLoading] = useState(false);
-  const [memberSyncStatus, setMemberSyncStatus] = useState<MemberSyncStatus | null>(null);
-  const [pushSummary, setPushSummary] = useState<PushSummary | null>(null);
   const [remoteUpdatedAt, setRemoteUpdatedAt] = useState<string | null>(null);
   const [reportPreviewKind, setReportPreviewKind] = useState<ReportKind>("members");
 
@@ -1240,114 +1230,6 @@ export default function Home() {
   const canManageAssets = canManageModule(currentAccessRole, "assets");
   const canManageDevotional = canManageModule(currentAccessRole, "devotional");
   const canManageRegistrationRequests = currentAccessRole === "Administrador" || currentAccessRole === "Secretario";
-  const isPushSummary = (value: PushSummary | { error?: string }): value is PushSummary =>
-    "configured" in value && "enabledSubscriptions" in value && "checkedAt" in value && "message" in value;
-  const loadMemberSyncStatus = useCallback(
-    async (refreshMirror = false) => {
-      setMemberSyncLoading(true);
-      const supabase = getSupabaseClient();
-      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        setMemberSyncLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch("/api/admin/member-sync-status", {
-          method: refreshMirror ? "POST" : "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const result = (await response.json()) as MemberSyncStatus | { error?: string };
-
-        if (!response.ok || isMemberSyncError(result)) {
-          const errorMessage = isMemberSyncError(result) ? result.error : undefined;
-          setMemberSyncStatus({
-            status: "Indisponivel",
-            jsonTotal: data.members.length,
-            tableTotal: 0,
-            missingCodeCount: 0,
-            duplicateCpfCount: 0,
-            duplicatePhoneCount: 0,
-            missingInTableCount: 0,
-            extraInTableCount: 0,
-            checkedAt: new Date().toISOString(),
-            message: errorMessage ?? "Não foi possível consultar a tabela members.",
-          });
-          return;
-        }
-
-        setMemberSyncStatus(result);
-        if (refreshMirror) setSyncStatus("Conferencia dos membros atualizada com o espelho da tabela members.");
-      } finally {
-        setMemberSyncLoading(false);
-      }
-    },
-    [data.members.length],
-  );
-
-  const loadPushSummary = useCallback(async () => {
-    const supabase = getSupabaseClient();
-    const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
-    const token = sessionData.session?.access_token;
-
-    if (!token) return;
-
-    try {
-      const response = await fetch("/api/admin/push-summary", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const result = (await response.json()) as PushSummary | { error?: string };
-
-      if (!response.ok || !isPushSummary(result)) {
-        setPushSummary({
-          configured: false,
-          enabledSubscriptions: 0,
-          checkedAt: new Date().toISOString(),
-          message: "Não foi possível conferir as notificações agora.",
-        });
-        return;
-      }
-
-      setPushSummary(result);
-    } catch {
-      setPushSummary({
-        configured: false,
-        enabledSubscriptions: 0,
-        checkedAt: new Date().toISOString(),
-        message: "Não foi possível conferir as notificações agora.",
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!hasSession || currentAccessRole !== "Administrador" || !isSupabaseConfigured()) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      void loadMemberSyncStatus();
-    }, 0);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [currentAccessRole, hasSession, loadMemberSyncStatus, remoteUpdatedAt]);
-
-  useEffect(() => {
-    if (!hasSession || !canManageRegistrationRequests || !isSupabaseConfigured()) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      void loadPushSummary();
-    }, 0);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [canManageRegistrationRequests, hasSession, loadPushSummary, remoteUpdatedAt]);
 
   useEffect(() => {
     if (!hasSession || !canManageMessages) return;
@@ -1830,6 +1712,38 @@ export default function Home() {
   const unassignedCareCount = data.careRequests.filter((request) => !request.responsible && request.status !== "Concluido").length;
   const memberSchoolName = currentMember?.schoolClassId ? classNameById(data.schoolClasses, currentMember.schoolClassId) : "";
   const memberDiscipleshipName = currentMember?.discipleshipClassId ? classNameById(data.discipleshipClasses, currentMember.discipleshipClassId) : "";
+  const publishedNotices = activeNotices.filter((notice) => notice.status === "Publicado");
+  const primaryNotice = publishedNotices[0];
+  const profileFirstName = profileName.split(" ").filter(Boolean)[0] || profileName;
+  const welcomeGreeting = `Bem-vindo, ${profileFirstName}!`;
+  const memberHasSchool = Boolean(memberSchoolName);
+  const memberHasDiscipleship = Boolean(memberDiscipleshipName);
+  const memberDiscipleshipProgress = 0;
+  const hasMemberSummary = Boolean(
+    nextAgendaEvent ||
+      featuredMuralItem ||
+      primaryNotice ||
+      pendingCareCount > 0 ||
+      memberHasSchool ||
+      memberHasDiscipleship,
+  );
+  const agendaBadgeLabel = (event: ChurchEvent) => {
+    const labels: Record<string, string> = {
+      worship: "Culto",
+      teaching: "Ensino",
+      school: "Escola Bíblica",
+      discipleship: "Discipulado",
+      communion: "Santa ceia",
+      meeting: "Reunião",
+      rehearsal: "Ensaio",
+      conference: "Congresso",
+      campaign: "Campanha",
+      kids: "Kids",
+      pastoral: "Pastoral",
+      default: "Agenda",
+    };
+    return labels[agendaThemeKey(event)] ?? "Agenda";
+  };
   const birthdaySpotlightPanel = (
     <BirthdaySpotlightPanel
       canSendMessages={canManageMessages}
@@ -4155,7 +4069,7 @@ export default function Home() {
                   <button onClick={() => setActiveModule("members")} type="button">
                     <span>Aniversariantes</span>
                     <strong>{monthlyBirthdays.length}</strong>
-                    <small>do mês em destaque</small>
+                    <small>{monthlyBirthdays.length ? "do mês em destaque" : "sem aniversariantes ativos"}</small>
                   </button>
                   <button onClick={() => setActiveModule("overview")} type="button">
                     <span>Pré-cadastros</span>
@@ -4235,25 +4149,6 @@ export default function Home() {
                 </div>
               </article>
 
-              <SystemHealthPanel
-                agendaCount={data.events.length}
-                canReload={hasSession && isSupabaseConfigured()}
-                isSupabaseReady={isSupabaseConfigured()}
-                kidsCount={data.kids.length}
-                lastSavedAt={lastSavedAt}
-                memberSyncLoading={currentAccessRole === "Administrador" ? memberSyncLoading : false}
-                memberSyncStatus={currentAccessRole === "Administrador" ? memberSyncStatus : null}
-                membersCount={data.members.length}
-                onMemberSyncRefresh={currentAccessRole === "Administrador" ? () => loadMemberSyncStatus(true) : undefined}
-                onPushSummaryRefresh={canManageRegistrationRequests ? loadPushSummary : undefined}
-                onReload={reloadRemoteStateNow}
-                pendingRegistrationsCount={pendingRegistrationRequests.length}
-                pushSummary={canManageRegistrationRequests ? pushSummary : null}
-                saveState={saveState}
-                syncStatus={syncStatus}
-                visitorsCount={data.visitors.length}
-              />
-
               {canManageRegistrationRequests && (
                 <RegistrationRequestsPanel
                   copyPublicRegistrationLink={copyPublicRegistrationLink}
@@ -4266,7 +4161,7 @@ export default function Home() {
                 />
               )}
 
-              {birthdaySpotlightPanel}
+              {monthlyBirthdays.length > 0 && birthdaySpotlightPanel}
 
               {todayDevotional && (
                 <article className="surface wide devotional-card streaming-section">
@@ -4296,6 +4191,7 @@ export default function Home() {
                     <div className={`data-row ${agendaThemeClass(event)}`} key={event.id}>
                       <span className="date-box">{formatDate(event.date)}</span>
                       <div>
+                        <span className={`agenda-badge agenda-badge-${agendaThemeKey(event)}`}>{agendaBadgeLabel(event)}</span>
                         <strong>{event.title}</strong>
                         <small>{event.ministry}</small>
                       </div>
@@ -4335,41 +4231,25 @@ export default function Home() {
                   </div>
                 )}
                 <p className="eyebrow">Área do membro</p>
-                <h2>Bem-vindo, {profileName}.</h2>
-                <p>Veja sua ficha, acompanhe a agenda, leia os avisos e envie pedidos de atendimento pastoral ou oração.</p>
+                <h2>{welcomeGreeting}</h2>
+                <p>Agenda, mural, devocional e pedidos em uma visão simples para o seu dia.</p>
                 {featuredMuralItem && <span className="mural-hero-label">Destaque do mural: {featuredMuralItem.title}</span>}
-                <div className="smart-hero-strip" aria-label="Resumo da área do membro">
-                  <button onClick={() => setActiveModule("events")} type="button">
-                    <span>Agenda da igreja</span>
-                    <strong>{nextAgendaEvent ? nextAgendaEvent.title : "Nada nesta semana"}</strong>
-                    <small>{nextAgendaEvent ? formatDate(nextAgendaEvent.date) : "A secretaria ainda não publicou evento"}</small>
-                  </button>
-                  <button onClick={() => setActiveModule("mural")} type="button">
-                    <span>Avisos e mural</span>
-                    <strong>{publishedMuralItems.length}</strong>
-                    <small>{featuredMuralItem ? featuredMuralItem.title : "Nenhum aviso publicado hoje"}</small>
-                  </button>
-                  <button onClick={() => setActiveModule("pastoral")} type="button">
-                    <span>Meus pedidos</span>
-                    <strong>{pendingCareCount}</strong>
-                    <small>Clique aqui para pedir oração</small>
-                  </button>
-                </div>
-                <div className="hero-actions">
-                  <button onClick={() => setActiveModule("members")} type="button">
-                    Meu cadastro
-                  </button>
-                  <button className="secondary" onClick={() => setActiveModule("pastoral")} type="button">
-                    Novo pedido
-                  </button>
-                  <button className="secondary" onClick={() => setActiveModule("notices")} type="button">
-                    Ver avisos
-                  </button>
-                  <button className="secondary" onClick={() => setActiveModule("mural")} type="button">
-                    Ver mural
-                  </button>
-                </div>
               </div>
+
+              <article className="surface wide member-quick-actions">
+                <button onClick={() => setActiveModule("pastoral")} type="button">
+                  <span>🙏</span>
+                  <strong>Pedir oração</strong>
+                </button>
+                <button onClick={() => setActiveModule("events")} type="button">
+                  <span>📅</span>
+                  <strong>Agenda</strong>
+                </button>
+                <button onClick={() => setActiveModule("devotional")} type="button">
+                  <span>📖</span>
+                  <strong>Devocional do dia</strong>
+                </button>
+              </article>
 
               {isSimpleView && (
                 <article className="surface wide simple-shortcuts-panel">
@@ -4402,32 +4282,65 @@ export default function Home() {
                 </article>
               )}
 
-              <article className="surface wide streaming-section member-home-panel">
-                <div className="panel-heading">
-                  <h2>Para você</h2>
-                  <span>Informações principais do seu acesso</span>
-                </div>
-                <div className="member-home-grid">
-                  <button onClick={() => setActiveModule("events")} type="button">
-                    <strong>{nextAgendaEvent ? nextAgendaEvent.title : "Agenda livre"}</strong>
-                    <span>{nextAgendaEvent ? `${formatDate(nextAgendaEvent.date)} - ${nextAgendaEvent.time || "Sem horário"}` : "Nenhum evento publicado para esta semana."}</span>
-                  </button>
-                  <button onClick={() => setActiveModule("mural")} type="button">
-                    <strong>{featuredMuralItem ? featuredMuralItem.title : "Avisos da igreja"}</strong>
-                    <span>{featuredMuralItem ? featuredMuralItem.category : "Nenhum aviso publicado hoje."}</span>
-                  </button>
-                  <button onClick={() => setActiveModule("school")} type="button">
-                    <strong>{memberSchoolName || "Classe EBD não vinculada"}</strong>
-                    <span>Sua classe ainda não foi vinculada se aparecer este aviso.</span>
-                  </button>
-                  <button onClick={() => setActiveModule("discipleship")} type="button">
-                    <strong>{memberDiscipleshipName || "Discipulado não vinculado"}</strong>
-                    <span>Acompanhe sua turma e frequência.</span>
-                  </button>
-                </div>
-              </article>
+              {hasMemberSummary && (
+                <article className="surface wide streaming-section member-home-panel">
+                  <div className="panel-heading">
+                    <h2>Resumo do dia</h2>
+                    <span>O que merece sua atenção agora</span>
+                  </div>
+                  <div className="member-home-grid">
+                    {nextAgendaEvent && (
+                      <button onClick={() => setActiveModule("events")} type="button">
+                        <span>Próximo evento</span>
+                        <strong>{nextAgendaEvent.title}</strong>
+                        <small>{formatDate(nextAgendaEvent.date)} - {nextAgendaEvent.time || "Sem horário"}</small>
+                      </button>
+                    )}
+                    {featuredMuralItem && (
+                      <button onClick={() => setActiveModule("mural")} type="button">
+                        <span>Mural em destaque</span>
+                        <strong>{featuredMuralItem.title}</strong>
+                        <small>{featuredMuralItem.category}</small>
+                      </button>
+                    )}
+                    {primaryNotice && (
+                      <button onClick={() => setActiveModule("notices")} type="button">
+                        <span>Aviso geral</span>
+                        <strong>{primaryNotice.title}</strong>
+                        <small>{primaryNotice.audience} - {primaryNotice.channel}</small>
+                      </button>
+                    )}
+                    {pendingCareCount > 0 && (
+                      <button onClick={() => setActiveModule("pastoral")} type="button">
+                        <span>Meus pedidos</span>
+                        <strong>{pendingCareCount} em acompanhamento</strong>
+                        <small>Toque para acompanhar o retorno.</small>
+                      </button>
+                    )}
+                    {memberHasSchool && (
+                      <button onClick={() => setActiveModule("school")} type="button">
+                        <span>Minha EBD</span>
+                        <strong>{memberSchoolName}</strong>
+                        <small>Classe vinculada ao seu cadastro.</small>
+                      </button>
+                    )}
+                    {memberHasDiscipleship && (
+                      <button onClick={() => setActiveModule("discipleship")} type="button">
+                        <span>Meu discipulado</span>
+                        <strong>{memberDiscipleshipName}</strong>
+                        <small>{memberDiscipleshipProgress > 0 ? `Módulo 2 • ${memberDiscipleshipProgress}% concluído` : "Turma vinculada ao seu cadastro."}</small>
+                        {memberDiscipleshipProgress > 0 && (
+                          <i className="member-progress-bar" aria-hidden="true">
+                            <b style={{ width: `${memberDiscipleshipProgress}%` }} />
+                          </i>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </article>
+              )}
 
-              {birthdaySpotlightPanel}
+              {monthlyBirthdays.length > 0 && birthdaySpotlightPanel}
 
               {todayDevotional && (
                 <article className="surface wide devotional-card streaming-section">
@@ -4473,6 +4386,7 @@ export default function Home() {
                     <div className={`data-row ${agendaThemeClass(event)}`} key={event.id}>
                       <span className="date-box">{formatDate(event.date)}</span>
                       <div>
+                        <span className={`agenda-badge agenda-badge-${agendaThemeKey(event)}`}>{agendaBadgeLabel(event)}</span>
                         <strong>{event.title}</strong>
                         <small>
                           {event.time || "Sem horário"} - {event.ministry} - {event.location || "Local não informado"}
@@ -4484,18 +4398,18 @@ export default function Home() {
                 </div>
               </article>
 
-              <article className="surface streaming-section notices-preview">
-                <div className="panel-heading">
-                  <h2>Avisos gerais</h2>
-                  <button onClick={() => setActiveModule("notices")} type="button">
-                    Ver avisos
-                  </button>
-                </div>
-                <div className="row-list">
-                  {activeNotices
-                    .filter((notice) => notice.status === "Publicado")
-                    .slice(0, 4)
-                    .map((notice) => (
+              {publishedNotices.length > 0 && (
+                <article className="surface streaming-section notices-preview">
+                  <div className="panel-heading">
+                    <h2>Avisos gerais</h2>
+                    <button onClick={() => setActiveModule("notices")} type="button">
+                      Ver avisos
+                    </button>
+                  </div>
+                  <div className="row-list">
+                    {publishedNotices
+                      .slice(0, 4)
+                      .map((notice) => (
                       <div className="data-row" key={notice.id}>
                         <span className="bullet-mark" />
                         <div>
@@ -4504,24 +4418,23 @@ export default function Home() {
                           <small>{notice.body}</small>
                         </div>
                       </div>
-                    ))}
-                  {!activeNotices.filter((notice) => notice.status === "Publicado").length && (
-                    <p className="empty-state">Nenhum aviso geral publicado no momento.</p>
-                  )}
-                </div>
-              </article>
+                      ))}
+                  </div>
+                </article>
+              )}
 
-              <article className="surface streaming-section mural-preview-panel">
-                <div className="panel-heading">
-                  <h2>Mural da igreja</h2>
-                  <button onClick={() => setActiveModule("mural")} type="button">
-                    Ver mural
-                  </button>
-                </div>
-                <div className="mural-stack">
-                  {publishedMuralItems
-                    .slice(0, 4)
-                    .map((item) => (
+              {publishedMuralItems.length > 0 && (
+                <article className="surface streaming-section mural-preview-panel">
+                  <div className="panel-heading">
+                    <h2>Mural da igreja</h2>
+                    <button onClick={() => setActiveModule("mural")} type="button">
+                      Ver mural
+                    </button>
+                  </div>
+                  <div className="mural-stack">
+                    {publishedMuralItems
+                      .slice(0, 4)
+                      .map((item) => (
                       <div className={item.featured ? "mural-card featured" : "mural-card"} key={item.id}>
                         {(item.imageDataUrl || item.bannerUrl) && (
                           <div className="mural-card-media">
@@ -4536,12 +4449,10 @@ export default function Home() {
                           </a>
                         )}
                       </div>
-                    ))}
-                  {!publishedMuralItems.length && (
-                    <p className="empty-state">Nenhum item publicado no mural no momento.</p>
-                  )}
-                </div>
-              </article>
+                      ))}
+                  </div>
+                </article>
+              )}
 
               <article className="surface streaming-section care-preview">
                 <div className="panel-heading">
