@@ -5410,10 +5410,21 @@ textarea:focus {
     linear-gradient(180deg, rgba(8, 10, 18, 0.08), rgba(8, 10, 18, 0.18)),
     url("/demo-igreja-conectada.webp") center / cover no-repeat,
     url("/demo-igreja-conectada-poster.png") center / cover no-repeat;
-  justify-content: flex-start;
+  align-items: stretch;
+  justify-content: stretch;
   overflow: hidden;
-  padding: 16px;
+  padding: 0;
   position: relative;
+}
+
+.landing-demo-media {
+  display: block;
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  position: absolute;
+  width: 100%;
+  z-index: 0;
 }
 
 .landing-demo-badge {
@@ -5423,7 +5434,11 @@ textarea:focus {
   color: #f7fbff;
   font-size: 13px;
   font-weight: 950;
+  left: 16px;
   padding: 8px 12px;
+  position: absolute;
+  top: 16px;
+  z-index: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

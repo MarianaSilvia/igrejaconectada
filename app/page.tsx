@@ -274,6 +274,14 @@ export default function LandingPage() {
         </div>
         <div className="landing-demo-card">
           <div className="landing-demo-preview landing-demo-animation" role="img" aria-label="Demonstração visual animada do Igreja Conectada">
+            <Image
+              alt="Demonstração visual animada do sistema Igreja Conectada"
+              className="landing-demo-media"
+              height={720}
+              src="/demo-igreja-conectada.webp"
+              unoptimized
+              width={1280}
+            />
             <span className="landing-demo-badge">Demo visual</span>
           </div>
           <div>
