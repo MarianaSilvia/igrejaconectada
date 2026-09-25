@@ -59,3 +59,4 @@ tsconfig.tsbuildinfo
 /Controle_de_Debitos_Pessoais_Com_Perfis.xlsx
 
 .env*
+.vercel
