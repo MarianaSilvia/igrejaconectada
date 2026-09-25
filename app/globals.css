@@ -5405,6 +5405,35 @@ textarea:focus {
   border-radius: var(--ic-radius);
 }
 
+.landing-demo-animation {
+  background:
+    linear-gradient(180deg, rgba(8, 10, 18, 0.08), rgba(8, 10, 18, 0.18)),
+    url("/demo-igreja-conectada.webp") center / cover no-repeat,
+    url("/demo-igreja-conectada-poster.png") center / cover no-repeat;
+  justify-content: flex-start;
+  overflow: hidden;
+  padding: 16px;
+  position: relative;
+}
+
+.landing-demo-badge {
+  background: rgba(8, 10, 18, 0.72);
+  border: 1px solid rgba(214, 230, 255, 0.18);
+  border-radius: 999px;
+  color: #f7fbff;
+  font-size: 13px;
+  font-weight: 950;
+  padding: 8px 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-demo-animation {
+    background:
+      linear-gradient(180deg, rgba(8, 10, 18, 0.08), rgba(8, 10, 18, 0.18)),
+      url("/demo-igreja-conectada-poster.png") center / cover no-repeat;
+  }
+}
+
 .landing-final {
   background:
     linear-gradient(145deg, rgba(20, 217, 196, 0.14), rgba(246, 198, 91, 0.08)),

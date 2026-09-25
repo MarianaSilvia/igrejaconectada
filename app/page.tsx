@@ -273,13 +273,13 @@ export default function LandingPage() {
           <h2 id="landing-demo-title">Veja como o sistema pode funcionar na rotina da igreja</h2>
         </div>
         <div className="landing-demo-card">
-          <div className="landing-demo-preview">
-            <span className="landing-play-button">▶</span>
+          <div className="landing-demo-preview landing-demo-animation" role="img" aria-label="Demonstração visual animada do Igreja Conectada">
+            <span className="landing-demo-badge">Demo visual</span>
           </div>
           <div>
             <h3>Vídeo demonstrativo preparado para apresentar o sistema</h3>
             <p>
-              Espaço reservado para um vídeo curto mostrando como aprovar um pré-cadastro, publicar um aviso e consultar a agenda. Enquanto o vídeo oficial não é adicionado, o botão leva ao ambiente do sistema.
+              Uma apresentação curta mostrando pré-cadastro, painel do membro, mural, agenda, cuidado pastoral e relatórios em uma experiência simples para a igreja.
             </p>
             <Link className="landing-secondary" href="/sistema">
               Abrir ambiente do sistema
