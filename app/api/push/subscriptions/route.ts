@@ -109,7 +109,7 @@ export async function POST(request: Request) {
   }
 
   if (error) {
-    return NextResponse.json({ error: "Nao foi possivel ativar notificacoes neste aparelho." }, { status: 400 });
+    return NextResponse.json({ error: "Não foi possível ativar notificações neste aparelho." }, { status: 400 });
   }
 
   return NextResponse.json({ ok: true });
@@ -128,7 +128,7 @@ export async function DELETE(request: Request) {
   if (endpoint) query = query.eq("endpoint", endpoint);
 
   const { error } = await query;
-  if (error) return NextResponse.json({ error: "Nao foi possivel desativar notificacoes." }, { status: 400 });
+  if (error) return NextResponse.json({ error: "Não foi possível desativar notificações." }, { status: 400 });
 
   return NextResponse.json({ ok: true });
 }

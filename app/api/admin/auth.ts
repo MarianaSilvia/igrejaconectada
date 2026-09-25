@@ -11,7 +11,7 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export function unavailableResponse() {
   if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
-    return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+    return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
   }
 
   return null;
@@ -49,7 +49,7 @@ export async function requireSession(request: Request, allowedRoles?: Iterable<C
   const token = authorization?.replace(/^Bearer\s+/i, "");
 
   if (!token) {
-    return { response: NextResponse.json({ error: "Sessao obrigatoria." }, { status: 401 }) };
+    return { response: NextResponse.json({ error: "Sessão obrigatória." }, { status: 401 }) };
   }
 
   const sessionClient = createClient(supabaseUrl!, supabaseAnonKey!, {
@@ -58,18 +58,18 @@ export async function requireSession(request: Request, allowedRoles?: Iterable<C
   const { data: sessionData, error: sessionError } = await sessionClient.auth.getUser(token);
 
   if (sessionError || !sessionData.user) {
-    return { response: NextResponse.json({ error: "Sessao invalida ou expirada." }, { status: 401 }) };
+    return { response: NextResponse.json({ error: "Sessão inválida ou expirada." }, { status: 401 }) };
   }
 
   const admin = adminClient();
   if (!admin) {
-    return { response: NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 }) };
+    return { response: NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 }) };
   }
 
   const { data: freshUserData, error: freshUserError } = await admin.auth.admin.getUserById(sessionData.user.id);
 
   if (freshUserError || !freshUserData.user) {
-    return { response: NextResponse.json({ error: "Sessao invalida ou acesso removido." }, { status: 401 }) };
+    return { response: NextResponse.json({ error: "Sessão inválida ou acesso removido." }, { status: 401 }) };
   }
 
   const user = freshUserData.user;
@@ -80,7 +80,7 @@ export async function requireSession(request: Request, allowedRoles?: Iterable<C
   }
 
   if (allowedRoles && !new Set(allowedRoles).has(role)) {
-    return { response: NextResponse.json({ error: "Voce nao tem permissao para esta acao." }, { status: 403 }) };
+    return { response: NextResponse.json({ error: "Você não tem permissão para esta ação." }, { status: 403 }) };
   }
 
   return { user, role };

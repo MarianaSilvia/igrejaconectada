@@ -2,16 +2,16 @@ import Image from "next/image";
 import Link from "next/link";
 
 const features = [
-  "Cadastro de membros",
+  "Membros e acessos",
   "Pré-cadastro online",
-  "Agenda da igreja",
-  "Mural de avisos",
+  "Agenda e eventos",
+  "Mural e comunicados",
   "Atendimento pastoral",
   "EBD e Discipulado",
-  "Comunicação por WhatsApp",
-  "Relatórios e fichas",
+  "WhatsApp manual",
+  "Relatórios e documentos",
   "Área do membro",
-  "App instalável no celular",
+  "PWA instalável",
 ];
 
 const leadershipBenefits = [
@@ -32,6 +32,19 @@ const steps = [
   "A igreja envia o link",
   "O membro faz o pré-cadastro",
   "A secretaria aprova e libera o acesso",
+];
+
+const highlights = [
+  { value: "PWA", label: "instalável no celular" },
+  { value: "Supabase", label: "base segura para dados" },
+  { value: "Perfis", label: "acesso por função" },
+];
+
+const managementCards = [
+  "Pré-cadastros aguardando análise",
+  "Pedidos pastorais e visitas",
+  "Mural, comunicados e agenda",
+  "Fichas, documentos e relatórios",
 ];
 
 const footerLinks = [
@@ -69,6 +82,14 @@ export default function LandingPage() {
               <Link className="landing-primary" href="/sistema">Entrar no sistema</Link>
               <Link className="landing-secondary" href="/cadastro">Fazer pré-cadastro</Link>
             </div>
+            <div className="landing-highlights" aria-label="Destaques do sistema">
+              {highlights.map((item) => (
+                <span key={item.label}>
+                  <strong>{item.value}</strong>
+                  {item.label}
+                </span>
+              ))}
+            </div>
           </div>
 
           <div className="landing-device-showcase" aria-label="Prévia visual do sistema">
@@ -83,10 +104,9 @@ export default function LandingPage() {
                 <small>Agenda, mural, aniversariantes e pendências</small>
               </div>
               <div className="landing-mockup-grid">
-                <span>Membros</span>
-                <span>Agenda</span>
-                <span>Mural</span>
-                <span>Pastoral</span>
+                {managementCards.map((card) => (
+                  <span key={card}>{card}</span>
+                ))}
               </div>
             </div>
             <div className="landing-phone-mockup">
@@ -96,6 +116,17 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="landing-section landing-purpose" aria-labelledby="landing-purpose">
+        <div>
+          <p className="landing-eyebrow">Para igrejas e congregações</p>
+          <h2 id="landing-purpose">Uma central simples para cuidar melhor das pessoas.</h2>
+        </div>
+        <p>
+          O Igreja Conectada ajuda a secretaria, liderança e membros a encontrarem as informações certas
+          com mais rapidez, mantendo a rotina da igreja organizada sem perder o cuidado pastoral.
+        </p>
       </section>
 
       <section className="landing-section" aria-labelledby="landing-features">
@@ -138,6 +169,10 @@ export default function LandingPage() {
         <div className="landing-section-heading">
           <p className="landing-eyebrow">Como funciona</p>
           <h2 id="landing-steps">Do cadastro ao acesso em três passos</h2>
+          <p className="landing-section-copy">
+            O domínio público apresenta o sistema. O aplicativo instalado no celular abre direto na área segura,
+            em <strong>/sistema</strong>, para facilitar o acesso dos membros.
+          </p>
         </div>
         <div className="landing-steps">
           {steps.map((step, index) => (

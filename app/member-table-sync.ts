@@ -123,11 +123,11 @@ export async function syncMembersTable(client: SupabaseClient, payload: JsonReco
 
   if (rows.length) {
     const { error } = await client.from("members").upsert(rows, { onConflict: "id" }).select("id");
-    if (error) return { error: error.message ?? "Nao foi possivel sincronizar membros." };
+    if (error) return { error: error.message ?? "Não foi possível sincronizar membros." };
   }
 
   const { data: mirroredRows, error: readError } = await client.from("members").select("id").eq("mirror_source", "church_app_state");
-  if (readError) return { error: readError.message ?? "Nao foi possivel conferir membros antigos do espelho." };
+  if (readError) return { error: readError.message ?? "Não foi possível conferir membros antigos do espelho." };
 
   const activeIds = new Set(memberIds);
   const staleIds = recordsFrom(mirroredRows)
@@ -136,7 +136,7 @@ export async function syncMembersTable(client: SupabaseClient, payload: JsonReco
 
   for (const staleChunk of chunks(staleIds, 200)) {
     const { error } = await client.from("members").delete().eq("mirror_source", "church_app_state").in("id", staleChunk);
-    if (error) return { error: error.message ?? "Nao foi possivel limpar membros removidos do espelho." };
+    if (error) return { error: error.message ?? "Não foi possível limpar membros removidos do espelho." };
   }
 
   return { ok: true, count: rows.length };

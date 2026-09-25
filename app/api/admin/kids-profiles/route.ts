@@ -62,7 +62,7 @@ export async function POST(request: Request) {
   });
 
   if (error) {
-    return NextResponse.json({ error: "Nao foi possivel sincronizar Kids." }, { status: 400 });
+    return NextResponse.json({ error: "Não foi possível sincronizar Kids." }, { status: 400 });
   }
 
   return NextResponse.json({ ok: true });

@@ -119,13 +119,13 @@ export async function POST(request: Request) {
   }
 
   if (hasInvalidRoleOrStatus(payload)) {
-    return NextResponse.json({ error: "Perfil ou status invalido para criar acesso." }, { status: 400 });
+    return NextResponse.json({ error: "Perfil ou status inválido para criar acesso." }, { status: 400 });
   }
 
   const client = adminClient();
-  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  if (!client) return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
   const manager = await accessManagerContext(client, session.user.email ?? "", session.role);
-  if (!manager.canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
+  if (!manager.canManage) return NextResponse.json({ error: "Você não tem permissão para gerenciar acessos." }, { status: 403 });
 
   const role = normalizeAccessRole(payload.role ?? "Lider");
   const status = normalizeAccessStatus(payload.status ?? "Ativo");
@@ -174,15 +174,15 @@ export async function PATCH(request: Request) {
   }
 
   if (hasInvalidRoleOrStatus(payload)) {
-    return NextResponse.json({ error: "Perfil ou status invalido para atualizar acesso." }, { status: 400 });
+    return NextResponse.json({ error: "Perfil ou status inválido para atualizar acesso." }, { status: 400 });
   }
 
   const client = adminClient();
-  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  if (!client) return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
   const manager = await accessManagerContext(client, session.user.email ?? "", session.role);
-  if (!manager.canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
+  if (!manager.canManage) return NextResponse.json({ error: "Você não tem permissão para gerenciar acessos." }, { status: 403 });
   if (!canManageTargetScope(manager.scope, targetAccessUser(manager.payload, payload.userId, currentEmail ?? email))) {
-    return NextResponse.json({ error: "Voce nao pode alterar acesso de outra congregacao." }, { status: 403 });
+    return NextResponse.json({ error: "Você não pode alterar acesso de outra congregação." }, { status: 403 });
   }
 
   try {
@@ -192,7 +192,7 @@ export async function PATCH(request: Request) {
     const congregationScope = isGlobalCongregationScope(manager.scope) ? normalizeCongregationScope(payload.congregationScope) : manager.scope;
 
     if (userId === session.user.id && (role !== "Administrador" || status !== "Ativo")) {
-      return NextResponse.json({ error: "Voce nao pode rebaixar ou bloquear o proprio acesso enquanto esta conectado." }, { status: 400 });
+      return NextResponse.json({ error: "Você não pode rebaixar ou bloquear o próprio acesso enquanto está conectado." }, { status: 400 });
     }
 
     const appMetadata = {
@@ -241,7 +241,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ id: data.user.id, email: data.user.email, created: true });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Nao foi possivel localizar o usuario no Supabase." },
+      { error: error instanceof Error ? error.message : "Não foi possível localizar o usuário no Supabase." },
       { status: 400 },
     );
   }
@@ -256,20 +256,20 @@ export async function DELETE(request: Request) {
   const email = payload.email?.trim().toLowerCase();
 
   const client = adminClient();
-  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  if (!client) return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
   const manager = await accessManagerContext(client, session.user.email ?? "", session.role);
-  if (!manager.canManage) return NextResponse.json({ error: "Voce nao tem permissao para gerenciar acessos." }, { status: 403 });
+  if (!manager.canManage) return NextResponse.json({ error: "Você não tem permissão para gerenciar acessos." }, { status: 403 });
   if (!canManageTargetScope(manager.scope, targetAccessUser(manager.payload, requestedUserId, email))) {
-    return NextResponse.json({ error: "Voce nao pode excluir acesso de outra congregacao." }, { status: 403 });
+    return NextResponse.json({ error: "Você não pode excluir acesso de outra congregação." }, { status: 403 });
   }
 
   try {
     if (!requestedUserId && !email) {
-      return NextResponse.json({ error: "Informe o usuario ou e-mail do acesso para excluir." }, { status: 400 });
+      return NextResponse.json({ error: "Informe o usuário ou e-mail do acesso para excluir." }, { status: 400 });
     }
 
     if (requestedUserId === session.user.id || (email && email === (session.user.email ?? "").toLowerCase())) {
-      return NextResponse.json({ error: "Voce nao pode excluir o proprio acesso enquanto esta conectado." }, { status: 400 });
+      return NextResponse.json({ error: "Você não pode excluir o próprio acesso enquanto está conectado." }, { status: 400 });
     }
 
     const userId = (await findUserIdByEmail(client, email)) ?? (isSupabaseAuthId(requestedUserId) ? requestedUserId : null);
@@ -287,7 +287,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ id: userId, authDeleted: true, localOnly: false });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Nao foi possivel excluir o acesso no Supabase." },
+      { error: error instanceof Error ? error.message : "Não foi possível excluir o acesso no Supabase." },
       { status: 400 },
     );
   }

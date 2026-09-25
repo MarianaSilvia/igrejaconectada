@@ -126,7 +126,7 @@ async function ensureBucket() {
   });
 
   if (error && !/already exists|already_exist|duplicate/i.test(error.message)) {
-    return { error: "Nao foi possivel preparar o armazenamento de fotos." };
+    return { error: "Não foi possível preparar o armazenamento de fotos." };
   }
 
   return { client };
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
   const memberId = textValue(payload?.memberId, 140);
 
   if (!(await canManagePhoto(memberId, session.role, session.user))) {
-    return NextResponse.json({ error: "Voce nao tem permissao para alterar esta foto." }, { status: 403 });
+    return NextResponse.json({ error: "Você não tem permissão para alterar esta foto." }, { status: 403 });
   }
 
   const parsed = parseDataUrl(payload?.dataUrl);
@@ -180,7 +180,7 @@ export async function DELETE(request: Request) {
 
   if (!fileKey) return NextResponse.json({ error: "Foto nao informada para remocao." }, { status: 400 });
   if (!(await canManagePhoto(memberId, session.role, session.user))) {
-    return NextResponse.json({ error: "Voce nao tem permissao para remover esta foto." }, { status: 403 });
+    return NextResponse.json({ error: "Você não tem permissão para remover esta foto." }, { status: 403 });
   }
 
   const bucket = await ensureBucket();

@@ -150,7 +150,7 @@ export async function GET(request: Request) {
   }
 
   if (error) {
-    return NextResponse.json({ error: "Nao foi possivel carregar os pre-cadastros." }, { status: 400 });
+    return NextResponse.json({ error: "Não foi possível carregar os pré-cadastros." }, { status: 400 });
   }
 
   return NextResponse.json({ requests: filterByScope(data as unknown as RegistrationRequestRow[], scope).map(toRegistrationRequest) });
@@ -169,7 +169,7 @@ export async function PATCH(request: Request) {
   const status = body?.status?.trim();
 
   if (!id || !status || !["Aprovado", "Recusado", "Em analise"].includes(status)) {
-    return NextResponse.json({ error: "Acao invalida para o pre-cadastro." }, { status: 400 });
+    return NextResponse.json({ error: "Ação inválida para o pré-cadastro." }, { status: 400 });
   }
 
   let existingResult = await client
@@ -187,11 +187,11 @@ export async function PATCH(request: Request) {
   }
 
   if (existingResult.error) {
-    return NextResponse.json({ error: "Nao foi possivel conferir o pre-cadastro." }, { status: 400 });
+    return NextResponse.json({ error: "Não foi possível conferir o pré-cadastro." }, { status: 400 });
   }
 
   if (existingResult.data && !congregationMatchesScope((existingResult.data as unknown as RegistrationRequestRow).congregation, scope)) {
-    return NextResponse.json({ error: "Voce nao pode alterar pre-cadastro de outra congregacao." }, { status: 403 });
+    return NextResponse.json({ error: "Você não pode alterar pré-cadastro de outra congregação." }, { status: 403 });
   }
 
   let { data, error } = await client
@@ -223,7 +223,7 @@ export async function PATCH(request: Request) {
   }
 
   if (error) {
-    return NextResponse.json({ error: "Nao foi possivel atualizar o pre-cadastro." }, { status: 400 });
+    return NextResponse.json({ error: "Não foi possível atualizar o pré-cadastro." }, { status: 400 });
   }
 
   return NextResponse.json({ request: toRegistrationRequest(data as unknown as RegistrationRequestRow) });

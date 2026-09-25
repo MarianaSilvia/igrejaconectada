@@ -92,7 +92,7 @@ async function assertAdmin(request: Request) {
 
   const client = adminClient();
   if (!client) {
-    return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+    return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
   }
 
   const stored = await readStoredPayload(client);
@@ -105,7 +105,7 @@ async function assertAdmin(request: Request) {
   const effectiveRole = session.role === "ADMIN" ? "ADMIN" : roleFromPayload(payload, session.user);
 
   if (effectiveRole !== "ADMIN") {
-    return NextResponse.json({ error: "Apenas administrador pode conferir a sincronizacao de membros." }, { status: 403 });
+    return NextResponse.json({ error: "Apenas administrador pode conferir a sincronização de membros." }, { status: 403 });
   }
 
   return { client, payload };
@@ -116,7 +116,7 @@ async function memberSyncStatus(client: NonNullable<ReturnType<typeof adminClien
   const tableResult = await readAllMemberRows(client);
 
   if ("error" in tableResult) {
-    return unavailableStatus(jsonMembers, tableResult.error ?? "Tabela members indisponivel.");
+    return unavailableStatus(jsonMembers, tableResult.error ?? "Tabela members indisponível.");
   }
 
   const tableRows = tableResult.rows;
@@ -147,8 +147,8 @@ async function memberSyncStatus(client: NonNullable<ReturnType<typeof adminClien
     extraInTableCount,
     checkedAt: new Date().toISOString(),
     message: messageOverride ?? (hasAttention
-      ? "Confira diferencas antes de trocar a fonte principal dos membros."
-      : "JSON principal e tabela members estao alinhados."),
+      ? "Conferência do espelho: há diferenças para revisar antes de usar a tabela members como fonte principal."
+      : "JSON principal e tabela members estão alinhados."),
   };
 }
 
@@ -167,7 +167,7 @@ export async function POST(request: Request) {
   const syncResult = await syncMembersTable(authorized.client, authorized.payload);
 
   if ("error" in syncResult) {
-    return NextResponse.json(unavailableStatus(jsonMembers, syncResult.error ?? "Nao foi possivel atualizar o espelho de membros."), { status: 400 });
+    return NextResponse.json(unavailableStatus(jsonMembers, syncResult.error ?? "Não foi possível atualizar o espelho de membros."), { status: 400 });
   }
 
   return NextResponse.json(

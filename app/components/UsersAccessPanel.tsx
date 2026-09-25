@@ -35,7 +35,7 @@ export function UsersAccessPanel({
     <section className="content-grid">
       <article className="surface">
         <div className="panel-heading">
-          <h2>Novo usuario</h2>
+          <h2>Novo usuário</h2>
           <span>Acesso interno</span>
         </div>
         <div className="form-grid">
@@ -60,7 +60,7 @@ export function UsersAccessPanel({
                 </small>
                 <small>
                   {selectedAccessExistingUser
-                    ? `Acesso existente: ${selectedAccessExistingUser.role} - sera atualizado`
+                    ? `Acesso existente: ${selectedAccessExistingUser.role} - será atualizado`
                     : "Pronto para virar acesso administrativo"}
                 </small>
               </div>
@@ -119,14 +119,14 @@ export function UsersAccessPanel({
             <small>Perfis locais só devem receber a congregação que podem administrar.</small>
           </label>
           <button className="primary-action" disabled={!canCreateUser} onClick={createUser} type="button">
-            {selectedAccessExistingUser ? "Atualizar acesso" : "Adicionar usuario"}
+            {selectedAccessExistingUser ? "Atualizar acesso" : "Adicionar usuário"}
           </button>
         </div>
       </article>
 
       <article className="surface">
         <div className="panel-heading">
-          <h2>Usuarios cadastrados</h2>
+          <h2>Usuários cadastrados</h2>
           <span>{data.users.length} acessos</span>
         </div>
         <div className="row-list access-users-list">

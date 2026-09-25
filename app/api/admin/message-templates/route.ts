@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     .order("label", { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: "Nao foi possivel carregar os modelos de mensagem." }, { status: 400 });
+    return NextResponse.json({ error: "Não foi possível carregar os modelos de mensagem." }, { status: 400 });
   }
 
   const templates = (data as TemplateRow[]).map((template) => ({

@@ -140,7 +140,7 @@ export async function POST(request: Request) {
     .limit(1);
 
   if (memberMatchError) {
-    return NextResponse.json({ error: "Nao foi possivel conferir membros cadastrados." }, { status: 400 });
+    return NextResponse.json({ error: "Não foi possível conferir membros cadastrados." }, { status: 400 });
   }
 
   if (memberMatches?.length) {
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
   const { data: stored, error: readError } = await client.from("church_app_state").select("payload").eq("id", "main").maybeSingle();
 
   if (readError) {
-    return NextResponse.json({ error: "Nao foi possivel conferir a base antes de cadastrar." }, { status: 400 });
+    return NextResponse.json({ error: "Não foi possível conferir a base antes de cadastrar." }, { status: 400 });
   }
 
   const payload = isRecord(stored?.payload) ? stored.payload : {};
@@ -172,7 +172,7 @@ export async function POST(request: Request) {
     .limit(1);
 
   if (matchError) {
-    return NextResponse.json({ error: "Nao foi possivel conferir pre-cadastros pendentes." }, { status: 400 });
+    return NextResponse.json({ error: "Não foi possível conferir pré-cadastros pendentes." }, { status: 400 });
   }
 
   if (pendingMatches?.length) {
@@ -231,11 +231,11 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ error: "Nao foi possivel salvar o pre-cadastro." }, { status: 400 });
+    return NextResponse.json({ error: "Não foi possível salvar o pré-cadastro." }, { status: 400 });
   }
 
   await sendPushToRolesByCongregation(client, ["ADMIN", "SECRETARY"], congregation, {
-    title: "Novo pre-cadastro",
+    title: "Novo pré-cadastro",
     body: `${fullName} esta aguardando analise em ${congregation}.`,
     module: "overview",
   });

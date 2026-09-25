@@ -2759,7 +2759,7 @@ export default function Home() {
     setMemberFormRegistrationId(request.id);
     setMemberFormTab("Dados");
     setActiveModule("members");
-    setSyncStatus(`Revise a ficha de ${request.fullName} e salve para aprovar o pre-cadastro.`);
+    setSyncStatus(`Revise a ficha de ${request.fullName} e salve para aprovar o pré-cadastro.`);
     window.setTimeout(() => {
       document.getElementById("member-form-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
       document.getElementById("member-full-name")?.focus();
@@ -2784,7 +2784,7 @@ export default function Home() {
 
   async function declineRegistrationRequest(request: RegistrationRequest) {
     if (!canManageRegistrationRequests) return;
-    if (!window.confirm(`Recusar o pre-cadastro de ${request.fullName}?`)) return;
+    if (!window.confirm(`Recusar o pré-cadastro de ${request.fullName}?`)) return;
     const updated = await updateRegistrationRequestStatus(request.id, "Recusado", "Recusado pela administracao");
     if (!updated) return;
     setData((current) => declineRegistrationRequestData(current, request, uid));
@@ -3936,7 +3936,7 @@ export default function Home() {
             <div>
               <strong>{isSupabaseConfigured() ? "Supabase preparado" : "Supabase obrigatório"}</strong>
               <span>{syncStatus}</span>
-              {lastSavedAt && <small>Ultimo salvamento: {lastSavedAt}</small>}
+              {lastSavedAt && <small>Último salvamento: {lastSavedAt}</small>}
               {saveState === "conflict" && <small>Salvamento pausado para proteger os dados.</small>}
               {(saveState === "error" || saveState === "conflict") && hasSession && isSupabaseConfigured() && (
                 <button className="sync-reload-button" onClick={reloadRemoteStateNow} type="button">
@@ -5017,7 +5017,7 @@ function RegistrationRequestsPanel({
           ))}
         </div>
       ) : (
-        <p className="empty-state">Nenhum pre-cadastro neste filtro. Use o link para receber novas fichas pelo WhatsApp.</p>
+        <p className="empty-state">Nenhum pré-cadastro neste filtro. Use o link para receber novas fichas pelo WhatsApp.</p>
       )}
     </article>
   );
