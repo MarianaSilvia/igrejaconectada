@@ -3870,21 +3870,28 @@ export default function Home() {
             ))}
           </nav>
 
-          <div className="connection-card">
-            <span className={`status-dot ${saveState}`} />
-            <div>
-              <strong>{isSupabaseConfigured() ? "Supabase preparado" : "Supabase obrigatório"}</strong>
-              <span>{syncStatus}</span>
-              {lastSavedAt && <small>Último salvamento: {lastSavedAt}</small>}
-              {saveState === "conflict" && <small>Salvamento pausado para proteger os dados.</small>}
-              {(saveState === "error" || saveState === "conflict") && hasSession && isSupabaseConfigured() && (
-                <button className="sync-reload-button" onClick={reloadRemoteStateNow} type="button">
-                  {saveState === "conflict" ? "Recarregar antes de continuar" : "Recarregar dados da base"}
-                </button>
-              )}
-              <small><a href="/excluir-conta">Privacidade e exclusão de conta</a></small>
+          {isAdminView ? (
+            <div className="connection-card">
+              <span className={`status-dot ${saveState}`} />
+              <div>
+                <strong>{isSupabaseConfigured() ? "Supabase preparado" : "Supabase obrigatório"}</strong>
+                <span>{syncStatus}</span>
+                {lastSavedAt && <small>Último salvamento: {lastSavedAt}</small>}
+                {saveState === "conflict" && <small>Salvamento pausado para proteger os dados.</small>}
+                {(saveState === "error" || saveState === "conflict") && hasSession && isSupabaseConfigured() && (
+                  <button className="sync-reload-button" onClick={reloadRemoteStateNow} type="button">
+                    {saveState === "conflict" ? "Recarregar antes de continuar" : "Recarregar dados da base"}
+                  </button>
+                )}
+                <small><a href="/excluir-conta">Privacidade e exclusão de conta</a></small>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="member-help-card">
+              <strong>Precisa de ajuda?</strong>
+              <span>Use “Fale com a liderança” para enviar uma mensagem segura.</span>
+            </div>
+          )}
         </aside>
 
         <nav className="mobile-tabbar" aria-label="Atalhos principais">
@@ -3931,7 +3938,7 @@ export default function Home() {
             Visitas
           </button>}
           <button className={notificationsOpen ? "active" : ""} onClick={() => setNotificationsOpen((open) => !open)} type="button">
-            Acoes
+            Ações
           </button>
           <button className="logout-tab" onClick={handleLogout} type="button">
             Sair
@@ -3944,7 +3951,7 @@ export default function Home() {
               <p className="eyebrow">{currentLongDate}</p>
               <h1>{visibleModules.find((module) => module.key === activeModule)?.label}</h1>
               <label className="mobile-module-picker">
-                Ir para modulo
+                Ir para módulo
                 <select onChange={(event) => setActiveModule(event.target.value as ModuleKey)} value={activeModule}>
                   {visibleModules.map((module) => (
                     <option key={module.key} value={module.key}>
@@ -3971,7 +3978,7 @@ export default function Home() {
                 onClick={() => setNotificationsOpen((open) => !open)}
                 type="button"
               >
-                <span>Acoes</span>
+                <span>Ações</span>
                 {unreadCount > 0 && <strong>{unreadCount}</strong>}
               </button>
               <PushNotificationControl />
@@ -3999,7 +4006,7 @@ export default function Home() {
             {notificationsOpen && (
               <div className="notifications-panel">
                 <div className="panel-heading">
-                  <h2>Central de acoes</h2>
+                  <h2>Central de ações</h2>
                   <button onClick={markAllNotificationsRead} type="button">
                     Marcar tudo como lido
                   </button>

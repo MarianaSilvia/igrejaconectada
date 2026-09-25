@@ -134,7 +134,6 @@ const footerLinks = [
   { href: "/cadastro", label: "Pré-cadastro" },
   { href: "/privacidade", label: "Privacidade" },
   { href: "/termos", label: "Termos" },
-  { href: "#contato", label: "WhatsApp em breve" },
 ];
 
 function FeatureCard({ description, icon: Icon, title }: FeatureCard) {
@@ -300,8 +299,8 @@ export default function LandingPage() {
           ))}
         </div>
         <div className="landing-testimonial-placeholder">
-          <strong>Depoimentos reais poderão entrar aqui.</strong>
-          <p>Esta área fica preparada para receber relatos autorizados de pastores, líderes ou secretarias, sem usar números ou nomes fictícios.</p>
+          <strong>Preparado para igrejas que precisam de clareza.</strong>
+          <p>Uma base visual e funcional pensada para secretaria, liderança e membros caminharem com a mesma informação.</p>
         </div>
       </section>
 
