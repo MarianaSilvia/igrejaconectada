@@ -720,8 +720,8 @@ export function MembersPanel({
                       </label>
                       <label>
                         Senha
-                        <input autoComplete="new-password" minLength={8} onChange={(event) => setMemberCredentialForm((form) => ({ ...form, password: event.target.value }))} placeholder="Senha temporária individual" type="password" value={memberCredentialForm.password} />
-                        <small className="form-hint">Senha inicial padrão para o primeiro envio.</small>
+                        <input autoComplete="new-password" minLength={6} onChange={(event) => setMemberCredentialForm((form) => ({ ...form, password: event.target.value }))} placeholder="123456" type="password" value={memberCredentialForm.password} />
+                        <small className="form-hint">Senha padrão do membro: 123456. O administrador pode alterar quando necessário.</small>
                       </label>
                       <button className="primary-action" disabled={!canSaveMemberAccess} onClick={() => { void saveMemberAccess(member); }} type="button">
                         Criar ou atualizar login

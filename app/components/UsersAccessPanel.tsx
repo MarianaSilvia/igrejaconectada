@@ -7,6 +7,7 @@ type UsersAccessPanelProps = {
   createUser: () => void;
   data: AppData;
   deleteAccessUser: (user: AccessUser) => void;
+  resetMemberPasswords: () => void;
   selectedAccessExistingUser?: AccessUser;
   selectedAccessMember?: MemberRecord;
   selectedAccessMemberId: string;
@@ -21,6 +22,7 @@ export function UsersAccessPanel({
   createUser,
   data,
   deleteAccessUser,
+  resetMemberPasswords,
   selectedAccessExistingUser,
   selectedAccessMember,
   selectedAccessMemberId,
@@ -121,6 +123,10 @@ export function UsersAccessPanel({
           <button className="primary-action" disabled={!canCreateUser} onClick={createUser} type="button">
             {selectedAccessExistingUser ? "Atualizar acesso" : "Adicionar usuário"}
           </button>
+          <button className="secondary full" onClick={resetMemberPasswords} type="button">
+            Padronizar senhas dos membros
+          </button>
+          <small className="form-hint full">Redefine membros ativos para a senha padrão 123456 e mantém o login por e-mail.</small>
         </div>
       </article>
 

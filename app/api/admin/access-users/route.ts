@@ -24,6 +24,7 @@ type JsonRecord = Record<string, unknown>;
 const allowedAccessRoles: AccessRole[] = ["Administrador", "Lider", "Professor", "Secretario", "Tesoureiro", "Membro"];
 const allowedAccessStatuses = ["Ativo", "Pendente", "Bloqueado"] as const;
 type AccessStatus = (typeof allowedAccessStatuses)[number];
+const memberDefaultPassword = "123456";
 
 function normalizeAccessRole(role?: string): AccessRole {
   return allowedAccessRoles.includes(role as AccessRole) ? (role as AccessRole) : "Membro";
@@ -48,6 +49,14 @@ function toChurchAccess(status: AccessStatus) {
   if (status === "Ativo") return "approved";
   if (status === "Bloqueado") return "blocked";
   return "pending";
+}
+
+function minimumPasswordLength(role: AccessRole) {
+  return role === "Membro" ? memberDefaultPassword.length : 8;
+}
+
+function passwordLengthMessage(role: AccessRole) {
+  return role === "Membro" ? "A senha do membro precisa ter pelo menos 6 caracteres." : "A senha precisa ter pelo menos 8 caracteres.";
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -114,8 +123,10 @@ export async function POST(request: Request) {
   const email = payload.email?.trim().toLowerCase();
   const password = payload.password?.trim();
 
-  if (!name || !email || !password || password.length < 8) {
-    return NextResponse.json({ error: "Informe nome, e-mail e senha com pelo menos 8 caracteres." }, { status: 400 });
+  const role = normalizeAccessRole(payload.role ?? "Lider");
+
+  if (!name || !email || !password || password.length < minimumPasswordLength(role)) {
+    return NextResponse.json({ error: `Informe nome, e-mail e senha. ${passwordLengthMessage(role)}` }, { status: 400 });
   }
 
   if (hasInvalidRoleOrStatus(payload)) {
@@ -127,7 +138,6 @@ export async function POST(request: Request) {
   const manager = await accessManagerContext(client, session.user.email ?? "", session.role);
   if (!manager.canManage) return NextResponse.json({ error: "Você não tem permissão para gerenciar acessos." }, { status: 403 });
 
-  const role = normalizeAccessRole(payload.role ?? "Lider");
   const status = normalizeAccessStatus(payload.status ?? "Ativo");
   const congregationScope = isGlobalCongregationScope(manager.scope) ? normalizeCongregationScope(payload.congregationScope) : manager.scope;
 
@@ -143,7 +153,7 @@ export async function POST(request: Request) {
       church_gp_access: toChurchAccess(status),
       congregation_scope: congregationScope,
       church_gp_congregation_scope: congregationScope,
-      must_change_password: true,
+      must_change_password: false,
       created_by: session.user.id,
     },
   });
@@ -169,10 +179,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Informe nome e e-mail para atualizar o acesso." }, { status: 400 });
   }
 
-  if (password && password.length < 8) {
-    return NextResponse.json({ error: "A senha precisa ter pelo menos 8 caracteres." }, { status: 400 });
-  }
-
   if (hasInvalidRoleOrStatus(payload)) {
     return NextResponse.json({ error: "Perfil ou status inválido para atualizar acesso." }, { status: 400 });
   }
@@ -191,6 +197,10 @@ export async function PATCH(request: Request) {
     const status = normalizeAccessStatus(payload.status ?? "Ativo");
     const congregationScope = isGlobalCongregationScope(manager.scope) ? normalizeCongregationScope(payload.congregationScope) : manager.scope;
 
+    if (password && password.length < minimumPasswordLength(role)) {
+      return NextResponse.json({ error: passwordLengthMessage(role) }, { status: 400 });
+    }
+
     if (userId === session.user.id && (role !== "Administrador" || status !== "Ativo")) {
       return NextResponse.json({ error: "Você não pode rebaixar ou bloquear o próprio acesso enquanto está conectado." }, { status: 400 });
     }
@@ -202,7 +212,7 @@ export async function PATCH(request: Request) {
       church_gp_access: toChurchAccess(status),
       congregation_scope: congregationScope,
       church_gp_congregation_scope: congregationScope,
-      ...(password ? { must_change_password: true } : {}),
+      must_change_password: false,
       updated_by: session.user.id,
     };
 
@@ -231,7 +241,7 @@ export async function PATCH(request: Request) {
       password,
       email_confirm: true,
       user_metadata: { name },
-      app_metadata: { ...appMetadata, must_change_password: true, created_by: session.user.id },
+      app_metadata: { ...appMetadata, created_by: session.user.id },
     });
 
     if (error) {

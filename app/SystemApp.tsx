@@ -696,11 +696,7 @@ function isApprovedAccessStatus(value: unknown) {
   return status === "approved" || status === "ativo" || status === "active";
 }
 
-function temporaryPassword() {
-  const bytes = new Uint32Array(3);
-  window.crypto.getRandomValues(bytes);
-  return `Ic!${Array.from(bytes, (value) => value.toString(36)).join("").slice(0, 10)}9`;
-}
+const defaultMemberPassword = "123456";
 
 function internalMemberEmail(member: Pick<MemberRecord, "memberCode" | "id">) {
   const loginId = (member.memberCode || member.id).replace(/[^a-z0-9]/gi, "").toLowerCase();
@@ -1090,7 +1086,7 @@ export default function Home() {
       setSessionUserId(session.user.id);
       setSessionEmail(restoredEmail);
       setSessionRole(accessRoleForSession(data.users, restoredEmail, metadata));
-      if (new URLSearchParams(window.location.search).get("recuperar") === "senha" || metadata.must_change_password === true) {
+      if (new URLSearchParams(window.location.search).get("recuperar") === "senha") {
         setAccessMode("reset");
         setAccessMessage("Crie uma nova senha pessoal para continuar.");
         setRemoteStateReady(true);
@@ -1638,7 +1634,7 @@ export default function Home() {
     canManageUsers &&
       memberCredentialForm.memberId &&
       memberCredentialForm.email.trim() &&
-      (!memberCredentialForm.password.trim() || memberCredentialForm.password.trim().length >= 8),
+      (!memberCredentialForm.password.trim() || memberCredentialForm.password.trim().length >= defaultMemberPassword.length),
   );
   const canCreateKid = canManageKids && Boolean(kidForm.childName.trim() && kidForm.guardianName.trim() && kidForm.guardianPhone.trim());
   const canCreateMuralItem = canManageMural && Boolean(muralForm.title.trim() && muralForm.expiresAt);
@@ -2467,7 +2463,7 @@ export default function Home() {
     if (!requireModuleAccess("users", "criar usuarios")) return;
     if (!userForm.name.trim() || !userForm.email.trim()) return;
     if (!selectedAccessExistingUser && userForm.password.trim().length < 8) {
-      setSyncStatus("Informe uma senha temporária individual com pelo menos 8 caracteres.");
+      setSyncStatus("Informe uma senha inicial com pelo menos 8 caracteres para acessos administrativos.");
       return;
     }
 
@@ -2518,6 +2514,41 @@ export default function Home() {
     setData((current) => upsertAccessUserData(current, user, selectedAccessMemberId, isUpdatingAccess, uid));
     setUserForm(blankUser);
     setSelectedAccessMemberId("");
+  }
+
+  async function resetMemberPasswords() {
+    if (!requireModuleAccess("users", "padronizar senhas de membros")) return;
+    if (!window.confirm("Padronizar todos os acessos ativos de membros para a senha 123456?")) return;
+
+    const supabase = getSupabaseClient();
+    const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+      setSyncStatus("Entre com uma conta administradora antes de padronizar senhas.");
+      return;
+    }
+
+    const response = await fetch("/api/admin/member-passwords", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const result = (await response.json().catch(() => ({}))) as {
+      created?: number;
+      updated?: number;
+      errors?: Array<{ email: string; message: string }>;
+      error?: string;
+    };
+
+    if (!response.ok) {
+      setSyncStatus(result.error ?? "Não foi possível padronizar as senhas dos membros.");
+      return;
+    }
+
+    const failures = result.errors?.length ?? 0;
+    setSyncStatus(
+      `Senhas padronizadas: ${result.updated ?? 0} atualizadas, ${result.created ?? 0} criadas${failures ? `, ${failures} com erro` : ""}.`,
+    );
   }
 
   async function updateAccessUserStatus(user: AccessUser, status: AccessUser["status"]) {
@@ -2852,18 +2883,17 @@ export default function Home() {
         : {
             memberId: member.id,
             email: member.email || internalMemberEmail(member),
-            password: temporaryPassword(),
+            password: defaultMemberPassword,
           },
     );
   }
 
   function memberAccessMessage(member: MemberRecord) {
     return [
-      "Ola, {nome}! Seu acesso ao Igreja Conectada foi preparado.",
+      "Olá, {nome}! Seu acesso ao Igreja Conectada foi preparado.",
       "Acesse: https://igrejaconectada-kappa.vercel.app",
-      `Login: ${member.memberCode || memberCredentialForm.email.trim() || member.email}`,
-      `Senha temporária: ${memberCredentialForm.password.trim()}`,
-      "No primeiro acesso, o sistema pedirá a criação de uma nova senha.",
+      `Login: ${memberCredentialForm.email.trim() || member.email}`,
+      `Senha: ${memberCredentialForm.password.trim() || defaultMemberPassword}`,
     ].join("\n");
   }
 
@@ -2934,7 +2964,7 @@ export default function Home() {
       };
     });
 
-    setMemberCredentialForm((form) => ({ ...form, password: temporaryPassword() }));
+    setMemberCredentialForm((form) => ({ ...form, password: defaultMemberPassword }));
   }
 
   function createKid() {
@@ -3473,11 +3503,6 @@ export default function Home() {
     setSessionRole(accessRoleForSession(data.users, loginEmail, metadata));
     setRemoteStateReady(false);
     setSyncStatus("Sessão Supabase ativa. Novos dados serão sincronizados.");
-    if (metadata.must_change_password === true) {
-      setAccessMode("reset");
-      setAccessMessage("Crie uma nova senha pessoal antes de continuar.");
-      return;
-    }
     setHasSession(true);
   }
 
@@ -4627,6 +4652,7 @@ export default function Home() {
               createUser={createUser}
               data={data}
               deleteAccessUser={deleteAccessUser}
+              resetMemberPasswords={resetMemberPasswords}
               selectedAccessExistingUser={selectedAccessExistingUser}
               selectedAccessMember={selectedAccessMember}
               selectedAccessMemberId={selectedAccessMemberId}
