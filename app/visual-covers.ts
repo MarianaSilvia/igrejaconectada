@@ -31,14 +31,18 @@ function normalized(value: string) {
 }
 
 export function agendaThemeKey(event: AgendaThemeEvent) {
+  const mainText = normalized([event.title, event.ministry].join(" "));
   const text = normalized([event.title, event.ministry, event.location, event.responsible].join(" "));
 
-  if (text.includes("ebd") || text.includes("escola biblica") || text.includes("escola dominical")) return "school";
-  if (text.includes("discipulado")) return "discipleship";
-  if (text.includes("circulo de oracao") || text.includes("oração") || text.includes("oracao")) return "prayer";
-  if (text.includes("ensino") || text.includes("doutrina") || text.includes("estudo")) return "teaching";
-  if (text.includes("santa ceia") || text.includes("ceia")) return "communion";
-  if (text.includes("domingo") || text.includes("familia") || text.includes("culto")) return "worship";
+  if (mainText.includes("ebd") || mainText.includes("escola biblica") || mainText.includes("escola dominical")) return "school";
+  if (mainText.includes("discipulado")) return "discipleship";
+  if (mainText.includes("circulo de oracao") || mainText.includes("oração") || mainText.includes("oracao")) return "prayer";
+  if (mainText.includes("ensino") || mainText.includes("doutrina") || mainText.includes("estudo")) return "teaching";
+  if (mainText.includes("santa ceia") || mainText.includes("ceia")) return "communion";
+  if (mainText.includes("evangelismo") || mainText.includes("evangelistico")) return "evangelism";
+  if (mainText.includes("jovem") || mainText.includes("jovens") || mainText.includes("juventude")) return "youth";
+  if (mainText.includes("louvor") || mainText.includes("coral")) return "rehearsal";
+  if (mainText.includes("pregacao") || mainText.includes("pregação") || mainText.includes("domingo") || mainText.includes("familia") || mainText.includes("culto")) return "preaching";
   if (text.includes("obreiro") || text.includes("administr") || text.includes("reuniao")) return "meeting";
   if (text.includes("ensaio") || text.includes("louvor") || text.includes("maestro")) return "rehearsal";
   if (text.includes("congresso") || text.includes("conferencia")) return "conference";

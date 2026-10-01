@@ -1502,6 +1502,29 @@ button.data-row.active {
   --agenda-symbol: "CUL";
 }
 
+.agenda-theme-preaching {
+  --agenda-a: rgba(246, 198, 91, 0.18);
+  --agenda-b: rgba(15, 30, 54, 0.88);
+  --agenda-glow: rgba(53, 214, 255, 0.3);
+  --agenda-image: url("/agenda-covers/culto-pregacao.webp");
+  --agenda-symbol: "PAL";
+}
+
+.agenda-theme-evangelism {
+  --agenda-a: rgba(246, 198, 91, 0.2);
+  --agenda-b: rgba(20, 41, 58, 0.88);
+  --agenda-glow: rgba(246, 198, 91, 0.34);
+  --agenda-image: url("/agenda-covers/culto-evangelismo.webp");
+  --agenda-symbol: "EVA";
+}
+
+.agenda-theme-youth {
+  --agenda-a: rgba(143, 124, 255, 0.18);
+  --agenda-b: rgba(28, 24, 58, 0.88);
+  --agenda-glow: rgba(143, 124, 255, 0.3);
+  --agenda-symbol: "JOV";
+}
+
 .agenda-theme-teaching,
 .agenda-theme-school,
 .agenda-theme-discipleship {
@@ -1535,6 +1558,7 @@ button.data-row.active {
   --agenda-a: rgba(143, 124, 255, 0.23);
   --agenda-b: rgba(30, 23, 48, 0.88);
   --agenda-glow: rgba(255, 255, 255, 0.22);
+  --agenda-image: url("/agenda-covers/santa-ceia.webp");
   --agenda-symbol: "CEI";
 }
 
@@ -5201,10 +5225,18 @@ textarea:focus {
 }
 
 .agenda-badge-worship,
-.agenda-badge-conference {
+.agenda-badge-conference,
+.agenda-badge-preaching,
+.agenda-badge-evangelism {
   background: rgba(232, 58, 79, 0.16);
   border-color: rgba(232, 58, 79, 0.28);
   color: #ffd5dd;
+}
+
+.agenda-badge-youth {
+  background: rgba(143, 124, 255, 0.16);
+  border-color: rgba(143, 124, 255, 0.3);
+  color: #ded8ff;
 }
 
 .agenda-badge-school,
@@ -7306,9 +7338,20 @@ button.secondary,
 }
 
 .agenda-badge-cult,
-.agenda-badge-culto {
+.agenda-badge-culto,
+.agenda-badge-preaching {
   background: rgba(37, 99, 235, 0.12);
   color: var(--ui-primary);
+}
+
+.agenda-badge-evangelism {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.agenda-badge-youth {
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
 }
 
 .agenda-badge-discipleship,
