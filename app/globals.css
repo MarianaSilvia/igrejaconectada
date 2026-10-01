@@ -7837,3 +7837,84 @@ button.secondary,
     transform: none;
   }
 }
+
+/* Final contrast guard for the light redesign */
+.landing-page {
+  --readable-title: #111827;
+  --readable-copy: #4b5f7a;
+}
+
+.landing-page :is(.landing-section, .landing-purpose, .landing-audience-panel, .landing-feature-card, .landing-step, .landing-demo-stage, .landing-demo-copy, .landing-testimonial-placeholder, .landing-faq-list details, .landing-final, .landing-footer) :is(h1, h2, h3, h4, strong, summary) {
+  color: var(--readable-title);
+}
+
+.landing-page :is(.landing-section, .landing-purpose, .landing-audience-panel, .landing-feature-card, .landing-step, .landing-demo-stage, .landing-demo-copy, .landing-testimonial-placeholder, .landing-faq-list details, .landing-final, .landing-footer) :is(p, small, li) {
+  color: var(--readable-copy);
+}
+
+.landing-page :is(.landing-nav-links a, .landing-footer a) {
+  color: #334155;
+}
+
+.landing-page :is(.landing-primary, .landing-nav-login),
+.landing-page :is(.landing-primary, .landing-nav-login) *,
+.landing-page .landing-app-card.featured,
+.landing-page .landing-app-card.featured *,
+.landing-page .landing-glass-play,
+.landing-page .landing-glass-play *,
+.landing-page .landing-phone-sidecar,
+.landing-page .landing-phone-sidecar *,
+.landing-page .landing-phone-mini-card,
+.landing-page .landing-phone-mini-card *,
+.landing-page .landing-phone-mini-row,
+.landing-page .landing-phone-mini-row * {
+  color: #ffffff;
+}
+
+.landing-page .landing-secondary {
+  color: var(--ui-primary);
+}
+
+.landing-page .landing-demo-badge,
+.landing-page .landing-floating-pill,
+.landing-page .landing-icon {
+  color: var(--ui-primary);
+}
+
+.app-shell {
+  --app-readable-title: #111827;
+  --app-readable-copy: #4b5f7a;
+  --app-readable-soft: #64748b;
+}
+
+.app-shell :is(.surface, .streaming-section, .hero-panel, .data-row, .today-grid > div, .priority-grid button, .member-home-grid button, .member-quick-actions, .notifications-panel, .connection-card, .member-help-card, .profile-pill, .birthday-person-card, .birthday-card, .mural-card, .action-tile, .simple-shortcuts-grid button, .form-grid, .form-card, .filter-grid, .row-list, .access-users-list, .member-form-panel, .members-list-panel, .registration-queue-panel) :is(h1, h2, h3, h4, strong, summary) {
+  color: var(--app-readable-title);
+}
+
+.app-shell :is(.surface, .streaming-section, .hero-panel, .data-row, .today-grid > div, .priority-grid button, .member-home-grid button, .member-quick-actions, .notifications-panel, .connection-card, .member-help-card, .profile-pill, .birthday-person-card, .birthday-card, .mural-card, .action-tile, .simple-shortcuts-grid button, .form-grid, .form-card, .filter-grid, .row-list, .access-users-list, .member-form-panel, .members-list-panel, .registration-queue-panel) :is(p, small, span, label, li) {
+  color: var(--app-readable-copy);
+}
+
+.app-shell :is(.eyebrow, .date-box, .agenda-badge, .status-chip, .mural-hero-label, .member-avatar, .birthday-person-photo, .landing-icon) {
+  color: var(--ui-primary);
+}
+
+.app-shell :is(.notification-button, .hero-actions button:not(.secondary), .panel-heading button:not(.secondary), .access-primary, .whatsapp-link, .registration-status-tabs button.active, .floating-contact-button, .floating-contact-button *, .brand-mark) {
+  color: #ffffff;
+}
+
+.app-shell :is(.notification-button, .hero-actions button:not(.secondary), .panel-heading button:not(.secondary), .access-primary, .whatsapp-link, .registration-status-tabs button.active) * {
+  color: #ffffff;
+}
+
+.app-shell :is(button.secondary, .hero-actions button.secondary, .panel-heading button.secondary, .sync-reload-button, .simple-mode-toggle, .member-quick-actions button, .registration-status-tabs button:not(.active), .module-button.active) {
+  color: var(--ui-primary);
+}
+
+.app-shell :is(input, select, textarea) {
+  color: var(--app-readable-title);
+}
+
+.app-shell :is(input::placeholder, textarea::placeholder) {
+  color: #7c8da5;
+}
