@@ -1745,6 +1745,7 @@ export default function Home() {
       teaching: "Ensino",
       school: "Escola Bíblica",
       discipleship: "Discipulado",
+      prayer: "Círculo de Oração",
       communion: "Santa ceia",
       meeting: "Reunião",
       rehearsal: "Ensaio",

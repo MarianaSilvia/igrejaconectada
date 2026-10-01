@@ -1455,9 +1455,13 @@ button.data-row.active {
 
 .agenda-cover::before {
   background:
+    linear-gradient(90deg, rgba(5, 9, 20, 0.92), rgba(5, 9, 20, 0.68) 48%, rgba(5, 9, 20, 0.38)),
     radial-gradient(circle at 82% 18%, var(--agenda-glow, rgba(72, 184, 255, 0.26)), transparent 0 24%, transparent 25%),
     linear-gradient(145deg, var(--agenda-a, rgba(72, 184, 255, 0.16)), transparent 58%),
-    linear-gradient(135deg, var(--agenda-b, rgba(18, 45, 76, 0.76)), rgba(7, 8, 13, 0.82));
+    linear-gradient(135deg, var(--agenda-b, rgba(18, 45, 76, 0.76)), rgba(7, 8, 13, 0.82)),
+    var(--agenda-image, linear-gradient(135deg, rgba(18, 45, 76, 0.76), rgba(7, 8, 13, 0.82)));
+  background-position: center;
+  background-size: cover;
   content: "";
   inset: 0;
   position: absolute;
@@ -1471,6 +1475,24 @@ button.data-row.active {
 .agenda-cover > * {
   position: relative;
   z-index: 1;
+}
+
+.agenda-cover strong {
+  color: #ffffff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+}
+
+.agenda-cover small {
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
+}
+
+.agenda-cover .date-box,
+.public-event-card.agenda-cover > span {
+  background: rgba(4, 11, 23, 0.62);
+  border-color: rgba(255, 255, 255, 0.26);
+  color: #ffffff;
+  backdrop-filter: blur(8px);
 }
 
 .agenda-theme-worship {
@@ -1487,6 +1509,26 @@ button.data-row.active {
   --agenda-b: rgba(42, 35, 19, 0.86);
   --agenda-glow: rgba(20, 217, 196, 0.22);
   --agenda-symbol: "BIB";
+}
+
+.agenda-theme-school {
+  --agenda-image: url("/agenda-covers/escola-biblica-dominical.webp");
+}
+
+.agenda-theme-teaching {
+  --agenda-image: url("/agenda-covers/estudo-da-palavra.webp");
+}
+
+.agenda-theme-discipleship {
+  --agenda-image: url("/agenda-covers/aula-do-discipulado.webp");
+}
+
+.agenda-theme-prayer {
+  --agenda-a: rgba(255, 126, 172, 0.22);
+  --agenda-b: rgba(49, 17, 38, 0.88);
+  --agenda-glow: rgba(255, 190, 210, 0.28);
+  --agenda-image: url("/agenda-covers/circulo-de-oracao.webp");
+  --agenda-symbol: "ORA";
 }
 
 .agenda-theme-communion {
@@ -5173,6 +5215,12 @@ textarea:focus {
   color: #ffe5a5;
 }
 
+.agenda-badge-prayer {
+  background: rgba(255, 126, 172, 0.16);
+  border-color: rgba(255, 126, 172, 0.3);
+  color: #ffd4e3;
+}
+
 .agenda-badge-kids,
 .agenda-badge-rehearsal {
   background: rgba(20, 217, 196, 0.16);
@@ -7273,6 +7321,12 @@ button.secondary,
 .agenda-badge-ebd {
   background: rgba(245, 158, 11, 0.16);
   color: #b45309;
+}
+
+.agenda-badge-prayer,
+.agenda-badge-oracao {
+  background: rgba(225, 29, 72, 0.12);
+  color: #be123c;
 }
 
 .agenda-badge-meeting,

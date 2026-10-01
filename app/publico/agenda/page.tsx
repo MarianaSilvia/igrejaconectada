@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { formatDate } from "../../app-helpers";
 import { getPublicAgenda } from "../../public-content";
+import { agendaThemeClass } from "../../visual-covers";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function PublicAgendaPage({ searchParams }: { searchParams?
 
           <div className="public-event-list">
             {events.map((event) => (
-              <div className="public-event-card" key={event.id}>
+              <div className={`public-event-card ${agendaThemeClass(event)}`} key={event.id}>
                 <span>{event.time || "Sem horário"}</span>
                 <div>
                   <strong>{event.title}</strong>
