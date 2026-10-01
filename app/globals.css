@@ -3422,6 +3422,10 @@ textarea:focus {
 
 .overview-streaming .birthday-spotlight-list {
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  max-height: min(440px, 56vh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
 }
 
 .overview-streaming .devotional-card {
@@ -7381,6 +7385,14 @@ button.secondary,
 
   .overview-streaming .streaming-rail {
     grid-auto-columns: minmax(208px, 84vw);
+  }
+}
+
+@media (max-width: 720px) {
+  .overview-streaming .birthday-spotlight-list {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
   }
 }
 
