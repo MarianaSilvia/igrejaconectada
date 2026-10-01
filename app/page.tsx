@@ -270,24 +270,67 @@ export default function LandingPage() {
       <section className="landing-section landing-demo" id="demonstracao" aria-labelledby="landing-demo-title">
         <div className="landing-section-heading">
           <p className="landing-eyebrow">Demonstração</p>
-          <h2 id="landing-demo-title">Veja como o sistema pode funcionar na rotina da igreja</h2>
+          <h2 id="landing-demo-title">Veja o Igreja Conectada em ação</h2>
         </div>
-        <div className="landing-demo-card">
-          <div className="landing-demo-preview landing-demo-animation" role="img" aria-label="Demonstração visual animada do Igreja Conectada">
-            <Image
-              alt="Demonstração visual animada do sistema Igreja Conectada"
-              className="landing-demo-media"
-              height={720}
-              src="/demo-igreja-conectada.webp"
-              unoptimized
-              width={1280}
-            />
-            <span className="landing-demo-badge">Demo visual</span>
+        <div className="landing-demo-stage">
+          <div className="landing-demo-visual" aria-label="Mockup 3D do sistema Igreja Conectada em notebook e celular">
+            <span className="landing-demo-glow" aria-hidden="true" />
+            <span className="landing-floating-pill pill-agenda" aria-hidden="true">Agenda</span>
+            <span className="landing-floating-pill pill-mural" aria-hidden="true">Mural</span>
+            <span className="landing-floating-pill pill-members" aria-hidden="true">Membros</span>
+            <span className="landing-floating-pill pill-registration" aria-hidden="true">Pré-cadastro</span>
+            <span className="landing-floating-pill pill-care" aria-hidden="true">Cuidado pastoral</span>
+
+            <div className="landing-device-3d">
+              <div className="landing-laptop-mockup">
+                <div className="landing-laptop-lid">
+                  <div className="landing-laptop-topbar">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div className="landing-laptop-screen">
+                    <Image
+                      alt="Demonstração visual animada do sistema Igreja Conectada"
+                      className="landing-demo-media"
+                      height={720}
+                      src="/demo-igreja-conectada.webp"
+                      unoptimized
+                      width={1280}
+                    />
+                    <button className="landing-glass-play" type="button" aria-label="Assistir demonstração visual">
+                      <span aria-hidden="true">▶</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="landing-laptop-base" aria-hidden="true" />
+              </div>
+
+              <div className="landing-phone-sidecar" aria-hidden="true">
+                <div className="landing-phone-notch" />
+                <div className="landing-phone-mini-card featured">
+                  <span>Hoje</span>
+                  <strong>19h30</strong>
+                  <small>Culto de ensino</small>
+                </div>
+                <div className="landing-phone-mini-row">
+                  <span>Mural</span>
+                  <strong>3 avisos</strong>
+                </div>
+                <div className="landing-phone-mini-grid">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <h3>Vídeo demonstrativo preparado para apresentar o sistema</h3>
+
+          <div className="landing-demo-copy">
+            <span className="landing-demo-badge">Demo visual</span>
+            <h3>Uma prévia visual da rotina da igreja</h3>
             <p>
-              Uma apresentação curta mostrando pré-cadastro, painel do membro, mural, agenda, cuidado pastoral e relatórios em uma experiência simples para a igreja.
+              Pré-cadastro, painel do membro, mural, agenda, cuidado pastoral e relatórios em uma experiência simples para a igreja.
             </p>
             <Link className="landing-secondary" href="/sistema">
               Abrir ambiente do sistema
