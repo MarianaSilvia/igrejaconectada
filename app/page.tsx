@@ -172,9 +172,9 @@ export default function LandingPage() {
         <div className="landing-hero-grid">
           <div className="landing-hero-copy">
             <p className="landing-eyebrow">Gestão, comunhão e cuidado em um só lugar</p>
-            <h1>A gestão da sua igreja simples, organizada e na palma da mão de cada membro.</h1>
+            <h1>Gestão da igreja simples, moderna e conectada.</h1>
             <p className="landing-subtitle">
-              Centralize avisos, pedidos de oração, agenda e secretaria em um único aplicativo leve e fácil de usar.
+              Organize membros, agenda, cuidado pastoral, comunicação e relatórios em uma experiência fácil para liderança e membros.
             </p>
             <div className="landing-actions">
               <a className="landing-primary" href="#demonstracao">
@@ -187,9 +187,9 @@ export default function LandingPage() {
             <div className="landing-phone-frame">
               <div className="landing-phone-speaker" />
               <div className="landing-app-card featured">
-                <span>Hoje na igreja</span>
+                <span>Resumo do dia</span>
                 <strong>Culto de ensino</strong>
-                <small>19h30 - Sede</small>
+                <small>19h30 - Sede/Farroupilha</small>
               </div>
               <div className="landing-app-row">
                 <span className="landing-mini-avatar">A</span>
@@ -208,7 +208,7 @@ export default function LandingPage() {
             <div className="landing-dashboard-card">
               <Sparkles size={22} />
               <strong>Painel inteligente</strong>
-              <small>Pré-cadastros, aniversariantes, mural e pendências em uma visão clara.</small>
+              <small>Pré-cadastros, mural, agenda e pendências em uma visão clara.</small>
             </div>
           </div>
         </div>
