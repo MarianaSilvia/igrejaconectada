@@ -93,12 +93,12 @@ export async function POST(request: Request) {
 
   const client = adminClient();
   if (!client) {
-    return NextResponse.json({ error: "Cadastro online indisponivel no momento." }, { status: 503 });
+    return NextResponse.json({ error: "Cadastro online indisponível no momento." }, { status: 503 });
   }
 
   const body = (await request.json().catch(() => null)) as JsonRecord | null;
   if (!isRecord(body)) {
-    return NextResponse.json({ error: "Dados invalidos para cadastro." }, { status: 400 });
+    return NextResponse.json({ error: "Dados inválidos para cadastro." }, { status: 400 });
   }
 
   if (textValue(body.website)) {
@@ -122,15 +122,15 @@ export async function POST(request: Request) {
   const cleanCpf = comparableCpf(body.cpf);
 
   if (fullName.length < 6 || cleanPhone.length < 8 || cleanPhone.length > maxDigits.phone || !isOfficialCongregation) {
-    return NextResponse.json({ error: "Informe nome completo, congregacao e telefone para enviar o cadastro." }, { status: 400 });
+    return NextResponse.json({ error: "Informe nome completo, congregação e telefone para enviar o cadastro." }, { status: 400 });
   }
 
   if (cleanCpf && cleanCpf.length !== maxDigits.cpf) {
-    return NextResponse.json({ error: "CPF invalido. Informe 11 numeros ou deixe em branco." }, { status: 400 });
+    return NextResponse.json({ error: "CPF inválido. Informe 11 números ou deixe em branco." }, { status: 400 });
   }
 
   if (!hasValidEmail(email)) {
-    return NextResponse.json({ error: "E-mail invalido. Corrija o e-mail ou deixe em branco." }, { status: 400 });
+    return NextResponse.json({ error: "E-mail inválido. Corrija o e-mail ou deixe em branco." }, { status: 400 });
   }
 
   const { data: memberMatches, error: memberMatchError } = await client
@@ -145,7 +145,7 @@ export async function POST(request: Request) {
 
   if (memberMatches?.length) {
     return NextResponse.json(
-      { error: "Cadastro ja recebido. Procure a secretaria para atualizar seus dados." },
+      { error: "Cadastro já recebido. Procure a secretaria para atualizar seus dados." },
       { status: 409 },
     );
   }
@@ -159,7 +159,7 @@ export async function POST(request: Request) {
   const payload = isRecord(stored?.payload) ? stored.payload : {};
   if (hasDuplicate(payload, cleanCpf, cleanPhone)) {
     return NextResponse.json(
-      { error: "Cadastro ja recebido. Procure a secretaria para atualizar seus dados." },
+      { error: "Cadastro já recebido. Procure a secretaria para atualizar seus dados." },
       { status: 409 },
     );
   }
@@ -177,7 +177,7 @@ export async function POST(request: Request) {
 
   if (pendingMatches?.length) {
     return NextResponse.json(
-      { error: "Cadastro ja recebido. Procure a secretaria para atualizar seus dados." },
+      { error: "Cadastro já recebido. Procure a secretaria para atualizar seus dados." },
       { status: 409 },
     );
   }
@@ -226,7 +226,7 @@ export async function POST(request: Request) {
   if (saveError) {
     if (saveError.code === "23505") {
       return NextResponse.json(
-        { error: "Cadastro ja recebido. Procure a secretaria para atualizar seus dados." },
+        { error: "Cadastro já recebido. Procure a secretaria para atualizar seus dados." },
         { status: 409 },
       );
     }
@@ -236,7 +236,7 @@ export async function POST(request: Request) {
 
   await sendPushToRolesByCongregation(client, ["ADMIN", "SECRETARY"], congregation, {
     title: "Novo pré-cadastro",
-    body: `${fullName} esta aguardando analise em ${congregation}.`,
+    body: `${fullName} está aguardando análise em ${congregation}.`,
     module: "overview",
   });
 

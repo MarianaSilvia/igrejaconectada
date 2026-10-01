@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   const guardianPhone = textValue(body?.guardianPhone, 60);
 
   if (!id || !childName || !ageGroup || !guardianName || !guardianPhone) {
-    return NextResponse.json({ error: "Informe crianca, faixa etaria e responsavel para salvar Kids." }, { status: 400 });
+    return NextResponse.json({ error: "Informe criança, faixa etária e responsável para salvar Kids." }, { status: 400 });
   }
 
   const now = new Date().toISOString();

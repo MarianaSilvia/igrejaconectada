@@ -30,6 +30,11 @@ type AgendaPanelProps = {
   weekEvents: ChurchEvent[];
 };
 
+function eventStatusLabel(status: ChurchEvent["status"]) {
+  if (status === "Concluido") return "Concluído";
+  return status;
+}
+
 export function AgendaPanel({
   canCreateEvent,
   canManageEvents,
@@ -64,7 +69,7 @@ export function AgendaPanel({
           </div>
           <div className="form-grid">
             <label className="full">
-              Titulo
+              Título
               <input onChange={(event) => setEventForm((form) => ({ ...form, title: event.target.value }))} placeholder="Ex.: Culto de ensino" value={eventForm.title} />
             </label>
             <label>
@@ -72,7 +77,7 @@ export function AgendaPanel({
               <input onChange={(event) => setEventForm((form) => ({ ...form, date: event.target.value }))} type="date" value={eventForm.date} />
             </label>
             <label>
-              Horario
+              Horário
               <input onChange={(event) => setEventForm((form) => ({ ...form, time: event.target.value }))} type="time" value={eventForm.time} />
             </label>
             <label>
@@ -82,9 +87,9 @@ export function AgendaPanel({
             <label>
               Status
               <select onChange={(event) => setEventForm((form) => ({ ...form, status: event.target.value as ChurchEvent["status"] }))} value={eventForm.status}>
-                <option>Programado</option>
-                <option>Confirmado</option>
-                <option>Concluido</option>
+                <option value="Programado">Programado</option>
+                <option value="Confirmado">Confirmado</option>
+                <option value="Concluido">Concluído</option>
               </select>
             </label>
             <label>
@@ -92,15 +97,15 @@ export function AgendaPanel({
               <input onChange={(event) => setEventForm((form) => ({ ...form, location: event.target.value }))} placeholder="Ex.: Templo principal" value={eventForm.location} />
             </label>
             <label>
-              Responsavel
+              Responsável
               <input onChange={(event) => setEventForm((form) => ({ ...form, responsible: event.target.value }))} placeholder="Ex.: Pr. Marcos" value={eventForm.responsible} />
             </label>
             <label>
-              Repeticao
+              Repetição
               <select onChange={(event) => setEventForm((form) => ({ ...form, recurrence: event.target.value as ChurchEvent["recurrence"] }))} value={eventForm.recurrence}>
-                <option>Unico</option>
-                <option>Semanal</option>
-                <option>Mensal</option>
+                <option value="Unico">Único</option>
+                <option value="Semanal">Semanal</option>
+                <option value="Mensal">Mensal</option>
               </select>
             </label>
             <div className="form-actions full">
@@ -132,7 +137,7 @@ export function AgendaPanel({
             Semana atual
           </button>
           <button className="secondary" onClick={() => setEventWeekOffset((offset) => offset + 1)} type="button">
-            Proxima semana
+            Próxima semana
           </button>
           <label>
             Grupo
@@ -147,9 +152,9 @@ export function AgendaPanel({
             Status
             <select onChange={(event) => setEventStatusFilter(event.target.value)} value={eventStatusFilter}>
               <option>Todos</option>
-              <option>Programado</option>
-              <option>Confirmado</option>
-              <option>Concluido</option>
+              <option value="Programado">Programado</option>
+              <option value="Confirmado">Confirmado</option>
+              <option value="Concluido">Concluído</option>
             </select>
           </label>
           <button className="secondary" onClick={() => exportReport("agenda", "pdf")} type="button">
@@ -166,7 +171,7 @@ export function AgendaPanel({
               <div>
                 <strong>{event.title}</strong>
                 <small>
-                  {event.time || "Sem horario"} - {event.ministry} - {event.status}
+                  {event.time || "Sem horário"} - {event.ministry} - {eventStatusLabel(event.status)}
                 </small>
                 <small>{event.location || "Local não informado"} - {event.responsible || "Sem responsável"}</small>
               </div>

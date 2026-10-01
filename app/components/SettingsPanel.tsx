@@ -125,7 +125,7 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
           <small>
             {data.members.length} membros, {monthlyBirthdays.length} aniversariantes no mês, {data.kids.length} crianças no Kids,{" "}
             {data.visitors.length} visitantes, {monthlyKidsBirthdays.length} aniversariantes Kids no mês,{" "}
-            {data.users.length} usuarios, {data.careRequests.length} atendimentos, {data.events.length} eventos, {data.schoolClasses.length} classes EBD,{" "}
+            {data.users.length} usuários, {data.careRequests.length} atendimentos, {data.events.length} eventos, {data.schoolClasses.length} classes EBD,{" "}
             {data.discipleshipClasses.length} classes Discipulado, {activeNotices.length} comunicados ativos, {data.mural.length} itens de mural,{" "}
             {data.transactions.length} lançamentos financeiros, {data.assets.length} itens de patrimônio, {data.devotionals.length} devocionais e{" "}
             {data.audit.length} auditorias.
@@ -136,7 +136,7 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
           <button onClick={downloadFullBackup} type="button">
             Baixar backup completo
           </button>
-          <button className="secondary" onClick={() => log("Backup conferido antes de alteracao grande")} type="button">
+          <button className="secondary" onClick={() => log("Backup conferido antes de alteração grande")} type="button">
             Registrar conferência
           </button>
           <button className="secondary" onClick={resetLocalData} type="button">

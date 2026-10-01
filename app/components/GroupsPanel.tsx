@@ -43,6 +43,11 @@ function groupCoverFor(name: string) {
   return groupCoverImages[normalizeSearchText(name)];
 }
 
+function ministryStatusLabel(status: MinistryRecord["status"]) {
+  if (status === "Em formacao") return "Em formação";
+  return status;
+}
+
 export function GroupsPanel({
   canCreateMinistry,
   cancelMinistryEdit,
@@ -166,7 +171,7 @@ export function GroupsPanel({
                   <div>
                     <strong>{ministry.name}</strong>
                     <small>
-                      {ministry.status} - Líder: {ministry.leader}
+                      {ministryStatusLabel(ministry.status)} - Líder: {ministry.leader}
                       {ministry.assistant ? ` - Auxiliar: ${ministry.assistant}` : ""}
                     </small>
                     <small>{ministry.meetingDay || "Reunião não definida"} - {ministry.notes || "Sem observações"}</small>

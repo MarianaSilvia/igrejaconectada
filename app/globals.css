@@ -6596,3 +6596,219 @@ button.secondary.full {
     justify-content: flex-start;
   }
 }
+
+/* Mobile app viewport correction after all legacy landing/system rules. */
+@media (max-width: 720px) {
+  .app-shell,
+  .workspace,
+  .content-column,
+  .overview-streaming,
+  .surface {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .workspace {
+    padding: 14px 10px calc(118px + env(safe-area-inset-bottom));
+  }
+
+  .topbar {
+    align-items: stretch;
+    gap: 14px;
+    margin-bottom: 16px;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .topbar > div:first-child {
+    min-width: 0;
+  }
+
+  .topbar h1 {
+    font-size: clamp(38px, 10vw, 48px);
+    line-height: 0.96;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .mobile-module-picker,
+  .mobile-module-picker select,
+  .command-search,
+  .command-search input {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .topbar-actions {
+    align-items: stretch;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) minmax(92px, auto);
+    max-width: 100%;
+    min-width: 0;
+    overflow: visible;
+    width: 100%;
+  }
+
+  .notification-button {
+    justify-content: center;
+    min-width: 0;
+    padding: 0 12px;
+    width: 100%;
+  }
+
+  .push-control {
+    display: grid;
+    gap: 10px;
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) minmax(104px, auto);
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .push-control button {
+    min-width: 0;
+    padding: 0 10px;
+    white-space: normal;
+    width: 100%;
+  }
+
+  .push-control small {
+    align-self: center;
+    font-size: 12px;
+    grid-column: 1 / -1;
+    line-height: 1.35;
+    max-width: 100%;
+  }
+
+  .overview-streaming {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .overview-streaming .streaming-cover {
+    border-radius: 22px;
+    box-sizing: border-box;
+    min-height: clamp(360px, 70svh, 520px);
+    overflow: hidden;
+    padding: 22px 14px;
+    width: 100%;
+  }
+
+  .overview-streaming .streaming-cover h2,
+  .overview-streaming .streaming-cover p {
+    margin-left: 0;
+    margin-right: 0;
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .overview-streaming .streaming-cover h2 {
+    font-size: clamp(28px, 8.6vw, 40px);
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+
+  .overview-streaming .hero-actions {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .overview-streaming .hero-actions button,
+  .overview-streaming .hero-actions button:first-child,
+  .overview-streaming .hero-actions button.secondary {
+    grid-column: auto;
+    justify-content: center;
+    min-width: 0;
+    white-space: normal;
+    width: 100%;
+  }
+
+  .overview-streaming .streaming-rail {
+    display: grid;
+    gap: 12px;
+    grid-auto-columns: minmax(154px, 78vw);
+    grid-auto-flow: column;
+    margin-inline: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 0 2px 8px;
+    scroll-padding-left: 2px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .overview-streaming .action-tile {
+    aspect-ratio: auto;
+    min-height: 158px;
+    scroll-snap-align: start;
+    width: 100%;
+  }
+
+  .overview-streaming .streaming-section,
+  .overview-streaming .agenda-preview .data-row,
+  .overview-streaming .notices-preview .data-row,
+  .overview-streaming .care-preview .data-row,
+  .overview-streaming .mural-preview-panel .mural-card {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .surface {
+    border-radius: 18px;
+    padding: 18px 16px;
+  }
+
+  .today-grid,
+  .priority-grid,
+  .member-home-grid,
+  .member-quick-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .floating-contact-button {
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    right: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .workspace {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .topbar-actions {
+    grid-template-columns: minmax(0, 1fr) minmax(82px, auto);
+  }
+
+  .notification-button {
+    padding: 0 10px;
+  }
+
+  .push-control {
+    grid-template-columns: minmax(0, 1fr) minmax(94px, auto);
+  }
+
+  .overview-streaming .streaming-rail {
+    grid-auto-columns: minmax(150px, 74vw);
+  }
+
+  .surface {
+    padding: 16px 14px;
+  }
+}

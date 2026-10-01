@@ -28,6 +28,12 @@ function nextStatus(status: CareStatus): CareStatus {
   return "Concluido";
 }
 
+function careStatusLabel(status: CareStatus) {
+  if (status === "Em analise") return "Em análise";
+  if (status === "Concluido") return "Concluído";
+  return status;
+}
+
 function suggestedNextStep(request: CareRequest) {
   if (request.status === "Pendente") return "Definir responsável";
   if (request.status === "Em analise") return "Agendar conversa";
@@ -129,7 +135,7 @@ export function PastoralPanel({
               <select onChange={(event) => setCareStatusFilter(event.target.value)} value={careStatusFilter}>
                 <option>Todos</option>
                 {statusFlow.map((status) => (
-                  <option key={status}>{status}</option>
+                  <option key={status} value={status}>{careStatusLabel(status)}</option>
                 ))}
               </select>
             </label>
@@ -139,7 +145,7 @@ export function PastoralPanel({
           {filteredCareRequests.map((request) => (
             <article className={request.id === selectedRequest?.id ? "care-list-item selected" : "care-list-item"} key={request.id}>
               <button className="care-list-main" onClick={() => setSelectedRequestId(request.id)} type="button">
-                <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>{request.status}</span>
+                <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>{careStatusLabel(request.status)}</span>
                 <strong>{request.member}</strong>
                 <small>{request.responsible || "Sem responsável definido"}</small>
                 <small>{suggestedNextStep(request)}</small>
@@ -170,7 +176,7 @@ export function PastoralPanel({
           <div className="flow-line" aria-label="Etapas do atendimento">
             {statusFlow.map((status) => (
               <span className={statusFlow.indexOf(status) <= statusFlow.indexOf(selectedRequest.status) ? "flow-step done" : "flow-step"} key={status}>
-                {status}
+                {careStatusLabel(status)}
               </span>
             ))}
           </div>

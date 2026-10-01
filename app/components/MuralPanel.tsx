@@ -22,6 +22,11 @@ type MuralPanelProps = {
   weekEvents: ChurchEvent[];
 };
 
+function eventStatusLabel(status: ChurchEvent["status"]) {
+  if (status === "Concluido") return "Concluído";
+  return status;
+}
+
 export function MuralPanel({
   activeNotices,
   canCreateMuralItem,
@@ -47,11 +52,11 @@ export function MuralPanel({
         <article className="surface">
           <div className="panel-heading">
             <h2>Novo item do mural</h2>
-            <span>Publicacao</span>
+            <span>Publicação</span>
           </div>
           <div className="form-grid">
             <label className="full">
-              Titulo
+              Título
               <input onChange={(event) => setMuralForm((form) => ({ ...form, title: event.target.value }))} placeholder="Ex.: Encontro de jovens" value={muralForm.title} />
             </label>
             <label>
@@ -144,7 +149,7 @@ export function MuralPanel({
               <span className="bullet-mark" />
               <div>
                 <strong>Nenhum banner publicado</strong>
-                <small>Quando a administracao publicar fotos, imagens ou banners, eles aparecem aqui.</small>
+                <small>Quando a administração publicar fotos, imagens ou banners, eles aparecem aqui.</small>
               </div>
             </div>
           )}
@@ -165,7 +170,7 @@ export function MuralPanel({
                 <div>
                   <strong>{event.title}</strong>
                   <small>
-                    Evento - {event.time || "Sem horario"} - {event.ministry} - {event.status}
+                    Evento - {event.time || "Sem horário"} - {event.ministry} - {eventStatusLabel(event.status)}
                   </small>
                   <small>{event.location || "Local não informado"} - {event.responsible || "Sem responsável"}</small>
                 </div>

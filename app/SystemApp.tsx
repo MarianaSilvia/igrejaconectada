@@ -156,6 +156,18 @@ const legacyStorageKeys = ["igreja-gestao-local-v1", "igreja-conectada-photo-cac
 
 const statusFlow: CareStatus[] = ["Pendente", "Em analise", "Agendado", "Concluido"];
 
+function careStatusLabel(status: CareStatus) {
+  if (status === "Em analise") return "Em análise";
+  if (status === "Concluido") return "Concluído";
+  return status;
+}
+
+function registrationStatusLabel(status: RegistrationRequest["status"]) {
+  if (status === "Aguardando aprovacao") return "Aguardando aprovação";
+  if (status === "Em analise") return "Em análise";
+  return status;
+}
+
 const initialData: AppData = {
   careRequests: [
     {
@@ -4470,7 +4482,7 @@ export default function Home() {
                   {filteredCareRequests.length ? (
                     filteredCareRequests.map((request) => (
                       <div className="data-row" key={request.id}>
-                        <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>{request.status}</span>
+                        <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>{careStatusLabel(request.status)}</span>
                         <div>
                           <strong>{request.category}</strong>
                           <small>{request.summary}</small>
@@ -4924,7 +4936,7 @@ function RegistrationRequestsPanel({
                 <p className="eyebrow">{request.requestedStatus}</p>
                 <strong>{request.fullName}</strong>
                 <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>
-                  {request.status}
+                  {registrationStatusLabel(request.status)}
                 </span>
                 <small>{request.phone} - {request.email || "E-mail não informado"}</small>
                 <small>
@@ -5006,7 +5018,7 @@ function AccessScreen({
         <div>
           <p className="access-kicker">Cuidar - Servir - Conectar</p>
           <h1>Toda a igreja, mais perto.</h1>
-          <p>Uma plataforma segura para fortalecer o cuidado com pessoas, grupos e a missao.</p>
+          <p>Uma plataforma segura para fortalecer o cuidado com pessoas, grupos e a missão.</p>
         </div>
         <blockquote>
           <p>&quot;Sirvam uns aos outros, cada um conforme o dom que recebeu.&quot;</p>

@@ -59,7 +59,7 @@ export function ClassModulePanel({
               </select>
             </label>
             <label className="full">
-              Titulo do aviso
+              Título do aviso
               <input onChange={(event) => setNoticeForm((form) => ({ ...form, title: event.target.value }))} placeholder={whatsappPlaceholder} value={noticeForm.title} />
             </label>
             <label className="full">
@@ -96,7 +96,7 @@ export function ClassModulePanel({
               <div>
                 <strong>{classRecord.name}</strong>
                 <small>
-                  Professor: {classRecord.teacher} - Proxima aula: {classRecord.nextLesson}
+                  Professor: {classRecord.teacher} - Próxima aula: {classRecord.nextLesson}
                 </small>
                 {canManage && <small>{classWhatsappRecipients(members, classRecord, areaLabel).length} contatos de WhatsApp encontrados</small>}
                 <div className="notice-stack">
