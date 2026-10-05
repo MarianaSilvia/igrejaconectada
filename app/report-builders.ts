@@ -14,6 +14,7 @@ type ReportDefinitionParams = {
   weekEvents: ChurchEvent[];
   monthlyBirthdays: MemberRecord[];
   absentRows: unknown[][];
+  congregationScope?: string;
 };
 
 function currentMonthKey() {
@@ -29,12 +30,31 @@ function percentage(value: number, total: number) {
   return `${Math.round((value / total) * 100)}%`;
 }
 
-export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays, absentRows }: ReportDefinitionParams): ReportDefinition {
-  const attendanceRecords = data.attendanceSessions.flatMap((session) => session.records);
+export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays, absentRows, congregationScope = "Todas" }: ReportDefinitionParams): ReportDefinition {
+  const scopedByCongregation = congregationScope && congregationScope !== "Todas";
+  const belongsToScope = (congregation?: string) => !scopedByCongregation || congregation === congregationScope;
+  const scopedMembers = data.members.filter((member) => belongsToScope(member.congregation));
+  const scopedMemberIds = new Set(scopedMembers.map((member) => member.id));
+  const scopedVisitors = data.visitors.filter((visitor) => belongsToScope(visitor.congregation));
+  const scopedKids = data.kids.filter((kid) => belongsToScope(kid.congregation));
+  const scopedEvents = weekEvents.filter((event) => belongsToScope(event.congregation));
+  const scopedBirthdays = monthlyBirthdays.filter((member) => belongsToScope(member.congregation));
+  const scopedRegistrations = data.registrationRequests.filter((request) => belongsToScope(request.congregation));
+  const scopedCareRequests = data.careRequests.filter((request) => belongsToScope(request.congregation));
+  const scopedAbsentRows = scopedByCongregation
+    ? absentRows.filter(([name]) => scopedMembers.some((member) => member.fullName === String(name)))
+    : absentRows;
+  const scopedAttendanceSessions = data.attendanceSessions
+    .map((session) => ({
+      ...session,
+      records: scopedByCongregation ? session.records.filter((record) => scopedMemberIds.has(record.memberId)) : session.records,
+    }))
+    .filter((session) => !scopedByCongregation || session.records.length > 0);
+  const attendanceRecords = scopedAttendanceSessions.flatMap((session) => session.records);
   const presentAttendanceRecords = attendanceRecords.filter((record) => record.status === "Presente");
-  const schoolStudents = data.members.filter((member) => member.schoolClassId);
-  const discipleshipStudents = data.members.filter((member) => member.discipleshipClassId);
-  const membersCreatedThisMonth = data.members.filter((member) => monthKey(member.createdAt || member.joinedAt) === currentMonthKey());
+  const schoolStudents = scopedMembers.filter((member) => member.schoolClassId);
+  const discipleshipStudents = scopedMembers.filter((member) => member.discipleshipClassId);
+  const membersCreatedThisMonth = scopedMembers.filter((member) => monthKey(member.createdAt || member.joinedAt) === currentMonthKey());
 
   const reports: Record<ReportKind, ReportDefinition> = {
     members: {
@@ -67,7 +87,7 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
         "Discipulado",
         "Situação pastoral",
       ],
-      rows: data.members.map((member) => [
+      rows: scopedMembers.map((member) => [
         member.memberCode,
         member.fullName,
         formatDate(member.birthDate),
@@ -99,7 +119,7 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
     visitors: {
       title: "Visitantes",
       headers: ["Nome", "Telefone", "Primeira visita", "Retorno", "Convidado por", "Contato", "Integração", "Observações"],
-      rows: data.visitors.map((visitor) => [
+      rows: scopedVisitors.map((visitor) => [
         visitor.fullName,
         visitor.phone,
         formatDate(visitor.firstVisitDate),
@@ -113,17 +133,17 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
     birthdays: {
       title: "Aniversariantes do mês",
       headers: ["Nome", "Data", "Telefone", "Grupos"],
-      rows: monthlyBirthdays.map((member) => [member.fullName, birthdayLabel(member.birthDate), member.phone, memberGroupLabel(member)]),
+      rows: scopedBirthdays.map((member) => [member.fullName, birthdayLabel(member.birthDate), member.phone, memberGroupLabel(member)]),
     },
     kids: {
       title: "Crianças cadastradas",
       headers: ["Criança", "Nascimento", "Faixa", "Turma", "Responsável", "Telefone"],
-      rows: data.kids.map((kid) => [kid.childName, formatDate(kid.birthDate), kid.ageGroup, kid.className, kid.guardianName, kid.guardianPhone]),
+      rows: scopedKids.map((kid) => [kid.childName, formatDate(kid.birthDate), kid.ageGroup, kid.className, kid.guardianName, kid.guardianPhone]),
     },
     agenda: {
       title: "Agenda semanal",
       headers: ["Data", "Horário", "Evento", "Grupo", "Local", "Responsável", "Status"],
-      rows: weekEvents.map((event) => [
+      rows: scopedEvents.map((event) => [
         formatDate(event.date),
         event.time || "Sem horário",
         event.title,
@@ -136,7 +156,7 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
     attendance: {
       title: "Presença EBD e Discipulado",
       headers: ["Data", "Área", "Classe", "Aula", "Aluno", "Status", "Observação"],
-      rows: data.attendanceSessions.flatMap((session) =>
+      rows: scopedAttendanceSessions.flatMap((session) =>
         session.records.map((record) => {
           const member = data.members.find((item) => item.id === record.memberId);
           const classes = session.area === "school" ? data.schoolClasses : data.discipleshipClasses;
@@ -155,7 +175,7 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
     absences: {
       title: "Faltosos recentes",
       headers: ["Nome", "WhatsApp", "Último status", "Faltas recentes", "Faltas no mês"],
-      rows: absentRows,
+      rows: scopedAbsentRows,
     },
     newMembers: {
       title: "Novos membros do mês",
@@ -174,7 +194,7 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
     followUpStudents: {
       title: "Alunos em acompanhamento",
       headers: ["Nome", "WhatsApp", "Último status", "Faltas recentes", "Faltas no mês", "Orientação"],
-      rows: absentRows.map(([name, phone, status, recent, month]) => [
+      rows: scopedAbsentRows.map(([name, phone, status, recent, month]) => [
         name,
         phone,
         status,
@@ -187,18 +207,18 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
       title: "Indicadores gerais",
       headers: ["Indicador", "Valor", "Detalhe"],
       rows: [
-        ["Membros cadastrados", data.members.length, `${data.members.filter((member) => member.status === "Membro ativo").length} ativos`],
+        ["Membros cadastrados", scopedMembers.length, `${scopedMembers.filter((member) => member.status === "Membro ativo").length} ativos`],
         ["Novos membros do mês", membersCreatedThisMonth.length, "Com base na data de criação do cadastro"],
-        ["Pré-cadastros aguardando análise", data.registrationRequests.filter((request) => request.status === "Aguardando aprovacao").length, "Fila de secretaria"],
-        ["Visitantes em acompanhamento", data.visitors.filter((visitor) => visitor.integrationStatus === "Em acompanhamento").length, "Visitantes ainda em cuidado"],
-        ["Eventos da semana", weekEvents.length, "Agenda dos próximos dias"],
-        ["Aniversariantes do mês", monthlyBirthdays.length, "Membros com aniversário no mês atual"],
+        ["Pré-cadastros aguardando análise", scopedRegistrations.filter((request) => request.status === "Aguardando aprovacao").length, "Fila de secretaria"],
+        ["Visitantes em acompanhamento", scopedVisitors.filter((visitor) => visitor.integrationStatus === "Em acompanhamento").length, "Visitantes ainda em cuidado"],
+        ["Eventos da semana", scopedEvents.length, "Agenda dos próximos dias"],
+        ["Aniversariantes do mês", scopedBirthdays.length, "Membros com aniversário no mês atual"],
         ["Alunos EBD", schoolStudents.length, `${data.schoolClasses.length} classes cadastradas`],
         ["Alunos Discipulado", discipleshipStudents.length, `${data.discipleshipClasses.length} classes cadastradas`],
-        ["Chamadas registradas", data.attendanceSessions.length, `${attendanceRecords.length} presenças/faltas lançadas`],
+        ["Chamadas registradas", scopedAttendanceSessions.length, `${attendanceRecords.length} presenças/faltas lançadas`],
         ["Taxa de presença registrada", percentage(presentAttendanceRecords.length, attendanceRecords.length), `${presentAttendanceRecords.length} presenças de ${attendanceRecords.length} registros`],
-        ["Alunos em alerta de falta", absentRows.length, "Baseado nos faltosos recentes"],
-        ["Pedidos pastorais pendentes", data.careRequests.filter((request) => request.status !== "Concluido").length, "Atendimentos ainda abertos"],
+        ["Alunos em alerta de falta", scopedAbsentRows.length, "Baseado nos faltosos recentes"],
+        ["Pedidos pastorais pendentes", scopedCareRequests.filter((request) => request.status !== "Concluido").length, "Atendimentos ainda abertos"],
       ],
     },
     finance: {

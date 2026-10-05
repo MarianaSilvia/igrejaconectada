@@ -1909,6 +1909,21 @@ button.secondary.full {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.report-scope-filter {
+  color: var(--muted);
+  display: grid;
+  font-size: 12px;
+  font-weight: 900;
+  gap: 6px;
+  min-width: min(260px, 100%);
+  text-transform: uppercase;
+}
+
+.report-scope-filter select {
+  min-height: 42px;
+  min-width: 220px;
+}
+
 .report-card {
   background: rgba(18, 45, 76, 0.62);
   border: 1px solid var(--line);

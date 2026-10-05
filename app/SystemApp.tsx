@@ -912,6 +912,7 @@ export default function Home() {
   const [lastSavedAt, setLastSavedAt] = useState("");
   const [remoteUpdatedAt, setRemoteUpdatedAt] = useState<string | null>(null);
   const [reportPreviewKind, setReportPreviewKind] = useState<ReportKind>("members");
+  const [reportCongregationFilter, setReportCongregationFilter] = useState("Todas");
 
   const forceAccessLogout = useCallback(async (message: string) => {
     if (saveTimerRef.current) {
@@ -1568,7 +1569,14 @@ export default function Home() {
 
     return templates.filter((template, index, list) => list.findIndex((item) => item.id === template.id) === index);
   }, [data.messageTemplates, remoteMessageTemplates]);
-  const selectedReportPreview = buildReportDefinition({ data, kind: reportPreviewKind, weekEvents, monthlyBirthdays, absentRows });
+  const selectedReportPreview = buildReportDefinition({
+    data,
+    kind: reportPreviewKind,
+    weekEvents,
+    monthlyBirthdays,
+    absentRows,
+    congregationScope: reportCongregationFilter,
+  });
   const roleOptions = useMemo(() => {
     const roles = [...memberRoleOptions];
     memberRolesFromText(memberForm.role).forEach((role) => {
@@ -2050,9 +2058,10 @@ export default function Home() {
     setSyncStatus(`Histórico em PDF preparado para ${classRecord.name}.`);
   }
 
-  function exportReport(kind: ReportKind, format: "pdf" | "csv") {
-    const report = buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays, absentRows });
-    const subtitle = `Igreja Conectada - gerado em ${new Date().toLocaleString("pt-BR")}`;
+  function exportReport(kind: ReportKind, format: "pdf" | "csv", congregationScope = reportCongregationFilter) {
+    const report = buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays, absentRows, congregationScope });
+    const scopeLabel = congregationScope && congregationScope !== "Todas" ? ` - ${congregationScope}` : "";
+    const subtitle = `Igreja Conectada${scopeLabel} - gerado em ${new Date().toLocaleString("pt-BR")}`;
 
     if (format === "csv") {
       downloadCsv(`${report.title.toLowerCase().replaceAll(" ", "-")}.csv`, report.headers, report.rows);
@@ -4848,8 +4857,10 @@ export default function Home() {
               generatePrintableDocument={generatePrintableDocument}
               monthlyBirthdays={monthlyBirthdays}
               reportPreviewKind={reportPreviewKind}
+              reportCongregationFilter={reportCongregationFilter}
               selectedReportPreview={selectedReportPreview}
               setReportPreviewKind={setReportPreviewKind}
+              setReportCongregationFilter={setReportCongregationFilter}
               weekEvents={weekEvents}
             />
           )}

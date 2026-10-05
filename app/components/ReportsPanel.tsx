@@ -12,11 +12,13 @@ type ReportsPanelProps = {
   absentRows: unknown[][];
   currentAccessRole: AccessRole;
   data: AppData;
-  exportReport: (kind: ReportKind, format: "pdf" | "csv") => void;
+  exportReport: (kind: ReportKind, format: "pdf" | "csv", congregationScope?: string) => void;
   generatePrintableDocument: (kind: PrintableDocumentKind, targetId: string) => void;
   monthlyBirthdays: MemberRecord[];
+  reportCongregationFilter: string;
   reportPreviewKind: ReportKind;
   selectedReportPreview: ReportDefinition;
+  setReportCongregationFilter: (congregation: string) => void;
   setReportPreviewKind: (kind: ReportKind) => void;
   weekEvents: ChurchEvent[];
 };
@@ -28,8 +30,10 @@ export function ReportsPanel({
   exportReport,
   generatePrintableDocument,
   monthlyBirthdays,
+  reportCongregationFilter,
   reportPreviewKind,
   selectedReportPreview,
+  setReportCongregationFilter,
   setReportPreviewKind,
   weekEvents,
 }: ReportsPanelProps) {
@@ -57,6 +61,22 @@ export function ReportsPanel({
   const [documentTargetId, setDocumentTargetId] = useState("");
   const selectedTargetId = documentTargets.some((target) => target.id === documentTargetId) ? documentTargetId : (documentTargets[0]?.id ?? "");
   const canGenerateDocuments = currentAccessRole === "Administrador" || currentAccessRole === "Secretario";
+  const congregationOptions = useMemo(() => {
+    const congregations = new Set<string>();
+    [
+      ...data.members.map((member) => member.congregation),
+      ...data.visitors.map((visitor) => visitor.congregation),
+      ...data.kids.map((kid) => kid.congregation),
+      ...data.events.map((event) => event.congregation),
+      ...data.registrationRequests.map((request) => request.congregation),
+      ...data.careRequests.map((request) => request.congregation),
+    ].forEach((congregation) => {
+      const normalized = congregation?.trim();
+      if (normalized) congregations.add(normalized);
+    });
+
+    return ["Todas", ...Array.from(congregations).sort((first, second) => first.localeCompare(second, "pt-BR", { sensitivity: "base" }))];
+  }, [data.careRequests, data.events, data.kids, data.members, data.registrationRequests, data.visitors]);
   const currentMonthKey = new Date().toISOString().slice(0, 7);
   const newMembersThisMonth = data.members.filter((member) => (member.createdAt || member.joinedAt).slice(0, 7) === currentMonthKey).length;
   const reportCards: ReportCardDefinition[] = [
@@ -78,8 +98,20 @@ export function ReportsPanel({
     <section className="content-grid">
       <article className="surface wide">
         <div className="panel-heading">
-          <h2>Relatórios operacionais</h2>
-          <span>PDF e Excel/CSV</span>
+          <div>
+            <h2>Relatórios operacionais</h2>
+            <span>PDF e Excel/CSV</span>
+          </div>
+          <label className="report-scope-filter">
+            Congregação
+            <select onChange={(event) => setReportCongregationFilter(event.target.value)} value={reportCongregationFilter}>
+              {congregationOptions.map((congregation) => (
+                <option key={congregation} value={congregation}>
+                  {congregation}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="report-grid">
           {reportCards
@@ -96,10 +128,10 @@ export function ReportsPanel({
                   <button className="secondary" onClick={() => setReportPreviewKind(kind)} type="button">
                     Prévia
                   </button>
-                  <button className="secondary" onClick={() => exportReport(kind, "pdf")} type="button">
+                  <button className="secondary" onClick={() => exportReport(kind, "pdf", reportCongregationFilter)} type="button">
                     PDF
                   </button>
-                  <button className="secondary" onClick={() => exportReport(kind, "csv")} type="button">
+                  <button className="secondary" onClick={() => exportReport(kind, "csv", reportCongregationFilter)} type="button">
                     Excel
                   </button>
                 </div>
