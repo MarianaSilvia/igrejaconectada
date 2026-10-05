@@ -14,7 +14,7 @@ type AssetsPanelProps = {
   deleteAsset: (asset: AssetRecord) => void;
   editAsset: (asset: AssetRecord) => void;
   editingAssetId: string | null;
-  exportReport: (kind: ReportKind, format: "pdf" | "csv") => void;
+  exportReport: (kind: ReportKind, format: "pdf" | "excel") => void;
   filteredAssets: AssetRecord[];
   setAssetConditionFilter: Dispatch<SetStateAction<string>>;
   setAssetForm: Dispatch<SetStateAction<AssetForm>>;
@@ -111,7 +111,7 @@ export function AssetsPanel({
           <button className="secondary" onClick={() => exportReport("assets", "pdf")} type="button">
             PDF
           </button>
-          <button className="secondary" onClick={() => exportReport("assets", "csv")} type="button">
+          <button className="secondary" onClick={() => exportReport("assets", "excel")} type="button">
             Excel
           </button>
         </div>

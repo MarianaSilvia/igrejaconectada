@@ -17,7 +17,7 @@ type AgendaPanelProps = {
   eventForm: EventForm;
   eventGroupFilter: string;
   eventStatusFilter: string;
-  exportReport: (kind: ReportKind, format: "pdf" | "csv") => void;
+  exportReport: (kind: ReportKind, format: "pdf" | "excel") => void;
   groupOptions: string[];
   totalEvents: number;
   updateEventStatus: (event: ChurchEvent, status: ChurchEvent["status"]) => void;

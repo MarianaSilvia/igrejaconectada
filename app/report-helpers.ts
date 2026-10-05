@@ -22,6 +22,42 @@ export function downloadCsv(filename: string, headers: string[], rows: unknown[]
   URL.revokeObjectURL(url);
 }
 
+export function downloadExcelWorkbook(filename: string, title: string, subtitle: string, headers: string[], rows: unknown[][]) {
+  const headRows = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("");
+  const bodyRows = rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(String(cell ?? ""))}</td>`).join("")}</tr>`).join("");
+  const content = `
+    <!doctype html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body { font-family: Arial, sans-serif; }
+          h1 { font-size: 20px; margin: 0 0 6px; }
+          p { color: #4b5563; margin: 0 0 14px; }
+          table { border-collapse: collapse; width: 100%; }
+          th, td { border: 1px solid #d1d5db; font-size: 12px; padding: 8px; text-align: left; vertical-align: top; }
+          th { background: #f3f4f6; font-weight: 700; }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(title)}</h1>
+        <p>${escapeHtml(subtitle)}</p>
+        <table>
+          <thead><tr>${headRows}</tr></thead>
+          <tbody>${bodyRows || `<tr><td colspan="${headers.length}">Nenhum registro encontrado.</td></tr>`}</tbody>
+        </table>
+      </body>
+    </html>
+  `;
+  const blob = new Blob([`\uFEFF${content}`], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function printHtmlReport(title: string, subtitle: string, headers: string[], rows: unknown[][]) {
   const reportWindow = window.open("", "_blank", "noopener,noreferrer,width=980,height=720");
 

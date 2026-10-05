@@ -13,7 +13,7 @@ type VisitorsPanelProps = {
   deleteVisitor: (visitor: VisitorRecord) => void;
   editVisitor: (visitor: VisitorRecord) => void;
   editingVisitorId: string | null;
-  exportReport: (kind: "visitors", format: "pdf" | "csv") => void;
+  exportReport: (kind: "visitors", format: "pdf" | "excel") => void;
   filteredVisitors: VisitorRecord[];
   setEditingVisitorId: Dispatch<SetStateAction<string | null>>;
   setVisitorContactFilter: Dispatch<SetStateAction<string>>;
@@ -148,7 +148,7 @@ export function VisitorsPanel({
           <button className="secondary" onClick={() => exportReport("visitors", "pdf")} type="button">
             PDF
           </button>
-          <button className="secondary" onClick={() => exportReport("visitors", "csv")} type="button">
+          <button className="secondary" onClick={() => exportReport("visitors", "excel")} type="button">
             Excel
           </button>
         </div>

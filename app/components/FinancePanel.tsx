@@ -12,7 +12,7 @@ type FinancePanelProps = {
   deleteTransaction: (transaction: TransactionRecord) => void;
   editTransaction: (transaction: TransactionRecord) => void;
   editingTransactionId: string | null;
-  exportReport: (kind: ReportKind, format: "pdf" | "csv") => void;
+  exportReport: (kind: ReportKind, format: "pdf" | "excel") => void;
   filteredTransactions: TransactionRecord[];
   financeTypeFilter: string;
   members: MemberRecord[];
@@ -157,7 +157,7 @@ export function FinancePanel({
           <button className="secondary" onClick={() => exportReport("finance", "pdf")} type="button">
             PDF
           </button>
-          <button className="secondary" onClick={() => exportReport("finance", "csv")} type="button">
+          <button className="secondary" onClick={() => exportReport("finance", "excel")} type="button">
             Excel
           </button>
         </div>

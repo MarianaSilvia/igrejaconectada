@@ -84,7 +84,7 @@ import {
 } from "./data-normalization";
 import { accessRoleFromMetadata, canAccessModule, canManageModule, isAdministrativeRole, modules, type AccessRole, type ModuleKey } from "./permissions";
 import { buildReportDefinition } from "./report-builders";
-import { downloadCsv, escapeHtml, printHtmlDocument, printHtmlReport } from "./report-helpers";
+import { downloadExcelWorkbook, escapeHtml, printHtmlDocument, printHtmlReport } from "./report-helpers";
 import { buildPrintableDocument, type PrintableDocumentKind } from "./document-templates";
 import { agendaEventShareText, dailyAgendaShareText, muralShareText, publicAgendaUrl, publicMuralUrl, sharePublicContent } from "./share-helpers";
 import {
@@ -2061,7 +2061,7 @@ export default function Home() {
     setSyncStatus(`Histórico em PDF preparado para ${classRecord.name}.`);
   }
 
-  function exportReport(kind: ReportKind, format: "pdf" | "csv", congregationScope = reportCongregationFilter) {
+  function exportReport(kind: ReportKind, format: "pdf" | "excel", congregationScope = reportCongregationFilter) {
     const effectiveCongregationScope = kind === "finance" || kind === "assets" ? "Todas" : congregationScope;
     const report = buildReportDefinition({
       data,
@@ -2077,9 +2077,9 @@ export default function Home() {
       reportStartDate || reportEndDate ? ` - período ${reportStartDate || "início"} até ${reportEndDate || "hoje"}` : "";
     const subtitle = `Igreja Conectada${scopeLabel}${periodLabel} - gerado em ${new Date().toLocaleString("pt-BR")}`;
 
-    if (format === "csv") {
-      downloadCsv(`${report.title.toLowerCase().replaceAll(" ", "-")}.csv`, report.headers, report.rows);
-      log(`CSV gerado: ${report.title}`);
+    if (format === "excel") {
+      downloadExcelWorkbook(`${report.title.toLowerCase().replaceAll(" ", "-")}.xls`, report.title, subtitle, report.headers, report.rows);
+      log(`Excel gerado: ${report.title}`);
       return;
     }
 

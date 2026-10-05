@@ -12,7 +12,7 @@ type ReportsPanelProps = {
   absentRows: unknown[][];
   currentAccessRole: AccessRole;
   data: AppData;
-  exportReport: (kind: ReportKind, format: "pdf" | "csv", congregationScope?: string) => void;
+  exportReport: (kind: ReportKind, format: "pdf" | "excel", congregationScope?: string) => void;
   generatePrintableDocument: (kind: PrintableDocumentKind, targetId: string) => void;
   monthlyBirthdays: MemberRecord[];
   reportCongregationFilter: string;
@@ -156,7 +156,7 @@ export function ReportsPanel({
         <div className="panel-heading">
           <div>
             <h2>Relatórios operacionais</h2>
-            <span>PDF e Excel/CSV</span>
+            <span>PDF e Excel</span>
           </div>
           <label className="report-scope-filter">
             Congregação
@@ -205,7 +205,7 @@ export function ReportsPanel({
                   <button className="secondary" onClick={() => exportReport(kind, "pdf", reportCongregationFilter)} type="button">
                     PDF
                   </button>
-                  <button className="secondary" onClick={() => exportReport(kind, "csv", reportCongregationFilter)} type="button">
+                  <button className="secondary" onClick={() => exportReport(kind, "excel", reportCongregationFilter)} type="button">
                     Excel
                   </button>
                 </div>
