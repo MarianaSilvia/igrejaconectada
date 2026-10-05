@@ -42,6 +42,18 @@ type WeeklyPlanItem = {
   title: string;
 };
 
+type FormationClassStat = {
+  area: "EBD" | "Discipulado";
+  attendanceRate: string;
+  classId: string;
+  className: string;
+  presentRecords: number;
+  sessions: number;
+  students: number;
+  teacher: string;
+  totalRecords: number;
+};
+
 type AutomationSuggestion = {
   description: string;
   module: ModuleKey;
@@ -92,6 +104,50 @@ function congregationName(value: string | undefined) {
   return value?.trim() || "Sem congregação definida";
 }
 
+function congregationKey(value: string | undefined) {
+  return congregationName(value).toLowerCase();
+}
+
+function matchesCongregation(value: string | undefined, selectedCongregation: string) {
+  return selectedCongregation === "Todas" || congregationKey(value) === congregationKey(selectedCongregation);
+}
+
+function buildCongregationOptions(data: AppData) {
+  const options = new Set<string>();
+  data.members.forEach((member) => options.add(congregationName(member.congregation)));
+  data.visitors.forEach((visitor) => options.add(congregationName(visitor.congregation)));
+  data.careRequests.forEach((request) => options.add(congregationName(request.congregation)));
+  data.events.forEach((event) => options.add(congregationName(event.congregation)));
+  data.registrationRequests.forEach((request) => options.add(congregationName(request.congregation)));
+  return ["Todas", ...[...options].sort((first, second) => first.localeCompare(second))];
+}
+
+function scopedDataForCongregation(data: AppData, selectedCongregation: string): AppData {
+  if (selectedCongregation === "Todas") return data;
+
+  const members = data.members.filter((member) => matchesCongregation(member.congregation, selectedCongregation));
+  const memberIds = new Set(members.map((member) => member.id));
+
+  return {
+    ...data,
+    attendanceSessions: data.attendanceSessions
+      .map((session) => ({
+        ...session,
+        records: session.records.filter((record) => memberIds.has(record.memberId)),
+      }))
+      .filter((session) => session.records.length > 0),
+    careRequests: data.careRequests.filter((request) => matchesCongregation(request.congregation, selectedCongregation)),
+    events: data.events.filter((event) => matchesCongregation(event.congregation, selectedCongregation)),
+    kids: data.kids.filter((kid) => matchesCongregation(kid.congregation, selectedCongregation)),
+    members,
+    ministries: data.ministries.filter((ministry) => matchesCongregation(ministry.congregation, selectedCongregation)),
+    mural: data.mural.filter((item) => matchesCongregation(item.congregation, selectedCongregation)),
+    notices: data.notices.filter((notice) => matchesCongregation(notice.congregation, selectedCongregation)),
+    registrationRequests: data.registrationRequests.filter((request) => matchesCongregation(request.congregation, selectedCongregation)),
+    visitors: data.visitors.filter((visitor) => matchesCongregation(visitor.congregation, selectedCongregation)),
+  };
+}
+
 function attendanceCounts(data: AppData) {
   const records = data.attendanceSessions.flatMap((session) => session.records);
   const present = records.filter((record) => record.status === "Presente").length;
@@ -104,6 +160,39 @@ function attendanceCounts(data: AppData) {
     present,
     total: records.length,
   };
+}
+
+function formationStats(
+  area: FormationClassStat["area"],
+  classes: AppData["schoolClasses"],
+  members: MemberRecord[],
+  data: AppData,
+): FormationClassStat[] {
+  const attendanceArea = area === "EBD" ? "school" : "discipleship";
+
+  return classes
+    .map((classRecord) => {
+      const classMembers = members.filter((member) =>
+        attendanceArea === "school" ? member.schoolClassId === classRecord.id : member.discipleshipClassId === classRecord.id,
+      );
+      const memberIds = new Set(classMembers.map((member) => member.id));
+      const sessions = data.attendanceSessions.filter((session) => session.area === attendanceArea && session.classId === classRecord.id);
+      const records = sessions.flatMap((session) => session.records).filter((record) => memberIds.has(record.memberId));
+      const presentRecords = records.filter((record) => record.status === "Presente").length;
+
+      return {
+        area,
+        attendanceRate: percentage(presentRecords, records.length),
+        classId: classRecord.id,
+        className: classRecord.name,
+        presentRecords,
+        sessions: sessions.length,
+        students: classMembers.length,
+        teacher: classRecord.teacher || "Sem professor definido",
+        totalRecords: records.length,
+      };
+    })
+    .filter((item) => item.students > 0 || item.sessions > 0);
 }
 
 function buildInsights({
@@ -594,22 +683,32 @@ function printExecutiveSummary({
   actionTasks,
   attendance,
   data,
+  formationClassStats,
+  formationLowAttendance,
   healthScore,
   insights,
   monthlyBirthdays,
   pendingCare,
   pendingRegistrationRequests,
+  scopeLabel,
+  schoolStudents,
+  discipleshipStudents,
   upcomingPanelEvents,
   visitorsInFollowUp,
 }: {
   actionTasks: ActionTask[];
   attendance: ReturnType<typeof attendanceCounts>;
   data: AppData;
+  formationClassStats: FormationClassStat[];
+  formationLowAttendance: number;
   healthScore: number;
   insights: { level: string; text: string; title: string }[];
   monthlyBirthdays: MemberRecord[];
   pendingCare: number;
   pendingRegistrationRequests: number;
+  scopeLabel: string;
+  schoolStudents: number;
+  discipleshipStudents: number;
   upcomingPanelEvents: ChurchEvent[];
   visitorsInFollowUp: number;
 }) {
@@ -642,6 +741,21 @@ function printExecutiveSummary({
       `,
     )
     .join("");
+  const formationRows = formationClassStats
+    .slice(0, 10)
+    .map(
+      (item) => `
+        <tr>
+          <td>${escapeHtml(item.area)}</td>
+          <td>${escapeHtml(item.className)}</td>
+          <td>${escapeHtml(item.teacher)}</td>
+          <td>${escapeHtml(String(item.students))}</td>
+          <td>${escapeHtml(String(item.sessions))}</td>
+          <td>${escapeHtml(item.attendanceRate)}</td>
+        </tr>
+      `,
+    )
+    .join("");
 
   return printHtmlDocument(
     "Resumo executivo - Inteligência",
@@ -662,6 +776,7 @@ function printExecutiveSummary({
       </style>
       <p class="eyebrow">Resumo gerado em ${escapeHtml(today)}</p>
       <h1>Resumo executivo da igreja</h1>
+      <p class="doc-text"><strong>Escopo:</strong> ${escapeHtml(scopeLabel)}</p>
       <div class="executive-score">
         <strong>${healthScore}</strong>
         <div>
@@ -678,6 +793,10 @@ function printExecutiveSummary({
         <div class="executive-card"><span>Aniversariantes</span><strong>${monthlyBirthdays.length}</strong></div>
         <div class="executive-card"><span>Frequência</span><strong>${percentage(attendance.present, attendance.total)}</strong></div>
         <div class="executive-card"><span>Chamadas</span><strong>${data.attendanceSessions.length}</strong></div>
+        <div class="executive-card"><span>Alunos EBD</span><strong>${schoolStudents}</strong></div>
+        <div class="executive-card"><span>Alunos Discipulado</span><strong>${discipleshipStudents}</strong></div>
+        <div class="executive-card"><span>Turmas</span><strong>${formationClassStats.length}</strong></div>
+        <div class="executive-card"><span>Formação atenção</span><strong>${formationLowAttendance}</strong></div>
       </div>
       <section class="doc-section">
         <h2>Pendências recomendadas</h2>
@@ -689,6 +808,13 @@ function printExecutiveSummary({
       <section class="doc-section">
         <h2>Leitura inteligente</h2>
         <ul class="executive-list">${insightRows || "<li>Nenhum alerta crítico encontrado.</li>"}</ul>
+      </section>
+      <section class="doc-section">
+        <h2>Formação cristã</h2>
+        <table class="executive-table">
+          <thead><tr><th>Área</th><th>Turma</th><th>Professor</th><th>Alunos</th><th>Chamadas</th><th>Presença</th></tr></thead>
+          <tbody>${formationRows || `<tr><td colspan="6">Nenhuma turma com alunos ou chamadas encontrada neste escopo.</td></tr>`}</tbody>
+        </table>
       </section>
       <section class="doc-section">
         <h2>Próximos eventos</h2>
@@ -711,42 +837,54 @@ export function IntelligencePanel({
   upcomingPanelEvents,
 }: IntelligencePanelProps) {
   const [copiedSuggestion, setCopiedSuggestion] = useState("");
+  const [selectedCongregation, setSelectedCongregation] = useState("Todas");
+  const congregationOptions = buildCongregationOptions(data);
+  const panelData = scopedDataForCongregation(data, selectedCongregation);
+  const panelMonthlyBirthdays = monthlyBirthdays.filter((member) => matchesCongregation(member.congregation, selectedCongregation));
+  const panelPendingRegistrationRequests = pendingRegistrationRequests.filter((request) => matchesCongregation(request.congregation, selectedCongregation));
+  const panelUpcomingPanelEvents = upcomingPanelEvents.filter((event) => matchesCongregation(event.congregation, selectedCongregation));
+  const panelMemberNames = new Set(panelData.members.map((member) => member.fullName));
+  const panelAbsentRows = selectedCongregation === "Todas" ? absentRows : absentRows.filter((row) => panelMemberNames.has(String(row[0] ?? "")));
   const monthKey = currentMonthKey();
-  const activeMembers = data.members.filter((member) => member.status === "Membro ativo");
-  const newMembersThisMonth = data.members.filter((member) => recordMonth(member.createdAt || member.joinedAt) === monthKey);
-  const visitorsInFollowUp = data.visitors.filter((visitor) => visitor.integrationStatus !== "Integrado");
-  const integratedVisitors = data.visitors.filter((visitor) => visitor.integrationStatus === "Integrado");
-  const pendingCare = data.careRequests.filter((request) => request.status !== "Concluido");
+  const activeMembers = panelData.members.filter((member) => member.status === "Membro ativo");
+  const newMembersThisMonth = panelData.members.filter((member) => recordMonth(member.createdAt || member.joinedAt) === monthKey);
+  const visitorsInFollowUp = panelData.visitors.filter((visitor) => visitor.integrationStatus !== "Integrado");
+  const integratedVisitors = panelData.visitors.filter((visitor) => visitor.integrationStatus === "Integrado");
+  const pendingCare = panelData.careRequests.filter((request) => request.status !== "Concluido");
   const unassignedCare = pendingCare.filter((request) => !request.responsible);
-  const publishedMural = data.mural.filter((item) => item.published);
-  const attendance = attendanceCounts(data);
-  const schoolStudents = data.members.filter((member) => member.schoolClassId).length;
-  const discipleshipStudents = data.members.filter((member) => member.discipleshipClassId).length;
-  const incompleteMembers = data.members.filter(isMissingMemberData);
-  const membersWithClass = data.members.filter((member) => member.schoolClassId || member.discipleshipClassId);
-  const statusBreakdown = countByLabel(data.members, (member) => member.status).slice(0, 4);
-  const ageBreakdown = countByLabel(data.members, (member) => member.ageGroup).slice(0, 5);
-  const visitorFunnel = countByLabel(data.visitors, (visitor) => visitor.integrationStatus);
-  const pastoralFunnel = countByLabel(data.careRequests, (request) => request.status === "Em analise" ? "Em análise" : request.status === "Concluido" ? "Concluído" : request.status);
-  const engagementRate = percentage(membersWithClass.length, data.members.length);
-  const visitorIntegrationRate = percentage(integratedVisitors.length, data.visitors.length);
-  const confirmedTransactions = data.transactions.filter((transaction) => transaction.status === "Confirmado");
-  const pendingTransactions = data.transactions.filter((transaction) => transaction.status === "Pendente");
+  const publishedMural = panelData.mural.filter((item) => item.published);
+  const attendance = attendanceCounts(panelData);
+  const schoolStudents = panelData.members.filter((member) => member.schoolClassId).length;
+  const discipleshipStudents = panelData.members.filter((member) => member.discipleshipClassId).length;
+  const schoolFormationStats = formationStats("EBD", panelData.schoolClasses, panelData.members, panelData);
+  const discipleshipFormationStats = formationStats("Discipulado", panelData.discipleshipClasses, panelData.members, panelData);
+  const formationClassStats = [...schoolFormationStats, ...discipleshipFormationStats];
+  const formationLowAttendance = formationClassStats.filter((item) => item.totalRecords > 0 && Number.parseFloat(item.attendanceRate) < 75);
+  const incompleteMembers = panelData.members.filter(isMissingMemberData);
+  const membersWithClass = panelData.members.filter((member) => member.schoolClassId || member.discipleshipClassId);
+  const statusBreakdown = countByLabel(panelData.members, (member) => member.status).slice(0, 4);
+  const ageBreakdown = countByLabel(panelData.members, (member) => member.ageGroup).slice(0, 5);
+  const visitorFunnel = countByLabel(panelData.visitors, (visitor) => visitor.integrationStatus);
+  const pastoralFunnel = countByLabel(panelData.careRequests, (request) => request.status === "Em analise" ? "Em análise" : request.status === "Concluido" ? "Concluído" : request.status);
+  const engagementRate = percentage(membersWithClass.length, panelData.members.length);
+  const visitorIntegrationRate = percentage(integratedVisitors.length, panelData.visitors.length);
+  const confirmedTransactions = panelData.transactions.filter((transaction) => transaction.status === "Confirmado");
+  const pendingTransactions = panelData.transactions.filter((transaction) => transaction.status === "Pendente");
   const financialIncome = confirmedTransactions
     .filter((transaction) => transaction.type === "Entrada" || transaction.type === "Dizimo" || transaction.type === "Oferta")
     .reduce((total, transaction) => total + transaction.amount, 0);
   const financialExpense = confirmedTransactions
     .filter((transaction) => transaction.type === "Saida")
     .reduce((total, transaction) => total + transaction.amount, 0);
-  const assetsNeedingAttention = data.assets.filter((asset) => asset.condition === "Manutencao" || asset.condition === "Baixado");
-  const insights = buildInsights({ absentRows, data, monthlyBirthdays, pendingRegistrationRequests, upcomingPanelEvents });
-  const actionTasks = buildActionTasks({ absentRows, data, pendingRegistrationRequests, upcomingPanelEvents });
-  const communicationSuggestions = buildCommunicationSuggestions({ data, monthlyBirthdays, pendingRegistrationRequests, upcomingPanelEvents });
-  const congregationSummaries = buildCongregationSummary({ data, monthlyBirthdays, upcomingPanelEvents });
-  const weeklyPlan = buildWeeklyPlan(actionTasks, upcomingPanelEvents);
-  const automationSuggestions = buildAutomationSuggestions({ data, monthlyBirthdays, pendingRegistrationRequests, upcomingPanelEvents });
-  const governanceItems = buildGovernanceItems({ data });
-  const nextEvents = [...upcomingPanelEvents].sort(sortEventsByDate).slice(0, 5);
+  const assetsNeedingAttention = panelData.assets.filter((asset) => asset.condition === "Manutencao" || asset.condition === "Baixado");
+  const insights = buildInsights({ absentRows: panelAbsentRows, data: panelData, monthlyBirthdays: panelMonthlyBirthdays, pendingRegistrationRequests: panelPendingRegistrationRequests, upcomingPanelEvents: panelUpcomingPanelEvents });
+  const actionTasks = buildActionTasks({ absentRows: panelAbsentRows, data: panelData, pendingRegistrationRequests: panelPendingRegistrationRequests, upcomingPanelEvents: panelUpcomingPanelEvents });
+  const communicationSuggestions = buildCommunicationSuggestions({ data: panelData, monthlyBirthdays: panelMonthlyBirthdays, pendingRegistrationRequests: panelPendingRegistrationRequests, upcomingPanelEvents: panelUpcomingPanelEvents });
+  const congregationSummaries = buildCongregationSummary({ data: panelData, monthlyBirthdays: panelMonthlyBirthdays, upcomingPanelEvents: panelUpcomingPanelEvents });
+  const weeklyPlan = buildWeeklyPlan(actionTasks, panelUpcomingPanelEvents);
+  const automationSuggestions = buildAutomationSuggestions({ data: panelData, monthlyBirthdays: panelMonthlyBirthdays, pendingRegistrationRequests: panelPendingRegistrationRequests, upcomingPanelEvents: panelUpcomingPanelEvents });
+  const governanceItems = buildGovernanceItems({ data: panelData });
+  const nextEvents = [...panelUpcomingPanelEvents].sort(sortEventsByDate).slice(0, 5);
   const healthScore = healthScoreForTasks(actionTasks);
 
   async function copySuggestion(suggestion: CommunicationSuggestion) {
@@ -770,10 +908,31 @@ export function IntelligencePanel({
           Este painel transforma cadastros, agenda, presença, visitantes e atendimentos em alertas práticos para a liderança agir com mais rapidez.
         </p>
         <div className="intelligence-hero-grid">
-          <span><strong>{data.members.length}</strong> pessoas cadastradas</span>
-          <span><strong>{upcomingPanelEvents.length}</strong> eventos próximos</span>
+          <span><strong>{panelData.members.length}</strong> pessoas cadastradas</span>
+          <span><strong>{panelUpcomingPanelEvents.length}</strong> eventos próximos</span>
           <span><strong>{pendingCare.length}</strong> pedidos em acompanhamento</span>
           <span><strong>{currentAccessRole}</strong> visualizando</span>
+        </div>
+        <div className="intelligence-scope-control">
+          <label htmlFor="intelligence-congregation-filter">
+            Filtrar congregação
+            <select
+              id="intelligence-congregation-filter"
+              onChange={(event) => setSelectedCongregation(event.target.value)}
+              value={selectedCongregation}
+            >
+              {congregationOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span>
+            {selectedCongregation === "Todas"
+              ? "Mostrando a visão geral de todas as congregações."
+              : `Mostrando apenas dados vinculados a ${selectedCongregation}.`}
+          </span>
         </div>
         <div className="intelligence-hero-actions">
           <button
@@ -781,12 +940,17 @@ export function IntelligencePanel({
               printExecutiveSummary({
                 actionTasks,
                 attendance,
-                data,
+                data: panelData,
+                formationClassStats,
+                formationLowAttendance: formationLowAttendance.length,
                 healthScore,
                 insights,
-                monthlyBirthdays,
+                monthlyBirthdays: panelMonthlyBirthdays,
                 pendingCare: pendingCare.length,
-                pendingRegistrationRequests: pendingRegistrationRequests.length,
+                pendingRegistrationRequests: panelPendingRegistrationRequests.length,
+                scopeLabel: selectedCongregation === "Todas" ? "Todas as congregações" : selectedCongregation,
+                schoolStudents,
+                discipleshipStudents,
                 upcomingPanelEvents: nextEvents,
                 visitorsInFollowUp: visitorsInFollowUp.length,
               })
@@ -896,19 +1060,19 @@ export function IntelligencePanel({
         </div>
         <div className="report-grid intelligence-metrics">
           <div className="report-card">
-            <strong>{data.members.length}</strong>
+            <strong>{panelData.members.length}</strong>
             <span>Membros e congregados</span>
             <small>{activeMembers.length} membros ativos • {newMembersThisMonth.length} novo(s) no mês</small>
           </div>
           <div className="report-card">
-            <strong>{pendingRegistrationRequests.length}</strong>
+            <strong>{panelPendingRegistrationRequests.length}</strong>
             <span>Pré-cadastros pendentes</span>
-            <small>{data.registrationRequests.length} solicitações no histórico</small>
+            <small>{panelData.registrationRequests.length} solicitações no histórico</small>
           </div>
           <div className="report-card">
             <strong>{visitorsInFollowUp.length}</strong>
             <span>Visitantes em acompanhamento</span>
-            <small>{data.visitors.filter((visitor) => !visitor.contactMade).length} sem contato registrado</small>
+            <small>{panelData.visitors.filter((visitor) => !visitor.contactMade).length} sem contato registrado</small>
           </div>
           <div className="report-card">
             <strong>{pendingCare.length}</strong>
@@ -916,14 +1080,14 @@ export function IntelligencePanel({
             <small>{unassignedCare.length} sem responsável definido</small>
           </div>
           <div className="report-card">
-            <strong>{data.schoolClasses.length + data.discipleshipClasses.length}</strong>
+            <strong>{panelData.schoolClasses.length + panelData.discipleshipClasses.length}</strong>
             <span>Classes formativas</span>
             <small>{schoolStudents} EBD • {discipleshipStudents} discipulado</small>
           </div>
           <div className="report-card">
             <strong>{publishedMural.length}</strong>
             <span>Murais publicados</span>
-            <small>{data.notices.filter((notice) => notice.status === "Publicado").length} comunicados ativos</small>
+            <small>{panelData.notices.filter((notice) => notice.status === "Publicado").length} comunicados ativos</small>
           </div>
         </div>
       </article>
@@ -938,13 +1102,13 @@ export function IntelligencePanel({
             <strong>{engagementRate}</strong>
             <span>membros vinculados a EBD ou Discipulado</span>
             <i><b style={{ width: engagementRate }} /></i>
-            <small>{membersWithClass.length} de {data.members.length} cadastros</small>
+            <small>{membersWithClass.length} de {panelData.members.length} cadastros</small>
           </div>
           <div className="growth-card">
             <strong>{visitorIntegrationRate}</strong>
             <span>visitantes integrados</span>
             <i><b style={{ width: visitorIntegrationRate }} /></i>
-            <small>{integratedVisitors.length} de {data.visitors.length} visitantes</small>
+            <small>{integratedVisitors.length} de {panelData.visitors.length} visitantes</small>
           </div>
           <div className="growth-card">
             <strong>{newMembersThisMonth.length}</strong>
@@ -968,6 +1132,53 @@ export function IntelligencePanel({
         </div>
       </article>
 
+      <article className="surface wide formation-intelligence-panel">
+        <div className="panel-heading">
+          <h2>Formação cristã</h2>
+          <span>{formationClassStats.length} turma{formationClassStats.length === 1 ? "" : "s"} acompanhada{formationClassStats.length === 1 ? "" : "s"}</span>
+        </div>
+        <div className="formation-intelligence-summary">
+          <button onClick={() => onOpenModule("school")} type="button">
+            <strong>{schoolStudents}</strong>
+            <span>alunos EBD</span>
+            <small>{schoolFormationStats.length} turma{schoolFormationStats.length === 1 ? "" : "s"} com vínculo</small>
+          </button>
+          <button onClick={() => onOpenModule("discipleship")} type="button">
+            <strong>{discipleshipStudents}</strong>
+            <span>alunos Discipulado</span>
+            <small>{discipleshipFormationStats.length} turma{discipleshipFormationStats.length === 1 ? "" : "s"} com vínculo</small>
+          </button>
+          <button onClick={() => onOpenModule("school")} type="button">
+            <strong>{percentage(attendance.present, attendance.total)}</strong>
+            <span>frequência média</span>
+            <small>{attendance.total} marcações de chamada</small>
+          </button>
+          <button onClick={() => onOpenModule("school")} type="button">
+            <strong>{formationLowAttendance.length}</strong>
+            <span>turmas para atenção</span>
+            <small>frequência abaixo de 75%</small>
+          </button>
+        </div>
+        <div className="formation-class-grid">
+          {formationClassStats.length ? (
+            formationClassStats.slice(0, 6).map((item) => (
+              <button className="formation-class-card" key={`${item.area}-${item.classId}`} onClick={() => onOpenModule(item.area === "EBD" ? "school" : "discipleship")} type="button">
+                <span>{item.area}</span>
+                <strong>{item.className}</strong>
+                <small>{item.teacher}</small>
+                <div>
+                  <em>{item.students} aluno{item.students === 1 ? "" : "s"}</em>
+                  <em>{item.sessions} chamada{item.sessions === 1 ? "" : "s"}</em>
+                  <em>{item.attendanceRate} presença</em>
+                </div>
+              </button>
+            ))
+          ) : (
+            <p className="empty-state">Nenhuma turma com alunos ou chamadas nesta visão.</p>
+          )}
+        </div>
+      </article>
+
       <article className="surface wide follow-up-funnel-panel">
         <div className="panel-heading">
           <h2>Funil de acompanhamento</h2>
@@ -983,7 +1194,7 @@ export function IntelligencePanel({
                   <button key={item.label} onClick={() => onOpenModule("visitors")} type="button">
                     <span>{item.count}</span>
                     <strong>{item.label}</strong>
-                    <i><b style={{ width: percentage(item.count, data.visitors.length) }} /></i>
+                    <i><b style={{ width: percentage(item.count, panelData.visitors.length) }} /></i>
                   </button>
                 ))
               ) : (
@@ -1000,7 +1211,7 @@ export function IntelligencePanel({
                   <button key={item.label} onClick={() => onOpenModule("pastoral")} type="button">
                     <span>{item.count}</span>
                     <strong>{item.label}</strong>
-                    <i><b style={{ width: percentage(item.count, data.careRequests.length) }} /></i>
+                    <i><b style={{ width: percentage(item.count, panelData.careRequests.length) }} /></i>
                   </button>
                 ))
               ) : (
@@ -1092,7 +1303,7 @@ export function IntelligencePanel({
       <article className="surface intelligence-card">
         <div className="panel-heading">
           <h2>Presença e acompanhamento</h2>
-          <span>{data.attendanceSessions.length} chamada(s)</span>
+          <span>{panelData.attendanceSessions.length} chamada(s)</span>
         </div>
         <div className="intelligence-progress-list">
           <div>
@@ -1112,7 +1323,7 @@ export function IntelligencePanel({
           </div>
         </div>
         <div className="row-list">
-          {absentRows.slice(0, 4).map((row) => (
+          {panelAbsentRows.slice(0, 4).map((row) => (
             <div className="data-row" key={`${row[0]}-${row[2]}`}>
               <span className="bullet-mark" />
               <div>
@@ -1121,7 +1332,7 @@ export function IntelligencePanel({
               </div>
             </div>
           ))}
-          {!absentRows.length && <p className="empty-state">Sem alerta de faltas recorrentes no momento.</p>}
+          {!panelAbsentRows.length && <p className="empty-state">Sem alerta de faltas recorrentes no momento.</p>}
         </div>
       </article>
 
@@ -1170,7 +1381,7 @@ export function IntelligencePanel({
             <span>lançamentos pendentes</span>
           </button>
           <button onClick={() => onOpenModule("assets")} type="button">
-            <strong>{data.assets.length}</strong>
+            <strong>{panelData.assets.length}</strong>
             <span>bens cadastrados</span>
           </button>
           <button onClick={() => onOpenModule("assets")} type="button">
@@ -1187,12 +1398,12 @@ export function IntelligencePanel({
         </div>
         <div className="report-grid compact-report-grid">
           <div className="report-card">
-            <strong>{percentage(data.members.length - incompleteMembers.length, data.members.length)}</strong>
+            <strong>{percentage(panelData.members.length - incompleteMembers.length, panelData.members.length)}</strong>
             <span>cadastros completos</span>
             <small>telefone, e-mail, congregação, aniversário e grupos</small>
           </div>
           <div className="report-card">
-            <strong>{monthlyBirthdays.length}</strong>
+            <strong>{panelMonthlyBirthdays.length}</strong>
             <span>aniversários do mês</span>
             <small>base para cuidado e comunicação</small>
           </div>
