@@ -54,6 +54,12 @@ type FormationClassStat = {
   totalRecords: number;
 };
 
+type QuickAnswer = {
+  answer: string;
+  module: ModuleKey;
+  question: string;
+};
+
 type AutomationSuggestion = {
   description: string;
   module: ModuleKey;
@@ -193,6 +199,82 @@ function formationStats(
       };
     })
     .filter((item) => item.students > 0 || item.sessions > 0);
+}
+
+function buildQuickAnswers({
+  attendance,
+  data,
+  discipleshipStudents,
+  formationLowAttendance,
+  newMembersThisMonth,
+  panelAbsentRows,
+  pendingCare,
+  pendingRegistrationRequests,
+  schoolStudents,
+  upcomingPanelEvents,
+  visitorsInFollowUp,
+}: {
+  attendance: ReturnType<typeof attendanceCounts>;
+  data: AppData;
+  discipleshipStudents: number;
+  formationLowAttendance: FormationClassStat[];
+  newMembersThisMonth: MemberRecord[];
+  panelAbsentRows: AbsenceAlert[];
+  pendingCare: number;
+  pendingRegistrationRequests: number;
+  schoolStudents: number;
+  upcomingPanelEvents: ChurchEvent[];
+  visitorsInFollowUp: number;
+}): QuickAnswer[] {
+  const nextEvent = [...upcomingPanelEvents].sort(sortEventsByDate)[0];
+  const lowAttendanceNames = formationLowAttendance.slice(0, 3).map((item) => item.className).join(", ");
+
+  return [
+    {
+      answer: `Há ${pendingRegistrationRequests} pré-cadastro${pendingRegistrationRequests === 1 ? "" : "s"} aguardando análise e ${pendingCare} atendimento${pendingCare === 1 ? "" : "s"} pastoral${pendingCare === 1 ? "" : "is"} em acompanhamento.`,
+      module: "overview",
+      question: "O que precisa de atenção agora?",
+    },
+    {
+      answer: nextEvent
+        ? `O próximo evento registrado é "${nextEvent.title}", em ${formatDate(nextEvent.date)}${nextEvent.time ? ` às ${nextEvent.time}` : ""}.`
+        : "Não há evento próximo registrado nesta visão. Cadastre a agenda para alimentar o painel e a página pública.",
+      module: "events",
+      question: "Qual é o próximo evento?",
+    },
+    {
+      answer: `A formação tem ${schoolStudents} aluno${schoolStudents === 1 ? "" : "s"} na EBD e ${discipleshipStudents} no Discipulado. A frequência registrada está em ${percentage(attendance.present, attendance.total)}.`,
+      module: "school",
+      question: "Como está a EBD e o Discipulado?",
+    },
+    {
+      answer: formationLowAttendance.length
+        ? `${formationLowAttendance.length} turma${formationLowAttendance.length === 1 ? "" : "s"} aparece${formationLowAttendance.length === 1 ? "" : "m"} com presença abaixo de 75%: ${lowAttendanceNames}.`
+        : "Nenhuma turma com chamadas registradas aparece abaixo de 75% de presença nesta visão.",
+      module: formationLowAttendance[0]?.area === "Discipulado" ? "discipleship" : "school",
+      question: "Quais turmas precisam de acompanhamento?",
+    },
+    {
+      answer: panelAbsentRows.length
+        ? `${panelAbsentRows.length} aluno${panelAbsentRows.length === 1 ? "" : "s"} está${panelAbsentRows.length === 1 ? "" : "ão"} com alerta de faltas recorrentes. Abra Presença para revisar os nomes e observações.`
+        : "Não há alerta de faltas recorrentes neste momento.",
+      module: "school",
+      question: "Tem alguém faltando muito?",
+    },
+    {
+      answer: `Neste mês entraram ${newMembersThisMonth.length} novo${newMembersThisMonth.length === 1 ? "" : "s"} cadastro${newMembersThisMonth.length === 1 ? "" : "s"}, há ${visitorsInFollowUp} visitante${visitorsInFollowUp === 1 ? "" : "s"} em acompanhamento e ${data.members.length} pessoa${data.members.length === 1 ? "" : "s"} cadastrada${data.members.length === 1 ? "" : "s"} nesta visão.`,
+      module: "members",
+      question: "Como está o crescimento?",
+    },
+  ];
+}
+
+function copyQuickAnswersText(answers: QuickAnswer[], scopeLabel: string) {
+  return [
+    `Perguntas rápidas - ${scopeLabel}`,
+    "",
+    ...answers.flatMap((answer) => [`${answer.question}`, answer.answer, ""]),
+  ].join("\n").trim();
 }
 
 function buildInsights({
@@ -365,6 +447,74 @@ function healthLabel(score: number) {
   if (score >= 70) return "Boa";
   if (score >= 50) return "Atenção";
   return "Crítica";
+}
+
+function copyActionTasksText(tasks: ActionTask[], scopeLabel: string) {
+  if (!tasks.length) return `Central de pendências - ${scopeLabel}\n\nNenhuma pendência administrativa principal encontrada.`;
+
+  return [
+    `Central de pendências - ${scopeLabel}`,
+    "",
+    ...tasks.map((task, index) => {
+      const priority = task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa";
+      return `${index + 1}. ${task.title}\nQuantidade: ${task.count}\nPrioridade: ${priority}\nOrientação: ${task.description}`;
+    }),
+  ].join("\n\n");
+}
+
+function copyCommunicationSuggestionsText(suggestions: CommunicationSuggestion[], scopeLabel: string) {
+  if (!suggestions.length) return `Sugestões de comunicação - ${scopeLabel}\n\nNenhuma sugestão de comunicação necessária agora.`;
+
+  return [
+    `Sugestões de comunicação - ${scopeLabel}`,
+    "",
+    ...suggestions.map((suggestion, index) => `${index + 1}. ${suggestion.title}\nPúblico: ${suggestion.audience}\n${suggestion.text}`),
+  ].join("\n\n");
+}
+
+function copyExecutiveSummaryText({
+  actionTasks,
+  attendance,
+  data,
+  healthScore,
+  pendingCare,
+  pendingRegistrationRequests,
+  quickAnswers,
+  scopeLabel,
+  upcomingPanelEvents,
+  visitorsInFollowUp,
+}: {
+  actionTasks: ActionTask[];
+  attendance: ReturnType<typeof attendanceCounts>;
+  data: AppData;
+  healthScore: number;
+  pendingCare: number;
+  pendingRegistrationRequests: number;
+  quickAnswers: QuickAnswer[];
+  scopeLabel: string;
+  upcomingPanelEvents: ChurchEvent[];
+  visitorsInFollowUp: number;
+}) {
+  const firstTasks = actionTasks.slice(0, 4).map((task, index) => `${index + 1}. ${task.title}: ${task.count} - ${task.description}`);
+  const firstAnswers = quickAnswers.slice(0, 3).map((answer) => `${answer.question}\n${answer.answer}`);
+
+  return [
+    `Resumo executivo - ${scopeLabel}`,
+    "",
+    `Saúde operacional: ${healthScore}/100 (${healthLabel(healthScore)})`,
+    `Membros cadastrados: ${data.members.length}`,
+    `Pré-cadastros pendentes: ${pendingRegistrationRequests}`,
+    `Visitantes em acompanhamento: ${visitorsInFollowUp}`,
+    `Atendimentos pastorais: ${pendingCare}`,
+    `Eventos próximos: ${upcomingPanelEvents.length}`,
+    `Frequência registrada: ${percentage(attendance.present, attendance.total)}`,
+    "",
+    "Pendências principais:",
+    ...(firstTasks.length ? firstTasks : ["Nenhuma pendência administrativa principal encontrada."]),
+    "",
+    "Perguntas rápidas:",
+    ...(firstAnswers.length ? firstAnswers : ["Nenhuma resposta automática disponível neste escopo."]),
+  ].join("\n");
 }
 
 function buildCommunicationSuggestions({
@@ -682,6 +832,7 @@ function countByLabel<T>(items: T[], labelForItem: (item: T) => string) {
 function printExecutiveSummary({
   actionTasks,
   attendance,
+  communicationSuggestions,
   data,
   formationClassStats,
   formationLowAttendance,
@@ -690,6 +841,7 @@ function printExecutiveSummary({
   monthlyBirthdays,
   pendingCare,
   pendingRegistrationRequests,
+  quickAnswers,
   scopeLabel,
   schoolStudents,
   discipleshipStudents,
@@ -698,6 +850,7 @@ function printExecutiveSummary({
 }: {
   actionTasks: ActionTask[];
   attendance: ReturnType<typeof attendanceCounts>;
+  communicationSuggestions: CommunicationSuggestion[];
   data: AppData;
   formationClassStats: FormationClassStat[];
   formationLowAttendance: number;
@@ -706,6 +859,7 @@ function printExecutiveSummary({
   monthlyBirthdays: MemberRecord[];
   pendingCare: number;
   pendingRegistrationRequests: number;
+  quickAnswers: QuickAnswer[];
   scopeLabel: string;
   schoolStudents: number;
   discipleshipStudents: number;
@@ -727,6 +881,20 @@ function printExecutiveSummary({
     .join("");
   const insightRows = insights
     .map((insight) => `<li><strong>${escapeHtml(insight.title)}</strong><span>${escapeHtml(insight.text)}</span></li>`)
+    .join("");
+  const quickAnswerRows = quickAnswers
+    .map((answer) => `<li><strong>${escapeHtml(answer.question)}</strong><span>${escapeHtml(answer.answer)}</span></li>`)
+    .join("");
+  const communicationRows = communicationSuggestions
+    .map(
+      (suggestion) => `
+        <tr>
+          <td>${escapeHtml(suggestion.title)}</td>
+          <td>${escapeHtml(suggestion.audience)}</td>
+          <td>${escapeHtml(suggestion.text)}</td>
+        </tr>
+      `,
+    )
     .join("");
   const eventRows = upcomingPanelEvents
     .slice(0, 7)
@@ -810,6 +978,17 @@ function printExecutiveSummary({
         <ul class="executive-list">${insightRows || "<li>Nenhum alerta crítico encontrado.</li>"}</ul>
       </section>
       <section class="doc-section">
+        <h2>Perguntas rápidas</h2>
+        <ul class="executive-list">${quickAnswerRows || "<li>Nenhuma resposta automática disponível neste escopo.</li>"}</ul>
+      </section>
+      <section class="doc-section">
+        <h2>Sugestões de comunicação</h2>
+        <table class="executive-table">
+          <thead><tr><th>Sugestão</th><th>Público</th><th>Texto pronto</th></tr></thead>
+          <tbody>${communicationRows || `<tr><td colspan="3">Nenhuma sugestão de comunicação necessária agora.</td></tr>`}</tbody>
+        </table>
+      </section>
+      <section class="doc-section">
         <h2>Formação cristã</h2>
         <table class="executive-table">
           <thead><tr><th>Área</th><th>Turma</th><th>Professor</th><th>Alunos</th><th>Chamadas</th><th>Presença</th></tr></thead>
@@ -845,6 +1024,7 @@ export function IntelligencePanel({
   const panelUpcomingPanelEvents = upcomingPanelEvents.filter((event) => matchesCongregation(event.congregation, selectedCongregation));
   const panelMemberNames = new Set(panelData.members.map((member) => member.fullName));
   const panelAbsentRows = selectedCongregation === "Todas" ? absentRows : absentRows.filter((row) => panelMemberNames.has(String(row[0] ?? "")));
+  const scopeLabel = selectedCongregation === "Todas" ? "Todas as congregações" : selectedCongregation;
   const monthKey = currentMonthKey();
   const activeMembers = panelData.members.filter((member) => member.status === "Membro ativo");
   const newMembersThisMonth = panelData.members.filter((member) => recordMonth(member.createdAt || member.joinedAt) === monthKey);
@@ -885,6 +1065,19 @@ export function IntelligencePanel({
   const automationSuggestions = buildAutomationSuggestions({ data: panelData, monthlyBirthdays: panelMonthlyBirthdays, pendingRegistrationRequests: panelPendingRegistrationRequests, upcomingPanelEvents: panelUpcomingPanelEvents });
   const governanceItems = buildGovernanceItems({ data: panelData });
   const nextEvents = [...panelUpcomingPanelEvents].sort(sortEventsByDate).slice(0, 5);
+  const quickAnswers = buildQuickAnswers({
+    attendance,
+    data: panelData,
+    discipleshipStudents,
+    formationLowAttendance,
+    newMembersThisMonth,
+    panelAbsentRows,
+    pendingCare: pendingCare.length,
+    pendingRegistrationRequests: panelPendingRegistrationRequests.length,
+    schoolStudents,
+    upcomingPanelEvents: panelUpcomingPanelEvents,
+    visitorsInFollowUp: visitorsInFollowUp.length,
+  });
   const healthScore = healthScoreForTasks(actionTasks);
 
   async function copySuggestion(suggestion: CommunicationSuggestion) {
@@ -893,9 +1086,52 @@ export function IntelligencePanel({
     window.setTimeout(() => setCopiedSuggestion(""), 2200);
   }
 
+  async function copyAllCommunicationSuggestions() {
+    await navigator.clipboard.writeText(copyCommunicationSuggestionsText(communicationSuggestions, scopeLabel));
+    setCopiedSuggestion("communication-suggestions");
+    window.setTimeout(() => setCopiedSuggestion(""), 2200);
+  }
+
   async function copyWeeklyPlan() {
     await navigator.clipboard.writeText(copyWeeklyPlanText(weeklyPlan));
     setCopiedSuggestion("weekly-plan");
+    window.setTimeout(() => setCopiedSuggestion(""), 2200);
+  }
+
+  async function copyActionTasks() {
+    await navigator.clipboard.writeText(copyActionTasksText(actionTasks, scopeLabel));
+    setCopiedSuggestion("action-tasks");
+    window.setTimeout(() => setCopiedSuggestion(""), 2200);
+  }
+
+  async function copyQuickAnswer(answer: QuickAnswer) {
+    await navigator.clipboard.writeText(answer.answer);
+    setCopiedSuggestion(answer.question);
+    window.setTimeout(() => setCopiedSuggestion(""), 2200);
+  }
+
+  async function copyAllQuickAnswers() {
+    await navigator.clipboard.writeText(copyQuickAnswersText(quickAnswers, scopeLabel));
+    setCopiedSuggestion("quick-answers");
+    window.setTimeout(() => setCopiedSuggestion(""), 2200);
+  }
+
+  async function copyExecutiveSummary() {
+    await navigator.clipboard.writeText(
+      copyExecutiveSummaryText({
+        actionTasks,
+        attendance,
+        data: panelData,
+        healthScore,
+        pendingCare: pendingCare.length,
+        pendingRegistrationRequests: panelPendingRegistrationRequests.length,
+        quickAnswers,
+        scopeLabel,
+        upcomingPanelEvents: panelUpcomingPanelEvents,
+        visitorsInFollowUp: visitorsInFollowUp.length,
+      }),
+    );
+    setCopiedSuggestion("executive-summary");
     window.setTimeout(() => setCopiedSuggestion(""), 2200);
   }
 
@@ -940,6 +1176,7 @@ export function IntelligencePanel({
               printExecutiveSummary({
                 actionTasks,
                 attendance,
+                communicationSuggestions,
                 data: panelData,
                 formationClassStats,
                 formationLowAttendance: formationLowAttendance.length,
@@ -948,7 +1185,8 @@ export function IntelligencePanel({
                 monthlyBirthdays: panelMonthlyBirthdays,
                 pendingCare: pendingCare.length,
                 pendingRegistrationRequests: panelPendingRegistrationRequests.length,
-                scopeLabel: selectedCongregation === "Todas" ? "Todas as congregações" : selectedCongregation,
+                quickAnswers,
+                scopeLabel,
                 schoolStudents,
                 discipleshipStudents,
                 upcomingPanelEvents: nextEvents,
@@ -958,6 +1196,9 @@ export function IntelligencePanel({
             type="button"
           >
             Imprimir resumo executivo
+          </button>
+          <button onClick={copyExecutiveSummary} type="button">
+            {copiedSuggestion === "executive-summary" ? "Resumo copiado" : "Copiar resumo"}
           </button>
         </div>
       </article>
@@ -977,7 +1218,9 @@ export function IntelligencePanel({
       <article className="surface wide intelligence-actions-panel">
         <div className="panel-heading">
           <h2>Central de pendências</h2>
-          <span>{actionTasks.length} ação{actionTasks.length === 1 ? "" : "ões"} recomendada{actionTasks.length === 1 ? "" : "s"}</span>
+          <button className="secondary" onClick={copyActionTasks} type="button">
+            {copiedSuggestion === "action-tasks" ? "Pendências copiadas" : "Copiar pendências"}
+          </button>
         </div>
         <div className="intelligence-actions-grid">
           {actionTasks.length ? (
@@ -992,6 +1235,31 @@ export function IntelligencePanel({
           ) : (
             <p className="empty-state">Tudo certo por enquanto. Nenhuma pendência administrativa principal encontrada.</p>
           )}
+        </div>
+      </article>
+
+      <article className="surface wide quick-answers-panel">
+        <div className="panel-heading">
+          <h2>Perguntas rápidas</h2>
+          <button className="secondary" onClick={copyAllQuickAnswers} type="button">
+            {copiedSuggestion === "quick-answers" ? "Respostas copiadas" : "Copiar tudo"}
+          </button>
+        </div>
+        <div className="quick-answer-grid">
+          {quickAnswers.map((answer) => (
+            <div className="quick-answer-card" key={answer.question}>
+              <strong>{answer.question}</strong>
+              <p>{answer.answer}</p>
+              <div className="row-actions">
+                <button className="secondary" onClick={() => copyQuickAnswer(answer)} type="button">
+                  {copiedSuggestion === answer.question ? "Resposta copiada" : "Copiar resposta"}
+                </button>
+                <button onClick={() => onOpenModule(answer.module)} type="button">
+                  Abrir área
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </article>
 
@@ -1272,7 +1540,9 @@ export function IntelligencePanel({
       <article className="surface intelligence-card intelligence-communication-panel">
         <div className="panel-heading">
           <h2>Sugestões de comunicação</h2>
-          <span>{communicationSuggestions.length} texto{communicationSuggestions.length === 1 ? "" : "s"} pronto{communicationSuggestions.length === 1 ? "" : "s"}</span>
+          <button className="secondary" onClick={copyAllCommunicationSuggestions} type="button">
+            {copiedSuggestion === "communication-suggestions" ? "Sugestões copiadas" : "Copiar sugestões"}
+          </button>
         </div>
         <div className="row-list">
           {communicationSuggestions.length ? (
