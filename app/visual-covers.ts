@@ -17,6 +17,7 @@ export type ModuleCoverKey =
   | "mural"
   | "messages"
   | "contact"
+  | "intelligence"
   | "reports";
 
 export function moduleCoverClass(key: ModuleCoverKey | ModuleKey) {

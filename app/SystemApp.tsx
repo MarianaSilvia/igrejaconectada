@@ -29,6 +29,7 @@ import { globalCongregationScope } from "./congregation-scope";
 import { DevotionalPanel } from "./components/DevotionalPanel";
 import { FinancePanel } from "./components/FinancePanel";
 import { GroupsPanel } from "./components/GroupsPanel";
+import { IntelligencePanel } from "./components/IntelligencePanel";
 import { KidsPanel } from "./components/KidsPanel";
 import { MembersPanel } from "./components/MembersPanel";
 import { MuralPanel } from "./components/MuralPanel";
@@ -3361,6 +3362,13 @@ export default function Home() {
       cover: "contact" as ModuleCoverKey,
     },
     {
+      label: "Inteligência",
+      value: "BI",
+      hint: "alertas e indicadores",
+      module: "intelligence" as ModuleKey,
+      cover: "intelligence" as ModuleCoverKey,
+    },
+    {
       label: "Relatórios",
       value: "8",
       hint: "modelos disponíveis",
@@ -4816,6 +4824,18 @@ export default function Home() {
               editingDevotionalId={editingDevotionalId}
               setDevotionalForm={setDevotionalForm}
               setEditingDevotionalId={setEditingDevotionalId}
+            />
+          )}
+
+          {activeModule === "intelligence" && (
+            <IntelligencePanel
+              absentRows={absentRows}
+              currentAccessRole={currentAccessRole}
+              data={data}
+              monthlyBirthdays={monthlyBirthdays}
+              onOpenModule={setActiveModule}
+              pendingRegistrationRequests={pendingRegistrationRequests}
+              upcomingPanelEvents={upcomingPanelEvents}
             />
           )}
 
