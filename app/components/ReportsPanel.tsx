@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { whatsappUrl } from "../app-helpers";
+import { birthdayDateThisYear, whatsappUrl } from "../app-helpers";
 import { printableDocumentDefinitions, type PrintableDocumentKind } from "../document-templates";
 import { canAccessModule, type AccessRole } from "../permissions";
 import type { AppData, ChurchEvent, MemberRecord, ReportKind } from "../types";
@@ -16,10 +16,14 @@ type ReportsPanelProps = {
   generatePrintableDocument: (kind: PrintableDocumentKind, targetId: string) => void;
   monthlyBirthdays: MemberRecord[];
   reportCongregationFilter: string;
+  reportEndDate: string;
   reportPreviewKind: ReportKind;
+  reportStartDate: string;
   selectedReportPreview: ReportDefinition;
   setReportCongregationFilter: (congregation: string) => void;
+  setReportEndDate: (date: string) => void;
   setReportPreviewKind: (kind: ReportKind) => void;
+  setReportStartDate: (date: string) => void;
   weekEvents: ChurchEvent[];
 };
 
@@ -31,10 +35,14 @@ export function ReportsPanel({
   generatePrintableDocument,
   monthlyBirthdays,
   reportCongregationFilter,
+  reportEndDate,
   reportPreviewKind,
+  reportStartDate,
   selectedReportPreview,
   setReportCongregationFilter,
+  setReportEndDate,
   setReportPreviewKind,
+  setReportStartDate,
   weekEvents,
 }: ReportsPanelProps) {
   const [documentKind, setDocumentKind] = useState<PrintableDocumentKind>("member-file");
@@ -79,22 +87,56 @@ export function ReportsPanel({
   }, [data.careRequests, data.events, data.kids, data.members, data.registrationRequests, data.visitors]);
   const currentMonthKey = new Date().toISOString().slice(0, 7);
   const reportIsScoped = reportCongregationFilter !== "Todas";
+  const reportHasPeriod = Boolean(reportStartDate || reportEndDate);
+  const dateFromKey = (value: string) => {
+    if (!value) return null;
+    const date = new Date(`${value.slice(0, 10)}T12:00:00`);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+  const isDateInReportPeriod = (value: string) => {
+    if (!reportHasPeriod) return true;
+    const date = dateFromKey(value);
+    if (!date) return false;
+    const start = reportStartDate ? dateFromKey(reportStartDate) : null;
+    const end = reportEndDate ? dateFromKey(reportEndDate) : null;
+
+    if (start && date < start) return false;
+    if (end && date > end) return false;
+    return true;
+  };
+  const isBirthdayInReportPeriod = (value: string) => {
+    if (!reportHasPeriod) return true;
+    const date = birthdayDateThisYear(value);
+    if (!date) return false;
+    const start = reportStartDate ? dateFromKey(reportStartDate) : null;
+    const end = reportEndDate ? dateFromKey(reportEndDate) : null;
+
+    if (start && date < start) return false;
+    if (end && date > end) return false;
+    return true;
+  };
   const belongsToReportScope = (congregation?: string) => !reportIsScoped || congregation === reportCongregationFilter;
   const scopedMembers = data.members.filter((member) => belongsToReportScope(member.congregation));
-  const scopedVisitors = data.visitors.filter((visitor) => belongsToReportScope(visitor.congregation));
+  const reportMembers = reportHasPeriod ? scopedMembers.filter((member) => isDateInReportPeriod(member.createdAt || member.joinedAt)) : scopedMembers;
+  const scopedVisitors = data.visitors.filter((visitor) => belongsToReportScope(visitor.congregation) && isDateInReportPeriod(visitor.firstVisitDate || visitor.returnDate));
   const scopedKids = data.kids.filter((kid) => belongsToReportScope(kid.congregation));
-  const scopedWeekEvents = weekEvents.filter((event) => belongsToReportScope(event.congregation));
-  const scopedMonthlyBirthdays = monthlyBirthdays.filter((member) => belongsToReportScope(member.congregation));
+  const eventSource = reportHasPeriod ? data.events : weekEvents;
+  const scopedWeekEvents = eventSource.filter((event) => belongsToReportScope(event.congregation) && isDateInReportPeriod(event.date));
+  const birthdaySource = reportHasPeriod ? scopedMembers : monthlyBirthdays;
+  const scopedMonthlyBirthdays = birthdaySource.filter((member) => belongsToReportScope(member.congregation) && isBirthdayInReportPeriod(member.birthDate));
   const scopedAbsentRows = reportIsScoped
     ? absentRows.filter(([name]) => scopedMembers.some((member) => member.fullName === String(name)))
     : absentRows;
   const scopedMemberIds = new Set(scopedMembers.map((member) => member.id));
-  const scopedAttendanceCount = reportIsScoped
-    ? data.attendanceSessions.filter((session) => session.records.some((record) => scopedMemberIds.has(record.memberId))).length
-    : data.attendanceSessions.length;
-  const newMembersThisMonth = scopedMembers.filter((member) => (member.createdAt || member.joinedAt).slice(0, 7) === currentMonthKey).length;
+  const scopedAttendanceCount = data.attendanceSessions.filter(
+    (session) => isDateInReportPeriod(session.date) && (!reportIsScoped || session.records.some((record) => scopedMemberIds.has(record.memberId))),
+  ).length;
+  const newMembersThisMonth = reportHasPeriod
+    ? scopedMembers.filter((member) => isDateInReportPeriod(member.createdAt || member.joinedAt)).length
+    : scopedMembers.filter((member) => (member.createdAt || member.joinedAt).slice(0, 7) === currentMonthKey).length;
+  const scopedFinanceCount = reportHasPeriod ? data.transactions.filter((transaction) => isDateInReportPeriod(transaction.date)).length : data.transactions.length;
   const reportCards: ReportCardDefinition[] = [
-    ["members", "Membros por tipo", `${scopedMembers.length} cadastros`],
+    ["members", "Membros por tipo", `${reportMembers.length} cadastros`],
     ["visitors", "Visitantes", `${scopedVisitors.length} acompanhamentos`],
     ["birthdays", "Aniversariantes", `${scopedMonthlyBirthdays.length} no mês`],
     ["kids", "Área Kids", `${scopedKids.length} crianças`],
@@ -104,7 +146,7 @@ export function ReportsPanel({
     ["newMembers", "Novos membros do mês", `${newMembersThisMonth} cadastros`],
     ["followUpStudents", "Alunos em acompanhamento", `${scopedAbsentRows.length} alertas`],
     ["indicators", "Indicadores gerais", "Visão executiva"],
-    ["finance", "Financeiro", `${data.transactions.length} lançamentos`],
+    ["finance", "Financeiro", `${scopedFinanceCount} lançamentos`],
     ["assets", "Patrimônio", `${data.assets.length} itens`],
   ];
 
@@ -126,6 +168,24 @@ export function ReportsPanel({
               ))}
             </select>
           </label>
+          <div className="report-period-filter">
+            <label>
+              De
+              <input onChange={(event) => setReportStartDate(event.target.value)} type="date" value={reportStartDate} />
+            </label>
+            <label>
+              Até
+              <input onChange={(event) => setReportEndDate(event.target.value)} type="date" value={reportEndDate} />
+            </label>
+            {(reportStartDate || reportEndDate) && (
+              <button className="secondary" onClick={() => {
+                setReportStartDate("");
+                setReportEndDate("");
+              }} type="button">
+                Limpar
+              </button>
+            )}
+          </div>
         </div>
         <div className="report-grid">
           {reportCards

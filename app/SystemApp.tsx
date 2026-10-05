@@ -913,6 +913,8 @@ export default function Home() {
   const [remoteUpdatedAt, setRemoteUpdatedAt] = useState<string | null>(null);
   const [reportPreviewKind, setReportPreviewKind] = useState<ReportKind>("members");
   const [reportCongregationFilter, setReportCongregationFilter] = useState("Todas");
+  const [reportStartDate, setReportStartDate] = useState("");
+  const [reportEndDate, setReportEndDate] = useState("");
 
   const forceAccessLogout = useCallback(async (message: string) => {
     if (saveTimerRef.current) {
@@ -1576,6 +1578,7 @@ export default function Home() {
     monthlyBirthdays,
     absentRows,
     congregationScope: reportCongregationFilter,
+    dateRange: { startDate: reportStartDate, endDate: reportEndDate },
   });
   const roleOptions = useMemo(() => {
     const roles = [...memberRoleOptions];
@@ -2060,9 +2063,19 @@ export default function Home() {
 
   function exportReport(kind: ReportKind, format: "pdf" | "csv", congregationScope = reportCongregationFilter) {
     const effectiveCongregationScope = kind === "finance" || kind === "assets" ? "Todas" : congregationScope;
-    const report = buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays, absentRows, congregationScope: effectiveCongregationScope });
+    const report = buildReportDefinition({
+      data,
+      kind,
+      weekEvents,
+      monthlyBirthdays,
+      absentRows,
+      congregationScope: effectiveCongregationScope,
+      dateRange: { startDate: reportStartDate, endDate: reportEndDate },
+    });
     const scopeLabel = effectiveCongregationScope && effectiveCongregationScope !== "Todas" ? ` - ${effectiveCongregationScope}` : "";
-    const subtitle = `Igreja Conectada${scopeLabel} - gerado em ${new Date().toLocaleString("pt-BR")}`;
+    const periodLabel =
+      reportStartDate || reportEndDate ? ` - período ${reportStartDate || "início"} até ${reportEndDate || "hoje"}` : "";
+    const subtitle = `Igreja Conectada${scopeLabel}${periodLabel} - gerado em ${new Date().toLocaleString("pt-BR")}`;
 
     if (format === "csv") {
       downloadCsv(`${report.title.toLowerCase().replaceAll(" ", "-")}.csv`, report.headers, report.rows);
@@ -4859,9 +4872,13 @@ export default function Home() {
               monthlyBirthdays={monthlyBirthdays}
               reportPreviewKind={reportPreviewKind}
               reportCongregationFilter={reportCongregationFilter}
+              reportEndDate={reportEndDate}
+              reportStartDate={reportStartDate}
               selectedReportPreview={selectedReportPreview}
               setReportPreviewKind={setReportPreviewKind}
               setReportCongregationFilter={setReportCongregationFilter}
+              setReportEndDate={setReportEndDate}
+              setReportStartDate={setReportStartDate}
               weekEvents={weekEvents}
             />
           )}

@@ -1,6 +1,11 @@
-import { birthdayLabel, formatDate, memberGroupLabel } from "./app-helpers";
+import { birthdayDateThisYear, birthdayLabel, formatDate, memberGroupLabel } from "./app-helpers";
 import { classNameById } from "./attendance-helpers";
 import type { AppData, ChurchEvent, MemberRecord, ReportKind } from "./types";
+
+export type ReportDateRange = {
+  startDate: string;
+  endDate: string;
+};
 
 export type ReportDefinition = {
   title: string;
@@ -15,6 +20,7 @@ type ReportDefinitionParams = {
   monthlyBirthdays: MemberRecord[];
   absentRows: unknown[][];
   congregationScope?: string;
+  dateRange?: ReportDateRange;
 };
 
 function currentMonthKey() {
@@ -30,16 +36,60 @@ function percentage(value: number, total: number) {
   return `${Math.round((value / total) * 100)}%`;
 }
 
-export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays, absentRows, congregationScope = "Todas" }: ReportDefinitionParams): ReportDefinition {
+function hasDateRange(dateRange?: ReportDateRange) {
+  return Boolean(dateRange?.startDate || dateRange?.endDate);
+}
+
+function dateFromKey(value: string) {
+  if (!value) return null;
+  const date = new Date(`${value.slice(0, 10)}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isDateInRange(value: string, dateRange?: ReportDateRange) {
+  if (!hasDateRange(dateRange)) return true;
+  const date = dateFromKey(value);
+  if (!date) return false;
+
+  const start = dateRange?.startDate ? dateFromKey(dateRange.startDate) : null;
+  const end = dateRange?.endDate ? dateFromKey(dateRange.endDate) : null;
+
+  if (start && date < start) return false;
+  if (end && date > end) return false;
+  return true;
+}
+
+function isBirthdayInRange(value: string, dateRange?: ReportDateRange) {
+  if (!hasDateRange(dateRange)) return true;
+  const date = birthdayDateThisYear(value);
+  if (!date) return false;
+
+  const start = dateRange?.startDate ? dateFromKey(dateRange.startDate) : null;
+  const end = dateRange?.endDate ? dateFromKey(dateRange.endDate) : null;
+
+  if (start && date < start) return false;
+  if (end && date > end) return false;
+  return true;
+}
+
+export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays, absentRows, congregationScope = "Todas", dateRange }: ReportDefinitionParams): ReportDefinition {
   const scopedByCongregation = congregationScope && congregationScope !== "Todas";
+  const scopedByDate = hasDateRange(dateRange);
   const belongsToScope = (congregation?: string) => !scopedByCongregation || congregation === congregationScope;
   const scopedMembers = data.members.filter((member) => belongsToScope(member.congregation));
   const scopedMemberIds = new Set(scopedMembers.map((member) => member.id));
-  const scopedVisitors = data.visitors.filter((visitor) => belongsToScope(visitor.congregation));
+  const reportMembers = scopedByDate ? scopedMembers.filter((member) => isDateInRange(member.createdAt || member.joinedAt, dateRange)) : scopedMembers;
+  const scopedVisitors = data.visitors.filter(
+    (visitor) => belongsToScope(visitor.congregation) && (!scopedByDate || isDateInRange(visitor.firstVisitDate || visitor.returnDate, dateRange)),
+  );
   const scopedKids = data.kids.filter((kid) => belongsToScope(kid.congregation));
-  const scopedEvents = weekEvents.filter((event) => belongsToScope(event.congregation));
-  const scopedBirthdays = monthlyBirthdays.filter((member) => belongsToScope(member.congregation));
-  const scopedRegistrations = data.registrationRequests.filter((request) => belongsToScope(request.congregation));
+  const eventSource = scopedByDate ? data.events : weekEvents;
+  const scopedEvents = eventSource.filter((event) => belongsToScope(event.congregation) && isDateInRange(event.date, dateRange));
+  const birthdaySource = scopedByDate ? scopedMembers : monthlyBirthdays;
+  const scopedBirthdays = birthdaySource.filter((member) => belongsToScope(member.congregation) && isBirthdayInRange(member.birthDate, dateRange));
+  const scopedRegistrations = data.registrationRequests.filter(
+    (request) => belongsToScope(request.congregation) && (!scopedByDate || isDateInRange(request.createdAt, dateRange)),
+  );
   const scopedCareRequests = data.careRequests.filter((request) => belongsToScope(request.congregation));
   const scopedAbsentRows = scopedByCongregation
     ? absentRows.filter(([name]) => scopedMembers.some((member) => member.fullName === String(name)))
@@ -49,12 +99,15 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
       ...session,
       records: scopedByCongregation ? session.records.filter((record) => scopedMemberIds.has(record.memberId)) : session.records,
     }))
-    .filter((session) => !scopedByCongregation || session.records.length > 0);
+    .filter((session) => (!scopedByCongregation || session.records.length > 0) && isDateInRange(session.date, dateRange));
   const attendanceRecords = scopedAttendanceSessions.flatMap((session) => session.records);
   const presentAttendanceRecords = attendanceRecords.filter((record) => record.status === "Presente");
   const schoolStudents = scopedMembers.filter((member) => member.schoolClassId);
   const discipleshipStudents = scopedMembers.filter((member) => member.discipleshipClassId);
-  const membersCreatedThisMonth = scopedMembers.filter((member) => monthKey(member.createdAt || member.joinedAt) === currentMonthKey());
+  const membersCreatedThisMonth = scopedByDate
+    ? scopedMembers.filter((member) => isDateInRange(member.createdAt || member.joinedAt, dateRange))
+    : scopedMembers.filter((member) => monthKey(member.createdAt || member.joinedAt) === currentMonthKey());
+  const scopedTransactions = scopedByDate ? data.transactions.filter((transaction) => isDateInRange(transaction.date, dateRange)) : data.transactions;
 
   const reports: Record<ReportKind, ReportDefinition> = {
     members: {
@@ -87,7 +140,7 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
         "Discipulado",
         "Situação pastoral",
       ],
-      rows: scopedMembers.map((member) => [
+      rows: reportMembers.map((member) => [
         member.memberCode,
         member.fullName,
         formatDate(member.birthDate),
@@ -224,7 +277,7 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
     finance: {
       title: "Financeiro",
       headers: ["Data", "Tipo", "Categoria", "Descrição", "Valor", "Método", "Status", "Membro", "Observações"],
-      rows: data.transactions.map((transaction) => [
+      rows: scopedTransactions.map((transaction) => [
         formatDate(transaction.date),
         transaction.type,
         transaction.category,

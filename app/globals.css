@@ -1924,6 +1924,32 @@ button.secondary.full {
   min-width: 220px;
 }
 
+.report-period-filter {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.report-period-filter label {
+  color: var(--muted);
+  display: grid;
+  font-size: 12px;
+  font-weight: 900;
+  gap: 6px;
+  text-transform: uppercase;
+}
+
+.report-period-filter input {
+  min-height: 42px;
+  min-width: 150px;
+}
+
+.report-period-filter button {
+  min-height: 42px;
+}
+
 .report-card {
   background: rgba(18, 45, 76, 0.62);
   border: 1px solid var(--line);
