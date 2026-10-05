@@ -282,10 +282,10 @@ export function ReportsPanel({
       <article className="surface">
         <div className="panel-heading">
           <h2>Prévia de faltosos</h2>
-          <span>{absentRows.length} alertas</span>
+          <span>{scopedAbsentRows.length} alertas</span>
         </div>
         <div className="row-list">
-          {absentRows.map(([name, phone, status, recent, month]) => (
+          {scopedAbsentRows.map(([name, phone, status, recent, month]) => (
             <div className="data-row" key={`${String(name)}-${String(phone)}`}>
               <span className="date-box">{String(month)}</span>
               <div>
@@ -299,7 +299,7 @@ export function ReportsPanel({
               </a>
             </div>
           ))}
-          {!absentRows.length && <p className="empty-state">Nenhum aluno em alerta de falta no momento.</p>}
+          {!scopedAbsentRows.length && <p className="empty-state">Nenhum aluno em alerta de falta no momento.</p>}
         </div>
       </article>
     </section>
