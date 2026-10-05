@@ -16,7 +16,26 @@ type ReportDefinitionParams = {
   absentRows: unknown[][];
 };
 
+function currentMonthKey() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function monthKey(value: string) {
+  return value ? value.slice(0, 7) : "";
+}
+
+function percentage(value: number, total: number) {
+  if (!total) return "0%";
+  return `${Math.round((value / total) * 100)}%`;
+}
+
 export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays, absentRows }: ReportDefinitionParams): ReportDefinition {
+  const attendanceRecords = data.attendanceSessions.flatMap((session) => session.records);
+  const presentAttendanceRecords = attendanceRecords.filter((record) => record.status === "Presente");
+  const schoolStudents = data.members.filter((member) => member.schoolClassId);
+  const discipleshipStudents = data.members.filter((member) => member.discipleshipClassId);
+  const membersCreatedThisMonth = data.members.filter((member) => monthKey(member.createdAt || member.joinedAt) === currentMonthKey());
+
   const reports: Record<ReportKind, ReportDefinition> = {
     members: {
       title: "Membros por tipo",
@@ -137,6 +156,50 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
       title: "Faltosos recentes",
       headers: ["Nome", "WhatsApp", "Último status", "Faltas recentes", "Faltas no mês"],
       rows: absentRows,
+    },
+    newMembers: {
+      title: "Novos membros do mês",
+      headers: ["Código", "Nome", "Tipo", "Status", "Congregação", "Grupos", "Criado em", "Telefone"],
+      rows: membersCreatedThisMonth.map((member) => [
+        member.memberCode,
+        member.fullName,
+        member.memberType,
+        member.status,
+        member.congregation || "Não informada",
+        memberGroupLabel(member),
+        formatDate((member.createdAt || member.joinedAt).slice(0, 10)),
+        member.phone,
+      ]),
+    },
+    followUpStudents: {
+      title: "Alunos em acompanhamento",
+      headers: ["Nome", "WhatsApp", "Último status", "Faltas recentes", "Faltas no mês", "Orientação"],
+      rows: absentRows.map(([name, phone, status, recent, month]) => [
+        name,
+        phone,
+        status,
+        recent,
+        month,
+        Number(month) >= 3 ? "Priorizar contato pastoral/professor" : "Enviar lembrete e acompanhar próxima aula",
+      ]),
+    },
+    indicators: {
+      title: "Indicadores gerais",
+      headers: ["Indicador", "Valor", "Detalhe"],
+      rows: [
+        ["Membros cadastrados", data.members.length, `${data.members.filter((member) => member.status === "Membro ativo").length} ativos`],
+        ["Novos membros do mês", membersCreatedThisMonth.length, "Com base na data de criação do cadastro"],
+        ["Pré-cadastros aguardando análise", data.registrationRequests.filter((request) => request.status === "Aguardando aprovacao").length, "Fila de secretaria"],
+        ["Visitantes em acompanhamento", data.visitors.filter((visitor) => visitor.integrationStatus === "Em acompanhamento").length, "Visitantes ainda em cuidado"],
+        ["Eventos da semana", weekEvents.length, "Agenda dos próximos dias"],
+        ["Aniversariantes do mês", monthlyBirthdays.length, "Membros com aniversário no mês atual"],
+        ["Alunos EBD", schoolStudents.length, `${data.schoolClasses.length} classes cadastradas`],
+        ["Alunos Discipulado", discipleshipStudents.length, `${data.discipleshipClasses.length} classes cadastradas`],
+        ["Chamadas registradas", data.attendanceSessions.length, `${attendanceRecords.length} presenças/faltas lançadas`],
+        ["Taxa de presença registrada", percentage(presentAttendanceRecords.length, attendanceRecords.length), `${presentAttendanceRecords.length} presenças de ${attendanceRecords.length} registros`],
+        ["Alunos em alerta de falta", absentRows.length, "Baseado nos faltosos recentes"],
+        ["Pedidos pastorais pendentes", data.careRequests.filter((request) => request.status !== "Concluido").length, "Atendimentos ainda abertos"],
+      ],
     },
     finance: {
       title: "Financeiro",

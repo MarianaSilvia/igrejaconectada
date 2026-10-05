@@ -295,6 +295,9 @@ export type ReportKind =
   | "agenda"
   | "attendance"
   | "absences"
+  | "newMembers"
+  | "followUpStudents"
+  | "indicators"
   | "finance"
   | "assets";
 

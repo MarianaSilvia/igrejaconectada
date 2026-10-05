@@ -57,6 +57,8 @@ export function ReportsPanel({
   const [documentTargetId, setDocumentTargetId] = useState("");
   const selectedTargetId = documentTargets.some((target) => target.id === documentTargetId) ? documentTargetId : (documentTargets[0]?.id ?? "");
   const canGenerateDocuments = currentAccessRole === "Administrador" || currentAccessRole === "Secretario";
+  const currentMonthKey = new Date().toISOString().slice(0, 7);
+  const newMembersThisMonth = data.members.filter((member) => (member.createdAt || member.joinedAt).slice(0, 7) === currentMonthKey).length;
   const reportCards: ReportCardDefinition[] = [
     ["members", "Membros por tipo", `${data.members.length} cadastros`],
     ["visitors", "Visitantes", `${data.visitors.length} acompanhamentos`],
@@ -65,6 +67,9 @@ export function ReportsPanel({
     ["agenda", "Agenda semanal", `${weekEvents.length} eventos na semana`],
     ["attendance", "Presença EBD/Discipulado", `${data.attendanceSessions.length} chamadas`],
     ["absences", "Faltosos recentes", `${absentRows.length} alertas`],
+    ["newMembers", "Novos membros do mês", `${newMembersThisMonth} cadastros`],
+    ["followUpStudents", "Alunos em acompanhamento", `${absentRows.length} alertas`],
+    ["indicators", "Indicadores gerais", "Visão executiva"],
     ["finance", "Financeiro", `${data.transactions.length} lançamentos`],
     ["assets", "Patrimônio", `${data.assets.length} itens`],
   ];
