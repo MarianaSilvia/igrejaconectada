@@ -86,6 +86,23 @@ export function ReportsPanel({
     return ["Todas", ...Array.from(congregations).sort((first, second) => first.localeCompare(second, "pt-BR", { sensitivity: "base" }))];
   }, [data.careRequests, data.events, data.kids, data.members, data.registrationRequests, data.visitors]);
   const currentMonthKey = new Date().toISOString().slice(0, 7);
+  const dateKey = (date: Date) => date.toLocaleDateString("en-CA");
+  const applyCurrentWeek = () => {
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - today.getDay());
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    setReportStartDate(dateKey(start));
+    setReportEndDate(dateKey(end));
+  };
+  const applyCurrentMonth = () => {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    setReportStartDate(dateKey(start));
+    setReportEndDate(dateKey(end));
+  };
   const reportIsScoped = reportCongregationFilter !== "Todas";
   const reportHasPeriod = Boolean(reportStartDate || reportEndDate);
   const dateFromKey = (value: string) => {
@@ -169,6 +186,12 @@ export function ReportsPanel({
             </select>
           </label>
           <div className="report-period-filter">
+            <button className="secondary" onClick={applyCurrentWeek} type="button">
+              Semana atual
+            </button>
+            <button className="secondary" onClick={applyCurrentMonth} type="button">
+              Mês atual
+            </button>
             <label>
               De
               <input onChange={(event) => setReportStartDate(event.target.value)} type="date" value={reportStartDate} />
