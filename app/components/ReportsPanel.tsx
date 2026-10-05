@@ -78,17 +78,31 @@ export function ReportsPanel({
     return ["Todas", ...Array.from(congregations).sort((first, second) => first.localeCompare(second, "pt-BR", { sensitivity: "base" }))];
   }, [data.careRequests, data.events, data.kids, data.members, data.registrationRequests, data.visitors]);
   const currentMonthKey = new Date().toISOString().slice(0, 7);
-  const newMembersThisMonth = data.members.filter((member) => (member.createdAt || member.joinedAt).slice(0, 7) === currentMonthKey).length;
+  const reportIsScoped = reportCongregationFilter !== "Todas";
+  const belongsToReportScope = (congregation?: string) => !reportIsScoped || congregation === reportCongregationFilter;
+  const scopedMembers = data.members.filter((member) => belongsToReportScope(member.congregation));
+  const scopedVisitors = data.visitors.filter((visitor) => belongsToReportScope(visitor.congregation));
+  const scopedKids = data.kids.filter((kid) => belongsToReportScope(kid.congregation));
+  const scopedWeekEvents = weekEvents.filter((event) => belongsToReportScope(event.congregation));
+  const scopedMonthlyBirthdays = monthlyBirthdays.filter((member) => belongsToReportScope(member.congregation));
+  const scopedAbsentRows = reportIsScoped
+    ? absentRows.filter(([name]) => scopedMembers.some((member) => member.fullName === String(name)))
+    : absentRows;
+  const scopedMemberIds = new Set(scopedMembers.map((member) => member.id));
+  const scopedAttendanceCount = reportIsScoped
+    ? data.attendanceSessions.filter((session) => session.records.some((record) => scopedMemberIds.has(record.memberId))).length
+    : data.attendanceSessions.length;
+  const newMembersThisMonth = scopedMembers.filter((member) => (member.createdAt || member.joinedAt).slice(0, 7) === currentMonthKey).length;
   const reportCards: ReportCardDefinition[] = [
-    ["members", "Membros por tipo", `${data.members.length} cadastros`],
-    ["visitors", "Visitantes", `${data.visitors.length} acompanhamentos`],
-    ["birthdays", "Aniversariantes", `${monthlyBirthdays.length} no mês`],
-    ["kids", "Área Kids", `${data.kids.length} crianças`],
-    ["agenda", "Agenda semanal", `${weekEvents.length} eventos na semana`],
-    ["attendance", "Presença EBD/Discipulado", `${data.attendanceSessions.length} chamadas`],
-    ["absences", "Faltosos recentes", `${absentRows.length} alertas`],
+    ["members", "Membros por tipo", `${scopedMembers.length} cadastros`],
+    ["visitors", "Visitantes", `${scopedVisitors.length} acompanhamentos`],
+    ["birthdays", "Aniversariantes", `${scopedMonthlyBirthdays.length} no mês`],
+    ["kids", "Área Kids", `${scopedKids.length} crianças`],
+    ["agenda", "Agenda semanal", `${scopedWeekEvents.length} eventos na semana`],
+    ["attendance", "Presença EBD/Discipulado", `${scopedAttendanceCount} chamadas`],
+    ["absences", "Faltosos recentes", `${scopedAbsentRows.length} alertas`],
     ["newMembers", "Novos membros do mês", `${newMembersThisMonth} cadastros`],
-    ["followUpStudents", "Alunos em acompanhamento", `${absentRows.length} alertas`],
+    ["followUpStudents", "Alunos em acompanhamento", `${scopedAbsentRows.length} alertas`],
     ["indicators", "Indicadores gerais", "Visão executiva"],
     ["finance", "Financeiro", `${data.transactions.length} lançamentos`],
     ["assets", "Patrimônio", `${data.assets.length} itens`],

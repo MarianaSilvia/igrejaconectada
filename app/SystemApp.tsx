@@ -2059,8 +2059,9 @@ export default function Home() {
   }
 
   function exportReport(kind: ReportKind, format: "pdf" | "csv", congregationScope = reportCongregationFilter) {
-    const report = buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays, absentRows, congregationScope });
-    const scopeLabel = congregationScope && congregationScope !== "Todas" ? ` - ${congregationScope}` : "";
+    const effectiveCongregationScope = kind === "finance" || kind === "assets" ? "Todas" : congregationScope;
+    const report = buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays, absentRows, congregationScope: effectiveCongregationScope });
+    const scopeLabel = effectiveCongregationScope && effectiveCongregationScope !== "Todas" ? ` - ${effectiveCongregationScope}` : "";
     const subtitle = `Igreja Conectada${scopeLabel} - gerado em ${new Date().toLocaleString("pt-BR")}`;
 
     if (format === "csv") {
