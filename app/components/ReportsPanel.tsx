@@ -88,13 +88,14 @@ export function ReportsPanel({
       ...data.events.map((event) => event.congregation),
       ...data.registrationRequests.map((request) => request.congregation),
       ...data.careRequests.map((request) => request.congregation),
+      ...data.messageCampaigns.map((campaign) => campaign.congregation),
     ].forEach((congregation) => {
       const normalized = congregation?.trim();
       if (normalized) congregations.add(normalized);
     });
 
     return ["Todas", ...Array.from(congregations).sort((first, second) => first.localeCompare(second, "pt-BR", { sensitivity: "base" }))];
-  }, [data.careRequests, data.events, data.kids, data.members, data.registrationRequests, data.visitors]);
+  }, [data.careRequests, data.events, data.kids, data.members, data.messageCampaigns, data.registrationRequests, data.visitors]);
   const currentMonthKey = new Date().toISOString().slice(0, 7);
   const dateKey = (date: Date) => date.toLocaleDateString("en-CA");
   const applyCurrentWeek = () => {
@@ -153,6 +154,7 @@ export function ReportsPanel({
   const scopedCareRequests = data.careRequests.filter(
     (request) => belongsToReportScope(request.congregation) && (!reportHasPeriod || isDateInReportPeriod(request.createdAt) || isDateInReportPeriod(request.scheduleDate)),
   );
+  const scopedMessageCampaigns = data.messageCampaigns.filter((campaign) => belongsToReportScope(campaign.congregation) && isDateInReportPeriod(campaign.createdAt));
   const birthdaySource = reportHasPeriod ? scopedMembers : monthlyBirthdays;
   const scopedMonthlyBirthdays = birthdaySource.filter((member) => belongsToReportScope(member.congregation) && isBirthdayInReportPeriod(member.birthDate));
   const scopedAbsentRows = reportIsScoped
@@ -179,6 +181,7 @@ export function ReportsPanel({
     ["agenda", "Agenda semanal", `${scopedWeekEvents.length} eventos na semana`],
     ["registrationRequests", "Pré-cadastros", `${scopedRegistrationRequests.length} solicitações`],
     ["careRequests", "Atendimento pastoral", `${scopedCareRequests.length} pedidos`],
+    ["messageCampaigns", "Campanhas WhatsApp", `${scopedMessageCampaigns.length} envios`],
     ["attendance", "Presença EBD/Discipulado", `${scopedAttendanceCount} chamadas`],
     ["schoolRoster", "Turmas EBD", `${scopedSchoolStudents.length} alunos`],
     ["discipleshipRoster", "Turmas Discipulado", `${scopedDiscipleshipStudents.length} alunos`],

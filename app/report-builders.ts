@@ -103,6 +103,9 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
     (request) => belongsToScope(request.congregation) && (!scopedByDate || isDateInRange(request.createdAt, dateRange)),
   );
   const scopedCareRequests = data.careRequests.filter((request) => belongsToScope(request.congregation));
+  const scopedMessageCampaigns = data.messageCampaigns.filter(
+    (campaign) => belongsToScope(campaign.congregation) && (!scopedByDate || isDateInRange(campaign.createdAt, dateRange)),
+  );
   const scopedAbsentRows = scopedByCongregation
     ? absentRows.filter(([name]) => scopedMembers.some((member) => member.fullName === String(name)))
     : absentRows;
@@ -302,6 +305,18 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
           request.summary,
           request.returnNote,
         ]),
+    },
+    messageCampaigns: {
+      title: "Campanhas de comunicação",
+      headers: ["Criado em", "Público", "Congregação", "Destinatários", "Modelo", "Mensagem"],
+      rows: scopedMessageCampaigns.map((campaign) => [
+        formatDate(campaign.createdAt.slice(0, 10)),
+        campaign.audience,
+        campaign.congregation || "Não informada",
+        campaign.recipientCount,
+        campaign.templateId || "Modelo manual",
+        campaign.text,
+      ]),
     },
     attendance: {
       title: "Presença EBD e Discipulado",

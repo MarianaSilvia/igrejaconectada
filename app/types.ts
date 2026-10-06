@@ -298,6 +298,7 @@ export type ReportKind =
   | "agenda"
   | "registrationRequests"
   | "careRequests"
+  | "messageCampaigns"
   | "attendance"
   | "schoolRoster"
   | "discipleshipRoster"
