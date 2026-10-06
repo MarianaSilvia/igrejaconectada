@@ -4762,6 +4762,7 @@ export default function Home() {
               members={data.members}
               noticeForm={schoolNoticeForm}
               noticeTitle="Novo aviso da EBD"
+              onExportRoster={() => exportReport("schoolRoster", "excel")}
               openClassWhatsapp={openClassWhatsapp}
               renderAttendancePanel={(classRecord) => renderAttendancePanel("school", classRecord)}
               setNoticeForm={setSchoolNoticeForm}
@@ -4781,6 +4782,7 @@ export default function Home() {
               members={data.members}
               noticeForm={discipleshipNoticeForm}
               noticeTitle="Novo aviso do Discipulado"
+              onExportRoster={() => exportReport("discipleshipRoster", "excel")}
               openClassWhatsapp={openClassWhatsapp}
               renderAttendancePanel={(classRecord) => renderAttendancePanel("discipleship", classRecord)}
               setNoticeForm={setDiscipleshipNoticeForm}

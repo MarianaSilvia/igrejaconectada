@@ -18,6 +18,7 @@ type ClassModulePanelProps = {
   members: MemberRecord[];
   noticeForm: ClassNoticeForm;
   noticeTitle: string;
+  onExportRoster?: () => void;
   renderAttendancePanel: (classRecord: SchoolClass) => ReactNode;
   setNoticeForm: Dispatch<SetStateAction<ClassNoticeForm>>;
   title: string;
@@ -35,6 +36,7 @@ export function ClassModulePanel({
   members,
   noticeForm,
   noticeTitle,
+  onExportRoster,
   renderAttendancePanel,
   setNoticeForm,
   title,
@@ -102,7 +104,14 @@ export function ClassModulePanel({
       <article className="surface">
         <div className="panel-heading">
           <h2>{title}</h2>
-          <span>{classes.length} classes</span>
+          <div className="panel-heading-actions">
+            <span>{classes.length} classes</span>
+            {canManage && onExportRoster && (
+              <button className="secondary" onClick={onExportRoster} type="button">
+                Exportar alunos
+              </button>
+            )}
+          </div>
         </div>
         <div className="row-list">
           {classes.map((classRecord) => {
