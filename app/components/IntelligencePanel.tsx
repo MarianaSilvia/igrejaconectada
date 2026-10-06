@@ -228,12 +228,22 @@ function buildQuickAnswers({
 }): QuickAnswer[] {
   const nextEvent = [...upcomingPanelEvents].sort(sortEventsByDate)[0];
   const lowAttendanceNames = formationLowAttendance.slice(0, 3).map((item) => item.className).join(", ");
+  const registrationWaiting = data.registrationRequests.filter((request) => request.status === "Aguardando aprovacao").length;
+  const registrationInReview = data.registrationRequests.filter((request) => request.status === "Em analise").length;
+  const openCareRequests = data.careRequests.filter((request) => request.status !== "Concluido");
+  const unassignedCare = openCareRequests.filter((request) => !request.responsible).length;
+  const unscheduledCare = openCareRequests.filter((request) => !request.scheduleDate).length;
 
   return [
     {
-      answer: `Há ${pendingRegistrationRequests} pré-cadastro${pendingRegistrationRequests === 1 ? "" : "s"} aguardando análise e ${pendingCare} atendimento${pendingCare === 1 ? "" : "s"} pastoral${pendingCare === 1 ? "" : "is"} em acompanhamento.`,
+      answer: `Há ${pendingRegistrationRequests} pré-cadastro${pendingRegistrationRequests === 1 ? "" : "s"} pendente${pendingRegistrationRequests === 1 ? "" : "s"}: ${registrationWaiting} aguardando aprovação e ${registrationInReview} em análise. Revise primeiro quem já enviou consentimento e telefone válido.`,
       module: "overview",
-      question: "O que precisa de atenção agora?",
+      question: "Como está a fila de pré-cadastros?",
+    },
+    {
+      answer: `Existem ${pendingCare} atendimento${pendingCare === 1 ? "" : "s"} pastoral${pendingCare === 1 ? "" : "is"} em aberto. Desses, ${unassignedCare} estão sem responsável e ${unscheduledCare} ainda não têm agenda definida.`,
+      module: "pastoral",
+      question: "Como está o atendimento pastoral?",
     },
     {
       answer: nextEvent
