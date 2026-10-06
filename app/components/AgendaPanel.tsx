@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { formatDate } from "../app-helpers";
 import type { ChurchEvent, ReportKind } from "../types";
 import { agendaThemeClass } from "../visual-covers";
@@ -35,6 +35,8 @@ function eventStatusLabel(status: ChurchEvent["status"]) {
   return status;
 }
 
+type AgendaVisibilityFilter = "Todos" | "Publicos" | "Internos" | "Com inscricao";
+
 export function AgendaPanel({
   canCreateEvent,
   canManageEvents,
@@ -59,6 +61,17 @@ export function AgendaPanel({
   shareTodayAgenda,
   weekEvents,
 }: AgendaPanelProps) {
+  const [visibilityFilter, setVisibilityFilter] = useState<AgendaVisibilityFilter>("Todos");
+  const visibleWeekEvents = useMemo(() => {
+    if (visibilityFilter === "Publicos") return weekEvents.filter((event) => event.published);
+    if (visibilityFilter === "Internos") return weekEvents.filter((event) => !event.published);
+    if (visibilityFilter === "Com inscricao") return weekEvents.filter((event) => event.registrationUrl);
+    return weekEvents;
+  }, [visibilityFilter, weekEvents]);
+  const publicWeekEvents = weekEvents.filter((event) => event.published).length;
+  const internalWeekEvents = weekEvents.length - publicWeekEvents;
+  const registrationWeekEvents = weekEvents.filter((event) => event.registrationUrl).length;
+
   return (
     <section className="content-grid">
       {canManageEvents && (
@@ -147,7 +160,7 @@ export function AgendaPanel({
         <div className="panel-heading">
           <h2>Agenda da semana</h2>
           <span>
-            {weekEvents.length} de {totalEvents} eventos
+            {visibleWeekEvents.length} exibido{visibleWeekEvents.length === 1 ? "" : "s"} de {totalEvents} eventos
           </span>
         </div>
         <div className="filter-bar">
@@ -178,6 +191,15 @@ export function AgendaPanel({
               <option value="Concluido">Concluído</option>
             </select>
           </label>
+          <label>
+            Visibilidade
+            <select onChange={(event) => setVisibilityFilter(event.target.value as AgendaVisibilityFilter)} value={visibilityFilter}>
+              <option value="Todos">Todos</option>
+              <option value="Publicos">Públicos</option>
+              <option value="Internos">Internos</option>
+              <option value="Com inscricao">Com inscrição</option>
+            </select>
+          </label>
           <button className="secondary" onClick={() => exportReport("agenda", "pdf")} type="button">
             Imprimir semana
           </button>
@@ -185,8 +207,13 @@ export function AgendaPanel({
             Compartilhar agenda do dia
           </button>
         </div>
+        <div className="agenda-week-summary">
+          <span><strong>{publicWeekEvents}</strong> públicos</span>
+          <span><strong>{internalWeekEvents}</strong> internos</span>
+          <span><strong>{registrationWeekEvents}</strong> com inscrição</span>
+        </div>
         <div className="row-list">
-          {weekEvents.map((event) => (
+          {visibleWeekEvents.map((event) => (
             <div className={`data-row access-user-row ${agendaThemeClass(event)}`} key={event.id}>
               <span className="date-box">{formatDate(event.date)}</span>
               <div>
@@ -225,7 +252,11 @@ export function AgendaPanel({
               </div>
             </div>
           ))}
-          {!weekEvents.length && <p className="empty-state">Nenhum evento cadastrado para esta semana.</p>}
+          {!visibleWeekEvents.length && (
+            <p className="empty-state">
+              {weekEvents.length ? "Nenhum evento encontrado para esse filtro." : "Nenhum evento cadastrado para esta semana."}
+            </p>
+          )}
         </div>
       </article>
     </section>

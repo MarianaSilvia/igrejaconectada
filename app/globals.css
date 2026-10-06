@@ -1821,6 +1821,30 @@ button.secondary.full {
   padding: 0 12px;
 }
 
+.agenda-week-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.agenda-week-summary span {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  gap: 6px;
+  padding: 8px 11px;
+}
+
+.agenda-week-summary strong {
+  color: var(--accent-strong);
+}
+
 .week-switcher {
   align-items: center;
   display: grid;
