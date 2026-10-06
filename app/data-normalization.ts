@@ -42,6 +42,7 @@ export const blankEvent: Omit<ChurchEvent, "id"> = {
   location: "",
   responsible: "",
   description: "",
+  registrationUrl: "",
   published: true,
   recurrence: "Unico",
   status: "Programado",

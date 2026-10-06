@@ -36,6 +36,11 @@ export default async function PublicAgendaPage({ searchParams }: { searchParams?
                   <small>{event.location || "Local não informado"}</small>
                   {event.responsible && <small>Responsável: {event.responsible}</small>}
                   {event.description && <small>{event.description}</small>}
+                  {event.registrationUrl && (
+                    <a className="public-inline-link" href={event.registrationUrl} rel="noreferrer" target="_blank">
+                      Fazer inscrição
+                    </a>
+                  )}
                 </div>
               </div>
             ))}

@@ -112,6 +112,15 @@ export function AgendaPanel({
                 value={eventForm.description}
               />
             </label>
+            <label className="full">
+              Link de inscrição
+              <input
+                onChange={(event) => setEventForm((form) => ({ ...form, registrationUrl: event.target.value }))}
+                placeholder="Ex.: https://forms.gle/..."
+                type="url"
+                value={eventForm.registrationUrl}
+              />
+            </label>
             <label>
               Repetição
               <select onChange={(event) => setEventForm((form) => ({ ...form, recurrence: event.target.value as ChurchEvent["recurrence"] }))} value={eventForm.recurrence}>
@@ -187,6 +196,7 @@ export function AgendaPanel({
                 </small>
                 <small>{event.location || "Local não informado"} - {event.responsible || "Sem responsável"}</small>
                 {event.description && <small>{event.description}</small>}
+                {event.registrationUrl && <small>Inscrição: {event.registrationUrl}</small>}
               </div>
               <div className="row-actions">
                 <button className="secondary" onClick={() => shareEvent(event)} type="button">
