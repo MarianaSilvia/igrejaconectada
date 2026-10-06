@@ -55,6 +55,9 @@ export function CommunicationPanel({
   setMessageText,
   setSelectedMessageRecipientIds,
 }: CommunicationPanelProps) {
+  const lastCampaign = data.messageCampaigns[0];
+  const selectedTemplate = availableMessageTemplates.find((template) => template.id === messageTemplateId);
+
   return (
     <section className="content-grid">
       <article className="surface">
@@ -62,6 +65,29 @@ export function CommunicationPanel({
           <h2>Comunicação por WhatsApp</h2>
           <span>{messageRecipients.length} contatos</span>
         </div>
+        <div className="message-summary-grid">
+          <div>
+            <strong>{messageRecipients.length}</strong>
+            <span>contatos encontrados</span>
+          </div>
+          <div>
+            <strong>{selectedMessageRecipients.length}</strong>
+            <span>selecionados no lote</span>
+          </div>
+          <div>
+            <strong>{availableMessageTemplates.length}</strong>
+            <span>modelos prontos</span>
+          </div>
+          <div>
+            <strong>{data.messageCampaigns.length}</strong>
+            <span>campanhas registradas</span>
+          </div>
+        </div>
+        <p className="body-copy">
+          {lastCampaign
+            ? `Último envio: ${lastCampaign.audience}, ${lastCampaign.recipientCount} destinatário${lastCampaign.recipientCount === 1 ? "" : "s"}, em ${formatDateTime(lastCampaign.createdAt)}.`
+            : "Nenhuma campanha registrada ainda. Selecione os contatos e abra o lote para iniciar o histórico."}
+        </p>
         <div className="form-grid">
           <label>
             Público
@@ -123,6 +149,7 @@ export function CommunicationPanel({
             <small>
               {selectedMessageRecipients.length} selecionado{selectedMessageRecipients.length === 1 ? "" : "s"} de {messageRecipients.length} contato
               {messageRecipients.length === 1 ? "" : "s"}
+              {selectedTemplate ? ` - modelo: ${selectedTemplate.label}` : ""}
             </small>
             <span>{selectedMessageRecipients[0] ? messageFor(messageText, selectedMessageRecipients[0].name) : "Nenhum contato encontrado para este público."}</span>
           </div>
