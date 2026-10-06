@@ -92,6 +92,10 @@ export function AgendaPanel({
                 <option value="Concluido">Concluído</option>
               </select>
             </label>
+            <label className="checkbox-line">
+              <input checked={eventForm.published} onChange={(event) => setEventForm((form) => ({ ...form, published: event.target.checked }))} type="checkbox" />
+              Publicar na agenda pública
+            </label>
             <label>
               Local
               <input onChange={(event) => setEventForm((form) => ({ ...form, location: event.target.value }))} placeholder="Ex.: Templo principal" value={eventForm.location} />
@@ -179,7 +183,7 @@ export function AgendaPanel({
               <div>
                 <strong>{event.title}</strong>
                 <small>
-                  {event.time || "Sem horário"} - {event.ministry} - {eventStatusLabel(event.status)}
+                  {event.time || "Sem horário"} - {event.ministry} - {eventStatusLabel(event.status)} - {event.published ? "Público" : "Interno"}
                 </small>
                 <small>{event.location || "Local não informado"} - {event.responsible || "Sem responsável"}</small>
                 {event.description && <small>{event.description}</small>}

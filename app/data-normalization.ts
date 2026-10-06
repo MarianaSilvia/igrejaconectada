@@ -42,6 +42,7 @@ export const blankEvent: Omit<ChurchEvent, "id"> = {
   location: "",
   responsible: "",
   description: "",
+  published: true,
   recurrence: "Unico",
   status: "Programado",
 };
@@ -335,6 +336,7 @@ export function normalizeEvent(event: Partial<ChurchEvent>): ChurchEvent {
     ...blankEvent,
     ...event,
     id: event.id ?? uid("event"),
+    published: event.published ?? true,
     recurrence: event.recurrence ?? "Unico",
   };
 }

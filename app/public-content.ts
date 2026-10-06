@@ -6,7 +6,7 @@ type JsonRecord = Record<string, unknown>;
 
 export type PublicMuralItem = Pick<MuralItem, "id" | "title" | "category" | "expiresAt" | "imageDataUrl" | "bannerUrl" | "socialUrl" | "featured">;
 
-export type PublicAgendaEvent = Pick<ChurchEvent, "id" | "title" | "date" | "time" | "ministry" | "location" | "responsible" | "description" | "status">;
+export type PublicAgendaEvent = Pick<ChurchEvent, "id" | "title" | "date" | "time" | "ministry" | "location" | "responsible" | "description" | "published" | "status">;
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -52,6 +52,7 @@ function eventFromRecord(record: JsonRecord): ChurchEvent {
     location: textValue(record.location, 180),
     responsible: textValue(record.responsible, 180),
     description: textValue(record.description, 500),
+    published: record.published !== false,
     recurrence: "Unico",
     status: status === "Confirmado" || status === "Concluido" ? status : "Programado",
   };
@@ -100,6 +101,7 @@ export async function getPublicAgenda(date = currentDateKey()) {
   const events = recordsFrom(payload.events)
     .map(eventFromRecord)
     .filter((event) => event.date === safeDate)
+    .filter((event) => event.published)
     .filter((event) => event.status !== "Concluido")
     .sort(sortEventsByDate)
     .map((event) => ({
@@ -111,6 +113,7 @@ export async function getPublicAgenda(date = currentDateKey()) {
       location: event.location,
       responsible: event.responsible,
       description: event.description,
+      published: event.published,
       status: event.status,
     }));
 

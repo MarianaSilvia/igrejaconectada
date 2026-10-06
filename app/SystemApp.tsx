@@ -210,6 +210,7 @@ const initialData: AppData = {
       location: "Templo principal",
       responsible: "Pr. Marcos",
       description: "Celebração aberta para toda a igreja.",
+      published: true,
       recurrence: "Unico",
       status: "Confirmado",
     },
@@ -222,6 +223,7 @@ const initialData: AppData = {
       location: "Auditorio",
       responsible: "Lider Ana",
       description: "Programação especial para jovens e visitantes.",
+      published: true,
       recurrence: "Unico",
       status: "Programado",
     },
@@ -234,6 +236,7 @@ const initialData: AppData = {
       location: "Salas de ensino",
       responsible: "Coord. EBD",
       description: "Aulas organizadas por classe.",
+      published: true,
       recurrence: "Unico",
       status: "Programado",
     },
@@ -2125,9 +2128,10 @@ export default function Home() {
 
   async function shareTodayAgenda() {
     const url = publicAgendaUrl();
+    const publicTodayAgendaEvents = todayAgendaEvents.filter((event) => event.published);
     const result = await sharePublicContent({
       title: "Agenda do dia - Igreja Conectada",
-      text: dailyAgendaShareText(todayAgendaEvents, url),
+      text: dailyAgendaShareText(publicTodayAgendaEvents, url),
       url,
     }).catch(() => null);
 
@@ -2140,6 +2144,11 @@ export default function Home() {
   }
 
   async function shareAgendaEvent(event: ChurchEvent) {
+    if (!event.published) {
+      setSyncStatus("Este evento está marcado como interno. Publique na agenda pública antes de compartilhar o link.");
+      return;
+    }
+
     const url = publicAgendaUrl(event.date);
     const result = await sharePublicContent({
       title: event.title || "Agenda Igreja Conectada",
@@ -2987,6 +2996,7 @@ export default function Home() {
       location: event.location,
       responsible: event.responsible,
       description: event.description,
+      published: event.published,
       recurrence: event.recurrence,
       status: event.status,
     });
@@ -3004,6 +3014,7 @@ export default function Home() {
       location: event.location,
       responsible: event.responsible,
       description: event.description,
+      published: event.published,
       recurrence: "Unico",
       status: "Programado",
     });
