@@ -294,6 +294,8 @@ export type ReportKind =
   | "kids"
   | "agenda"
   | "attendance"
+  | "schoolRoster"
+  | "discipleshipRoster"
   | "absences"
   | "newMembers"
   | "followUpStudents"

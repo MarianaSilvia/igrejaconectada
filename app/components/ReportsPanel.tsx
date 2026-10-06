@@ -155,6 +155,8 @@ export function ReportsPanel({
     ? absentRows.filter(([name]) => scopedMembers.some((member) => member.fullName === String(name)))
     : absentRows;
   const scopedMemberIds = new Set(scopedMembers.map((member) => member.id));
+  const scopedSchoolStudents = scopedMembers.filter((member) => member.schoolClassId);
+  const scopedDiscipleshipStudents = scopedMembers.filter((member) => member.discipleshipClassId);
   const scopedAttendanceCount = data.attendanceSessions.filter(
     (session) => isDateInReportPeriod(session.date) && (!reportIsScoped || session.records.some((record) => scopedMemberIds.has(record.memberId))),
   ).length;
@@ -169,6 +171,8 @@ export function ReportsPanel({
     ["kids", "Área Kids", `${scopedKids.length} crianças`],
     ["agenda", "Agenda semanal", `${scopedWeekEvents.length} eventos na semana`],
     ["attendance", "Presença EBD/Discipulado", `${scopedAttendanceCount} chamadas`],
+    ["schoolRoster", "Turmas EBD", `${scopedSchoolStudents.length} alunos`],
+    ["discipleshipRoster", "Turmas Discipulado", `${scopedDiscipleshipStudents.length} alunos`],
     ["absences", "Faltosos recentes", `${scopedAbsentRows.length} alertas`],
     ["newMembers", "Novos membros do mês", `${newMembersThisMonth} cadastros`],
     ["followUpStudents", "Alunos em acompanhamento", `${scopedAbsentRows.length} alertas`],

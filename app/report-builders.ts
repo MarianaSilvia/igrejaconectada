@@ -104,6 +104,26 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
   const presentAttendanceRecords = attendanceRecords.filter((record) => record.status === "Presente");
   const schoolStudents = scopedMembers.filter((member) => member.schoolClassId);
   const discipleshipStudents = scopedMembers.filter((member) => member.discipleshipClassId);
+  const classRosterRows = (classes: AppData["schoolClasses"], area: "school" | "discipleship") =>
+    classes.flatMap((classRecord) => {
+      const students = scopedMembers
+        .filter((member) => (area === "school" ? member.schoolClassId === classRecord.id : member.discipleshipClassId === classRecord.id))
+        .sort((first, second) => first.fullName.localeCompare(second.fullName, "pt-BR"));
+
+      if (!students.length) {
+        return [[classRecord.name, classRecord.teacher || "Não informado", "Sem alunos matriculados", "", "", "", classRecord.nextLesson || "Não informada"]];
+      }
+
+      return students.map((member) => [
+        classRecord.name,
+        classRecord.teacher || "Não informado",
+        member.fullName,
+        member.memberCode,
+        member.phone,
+        member.status,
+        classRecord.nextLesson || "Não informada",
+      ]);
+    });
   const membersCreatedThisMonth = scopedByDate
     ? scopedMembers.filter((member) => isDateInRange(member.createdAt || member.joinedAt, dateRange))
     : scopedMembers.filter((member) => monthKey(member.createdAt || member.joinedAt) === currentMonthKey());
@@ -224,6 +244,16 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
           ];
         }),
       ),
+    },
+    schoolRoster: {
+      title: "Turmas EBD - alunos e professores",
+      headers: ["Classe", "Professor", "Aluno", "Código", "Telefone", "Status", "Próxima lição"],
+      rows: classRosterRows(data.schoolClasses, "school"),
+    },
+    discipleshipRoster: {
+      title: "Turmas Discipulado - alunos e professores",
+      headers: ["Turma", "Professor", "Aluno", "Código", "Telefone", "Status", "Próxima lição"],
+      rows: classRosterRows(data.discipleshipClasses, "discipleship"),
     },
     absences: {
       title: "Faltosos recentes",
