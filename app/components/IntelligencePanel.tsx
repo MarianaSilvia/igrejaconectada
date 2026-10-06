@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { AccessRole, ModuleKey } from "../permissions";
 import type { AppData, ChurchEvent, MemberRecord, RegistrationRequest } from "../types";
-import { formatDate, sortEventsByDate } from "../app-helpers";
+import { dateAfterDays, formatDate, sortEventsByDate } from "../app-helpers";
 import { escapeHtml, printHtmlDocument } from "../report-helpers";
 
 type AbsenceAlert = (string | number)[];
@@ -764,6 +764,11 @@ function buildGovernanceItems({
   const publicMuralWithExternalLink = data.mural.filter((item) => item.published && item.socialUrl);
   const membersWithoutCongregation = data.members.filter((member) => !member.congregation);
   const careWithSensitiveNotes = data.careRequests.filter((request) => request.summary.length > 120 || request.returnNote.length > 120);
+  const todayKey = dateAfterDays(0);
+  const upcomingEvents = data.events.filter((event) => event.date >= todayKey && event.status !== "Concluido");
+  const internalUpcomingEvents = upcomingEvents.filter((event) => !event.published);
+  const publicEventsMissingDetails = upcomingEvents.filter((event) => event.published && (!event.location || !event.description));
+  const registrationEventsMissingDetails = upcomingEvents.filter((event) => event.registrationUrl && (!event.description || !event.location || !event.published));
 
   return [
     {
@@ -814,6 +819,27 @@ function buildGovernanceItems({
       module: "pastoral",
       status: careWithSensitiveNotes.length ? "Revisar" : "Em dia",
       title: "Notas pastorais sensíveis",
+    },
+    {
+      count: internalUpcomingEvents.length,
+      description: "Eventos futuros marcados como internos não aparecem na agenda pública nem nos links de compartilhamento.",
+      module: "events",
+      status: internalUpcomingEvents.length ? "Atenção" : "Em dia",
+      title: "Agenda pública",
+    },
+    {
+      count: publicEventsMissingDetails.length,
+      description: "Eventos públicos sem local ou descrição ficam menos claros para membros e visitantes.",
+      module: "events",
+      status: publicEventsMissingDetails.length ? "Atenção" : "Em dia",
+      title: "Detalhes da agenda",
+    },
+    {
+      count: registrationEventsMissingDetails.length,
+      description: "Eventos com inscrição precisam estar públicos e com local/descrição para evitar dúvidas no compartilhamento.",
+      module: "events",
+      status: registrationEventsMissingDetails.length ? "Revisar" : "Em dia",
+      title: "Inscrições da agenda",
     },
   ];
 }
@@ -1065,6 +1091,9 @@ export function IntelligencePanel({
   const automationSuggestions = buildAutomationSuggestions({ data: panelData, monthlyBirthdays: panelMonthlyBirthdays, pendingRegistrationRequests: panelPendingRegistrationRequests, upcomingPanelEvents: panelUpcomingPanelEvents });
   const governanceItems = buildGovernanceItems({ data: panelData });
   const nextEvents = [...panelUpcomingPanelEvents].sort(sortEventsByDate).slice(0, 5);
+  const upcomingPublicEvents = panelUpcomingPanelEvents.filter((event) => event.published);
+  const upcomingInternalEvents = panelUpcomingPanelEvents.filter((event) => !event.published);
+  const upcomingRegistrationEvents = panelUpcomingPanelEvents.filter((event) => event.registrationUrl);
   const quickAnswers = buildQuickAnswers({
     attendance,
     data: panelData,
@@ -1356,6 +1385,16 @@ export function IntelligencePanel({
             <strong>{publishedMural.length}</strong>
             <span>Murais publicados</span>
             <small>{panelData.notices.filter((notice) => notice.status === "Publicado").length} comunicados ativos</small>
+          </div>
+          <div className="report-card">
+            <strong>{panelUpcomingPanelEvents.length}</strong>
+            <span>Próximos eventos</span>
+            <small>{upcomingPublicEvents.length} públicos • {upcomingInternalEvents.length} internos</small>
+          </div>
+          <div className="report-card">
+            <strong>{upcomingRegistrationEvents.length}</strong>
+            <span>Eventos com inscrição</span>
+            <small>{upcomingRegistrationEvents.length ? "Revisar links antes de compartilhar" : "Sem inscrições abertas na agenda"}</small>
           </div>
         </div>
       </article>
