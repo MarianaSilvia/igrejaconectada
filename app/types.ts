@@ -299,6 +299,7 @@ export type ReportKind =
   | "attendance"
   | "schoolRoster"
   | "discipleshipRoster"
+  | "classAttendanceSummary"
   | "absences"
   | "newMembers"
   | "followUpStudents"

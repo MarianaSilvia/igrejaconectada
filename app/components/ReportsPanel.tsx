@@ -160,6 +160,9 @@ export function ReportsPanel({
   const scopedAttendanceCount = data.attendanceSessions.filter(
     (session) => isDateInReportPeriod(session.date) && (!reportIsScoped || session.records.some((record) => scopedMemberIds.has(record.memberId))),
   ).length;
+  const scopedFormationClassCount =
+    data.schoolClasses.filter((classRecord) => scopedSchoolStudents.some((member) => member.schoolClassId === classRecord.id)).length +
+    data.discipleshipClasses.filter((classRecord) => scopedDiscipleshipStudents.some((member) => member.discipleshipClassId === classRecord.id)).length;
   const newMembersThisMonth = reportHasPeriod
     ? scopedMembers.filter((member) => isDateInReportPeriod(member.createdAt || member.joinedAt)).length
     : scopedMembers.filter((member) => (member.createdAt || member.joinedAt).slice(0, 7) === currentMonthKey).length;
@@ -173,6 +176,7 @@ export function ReportsPanel({
     ["attendance", "Presença EBD/Discipulado", `${scopedAttendanceCount} chamadas`],
     ["schoolRoster", "Turmas EBD", `${scopedSchoolStudents.length} alunos`],
     ["discipleshipRoster", "Turmas Discipulado", `${scopedDiscipleshipStudents.length} alunos`],
+    ["classAttendanceSummary", "Frequência por turma", `${scopedFormationClassCount} turmas`],
     ["absences", "Faltosos recentes", `${scopedAbsentRows.length} alertas`],
     ["newMembers", "Novos membros do mês", `${newMembersThisMonth} cadastros`],
     ["followUpStudents", "Alunos em acompanhamento", `${scopedAbsentRows.length} alertas`],

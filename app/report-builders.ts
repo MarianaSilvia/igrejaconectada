@@ -124,6 +124,33 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
         classRecord.nextLesson || "Não informada",
       ]);
     });
+  const classAttendanceSummaryRows = (classes: AppData["schoolClasses"], area: "school" | "discipleship") =>
+    classes.map((classRecord) => {
+      const students = scopedMembers.filter((member) => (area === "school" ? member.schoolClassId === classRecord.id : member.discipleshipClassId === classRecord.id));
+      const studentIds = new Set(students.map((member) => member.id));
+      const sessions = scopedAttendanceSessions.filter((session) => session.area === area && session.classId === classRecord.id);
+      const records = sessions.flatMap((session) => session.records).filter((record) => studentIds.has(record.memberId));
+      const present = records.filter((record) => record.status === "Presente").length;
+      const absences = records.filter((record) => record.status === "Falta").length;
+      const justified = records.filter((record) => record.status === "Justificado").length;
+      const contact = records.filter((record) => record.status === "Precisa de contato").length;
+      const lastSession = sessions.map((session) => session.date).sort().at(-1);
+
+      return [
+        area === "school" ? "EBD" : "Discipulado",
+        classRecord.name,
+        classRecord.teacher || "Não informado",
+        students.length,
+        sessions.length,
+        present,
+        absences,
+        justified,
+        contact,
+        percentage(present, records.length),
+        lastSession ? formatDate(lastSession) : "Sem chamada",
+        classRecord.nextLesson || "Não informada",
+      ];
+    });
   const membersCreatedThisMonth = scopedByDate
     ? scopedMembers.filter((member) => isDateInRange(member.createdAt || member.joinedAt, dateRange))
     : scopedMembers.filter((member) => monthKey(member.createdAt || member.joinedAt) === currentMonthKey());
@@ -257,6 +284,11 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
       title: "Turmas Discipulado - alunos e professores",
       headers: ["Turma", "Professor", "Aluno", "Código", "Telefone", "Status", "Próxima lição"],
       rows: classRosterRows(data.discipleshipClasses, "discipleship"),
+    },
+    classAttendanceSummary: {
+      title: "Frequência por turma",
+      headers: ["Área", "Turma", "Professor", "Alunos", "Chamadas", "Presenças", "Faltas", "Justificadas", "Precisa contato", "Presença", "Última chamada", "Próxima lição"],
+      rows: [...classAttendanceSummaryRows(data.schoolClasses, "school"), ...classAttendanceSummaryRows(data.discipleshipClasses, "discipleship")],
     },
     absences: {
       title: "Faltosos recentes",
