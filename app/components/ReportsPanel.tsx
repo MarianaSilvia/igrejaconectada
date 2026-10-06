@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { birthdayDateThisYear, whatsappUrl } from "../app-helpers";
+import { birthdayDateThisYear, normalizeSearchText, whatsappUrl } from "../app-helpers";
 import { printableDocumentDefinitions, type PrintableDocumentKind } from "../document-templates";
 import { canAccessModule, type AccessRole } from "../permissions";
 import type { AppData, ChurchEvent, MemberRecord, ReportKind } from "../types";
@@ -46,6 +46,7 @@ export function ReportsPanel({
   weekEvents,
 }: ReportsPanelProps) {
   const [documentKind, setDocumentKind] = useState<PrintableDocumentKind>("member-file");
+  const [documentSearch, setDocumentSearch] = useState("");
   const selectedDocument = printableDocumentDefinitions.find((document) => document.kind === documentKind) ?? printableDocumentDefinitions[0];
   const documentTargets = useMemo(() => {
     if (selectedDocument.target === "kid") {
@@ -66,8 +67,13 @@ export function ReportsPanel({
 
     return data.members.map((member) => ({ id: member.id, label: member.fullName }));
   }, [data.kids, data.members, documentKind, selectedDocument.target]);
+  const visibleDocumentTargets = useMemo(() => {
+    const search = normalizeSearchText(documentSearch);
+    if (!search) return documentTargets;
+    return documentTargets.filter((target) => normalizeSearchText(target.label).includes(search));
+  }, [documentSearch, documentTargets]);
   const [documentTargetId, setDocumentTargetId] = useState("");
-  const selectedTargetId = documentTargets.some((target) => target.id === documentTargetId) ? documentTargetId : (documentTargets[0]?.id ?? "");
+  const selectedTargetId = visibleDocumentTargets.some((target) => target.id === documentTargetId) ? documentTargetId : (visibleDocumentTargets[0]?.id ?? "");
   const canGenerateDocuments = currentAccessRole === "Administrador" || currentAccessRole === "Secretario";
   const congregationOptions = useMemo(() => {
     const congregations = new Set<string>();
@@ -251,6 +257,7 @@ export function ReportsPanel({
               <select
                 onChange={(event) => {
                   setDocumentKind(event.target.value as PrintableDocumentKind);
+                  setDocumentSearch("");
                   setDocumentTargetId("");
                 }}
                 value={documentKind}
@@ -263,9 +270,13 @@ export function ReportsPanel({
               </select>
             </label>
             <label>
+              Buscar
+              <input onChange={(event) => setDocumentSearch(event.target.value)} placeholder="Digite o nome" value={documentSearch} />
+            </label>
+            <label>
               {selectedDocument.target === "kid" ? "Criança" : "Membro"}
               <select onChange={(event) => setDocumentTargetId(event.target.value)} value={selectedTargetId}>
-                {documentTargets.map((target) => (
+                {visibleDocumentTargets.map((target) => (
                   <option key={target.id} value={target.id}>
                     {target.label}
                   </option>
@@ -277,6 +288,7 @@ export function ReportsPanel({
             </button>
           </div>
           {!documentTargets.length && <p className="empty-state">Nenhum cadastro disponível para este modelo.</p>}
+          {documentTargets.length > 0 && !visibleDocumentTargets.length && <p className="empty-state">Nenhum cadastro encontrado com esse nome.</p>}
         </article>
       )}
 
