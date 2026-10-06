@@ -148,6 +148,13 @@ export function ContactLeadershipPanel({ openPastoral }: ContactLeadershipPanelP
     if (filter === "closed") return thread.status === "closed";
     return true;
   }), [currentUserId, filter, threads]);
+  const unreadThreads = threads.filter((thread) => thread.unread).length;
+  const openThreads = threads.filter((thread) => thread.status !== "closed").length;
+  const unassignedThreads = threads.filter((thread) => thread.status === "unassigned").length;
+  const assignedToMeThreads = threads.filter((thread) => thread.assignedUserId === currentUserId && thread.status !== "closed").length;
+  const waitingLeadershipThreads = threads.filter((thread) => thread.status === "waiting_leadership" || thread.status === "unassigned").length;
+  const waitingMemberThreads = threads.filter((thread) => thread.status === "waiting_member").length;
+  const closedThreads = threads.filter((thread) => thread.status === "closed").length;
 
   const loadContacts = useCallback(async (threadId: string, options?: { quiet?: boolean }) => {
     if (!isSupabaseConfigured()) {
@@ -322,7 +329,52 @@ export function ContactLeadershipPanel({ openPastoral }: ContactLeadershipPanelP
       </article>
 
       <article className="surface contact-inbox">
-        <div className="panel-heading"><h2>{isStaff ? "Caixa de atendimento" : "Minhas conversas"}</h2><span>{threads.filter((thread) => thread.unread).length} não lidas</span></div>
+        <div className="panel-heading"><h2>{isStaff ? "Caixa de atendimento" : "Minhas conversas"}</h2><span>{unreadThreads} não lidas</span></div>
+        <div className="contact-summary-grid" aria-label="Resumo das conversas">
+          <div>
+            <strong>{openThreads}</strong>
+            <span>Em aberto</span>
+          </div>
+          <div>
+            <strong>{unreadThreads}</strong>
+            <span>Não lidas</span>
+          </div>
+          {isStaff ? (
+            <>
+              <div>
+                <strong>{unassignedThreads}</strong>
+                <span>Para encaminhar</span>
+              </div>
+              <div>
+                <strong>{assignedToMeThreads}</strong>
+                <span>Minhas</span>
+              </div>
+              <div>
+                <strong>{waitingMemberThreads}</strong>
+                <span>Aguardando membro</span>
+              </div>
+              <div>
+                <strong>{closedThreads}</strong>
+                <span>Concluídas</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <strong>{waitingLeadershipThreads}</strong>
+                <span>Aguardando liderança</span>
+              </div>
+              <div>
+                <strong>{waitingMemberThreads}</strong>
+                <span>Aguardando você</span>
+              </div>
+              <div>
+                <strong>{closedThreads}</strong>
+                <span>Concluídas</span>
+              </div>
+            </>
+          )}
+        </div>
         <div className="contact-tabs" role="tablist" aria-label="Filtros de conversa">
           <button className={filter === "open" ? "active" : ""} onClick={() => setFilter("open")} type="button">Em aberto</button>
           {isStaff && <button className={filter === "unassigned" ? "active" : ""} onClick={() => setFilter("unassigned")} type="button">Encaminhar</button>}
