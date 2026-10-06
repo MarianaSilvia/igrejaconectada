@@ -49,24 +49,28 @@ export function ReportsPanel({
   const [documentSearch, setDocumentSearch] = useState("");
   const selectedDocument = printableDocumentDefinitions.find((document) => document.kind === documentKind) ?? printableDocumentDefinitions[0];
   const documentTargets = useMemo(() => {
+    const matchesDocumentScope = (congregation?: string) => reportCongregationFilter === "Todas" || congregation === reportCongregationFilter;
+
     if (selectedDocument.target === "kid") {
-      return data.kids.map((kid) => ({ id: kid.id, label: kid.childName }));
+      return data.kids.filter((kid) => matchesDocumentScope(kid.congregation)).map((kid) => ({ id: kid.id, label: kid.childName }));
     }
 
+    const scopedDocumentMembers = data.members.filter((member) => matchesDocumentScope(member.congregation));
+
     if (documentKind === "school-certificate") {
-      return data.members
+      return scopedDocumentMembers
         .filter((member) => member.schoolClassId)
         .map((member) => ({ id: member.id, label: member.fullName }));
     }
 
     if (documentKind === "discipleship-certificate") {
-      return data.members
+      return scopedDocumentMembers
         .filter((member) => member.discipleshipClassId)
         .map((member) => ({ id: member.id, label: member.fullName }));
     }
 
-    return data.members.map((member) => ({ id: member.id, label: member.fullName }));
-  }, [data.kids, data.members, documentKind, selectedDocument.target]);
+    return scopedDocumentMembers.map((member) => ({ id: member.id, label: member.fullName }));
+  }, [data.kids, data.members, documentKind, reportCongregationFilter, selectedDocument.target]);
   const visibleDocumentTargets = useMemo(() => {
     const search = normalizeSearchText(documentSearch);
     if (!search) return documentTargets;
@@ -287,7 +291,11 @@ export function ReportsPanel({
               Gerar PDF / Imprimir
             </button>
           </div>
-          {!documentTargets.length && <p className="empty-state">Nenhum cadastro disponível para este modelo.</p>}
+          {!documentTargets.length && (
+            <p className="empty-state">
+              Nenhum cadastro disponível para este modelo{reportCongregationFilter !== "Todas" ? ` em ${reportCongregationFilter}` : ""}.
+            </p>
+          )}
           {documentTargets.length > 0 && !visibleDocumentTargets.length && <p className="empty-state">Nenhum cadastro encontrado com esse nome.</p>}
         </article>
       )}
