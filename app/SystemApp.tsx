@@ -4752,6 +4752,7 @@ export default function Home() {
               canCreateNotice={canCreateSchoolNotice}
               canManage={canManageModule(currentAccessRole, "school")}
               classes={data.schoolClasses}
+              attendanceSessions={data.attendanceSessions}
               createNotice={createSchoolNotice}
               members={data.members}
               noticeForm={schoolNoticeForm}
@@ -4770,6 +4771,7 @@ export default function Home() {
               canCreateNotice={canCreateDiscipleshipNotice}
               canManage={canManageModule(currentAccessRole, "discipleship")}
               classes={data.discipleshipClasses}
+              attendanceSessions={data.attendanceSessions}
               createNotice={createDiscipleshipNotice}
               members={data.members}
               noticeForm={discipleshipNoticeForm}

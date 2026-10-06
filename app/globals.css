@@ -5337,6 +5337,35 @@ textarea:focus {
   height: 100%;
 }
 
+.class-attendance-meter {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+  max-width: 360px;
+}
+
+.class-attendance-meter span,
+.class-attendance-meter strong {
+  color: rgba(245, 248, 255, 0.9);
+  font-size: 12px;
+}
+
+.class-attendance-meter i {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  display: block;
+  height: 7px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.class-attendance-meter b {
+  background: linear-gradient(90deg, #14d9c4, #48b8ff);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
 .floating-contact-button {
   border-radius: 999px;
   bottom: 24px;

@@ -1,6 +1,6 @@
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { classWhatsappRecipients } from "../communication-helpers";
-import type { MemberRecord, SchoolClass } from "../types";
+import type { AttendanceSession, MemberRecord, SchoolClass } from "../types";
 
 type ClassNoticeForm = {
   classId: string;
@@ -13,6 +13,7 @@ type ClassModulePanelProps = {
   canCreateNotice: boolean;
   canManage: boolean;
   classes: SchoolClass[];
+  attendanceSessions: AttendanceSession[];
   createNotice: () => void;
   members: MemberRecord[];
   noticeForm: ClassNoticeForm;
@@ -29,6 +30,7 @@ export function ClassModulePanel({
   canCreateNotice,
   canManage,
   classes,
+  attendanceSessions,
   createNotice,
   members,
   noticeForm,
@@ -39,6 +41,19 @@ export function ClassModulePanel({
   whatsappPlaceholder,
   openClassWhatsapp,
 }: ClassModulePanelProps) {
+  const attendanceArea = areaLabel === "EBD" ? "school" : "discipleship";
+  const linkedMembersForClass = (classRecord: SchoolClass) =>
+    members.filter((member) => (attendanceArea === "school" ? member.schoolClassId === classRecord.id : member.discipleshipClassId === classRecord.id));
+  const attendanceSummaryForClass = (classRecord: SchoolClass) => {
+    const classMemberIds = new Set(linkedMembersForClass(classRecord).map((member) => member.id));
+    const sessions = attendanceSessions.filter((session) => session.area === attendanceArea && session.classId === classRecord.id);
+    const records = sessions.flatMap((session) => session.records).filter((record) => classMemberIds.has(record.memberId));
+    const present = records.filter((record) => record.status === "Presente").length;
+    const rate = records.length ? Math.round((present / records.length) * 100) : 0;
+
+    return { records: records.length, sessions: sessions.length, present, rate };
+  };
+
   return (
     <section className="content-grid">
       {canManage && (
@@ -90,14 +105,29 @@ export function ClassModulePanel({
           <span>{classes.length} classes</span>
         </div>
         <div className="row-list">
-          {classes.map((classRecord) => (
+          {classes.map((classRecord) => {
+            const linkedMembers = linkedMembersForClass(classRecord);
+            const summary = attendanceSummaryForClass(classRecord);
+
+            return (
             <div className="data-row class-row" key={classRecord.id}>
-              <span className="date-box">{classRecord.students}</span>
+              <span className="date-box">{linkedMembers.length}</span>
               <div>
                 <strong>{classRecord.name}</strong>
                 <small>
                   Professor: {classRecord.teacher} - Próxima aula: {classRecord.nextLesson}
                 </small>
+                <small>
+                  {linkedMembers.length} aluno{linkedMembers.length === 1 ? "" : "s"} vinculado{linkedMembers.length === 1 ? "" : "s"} - {summary.sessions} chamada
+                  {summary.sessions === 1 ? "" : "s"} registrada{summary.sessions === 1 ? "" : "s"}
+                </small>
+                <span className="class-attendance-meter">
+                  <span>Frequência da turma</span>
+                  <strong>{summary.records ? `${summary.rate}%` : "Sem chamada"}</strong>
+                  <i aria-hidden="true">
+                    <b style={{ width: `${summary.rate}%` }} />
+                  </i>
+                </span>
                 {canManage && <small>{classWhatsappRecipients(members, classRecord, areaLabel).length} contatos de WhatsApp encontrados</small>}
                 <div className="notice-stack">
                   {classRecord.notices.length === 0 ? (
@@ -113,7 +143,8 @@ export function ClassModulePanel({
                 {renderAttendancePanel(classRecord)}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </article>
     </section>
