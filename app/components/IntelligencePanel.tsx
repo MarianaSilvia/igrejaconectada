@@ -770,10 +770,13 @@ function buildGovernanceItems({
   const incompleteMembers = data.members.filter(isMissingMemberData);
   const membersWithoutPhotoConsent = data.members.filter((member) => member.photoUrl && !member.photoConsent);
   const registrationsWithoutConsent = data.registrationRequests.filter((request) => !request.privacyConsent);
+  const registrationsMissingContact = data.registrationRequests.filter((request) => request.status !== "Aprovado" && (!request.phone || !request.email));
   const pendingOrBlockedUsers = data.users.filter((user) => user.status !== "Ativo");
   const publicMuralWithExternalLink = data.mural.filter((item) => item.published && item.socialUrl);
   const membersWithoutCongregation = data.members.filter((member) => !member.congregation);
   const careWithSensitiveNotes = data.careRequests.filter((request) => request.summary.length > 120 || request.returnNote.length > 120);
+  const openCareRequests = data.careRequests.filter((request) => request.status !== "Concluido");
+  const careWithoutOwnerOrSchedule = openCareRequests.filter((request) => !request.responsible || !request.scheduleDate);
   const todayKey = dateAfterDays(0);
   const upcomingEvents = data.events.filter((event) => event.date >= todayKey && event.status !== "Concluido");
   const internalUpcomingEvents = upcomingEvents.filter((event) => !event.published);
@@ -803,6 +806,13 @@ function buildGovernanceItems({
       title: "Consentimento LGPD",
     },
     {
+      count: registrationsMissingContact.length,
+      description: "Pré-cadastros pendentes sem telefone ou e-mail dificultam confirmação, login e retorno da secretaria.",
+      module: "overview",
+      status: registrationsMissingContact.length ? "Atenção" : "Em dia",
+      title: "Contato no pré-cadastro",
+    },
+    {
       count: pendingOrBlockedUsers.length,
       description: "Acessos pendentes ou bloqueados precisam ser conferidos periodicamente.",
       module: "users",
@@ -829,6 +839,13 @@ function buildGovernanceItems({
       module: "pastoral",
       status: careWithSensitiveNotes.length ? "Revisar" : "Em dia",
       title: "Notas pastorais sensíveis",
+    },
+    {
+      count: careWithoutOwnerOrSchedule.length,
+      description: "Pedidos pastorais abertos precisam ter responsável e agenda para não ficarem parados na fila.",
+      module: "pastoral",
+      status: careWithoutOwnerOrSchedule.length ? "Atenção" : "Em dia",
+      title: "Encaminhamento pastoral",
     },
     {
       count: internalUpcomingEvents.length,
