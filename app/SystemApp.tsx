@@ -180,7 +180,7 @@ const initialData: AppData = {
       responsible: "Pr. Marcos",
       scheduleDate: "2026-09-04",
       scheduleTime: "19:30",
-      summary: "Solicitou conversa com a lideranca sobre acompanhamento familiar.",
+      summary: "Solicitou conversa com a liderança sobre acompanhamento familiar.",
       returnNote: "Confirmar presenca um dia antes e registrar encaminhamento.",
       createdAt: "2026-09-01T18:20:00.000Z",
       updatedAt: "2026-09-02T12:10:00.000Z",
@@ -203,7 +203,7 @@ const initialData: AppData = {
   events: [
     {
       id: "event-1",
-      title: "Culto da familia",
+      title: "Culto da família",
       date: "2026-09-06",
       time: "19:00",
       ministry: "Todos",
@@ -220,8 +220,8 @@ const initialData: AppData = {
       date: "2026-09-12",
       time: "18:30",
       ministry: "Jovens",
-      location: "Auditorio",
-      responsible: "Lider Ana",
+      location: "Auditório",
+      responsible: "Líder Ana",
       description: "Programação especial para jovens e visitantes.",
       published: true,
       recurrence: "Unico",
@@ -229,7 +229,7 @@ const initialData: AppData = {
     },
     {
       id: "event-3",
-      title: "Escola Biblica",
+      title: "Escola Bíblica",
       date: "2026-09-13",
       time: "09:00",
       ministry: "EBD",
@@ -244,10 +244,10 @@ const initialData: AppData = {
   notices: [
     {
       id: "notice-1",
-      title: "Agenda de setembro disponivel",
-      body: "Lideres ja podem conferir e ajustar a agenda mensal.",
+      title: "Agenda de setembro disponível",
+      body: "Líderes já podem conferir e ajustar a agenda mensal.",
       status: "Publicado",
-      audience: "Lideres",
+      audience: "Líderes",
       channel: "App",
       retentionDays: 7,
       expiresAt: "2026-09-09",
@@ -266,7 +266,7 @@ const initialData: AppData = {
   mural: [
     {
       id: "mural-1",
-      title: "Campanha de arrecadacao",
+      title: "Campanha de arrecadação",
       category: "Ação social",
       published: true,
       featured: true,
@@ -278,7 +278,7 @@ const initialData: AppData = {
     {
       id: "mural-2",
       title: "Encontro de casais",
-      category: "Familia",
+      category: "Família",
       published: true,
       featured: false,
       expiresAt: "2026-09-18",
@@ -330,10 +330,10 @@ const initialData: AppData = {
       gender: "Feminino",
       status: "Membro ativo",
       memberType: "Membro",
-      role: "Lider de familia",
+      role: "Líder de família",
       categories: "Membro",
-      ministry: "Familia",
-      ministries: ["Familia"],
+      ministry: "Família",
+      ministries: ["Família"],
       ministerialFunction: "Auxiliar oficial",
       schoolClassId: "class-adults",
       discipleshipClassId: "",
@@ -464,7 +464,7 @@ const initialData: AppData = {
       name: "Classe adultos",
       teacher: "Pr. Marcos",
       students: 34,
-      nextLesson: "Familia, discipulado e servico",
+      nextLesson: "Família, discipulado e serviço",
       notices: [
         {
           id: "school-notice-1",
@@ -481,7 +481,7 @@ const initialData: AppData = {
     {
       id: "class-youth",
       name: "Classe jovens",
-      teacher: "Lider Ana",
+      teacher: "Líder Ana",
       students: 22,
       nextLesson: "Identidade crista",
       notices: [],
@@ -518,7 +518,7 @@ const initialData: AppData = {
     {
       id: "discipleship-leaders",
       name: "Discipulado 2",
-      teacher: "Lider Ana",
+      teacher: "Líder Ana",
       students: 8,
       nextLesson: "Acompanhamento e cuidado",
       notices: [],
@@ -546,7 +546,7 @@ const initialData: AppData = {
     {
       id: "ministry-2",
       name: "Jovens",
-      leader: "Lider Ana",
+      leader: "Líder Ana",
       assistant: "Rafael Costa",
       meetingDay: "Sabado",
       volunteers: 22,
@@ -570,7 +570,7 @@ const initialData: AppData = {
       date: "2026-09-06",
       type: "Oferta",
       category: "Culto",
-      description: "Oferta do culto da familia",
+      description: "Oferta do culto da família",
       amount: 0,
       method: "Dinheiro/Pix",
       status: "Pendente",
@@ -619,7 +619,7 @@ const memberRoleOptions = [
   "Professor",
   "Dirigente",
   "Vice-dirigente",
-  "Lider da igreja",
+  "Líder da igreja",
   "Vice-lider da igreja",
   "Pastor",
   "Secretaria",
@@ -984,7 +984,7 @@ export default function Home() {
       if (response.status === 409) {
         setSaveState("conflict");
         setRemoteUpdatedAt(result.updatedAt ?? remoteUpdatedAt);
-        setSyncStatus("Existe uma versao mais recente na base. Recarregue os dados antes de continuar editando.");
+        setSyncStatus("Existe uma versão mais recente na base. Recarregue os dados antes de continuar editando.");
         return false;
       }
 
@@ -2416,7 +2416,7 @@ export default function Home() {
       if (currentId !== request.id) return currentId;
       return filteredCareRequests.find((item) => item.id !== request.id)?.id ?? "";
     });
-    setSyncStatus(`Atendimento pastoral de ${request.member} excluido.`);
+    setSyncStatus(`Atendimento pastoral de ${request.member} excluído.`);
   }
 
   function toggleMural(id: string, field: "published" | "featured") {
@@ -2592,7 +2592,7 @@ export default function Home() {
     }
 
     setData((current) => deleteAccessUserData(current, user, uid));
-    setSyncStatus(`Acesso de ${user.name} excluido.`);
+    setSyncStatus(`Acesso de ${user.name} excluído.`);
   }
 
   async function createMember() {
@@ -2610,7 +2610,7 @@ export default function Home() {
       );
 
       if (exactDuplicate) {
-        setSyncStatus(`Possivel duplicidade: ${exactDuplicate.fullName} ja possui este CPF ou telefone. Use "Atualizar cadastro existente".`);
+        setSyncStatus(`Possível duplicidade: ${exactDuplicate.fullName} já possui este CPF ou telefone. Use "Atualizar cadastro existente".`);
         return;
       }
     }
@@ -2620,7 +2620,7 @@ export default function Home() {
     const reviewedRegistrationId = memberFormRegistrationId;
 
     if (reviewedRegistrationId) {
-      const updated = await updateRegistrationRequestStatus(reviewedRegistrationId, "Aprovado", "Aprovado com edicao da ficha");
+      const updated = await updateRegistrationRequestStatus(reviewedRegistrationId, "Aprovado", "Aprovado com edição da ficha");
       if (!updated) return;
     }
 
@@ -2636,7 +2636,7 @@ export default function Home() {
                 ...request,
                 status: "Aprovado",
                 reviewedAt: new Date().toISOString(),
-                reviewNote: "Aprovado com edicao da ficha",
+                reviewNote: "Aprovado com edição da ficha",
               }
             : request,
         ),
@@ -3001,13 +3001,13 @@ export default function Home() {
       status: event.status,
     });
     setEditingEventId(event.id);
-    setSyncStatus(`Evento selecionado para edicao: ${event.title}.`);
+    setSyncStatus(`Evento selecionado para edição: ${event.title}.`);
   }
 
   function duplicateEvent(event: ChurchEvent) {
     if (!requireModuleAccess("events", "duplicar eventos")) return;
     setEventForm({
-      title: `${event.title} - copia`,
+      title: `${event.title} - cópia`,
       date: event.date,
       time: event.time,
       ministry: event.ministry,
@@ -3019,7 +3019,7 @@ export default function Home() {
       status: "Programado",
     });
     setEditingEventId(null);
-    setSyncStatus(`Evento duplicado no formulario: ${event.title}. Ajuste a data e salve.`);
+    setSyncStatus(`Evento duplicado no formulário: ${event.title}. Ajuste a data e salve.`);
     window.setTimeout(() => document.querySelector(".editing-surface, .surface")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
   }
 
@@ -3080,7 +3080,7 @@ export default function Home() {
     setData((current) => upsertAssetData(current, assetForm, editingAssetId, uid));
     setAssetForm(blankAsset);
     setEditingAssetId(null);
-    setSyncStatus(editingAssetId ? "Patrimonio atualizado." : "Patrimonio cadastrado.");
+    setSyncStatus(editingAssetId ? "Patrimônio atualizado." : "Patrimônio cadastrado.");
   }
 
   function editAsset(asset: AssetRecord) {
@@ -3169,7 +3169,7 @@ export default function Home() {
       notes: ministry.notes,
     });
     setEditingMinistryId(ministry.id);
-    setSyncStatus(`Grupo selecionado para edicao: ${ministry.name}.`);
+    setSyncStatus(`Grupo selecionado para edição: ${ministry.name}.`);
   }
 
   function cancelMinistryEdit() {

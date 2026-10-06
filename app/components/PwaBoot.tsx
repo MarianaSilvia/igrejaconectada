@@ -34,7 +34,7 @@ export function PwaBoot() {
 
   return (
     <div className="pwa-update-banner" role="status">
-      <span>Nova versao disponivel.</span>
+      <span>Nova versão disponível.</span>
       <button onClick={() => window.location.reload()} type="button">
         Atualizar app
       </button>

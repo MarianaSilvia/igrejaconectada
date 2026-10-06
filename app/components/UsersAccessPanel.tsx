@@ -70,7 +70,7 @@ export function UsersAccessPanel({
           )}
           <label className="full">
             Nome
-            <input onChange={(event) => setUserForm((form) => ({ ...form, name: event.target.value }))} placeholder="Ex.: Lider de jovens" value={userForm.name} />
+            <input onChange={(event) => setUserForm((form) => ({ ...form, name: event.target.value }))} placeholder="Ex.: Líder de jovens" value={userForm.name} />
           </label>
           <label className="full">
             E-mail

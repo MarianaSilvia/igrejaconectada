@@ -199,7 +199,7 @@ export function deleteVisitorData(data: AppData, visitor: VisitorRecord, createI
   return {
     ...data,
     visitors: data.visitors.filter((item) => item.id !== visitor.id),
-    audit: [auditItem(createId, `Visitante excluido: ${visitor.fullName}`), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, `Visitante excluído: ${visitor.fullName}`), ...data.audit].slice(0, 12),
   };
 }
 
@@ -280,7 +280,7 @@ export function deleteEventData(data: AppData, event: ChurchEvent, createId: IdF
   return {
     ...data,
     events: data.events.filter((item) => item.id !== event.id),
-    audit: [auditItem(createId, `Evento excluido da agenda: ${event.title}`), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, `Evento excluído da agenda: ${event.title}`), ...data.audit].slice(0, 12),
   };
 }
 
@@ -324,7 +324,7 @@ export function deleteCareRequestData(data: AppData, request: CareRequest, creat
   return {
     ...data,
     careRequests: data.careRequests.filter((item) => item.id !== request.id),
-    audit: [auditItem(createId, `Atendimento pastoral excluido: ${request.member}`), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, `Atendimento pastoral excluído: ${request.member}`), ...data.audit].slice(0, 12),
   };
 }
 
@@ -349,7 +349,7 @@ export function deleteMuralItemData(data: AppData, item: MuralItem, createId: Id
   return {
     ...data,
     mural: data.mural.filter((muralItem) => muralItem.id !== item.id),
-    audit: [auditItem(createId, `Item excluido do mural: ${item.title}`), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, `Item excluído do mural: ${item.title}`), ...data.audit].slice(0, 12),
   };
 }
 
@@ -366,7 +366,7 @@ export function deleteNoticeData(data: AppData, notice: Notice, createId: IdFact
   return {
     ...data,
     notices: data.notices.filter((item) => item.id !== notice.id),
-    audit: [auditItem(createId, `Aviso excluido: ${notice.title}`), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, `Aviso excluído: ${notice.title}`), ...data.audit].slice(0, 12),
   };
 }
 
@@ -408,7 +408,7 @@ export function deleteMinistryData(data: AppData, ministry: MinistryRecord, crea
       return { ...member, ministry: ministries[0] ?? "", ministries };
     }),
     events: data.events.map((event) => (event.ministry === ministry.name ? { ...event, ministry: "Todos" } : event)),
-    audit: [auditItem(createId, `Grupo excluido: ${ministry.name}`), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, `Grupo excluído: ${ministry.name}`), ...data.audit].slice(0, 12),
   };
 }
 
@@ -427,7 +427,7 @@ export function upsertTransactionData(
     audit: [
       auditItem(
         createId,
-        editingTransactionId ? `Lancamento financeiro atualizado: ${transaction.description}` : `Lancamento financeiro criado: ${transaction.description}`,
+        editingTransactionId ? `Lançamento financeiro atualizado: ${transaction.description}` : `Lançamento financeiro criado: ${transaction.description}`,
       ),
       ...data.audit,
     ].slice(0, 12),
@@ -438,7 +438,7 @@ export function deleteTransactionData(data: AppData, transaction: TransactionRec
   return {
     ...data,
     transactions: data.transactions.filter((item) => item.id !== transaction.id),
-    audit: [auditItem(createId, `Lancamento financeiro excluido: ${transaction.description}`), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, `Lançamento financeiro excluído: ${transaction.description}`), ...data.audit].slice(0, 12),
   };
 }
 
@@ -447,7 +447,7 @@ export function upsertAssetData(data: AppData, form: AssetForm, editingAssetId: 
   return {
     ...data,
     assets: editingAssetId ? data.assets.map((item) => (item.id === editingAssetId ? asset : item)) : [asset, ...data.assets],
-    audit: [auditItem(createId, editingAssetId ? `Patrimonio atualizado: ${asset.name}` : `Patrimonio cadastrado: ${asset.name}`), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, editingAssetId ? `Patrimônio atualizado: ${asset.name}` : `Patrimônio cadastrado: ${asset.name}`), ...data.audit].slice(0, 12),
   };
 }
 
@@ -455,7 +455,7 @@ export function deleteAssetData(data: AppData, asset: AssetRecord, createId: IdF
   return {
     ...data,
     assets: data.assets.filter((item) => item.id !== asset.id),
-    audit: [auditItem(createId, `Patrimonio excluido: ${asset.name}`), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, `Patrimônio excluído: ${asset.name}`), ...data.audit].slice(0, 12),
   };
 }
 
@@ -489,7 +489,7 @@ export function deleteDevotionalData(data: AppData, devotional: DevotionalRecord
   return {
     ...data,
     devotionals: data.devotionals.filter((item) => item.id !== devotional.id),
-    audit: [auditItem(createId, `Devocional excluido: ${devotional.title}`), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, `Devocional excluído: ${devotional.title}`), ...data.audit].slice(0, 12),
   };
 }
 
@@ -527,6 +527,6 @@ export function deleteAccessUserData(data: AppData, user: AccessUser, createId: 
     members: data.members.map((member) =>
       member.authUserId === user.id || member.email.toLowerCase() === user.email.toLowerCase() ? { ...member, authUserId: "" } : member,
     ),
-    audit: [auditItem(createId, `Acesso excluido: ${user.name}`), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, `Acesso excluído: ${user.name}`), ...data.audit].slice(0, 12),
   };
 }
