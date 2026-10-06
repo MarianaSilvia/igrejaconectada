@@ -35,6 +35,7 @@ export default async function PublicAgendaPage({ searchParams }: { searchParams?
                   <small>{event.ministry || "Igreja"} - {event.status}</small>
                   <small>{event.location || "Local não informado"}</small>
                   {event.responsible && <small>Responsável: {event.responsible}</small>}
+                  {event.description && <small>{event.description}</small>}
                 </div>
               </div>
             ))}

@@ -6,7 +6,7 @@ type JsonRecord = Record<string, unknown>;
 
 export type PublicMuralItem = Pick<MuralItem, "id" | "title" | "category" | "expiresAt" | "imageDataUrl" | "bannerUrl" | "socialUrl" | "featured">;
 
-export type PublicAgendaEvent = Pick<ChurchEvent, "id" | "title" | "date" | "time" | "ministry" | "location" | "responsible" | "status">;
+export type PublicAgendaEvent = Pick<ChurchEvent, "id" | "title" | "date" | "time" | "ministry" | "location" | "responsible" | "description" | "status">;
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -51,6 +51,7 @@ function eventFromRecord(record: JsonRecord): ChurchEvent {
     ministry: textValue(record.ministry, 120),
     location: textValue(record.location, 180),
     responsible: textValue(record.responsible, 180),
+    description: textValue(record.description, 500),
     recurrence: "Unico",
     status: status === "Confirmado" || status === "Concluido" ? status : "Programado",
   };
@@ -109,6 +110,7 @@ export async function getPublicAgenda(date = currentDateKey()) {
       ministry: event.ministry,
       location: event.location,
       responsible: event.responsible,
+      description: event.description,
       status: event.status,
     }));
 

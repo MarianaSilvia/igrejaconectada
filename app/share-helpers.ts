@@ -40,6 +40,7 @@ export function agendaEventShareText(event: ChurchEvent, url: string) {
     event.ministry ? `Grupo: ${event.ministry}` : "",
     event.location ? `Local: ${event.location}` : "",
     event.responsible ? `Responsável: ${event.responsible}` : "",
+    event.description ? `Observação: ${event.description}` : "",
     `Confira a agenda: ${url}`,
   ]
     .filter(Boolean)
@@ -48,7 +49,7 @@ export function agendaEventShareText(event: ChurchEvent, url: string) {
 
 export function dailyAgendaShareText(events: ChurchEvent[], url: string) {
   const eventLines = events.length
-    ? events.map((event) => `- ${event.time || "Sem horário"} | ${event.title}${event.location ? ` | ${event.location}` : ""}`)
+    ? events.map((event) => `- ${event.time || "Sem horário"} | ${event.title}${event.location ? ` | ${event.location}` : ""}${event.description ? ` | ${event.description}` : ""}`)
     : ["Nenhum evento publicado para hoje."];
 
   return ["Igreja Conectada", "Agenda de hoje", ...eventLines, `Veja a agenda: ${url}`].join("\n");

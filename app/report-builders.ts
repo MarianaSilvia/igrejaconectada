@@ -215,7 +215,7 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
     },
     agenda: {
       title: "Agenda semanal",
-      headers: ["Data", "Horário", "Evento", "Grupo", "Local", "Responsável", "Status"],
+      headers: ["Data", "Horário", "Evento", "Grupo", "Local", "Responsável", "Descrição", "Status"],
       rows: scopedEvents.map((event) => [
         formatDate(event.date),
         event.time || "Sem horário",
@@ -223,6 +223,7 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
         event.ministry,
         event.location,
         event.responsible,
+        event.description,
         event.status,
       ]),
     },

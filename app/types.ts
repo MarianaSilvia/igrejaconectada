@@ -29,6 +29,7 @@ export type ChurchEvent = {
   ministry: string;
   location: string;
   responsible: string;
+  description: string;
   recurrence: "Unico" | "Semanal" | "Mensal";
   status: "Programado" | "Confirmado" | "Concluido";
 };
