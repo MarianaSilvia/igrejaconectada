@@ -296,6 +296,8 @@ export type ReportKind =
   | "birthdays"
   | "kids"
   | "agenda"
+  | "registrationRequests"
+  | "careRequests"
   | "attendance"
   | "schoolRoster"
   | "discipleshipRoster"

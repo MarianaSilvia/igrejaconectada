@@ -36,6 +36,18 @@ function percentage(value: number, total: number) {
   return `${Math.round((value / total) * 100)}%`;
 }
 
+function careStatusLabel(status: string) {
+  if (status === "Em analise") return "Em análise";
+  if (status === "Concluido") return "Concluído";
+  return status;
+}
+
+function registrationStatusLabel(status: string) {
+  if (status === "Aguardando aprovacao") return "Aguardando aprovação";
+  if (status === "Em analise") return "Em análise";
+  return status;
+}
+
 function hasDateRange(dateRange?: ReportDateRange) {
   return Boolean(dateRange?.startDate || dateRange?.endDate);
 }
@@ -255,6 +267,41 @@ export function buildReportDefinition({ data, kind, weekEvents, monthlyBirthdays
         event.published ? "Público" : "Interno",
         event.status,
       ]),
+    },
+    registrationRequests: {
+      title: "Pré-cadastros",
+      headers: ["Criado em", "Nome", "Telefone", "E-mail", "Congregação", "Tipo solicitado", "Origem", "Status", "Consentimento", "Revisado em", "Observação"],
+      rows: scopedRegistrations.map((request) => [
+        formatDate(request.createdAt.slice(0, 10)),
+        request.fullName,
+        request.phone,
+        request.email,
+        request.congregation || "Não informada",
+        request.requestedStatus,
+        request.registrationSource,
+        registrationStatusLabel(request.status),
+        request.privacyConsent ? `Aceito em ${formatDate(request.privacyConsentAt.slice(0, 10))}` : "Pendente",
+        request.reviewedAt ? formatDate(request.reviewedAt.slice(0, 10)) : "Sem revisão",
+        request.reviewNote || request.notes,
+      ]),
+    },
+    careRequests: {
+      title: "Atendimentos pastorais",
+      headers: ["Criado em", "Membro", "Telefone", "Categoria", "Congregação", "Status", "Responsável", "Agenda", "Resumo", "Retorno"],
+      rows: scopedCareRequests
+        .filter((request) => !scopedByDate || isDateInRange(request.createdAt, dateRange) || isDateInRange(request.scheduleDate, dateRange))
+        .map((request) => [
+          formatDate(request.createdAt.slice(0, 10)),
+          request.member,
+          request.phone,
+          request.category,
+          request.congregation || "Não informada",
+          careStatusLabel(request.status),
+          request.responsible || "Sem responsável",
+          request.scheduleDate ? `${formatDate(request.scheduleDate)} ${request.scheduleTime || ""}`.trim() : "Sem agenda",
+          request.summary,
+          request.returnNote,
+        ]),
     },
     attendance: {
       title: "Presença EBD e Discipulado",

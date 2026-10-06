@@ -149,6 +149,10 @@ export function ReportsPanel({
   const scopedKids = data.kids.filter((kid) => belongsToReportScope(kid.congregation));
   const eventSource = reportHasPeriod ? data.events : weekEvents;
   const scopedWeekEvents = eventSource.filter((event) => belongsToReportScope(event.congregation) && isDateInReportPeriod(event.date));
+  const scopedRegistrationRequests = data.registrationRequests.filter((request) => belongsToReportScope(request.congregation) && isDateInReportPeriod(request.createdAt));
+  const scopedCareRequests = data.careRequests.filter(
+    (request) => belongsToReportScope(request.congregation) && (!reportHasPeriod || isDateInReportPeriod(request.createdAt) || isDateInReportPeriod(request.scheduleDate)),
+  );
   const birthdaySource = reportHasPeriod ? scopedMembers : monthlyBirthdays;
   const scopedMonthlyBirthdays = birthdaySource.filter((member) => belongsToReportScope(member.congregation) && isBirthdayInReportPeriod(member.birthDate));
   const scopedAbsentRows = reportIsScoped
@@ -173,6 +177,8 @@ export function ReportsPanel({
     ["birthdays", "Aniversariantes", `${scopedMonthlyBirthdays.length} no mês`],
     ["kids", "Área Kids", `${scopedKids.length} crianças`],
     ["agenda", "Agenda semanal", `${scopedWeekEvents.length} eventos na semana`],
+    ["registrationRequests", "Pré-cadastros", `${scopedRegistrationRequests.length} solicitações`],
+    ["careRequests", "Atendimento pastoral", `${scopedCareRequests.length} pedidos`],
     ["attendance", "Presença EBD/Discipulado", `${scopedAttendanceCount} chamadas`],
     ["schoolRoster", "Turmas EBD", `${scopedSchoolStudents.length} alunos`],
     ["discipleshipRoster", "Turmas Discipulado", `${scopedDiscipleshipStudents.length} alunos`],
