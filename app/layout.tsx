@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   title: 'Igreja Conectada',
   description:
-    'Sistema conectado para membros, secretaria, agenda, mural, atendimento pastoral, EBD, Discipulado e comunicacao da igreja.',
+    "Sistema conectado para membros, secretaria, agenda, mural, atendimento pastoral, EBD, Discipulado e comunicação da igreja.",
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

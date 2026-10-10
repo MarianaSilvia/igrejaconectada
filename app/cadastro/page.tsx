@@ -120,7 +120,7 @@ export default function PublicRegistrationPage() {
         />
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Pre-cadastro</p>
+            <p className="eyebrow">Pré-cadastro</p>
             <h2>Dados principais</h2>
           </div>
           <span>{status === "sending" ? "Enviando..." : "Fila da secretaria"}</span>

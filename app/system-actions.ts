@@ -145,7 +145,7 @@ export function approveRegistrationAsMemberData(
     registrationRequests: data.registrationRequests.map((item) =>
       item.id === request.id ? { ...item, status: "Aprovado", reviewedAt: now, reviewNote: `Aprovado como ${memberType}` } : item,
     ),
-    audit: [auditItem(createId, `Pre-cadastro aprovado: ${request.fullName}`, now), ...withMember.audit].slice(0, 12),
+    audit: [auditItem(createId, `Pré-cadastro aprovado: ${request.fullName}`, now), ...withMember.audit].slice(0, 12),
   };
 }
 
@@ -159,7 +159,7 @@ export function approveRegistrationAsVisitorData(data: AppData, request: Registr
     registrationRequests: data.registrationRequests.map((item) =>
       item.id === request.id ? { ...item, status: "Aprovado", reviewedAt: now, reviewNote: "Aprovado como visitante" } : item,
     ),
-    audit: [auditItem(createId, `Pre-cadastro aprovado como visitante: ${request.fullName}`, now), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, `Pré-cadastro aprovado como visitante: ${request.fullName}`, now), ...data.audit].slice(0, 12),
   };
 }
 
@@ -171,7 +171,7 @@ export function declineRegistrationRequestData(data: AppData, request: Registrat
     registrationRequests: data.registrationRequests.map((item) =>
       item.id === request.id ? { ...item, status: "Recusado", reviewedAt: now, reviewNote: "Recusado pela administracao" } : item,
     ),
-    audit: [auditItem(createId, `Pre-cadastro recusado: ${request.fullName}`, now), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, `Pré-cadastro recusado: ${request.fullName}`, now), ...data.audit].slice(0, 12),
   };
 }
 

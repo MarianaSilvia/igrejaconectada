@@ -1433,7 +1433,7 @@ export default function Home() {
 
     const pendingRegistrations = pendingRegistrationRequests.map((request) => ({
       id: `registration-${request.id}`,
-      title: `Pre-cadastro: ${request.fullName}`,
+      title: `Pré-cadastro: ${request.fullName}`,
       body: `${request.requestedStatus} - ${request.phone}`,
       module: "overview" as ModuleKey,
     }));
@@ -2771,7 +2771,7 @@ export default function Home() {
     const updated = await updateRegistrationRequestStatus(request.id, "Aprovado", "Aprovado como membro");
     if (!updated) return;
     setData((current) => approveRegistrationAsMemberData(current, request, blankMember, uid, "Membro"));
-    setSyncStatus(`Pre-cadastro de ${request.fullName} aprovado como membro.`);
+    setSyncStatus(`Pré-cadastro de ${request.fullName} aprovado como membro.`);
   }
 
   async function approveRegistrationAsVisitor(request: RegistrationRequest) {
@@ -2779,7 +2779,7 @@ export default function Home() {
     const updated = await updateRegistrationRequestStatus(request.id, "Aprovado", "Aprovado como visitante");
     if (!updated) return;
     setData((current) => approveRegistrationAsVisitorData(current, request, uid));
-    setSyncStatus(`Pre-cadastro de ${request.fullName} aprovado como visitante.`);
+    setSyncStatus(`Pré-cadastro de ${request.fullName} aprovado como visitante.`);
   }
 
   async function declineRegistrationRequest(request: RegistrationRequest) {
@@ -2788,7 +2788,7 @@ export default function Home() {
     const updated = await updateRegistrationRequestStatus(request.id, "Recusado", "Recusado pela administracao");
     if (!updated) return;
     setData((current) => declineRegistrationRequestData(current, request, uid));
-    setSyncStatus(`Pre-cadastro de ${request.fullName} recusado.`);
+    setSyncStatus(`Pré-cadastro de ${request.fullName} recusado.`);
   }
 
   function deleteMember(member: MemberRecord) {
@@ -3550,7 +3550,7 @@ export default function Home() {
     setMessageText(template.text);
     setCustomTemplateLabel("");
     setCustomTemplateText("");
-    setSyncStatus(`Modelo "${template.label}" salvo para uso nesta comunicacao.`);
+    setSyncStatus(`Modelo "${template.label}" salvo para uso nesta comunicação.`);
   }
 
   function openBulkWhatsapp() {
