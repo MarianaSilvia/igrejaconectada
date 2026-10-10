@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   if (session.response) return session.response;
 
   const client = adminClient();
-  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  if (!client) return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
 
   const { data, error } = await client
     .from("message_templates")

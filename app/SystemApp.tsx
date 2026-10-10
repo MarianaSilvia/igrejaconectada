@@ -3803,7 +3803,7 @@ export default function Home() {
     const token = sessionData.session?.access_token;
 
     if (!token) {
-      setSyncStatus("Kids salvo localmente; faca login Supabase para sincronizar.");
+      setSyncStatus("Kids salvo localmente; faça login Supabase para sincronizar.");
       return;
     }
 
@@ -3826,7 +3826,7 @@ export default function Home() {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
     if (!token) {
-      setSyncStatus("Mensagens abertas localmente; faca login Supabase para registrar campanha.");
+      setSyncStatus("Mensagens abertas localmente; faça login Supabase para registrar campanha.");
       return;
     }
 

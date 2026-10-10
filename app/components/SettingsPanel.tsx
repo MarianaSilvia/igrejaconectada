@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { formatDateTime, normalizeSearchText } from "../app-helpers";
+import { moduleAccessByRole, modules, type AccessRole } from "../permissions";
 import { downloadCsv, printHtmlReport } from "../report-helpers";
 import type { AppData, AuditItem, KidRecord, MemberRecord, Notice } from "../types";
 
@@ -18,6 +19,7 @@ type SettingsPanelProps = {
 
 const auditModuleOptions: AuditModuleFilter[] = ["Todos", "Membros", "Acessos", "Agenda", "Visitantes", "Pastoral", "Sistema"];
 const auditPeriodOptions: AuditPeriodFilter[] = ["Todos", "Hoje", "7 dias", "30 dias"];
+const profileTestRoles: AccessRole[] = ["Administrador", "Secretario", "Lider", "Professor", "Tesoureiro", "Membro"];
 
 function auditModuleFor(action: string): AuditModuleFilter {
   const normalized = normalizeSearchText(action);
@@ -81,6 +83,23 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
         .filter((item) => item.total > 0),
     [data.audit],
   );
+  const profileChecklist = useMemo(
+    () =>
+      profileTestRoles.map((role) => {
+        const activeUsers = data.users.filter((user) => user.role === role && user.status === "Ativo");
+        const allowedModules = moduleAccessByRole[role]
+          .map((moduleKey) => modules.find((module) => module.key === moduleKey)?.short ?? moduleKey)
+          .slice(0, 8);
+
+        return {
+          role,
+          activeUsers,
+          allowedModules,
+          ready: activeUsers.length > 0,
+        };
+      }),
+    [data.users],
+  );
 
   function exportAudit(format: "pdf" | "csv") {
     const headers = ["Data e hora", "Módulo", "Ação"];
@@ -142,6 +161,30 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
           <button className="secondary" onClick={resetLocalData} type="button">
             Restaurar dados exemplo
           </button>
+        </div>
+      </article>
+
+      <article className="surface">
+        <div className="panel-heading">
+          <h2>Teste por perfil</h2>
+          <span>Login e permissões</span>
+        </div>
+        <p className="body-copy">
+          Use esta lista como roteiro antes de mudanças grandes: entre com uma conta ativa de cada perfil, confira os módulos esperados e pressione F5 para confirmar que a sessão continua aberta.
+        </p>
+        <div className="profile-check-grid">
+          {profileChecklist.map((item) => (
+            <div className={item.ready ? "profile-check-card ready" : "profile-check-card warning"} key={item.role}>
+              <span>{item.ready ? "Pronto para teste" : "Precisa criar acesso"}</span>
+              <strong>{item.role}</strong>
+              <small>
+                {item.activeUsers.length
+                  ? `${item.activeUsers.length} acesso${item.activeUsers.length === 1 ? "" : "s"} ativo${item.activeUsers.length === 1 ? "" : "s"}`
+                  : "Nenhum acesso ativo cadastrado"}
+              </small>
+              <p>{item.allowedModules.join(", ")}</p>
+            </div>
+          ))}
         </div>
       </article>
 

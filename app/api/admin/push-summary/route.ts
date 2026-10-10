@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   if (session.response || !session.user) return session.response;
 
   const client = adminClient();
-  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  if (!client) return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
 
   const scope = await accessCongregationScope(client, session.user.email ?? "", session.user.app_metadata?.church_gp_congregation_scope);
   const { data, error } = await client
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       configured: isPushConfigured(),
       enabledSubscriptions: 0,
-      error: "Tabela de notificacoes indisponivel.",
+      error: "Tabela de notificações indisponível.",
     });
   }
 

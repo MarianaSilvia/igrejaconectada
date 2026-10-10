@@ -1364,6 +1364,55 @@ button:disabled {
   text-transform: uppercase;
 }
 
+.profile-check-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.profile-check-card {
+  background:
+    radial-gradient(circle at 85% 12%, rgba(246, 198, 91, 0.18), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035));
+  border: 1px solid rgba(246, 198, 91, 0.22);
+  border-radius: 10px;
+  display: grid;
+  gap: 7px;
+  min-height: 150px;
+  padding: 13px;
+}
+
+.profile-check-card.ready {
+  background:
+    radial-gradient(circle at 85% 12%, rgba(20, 217, 196, 0.18), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035));
+  border-color: rgba(20, 217, 196, 0.24);
+}
+
+.profile-check-card > span {
+  color: #ffe29a;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.profile-check-card.ready > span {
+  color: #9ef3e8;
+}
+
+.profile-check-card strong {
+  color: #fff;
+  font-size: 18px;
+}
+
+.profile-check-card small,
+.profile-check-card p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+}
+
 .data-row,
 .mural-card,
 .care-list-item,

@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   if (session.response || !session.user) return session.response;
 
   const client = adminClient();
-  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  if (!client) return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
 
   const body = (await request.json().catch(() => null)) as CampaignPayload | null;
   const audience = textValue(body?.audience, 120);

@@ -104,7 +104,7 @@ function safeFileKey(fileKey?: string) {
 
 async function ensureBucket() {
   const client = adminClient();
-  if (!client) return { error: "Supabase administrativo nao configurado." };
+  if (!client) return { error: "Supabase administrativo não configurado." };
 
   const { data: bucket } = await client.storage.getBucket(bucketName);
   if (bucket) {

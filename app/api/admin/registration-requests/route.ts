@@ -130,7 +130,7 @@ export async function GET(request: Request) {
   if (session.response) return session.response;
 
   const client = adminClient();
-  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  if (!client) return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
   const scope = await accessCongregationScope(client, session.user?.email ?? "", session.user?.app_metadata?.church_gp_congregation_scope);
 
   let { data, error } = await client
@@ -161,7 +161,7 @@ export async function PATCH(request: Request) {
   if (session.response || !session.user) return session.response;
 
   const client = adminClient();
-  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  if (!client) return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
   const scope = await accessCongregationScope(client, session.user.email ?? "", session.user.app_metadata?.church_gp_congregation_scope);
 
   const body = (await request.json().catch(() => null)) as { id?: string; status?: string; reviewNote?: string } | null;

@@ -41,7 +41,7 @@ export async function GET(request: Request) {
   if (session.response || !session.user) return session.response;
 
   const client = adminClient();
-  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  if (!client) return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
 
   const { count, error } = await client
     .from("push_subscriptions")
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       configured: isPushConfigured(),
       enabled: false,
-      error: "Tabela de notificacoes indisponivel.",
+      error: "Tabela de notificações indisponível.",
     });
   }
 
@@ -65,17 +65,17 @@ export async function POST(request: Request) {
   if (session.response || !session.user) return session.response;
 
   if (!isPushConfigured()) {
-    return NextResponse.json({ error: "Notificacoes ainda nao configuradas no servidor." }, { status: 503 });
+    return NextResponse.json({ error: "Notificações ainda não configuradas no servidor." }, { status: 503 });
   }
 
   const client = adminClient();
-  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  if (!client) return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
 
   const body = (await request.json().catch(() => null)) as JsonRecord | null;
   const subscription = body?.subscription;
 
   if (!validSubscription(subscription)) {
-    return NextResponse.json({ error: "Inscricao de notificacao invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Inscrição de notificação inválida." }, { status: 400 });
   }
 
   const record = subscription as JsonRecord;
@@ -120,7 +120,7 @@ export async function DELETE(request: Request) {
   if (session.response || !session.user) return session.response;
 
   const client = adminClient();
-  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  if (!client) return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
 
   const body = (await request.json().catch(() => null)) as JsonRecord | null;
   const endpoint = textValue(body?.endpoint, 2048);

@@ -96,7 +96,7 @@ export function KidsPanel({
             </label>
             <label>
               E-mail do responsável
-              <input onChange={(event) => setKidForm((form) => ({ ...form, guardianEmail: event.target.value }))} placeholder="responsavel@email.com" type="email" value={kidForm.guardianEmail} />
+              <input onChange={(event) => setKidForm((form) => ({ ...form, guardianEmail: event.target.value }))} placeholder="responsavel@email.com.br" type="email" value={kidForm.guardianEmail} />
             </label>
             <label className="full">
               Pessoas autorizadas a buscar

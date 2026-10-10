@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   }
 
   const client = adminClient();
-  if (!client) return NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 });
+  if (!client) return NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 });
 
   const result = await sendPushToUser(client, session.user.id, {
     title: "Igreja Conectada",

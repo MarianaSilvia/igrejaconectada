@@ -347,7 +347,7 @@ function serverAuditEntries(existingPayload: JsonRecord, nextPayload: JsonRecord
     entries.push(auditEntry(`Membro cadastrado: ${displayName(record)}`, actor, role, when)),
   );
   deletedRecords(existingPayload, nextPayload, "members").forEach((record) =>
-    entries.push(auditEntry(`Membro excluido: ${displayName(record)}`, actor, role, when)),
+    entries.push(auditEntry(`Membro excluído: ${displayName(record)}`, actor, role, when)),
   );
   changedRecords(existingPayload, nextPayload, "members", [
     "fullName",
@@ -364,7 +364,7 @@ function serverAuditEntries(existingPayload: JsonRecord, nextPayload: JsonRecord
     entries.push(auditEntry(`Acesso criado: ${displayName(record)}`, actor, role, when)),
   );
   deletedRecords(existingPayload, nextPayload, "users").forEach((record) =>
-    entries.push(auditEntry(`Acesso excluido: ${displayName(record)}`, actor, role, when)),
+    entries.push(auditEntry(`Acesso excluído: ${displayName(record)}`, actor, role, when)),
   );
   changedRecords(existingPayload, nextPayload, "users", ["role", "status", "email"]).forEach((record) =>
     entries.push(auditEntry(`Acesso atualizado: ${displayName(record)}`, actor, role, when)),
@@ -374,7 +374,7 @@ function serverAuditEntries(existingPayload: JsonRecord, nextPayload: JsonRecord
     entries.push(auditEntry(`Evento criado: ${displayName(record)}`, actor, role, when)),
   );
   deletedRecords(existingPayload, nextPayload, "events").forEach((record) =>
-    entries.push(auditEntry(`Evento excluido: ${displayName(record)}`, actor, role, when)),
+    entries.push(auditEntry(`Evento excluído: ${displayName(record)}`, actor, role, when)),
   );
   changedRecords(existingPayload, nextPayload, "events", ["title", "date", "time", "responsible", "status"]).forEach((record) =>
     entries.push(auditEntry(`Evento atualizado: ${displayName(record)}`, actor, role, when)),
@@ -384,7 +384,7 @@ function serverAuditEntries(existingPayload: JsonRecord, nextPayload: JsonRecord
     entries.push(auditEntry(`Visitante cadastrado: ${displayName(record)}`, actor, role, when)),
   );
   deletedRecords(existingPayload, nextPayload, "visitors").forEach((record) =>
-    entries.push(auditEntry(`Visitante excluido: ${displayName(record)}`, actor, role, when)),
+    entries.push(auditEntry(`Visitante excluído: ${displayName(record)}`, actor, role, when)),
   );
 
   createdRecords(existingPayload, nextPayload, "careRequests").forEach((record) =>
@@ -741,7 +741,7 @@ function sanitizePayloadForSave(existingPayload: JsonRecord, incomingPayload: Js
 
 async function readStoredPayload() {
   const client = adminClient();
-  if (!client) return { response: NextResponse.json({ error: "Supabase administrativo nao configurado." }, { status: 503 }) };
+  if (!client) return { response: NextResponse.json({ error: "Supabase administrativo não configurado." }, { status: 503 }) };
 
   const { data, error } = await client.from("church_app_state").select("payload,updated_at").eq("id", stateId).maybeSingle();
 

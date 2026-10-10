@@ -508,7 +508,7 @@ export function upsertAccessUserData(
           member.id === selectedAccessMemberId ? { ...member, email: user.email, authUserId: user.id, role: user.role } : member,
         )
       : data.members,
-    audit: [auditItem(createId, isUpdatingAccess ? `Acesso promovido: ${user.name}` : `Usuario criado para ${user.name}`), ...data.audit].slice(0, 12),
+    audit: [auditItem(createId, isUpdatingAccess ? `Acesso promovido: ${user.name}` : `Usuário criado para ${user.name}`), ...data.audit].slice(0, 12),
   };
 }
 
