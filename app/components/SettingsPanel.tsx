@@ -290,6 +290,39 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
       },
     ];
   }, [data.careRequests, data.events, data.kids, data.visitors]);
+  const normalizationRows = useMemo(() => {
+    const rows: unknown[][] = [];
+
+    data.visitors.forEach((visitor) => {
+      const base = ["Visitantes", visitor.id, visitor.fullName || "Sem nome", visitor.congregation || "Não informado", visitor.phone || "Não informado", visitor.firstVisitDate || "Não informado"];
+
+      if (normalizeCongregationScope(visitor.congregation) === globalCongregationScope) rows.push([...base, "Congregação ausente"]);
+      if (onlyDigits(visitor.phone).length < 8) rows.push([...base, "Telefone ausente ou inválido"]);
+    });
+
+    data.kids.forEach((kid) => {
+      const base = ["Kids", kid.id, kid.childName || "Sem nome", kid.congregation || "Não informado", kid.guardianPhone || "Não informado", kid.joinedAt || "Não informado"];
+
+      if (normalizeCongregationScope(kid.congregation) === globalCongregationScope) rows.push([...base, "Congregação ausente"]);
+      if (onlyDigits(kid.guardianPhone).length < 8) rows.push([...base, "Telefone do responsável ausente ou inválido"]);
+    });
+
+    data.events.forEach((event) => {
+      const base = ["Agenda", event.id, event.title || "Sem título", event.congregation || "Não informado", event.responsible || "Não informado", `${event.date || "Sem data"} ${event.time || "Sem horário"}`.trim()];
+
+      if (normalizeCongregationScope(event.congregation) === globalCongregationScope) rows.push([...base, "Congregação ausente"]);
+      if (!event.date || !event.time) rows.push([...base, "Data ou horário ausente"]);
+    });
+
+    data.careRequests.forEach((request) => {
+      const base = ["Pastoral", request.id, request.member || "Sem membro", request.congregation || "Não informado", request.responsible || "Não informado", request.createdAt || "Não informado"];
+
+      if (normalizeCongregationScope(request.congregation) === globalCongregationScope) rows.push([...base, "Congregação ausente"]);
+      if (!request.responsible.trim() && request.status !== "Concluido") rows.push([...base, "Responsável ausente em atendimento aberto"]);
+    });
+
+    return rows.sort((a, b) => `${String(a[0])}-${String(a[2])}`.localeCompare(`${String(b[0])}-${String(b[2])}`, "pt-BR"));
+  }, [data.careRequests, data.events, data.kids, data.visitors]);
 
   function exportAudit(format: "pdf" | "csv") {
     const headers = ["Data e hora", "Módulo", "Ação"];
@@ -335,6 +368,25 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
       memberQualityRows,
     );
     log("Pendências dos cadastros exportadas para Excel");
+  }
+
+  function exportNormalizationReadiness(format: "csv" | "excel") {
+    const headers = ["Módulo", "ID", "Registro", "Congregação", "Contato ou responsável", "Data", "Pendência"];
+
+    if (format === "csv") {
+      downloadCsv("pendencias-normalizacao-modulos.csv", headers, normalizationRows);
+      log("Pendências de normalização exportadas em CSV");
+      return;
+    }
+
+    downloadExcelWorkbook(
+      "pendencias-normalizacao-modulos.xls",
+      "Pendências para normalização dos módulos",
+      `Lista gerada em ${new Date().toLocaleString("pt-BR")} com ${normalizationRows.length} pendência(s).`,
+      headers,
+      normalizationRows,
+    );
+    log("Pendências de normalização exportadas para Excel");
   }
 
   return (
@@ -461,6 +513,15 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
             </div>
           ))}
         </div>
+        <div className="detail-actions">
+          <button className="secondary" disabled={!normalizationRows.length} onClick={() => exportNormalizationReadiness("csv")} type="button">
+            Exportar normalização CSV
+          </button>
+          <button className="secondary" disabled={!normalizationRows.length} onClick={() => exportNormalizationReadiness("excel")} type="button">
+            Exportar para Excel
+          </button>
+        </div>
+        {!normalizationRows.length && <p className="empty-state">Nenhuma pendência encontrada nos próximos módulos para normalização.</p>}
       </article>
 
       <article className="surface">
