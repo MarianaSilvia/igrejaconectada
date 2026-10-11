@@ -785,7 +785,7 @@ function memberRecordFromMirrorRow(row: JsonRecord): JsonRecord | null {
 
 async function payloadWithMembersMirrorFallback(client: NonNullable<ReturnType<typeof adminClient>>, payload: unknown) {
   if (!isRecord(payload)) return payload;
-  if (recordsFrom(payload.members).length) return payload;
+  const payloadMembers = recordsFrom(payload.members);
 
   const { data, error } = await client
     .from("members")
@@ -799,7 +799,7 @@ async function payloadWithMembersMirrorFallback(client: NonNullable<ReturnType<t
     .map(memberRecordFromMirrorRow)
     .filter((member): member is JsonRecord => Boolean(member));
 
-  return recoveredMembers.length ? { ...payload, members: recoveredMembers } : payload;
+  return recoveredMembers.length > payloadMembers.length ? { ...payload, members: recoveredMembers } : payload;
 }
 
 export async function GET(request: Request) {
