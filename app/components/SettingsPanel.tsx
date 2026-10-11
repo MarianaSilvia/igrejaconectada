@@ -110,6 +110,83 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
       }),
     [data.users],
   );
+  const profileTestRows = useMemo(
+    () =>
+      profileChecklist.map((item) => [
+        item.role,
+        item.activeUsers.length,
+        item.ready ? "Pronto para testar" : "Criar ou reativar acesso antes",
+        item.allowedModules.join(", "),
+        "Entrar, confirmar painel, abrir módulos permitidos e pressionar F5 para validar sessão.",
+      ]),
+    [profileChecklist],
+  );
+  const operationalTestRows = useMemo(() => {
+    const activeUsers = data.users.filter((user) => user.status === "Ativo");
+    const nonAdminUsers = data.users.filter((user) => user.role !== "Administrador");
+    const openCareRequests = data.careRequests.filter((request) => request.status !== "Concluido");
+    const publishedMural = data.mural.filter((item) => item.published);
+    const todaysEvents = data.events.filter((event) => event.date === new Date().toISOString().slice(0, 10));
+
+    return [
+      [
+        "Login",
+        "Sessão por perfil",
+        profileChecklist.every((item) => item.ready) ? "Pronto" : "Pendente",
+        `${activeUsers.length} acesso(s) ativo(s).`,
+        "Testar administrador, secretário, líder, professor, tesoureiro e membro com F5 após login.",
+      ],
+      [
+        "Usuários e acessos",
+        "Cancelar, reativar e excluir acesso",
+        nonAdminUsers.length ? "Pronto" : "Criar acesso de teste",
+        `${nonAdminUsers.length} acesso(s) não administrador disponíveis para teste.`,
+        "Nunca excluir o administrador logado; usar um acesso de teste ou antigo.",
+      ],
+      [
+        "Atendimento pastoral",
+        "Avançar etapa e Concluir",
+        openCareRequests.length ? "Pronto" : "Criar pedido de teste",
+        `${openCareRequests.length} atendimento(s) aberto(s).`,
+        "Confirmar que Pendente vira Em análise, depois Agendado e Concluído.",
+      ],
+      [
+        "Membros",
+        "Editar ficha, foto e grupos",
+        data.members.length ? "Pronto" : "Criar membro de teste",
+        `${data.members.length} membro(s) cadastrado(s).`,
+        "Alterar uma ficha teste, conferir grupo múltiplo e confirmar persistência após F5.",
+      ],
+      [
+        "Mural",
+        "Compartilhar aviso publicado",
+        publishedMural.length ? "Pronto" : "Publicar aviso de teste",
+        `${publishedMural.length} mural(is) publicado(s).`,
+        "Abrir link público sem login e confirmar que não expõe dados administrativos.",
+      ],
+      [
+        "Agenda",
+        "Compartilhar agenda do dia",
+        todaysEvents.length ? "Pronto" : "Criar evento de hoje para teste",
+        `${todaysEvents.length} evento(s) de hoje.`,
+        "Abrir link público da agenda e confirmar que mostra apenas eventos do dia.",
+      ],
+      [
+        "Relatórios",
+        "Gerar PDF/Excel e documentos prontos",
+        data.members.length ? "Pronto" : "Cadastrar membro antes",
+        "Usa dados administrativos do painel.",
+        "Gerar ficha cadastral, carta e relatório simples sem salvar PDF no banco.",
+      ],
+      [
+        "Notificações",
+        "Enviar teste push",
+        "Revisar",
+        "Depende de permissão no aparelho e VAPID em produção.",
+        "Ativar notificações, enviar teste e tocar no aviso para abrir o sistema.",
+      ],
+    ];
+  }, [data.careRequests, data.events, data.members.length, data.mural, data.users, profileChecklist]);
   const securityChecklist = useMemo(() => {
     const activeAdmins = data.users.filter((user) => user.role === "Administrador" && user.status === "Ativo");
     const activeLocalStaffWithoutScope = data.users.filter((user) => {
@@ -370,6 +447,44 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
     log("Pendências dos cadastros exportadas para Excel");
   }
 
+  function exportProfileTests(format: "csv" | "excel") {
+    const headers = ["Perfil", "Acessos ativos", "Status", "Módulos esperados", "Teste obrigatório"];
+
+    if (format === "csv") {
+      downloadCsv("roteiro-testes-por-perfil.csv", headers, profileTestRows);
+      log("Roteiro de testes por perfil exportado em CSV");
+      return;
+    }
+
+    downloadExcelWorkbook(
+      "roteiro-testes-por-perfil.xls",
+      "Roteiro de testes por perfil",
+      `Lista gerada em ${new Date().toLocaleString("pt-BR")}.`,
+      headers,
+      profileTestRows,
+    );
+    log("Roteiro de testes por perfil exportado para Excel");
+  }
+
+  function exportOperationalTests(format: "csv" | "excel") {
+    const headers = ["Área", "Fluxo", "Status", "Evidência atual", "Como testar"];
+
+    if (format === "csv") {
+      downloadCsv("roteiro-testes-operacionais.csv", headers, operationalTestRows);
+      log("Roteiro de testes operacionais exportado em CSV");
+      return;
+    }
+
+    downloadExcelWorkbook(
+      "roteiro-testes-operacionais.xls",
+      "Roteiro de testes operacionais",
+      `Lista gerada em ${new Date().toLocaleString("pt-BR")} com ${operationalTestRows.length} fluxo(s).`,
+      headers,
+      operationalTestRows,
+    );
+    log("Roteiro de testes operacionais exportado para Excel");
+  }
+
   function exportNormalizationReadiness(format: "csv" | "excel") {
     const headers = ["Módulo", "ID", "Registro", "Congregação", "Contato ou responsável", "Data", "Pendência"];
 
@@ -446,6 +561,41 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
               <p>{item.allowedModules.join(", ")}</p>
             </div>
           ))}
+        </div>
+        <div className="detail-actions">
+          <button className="secondary" onClick={() => exportProfileTests("csv")} type="button">
+            Exportar perfis CSV
+          </button>
+          <button className="secondary" onClick={() => exportProfileTests("excel")} type="button">
+            Exportar para Excel
+          </button>
+        </div>
+      </article>
+
+      <article className="surface wide">
+        <div className="panel-heading">
+          <h2>Checklist operacional</h2>
+          <span>Botões e fluxos críticos</span>
+        </div>
+        <p className="body-copy">
+          Use este roteiro antes de uma publicação importante ou depois de mudanças grandes. Ele mostra o que já tem dados para teste e o que precisa de um registro de teste antes da conferência manual.
+        </p>
+        <div className="security-check-grid">
+          {operationalTestRows.map((row) => (
+            <div className={row[2] === "Pronto" ? "security-check-card ok" : "security-check-card warning"} key={`${row[0]}-${row[1]}`}>
+              <span>{String(row[2])}</span>
+              <strong>{String(row[1])}</strong>
+              <small>{String(row[0])} - {String(row[3])}</small>
+            </div>
+          ))}
+        </div>
+        <div className="detail-actions">
+          <button className="secondary" onClick={() => exportOperationalTests("csv")} type="button">
+            Exportar testes CSV
+          </button>
+          <button className="secondary" onClick={() => exportOperationalTests("excel")} type="button">
+            Exportar para Excel
+          </button>
         </div>
       </article>
 
