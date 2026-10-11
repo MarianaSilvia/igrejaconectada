@@ -9307,3 +9307,122 @@ button.secondary,
     grid-template-columns: 1fr;
   }
 }
+
+/* Final mobile viewport guard: keep logged-in panels readable and uncropped. */
+@media (max-width: 720px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .app-shell,
+  .workspace,
+  .content-grid,
+  .content-column,
+  .overview-streaming,
+  .overview-streaming > *,
+  .surface,
+  .hero-panel,
+  .streaming-section,
+  .member-quick-actions,
+  .topbar,
+  .topbar-actions,
+  .push-control,
+  .notifications-panel,
+  .member-form-panel,
+  .members-list-panel,
+  .access-users-list,
+  .registration-queue-panel,
+  .row-list,
+  .data-row {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .workspace {
+    overflow-x: clip;
+  }
+
+  .topbar {
+    width: 100%;
+  }
+
+  .topbar-actions,
+  .push-control {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .notification-button,
+  .push-control button,
+  .hero-actions button,
+  .hero-actions button:first-child,
+  .hero-actions button.secondary,
+  .member-quick-actions button,
+  .detail-actions button {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    width: 100%;
+  }
+
+  .overview-streaming .streaming-cover {
+    min-height: auto;
+    overflow: hidden;
+    padding-inline: 16px;
+  }
+
+  .smart-hero-strip {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .smart-hero-strip button {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .overview-streaming .streaming-rail {
+    grid-auto-columns: minmax(190px, calc(100vw - 42px));
+    max-width: 100%;
+    overscroll-behavior-inline: contain;
+  }
+
+  .overview-streaming .action-tile {
+    max-width: calc(100vw - 42px);
+    overflow: hidden;
+  }
+
+  .mobile-tabbar {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .mobile-tabbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-tabbar button {
+    flex: 0 0 auto;
+    min-width: 72px;
+    padding-inline: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .overview-streaming .streaming-rail {
+    grid-auto-columns: minmax(178px, calc(100vw - 34px));
+  }
+
+  .overview-streaming .action-tile {
+    max-width: calc(100vw - 34px);
+  }
+
+  .mobile-tabbar button {
+    min-width: 66px;
+    padding-inline: 10px;
+  }
+}
