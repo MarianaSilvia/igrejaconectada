@@ -790,7 +790,6 @@ async function payloadWithMembersMirrorFallback(client: NonNullable<ReturnType<t
   const { data, error } = await client
     .from("members")
     .select("id,registration_number,full_name,photo_url,status,congregation,ministerial_role,birth_date,phone,email,address,app_payload")
-    .eq("mirror_source", "church_app_state")
     .order("full_name", { ascending: true });
 
   if (error || !data?.length) return payload;
