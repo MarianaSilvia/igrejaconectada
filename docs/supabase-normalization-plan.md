@@ -60,6 +60,27 @@ O arquivo `db/schema.ts` deve funcionar como rascunho tecnico do alvo normalizad
 - Testar criacao, edicao e exclusao por perfil.
 - Testar relatarios PDF/CSV com as novas tabelas.
 - Conferir RLS com usuario comum tentando acessar dados administrativos.
+- Rodar `db/supabase-rls-readiness-audit.sql` no Supabase SQL Editor e revisar:
+  - tabelas publicas sem RLS;
+  - politicas amplas demais para `authenticated`;
+  - politicas de escrita sem `WITH CHECK`;
+  - views sem `security_invoker=true`;
+  - funcoes `SECURITY DEFINER` no schema `public`;
+  - buckets publicos ou com mime types arriscados;
+  - chaves estrangeiras sem indice;
+  - perfis em `app_metadata` sem status, acesso ou escopo esperado.
+
+## Auditoria Supabase antes de qualquer mudanca
+
+O arquivo `db/supabase-rls-readiness-audit.sql` e somente leitura. Ele nao cria, altera nem remove nada. Use esse roteiro para levantar pendencias reais antes de aplicar scripts como `db/supabase-security-mobile-readiness.sql` ou futuras migracoes normalizadas.
+
+Fluxo recomendado:
+
+1. Baixar backup completo no painel do sistema.
+2. Rodar a auditoria SQL no projeto Supabase.
+3. Salvar os resultados em PDF/CSV pelo painel do Supabase, se necessario.
+4. Corrigir primeiro riscos de seguranca: RLS ausente, bucket publico, policies amplas e funcoes publicas privilegiadas.
+5. So depois criar ou aplicar migrations de dados normalizados.
 
 ## Observacao
 
