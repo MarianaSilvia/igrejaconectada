@@ -735,11 +735,27 @@ function internalMemberEmail(member: Pick<MemberRecord, "memberCode" | "id">) {
   return `${loginId}@acesso.igrejaconectada.invalid`;
 }
 
+const accessRolePriority: Record<AccessRole, number> = {
+  Membro: 0,
+  Professor: 1,
+  Tesoureiro: 2,
+  Lider: 3,
+  Secretario: 4,
+  Administrador: 5,
+};
+
+function strongestAccessRole(...roles: (AccessRole | undefined)[]) {
+  return roles.reduce<AccessRole>((strongest, role) => {
+    if (!role) return strongest;
+    return accessRolePriority[role] > accessRolePriority[strongest] ? role : strongest;
+  }, "Membro");
+}
+
 function accessRoleForSession(users: AccessUser[], email: string, metadata: Record<string, unknown> | undefined) {
-  return (
-    users.find((user) => normalizeEmail(user.email) === normalizeEmail(email))?.role ??
-    accessRoleFromMetadata(metadata?.church_gp_role ?? metadata?.role)
-  );
+  const localRole = users.find((user) => normalizeEmail(user.email) === normalizeEmail(email))?.role;
+  const metadataRole = accessRoleFromMetadata(metadata?.church_gp_role ?? metadata?.role);
+
+  return strongestAccessRole(localRole, metadataRole);
 }
 
 function uid(prefix: string) {
@@ -1257,7 +1273,7 @@ export default function Home() {
     () => data.users.find((user) => normalizeEmail(user.email) === normalizedSessionEmail),
     [data.users, normalizedSessionEmail],
   );
-  const currentAccessRole = currentAccessUser?.role ?? sessionRole;
+  const currentAccessRole = strongestAccessRole(currentAccessUser?.role, sessionRole);
   const isAdminView = isAdministrativeRole(currentAccessRole);
   const isSimpleView = simpleViewEnabled && !isAdminView;
   const currentMember = useMemo(
