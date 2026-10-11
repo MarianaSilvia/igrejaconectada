@@ -1460,6 +1460,53 @@ button:disabled {
   line-height: 1.45;
 }
 
+.data-quality-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.data-quality-card {
+  background:
+    radial-gradient(circle at 84% 10%, rgba(255, 98, 128, 0.16), transparent 36%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035));
+  border: 1px solid rgba(255, 98, 128, 0.22);
+  border-radius: 10px;
+  display: grid;
+  gap: 7px;
+  min-height: 126px;
+  padding: 13px;
+}
+
+.data-quality-card.ok {
+  background:
+    radial-gradient(circle at 84% 10%, rgba(20, 217, 196, 0.16), transparent 36%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035));
+  border-color: rgba(20, 217, 196, 0.24);
+}
+
+.data-quality-card > span {
+  color: #ffb6c5;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.data-quality-card.ok > span {
+  color: #9ef3e8;
+}
+
+.data-quality-card strong {
+  color: #fff;
+  font-size: 17px;
+}
+
+.data-quality-card small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .data-row,
 .mural-card,
 .care-list-item,

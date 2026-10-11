@@ -55,6 +55,10 @@ function auditRows(items: AuditItem[]) {
   return items.map((item) => [formatDateTime(item.when), auditModuleFor(item.action), item.action]);
 }
 
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "");
+}
+
 export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, monthlyKidsBirthdays, resetLocalData }: SettingsPanelProps) {
   const [auditSearch, setAuditSearch] = useState("");
   const [auditModule, setAuditModule] = useState<AuditModuleFilter>("Todos");
@@ -149,6 +153,60 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
       },
     ];
   }, [data.kids, data.members, data.users]);
+  const memberQualityChecklist = useMemo(() => {
+    const phoneCounts = new Map<string, number>();
+    const cpfCounts = new Map<string, number>();
+
+    data.members.forEach((member) => {
+      const phone = onlyDigits(member.phone);
+      const cpf = onlyDigits(member.cpf);
+      if (phone) phoneCounts.set(phone, (phoneCounts.get(phone) ?? 0) + 1);
+      if (cpf) cpfCounts.set(cpf, (cpfCounts.get(cpf) ?? 0) + 1);
+    });
+
+    const missingPhone = data.members.filter((member) => onlyDigits(member.phone).length < 8);
+    const missingEmail = data.members.filter((member) => !member.email.trim());
+    const missingBirthDate = data.members.filter((member) => !member.birthDate);
+    const withoutGroup = data.members.filter((member) => !member.ministry && (!member.ministries || member.ministries.length === 0));
+    const duplicatePhones = Array.from(phoneCounts.values()).filter((count) => count > 1).length;
+    const duplicateCpfs = Array.from(cpfCounts.values()).filter((count) => count > 1).length;
+
+    return [
+      {
+        count: missingPhone.length,
+        detail: missingPhone.length ? "Sem telefone válido para WhatsApp, contato e recuperação." : "Telefones principais preenchidos.",
+        ok: missingPhone.length === 0,
+        title: "Telefone",
+      },
+      {
+        count: missingEmail.length,
+        detail: missingEmail.length ? "Sem e-mail, o login do membro pode depender de ajuste manual." : "E-mails principais preenchidos.",
+        ok: missingEmail.length === 0,
+        title: "E-mail de acesso",
+      },
+      {
+        count: missingBirthDate.length,
+        detail: missingBirthDate.length ? "Aniversariantes, idade e relatórios ficam incompletos." : "Datas de nascimento preenchidas.",
+        ok: missingBirthDate.length === 0,
+        title: "Nascimento",
+      },
+      {
+        count: withoutGroup.length,
+        detail: withoutGroup.length ? "Fichas sem grupo dificultam filtros, liderança e comunicação." : "Grupos vinculados nas fichas.",
+        ok: withoutGroup.length === 0,
+        title: "Grupos",
+      },
+      {
+        count: duplicatePhones + duplicateCpfs,
+        detail:
+          duplicatePhones || duplicateCpfs
+            ? `${duplicatePhones} telefone(s) e ${duplicateCpfs} CPF(s) aparecem repetidos.`
+            : "Não há duplicidades óbvias por telefone ou CPF.",
+        ok: duplicatePhones === 0 && duplicateCpfs === 0,
+        title: "Duplicidades",
+      },
+    ];
+  }, [data.members]);
 
   function exportAudit(format: "pdf" | "csv") {
     const headers = ["Data e hora", "Módulo", "Ação"];
@@ -249,6 +307,25 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
           {securityChecklist.map((item) => (
             <div className={item.ok ? "security-check-card ok" : "security-check-card warning"} key={item.title}>
               <span>{item.ok ? "OK" : "Revisar"}</span>
+              <strong>{item.title}</strong>
+              <small>{item.detail}</small>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <article className="surface wide">
+        <div className="panel-heading">
+          <h2>Qualidade dos cadastros</h2>
+          <span>Antes da normalização</span>
+        </div>
+        <p className="body-copy">
+          Esta conferência mostra pontos que podem dificultar login, relatórios, comunicação por WhatsApp e filtros por grupo quando os dados forem migrados para tabelas próprias.
+        </p>
+        <div className="data-quality-grid">
+          {memberQualityChecklist.map((item) => (
+            <div className={item.ok ? "data-quality-card ok" : "data-quality-card warning"} key={item.title}>
+              <span>{item.ok ? "OK" : `${item.count} revisar`}</span>
               <strong>{item.title}</strong>
               <small>{item.detail}</small>
             </div>
