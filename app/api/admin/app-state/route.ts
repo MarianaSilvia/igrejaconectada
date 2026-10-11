@@ -752,6 +752,49 @@ async function readStoredPayload() {
   return { client, payload: data?.payload ?? null, updatedAt: data?.updated_at ?? null };
 }
 
+function memberRecordFromMirrorRow(row: JsonRecord): JsonRecord | null {
+  const appPayload = isRecord(row.app_payload) ? row.app_payload : {};
+  const id = textValue(appPayload.id) || textValue(row.id);
+  const fullName = textValue(appPayload.fullName) || textValue(row.full_name);
+
+  if (!id || !fullName) return null;
+
+  return {
+    ...appPayload,
+    id,
+    fullName,
+    memberCode: textValue(appPayload.memberCode) || textValue(row.registration_number),
+    status: textValue(appPayload.status) || textValue(row.status),
+    congregation: textValue(appPayload.congregation) || textValue(row.congregation),
+    ministerialFunction: textValue(appPayload.ministerialFunction) || textValue(row.ministerial_role),
+    birthDate: textValue(appPayload.birthDate) || textValue(row.birth_date),
+    phone: textValue(appPayload.phone) || textValue(row.phone),
+    email: textValue(appPayload.email) || textValue(row.email),
+    address: textValue(appPayload.address) || textValue(row.address),
+    photoUrl: textValue(appPayload.photoUrl) || textValue(row.photo_url),
+    photoDataUrl: "",
+  };
+}
+
+async function payloadWithMembersMirrorFallback(client: NonNullable<ReturnType<typeof adminClient>>, payload: unknown) {
+  if (!isRecord(payload)) return payload;
+  if (recordsFrom(payload.members).length) return payload;
+
+  const { data, error } = await client
+    .from("members")
+    .select("id,registration_number,full_name,photo_url,status,congregation,ministerial_role,birth_date,phone,email,address,app_payload")
+    .eq("mirror_source", "church_app_state")
+    .order("full_name", { ascending: true });
+
+  if (error || !data?.length) return payload;
+
+  const recoveredMembers = recordsFrom(data)
+    .map(memberRecordFromMirrorRow)
+    .filter((member): member is JsonRecord => Boolean(member));
+
+  return recoveredMembers.length ? { ...payload, members: recoveredMembers } : payload;
+}
+
 export async function GET(request: Request) {
   const session = await requireSession(request);
   if (session.response || !session.user) return session.response;
@@ -759,13 +802,14 @@ export async function GET(request: Request) {
   const stored = await readStoredPayload();
   if (stored.response || !stored.client) return stored.response;
 
-  const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(stored.payload, session.user);
-  const sanitizedPayload = sanitizePayloadForResponse(stored.payload, effectiveRole, session.user);
+  const storedPayload = await payloadWithMembersMirrorFallback(stored.client, stored.payload);
+  const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(storedPayload, session.user);
+  const sanitizedPayload = sanitizePayloadForResponse(storedPayload, effectiveRole, session.user);
   const payload = isRecord(sanitizedPayload) ? await withSignedMemberPhotos(stored.client, sanitizedPayload) : sanitizedPayload;
   const registrationRequests = await readRegistrationRequests(
     stored.client,
     effectiveRole,
-    isRecord(stored.payload) ? congregationScopeFromPayload(stored.payload, session.user) : "",
+    isRecord(storedPayload) ? congregationScopeFromPayload(storedPayload, session.user) : "",
   );
 
   return NextResponse.json({
@@ -786,6 +830,7 @@ export async function PUT(request: Request) {
 
   const stored = await readStoredPayload();
   if (stored.response || !stored.client) return stored.response;
+  const storedPayload = await payloadWithMembersMirrorFallback(stored.client, stored.payload);
 
   if (baseUpdatedAt && stored.updatedAt && baseUpdatedAt !== stored.updatedAt) {
     return NextResponse.json(
@@ -798,11 +843,11 @@ export async function PUT(request: Request) {
     );
   }
 
-  const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(stored.payload, session.user);
-  const mergedPayload = sanitizePayloadForSave(isRecord(stored.payload) ? stored.payload : {}, payload, effectiveRole, session.user);
+  const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(storedPayload, session.user);
+  const mergedPayload = sanitizePayloadForSave(isRecord(storedPayload) ? storedPayload : {}, payload, effectiveRole, session.user);
 
   if ("response" in mergedPayload) return mergedPayload.response;
-  const payloadWithAudit = appendServerAudit(isRecord(stored.payload) ? stored.payload : {}, mergedPayload.payload, effectiveRole, session.user);
+  const payloadWithAudit = appendServerAudit(isRecord(storedPayload) ? storedPayload : {}, mergedPayload.payload, effectiveRole, session.user);
 
   const { data, error } = await stored.client
     .from("church_app_state")
@@ -820,7 +865,7 @@ export async function PUT(request: Request) {
   }
 
   const memberSync = await syncMembersTable(stored.client, payloadWithAudit);
-  await notifyImportantStateChanges(stored.client, isRecord(stored.payload) ? stored.payload : {}, payloadWithAudit);
+  await notifyImportantStateChanges(stored.client, isRecord(storedPayload) ? storedPayload : {}, payloadWithAudit);
 
   return NextResponse.json({
     ok: true,

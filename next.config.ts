@@ -53,6 +53,14 @@ const nextConfig: NextConfig = {
         headers: noStoreHeaders,
       },
       {
+        source: '/api/public/registrations',
+        headers: noStoreHeaders,
+      },
+      {
+        source: '/api/public/account-deletion',
+        headers: noStoreHeaders,
+      },
+      {
         source: '/sw.js',
         headers: [
           ...noStoreHeaders,
