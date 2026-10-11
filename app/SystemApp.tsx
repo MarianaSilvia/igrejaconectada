@@ -155,6 +155,23 @@ import type {
 
 const legacyStorageKeys = ["igreja-gestao-local-v1", "igreja-conectada-photo-cache-v1"];
 
+function clearPrivateBrowserCache() {
+  if (typeof window === "undefined") return;
+
+  const shouldRemoveKey = (key: string) =>
+    legacyStorageKeys.includes(key) ||
+    key.toLowerCase().includes("church_app_state") ||
+    key.toLowerCase().includes("igreja-conectada-photo") ||
+    key.toLowerCase().includes("igreja-gestao");
+
+  [window.localStorage, window.sessionStorage].forEach((storage) => {
+    for (let index = storage.length - 1; index >= 0; index -= 1) {
+      const key = storage.key(index);
+      if (key && shouldRemoveKey(key)) storage.removeItem(key);
+    }
+  });
+}
+
 const statusFlow: CareStatus[] = ["Pendente", "Em analise", "Agendado", "Concluido"];
 
 function careStatusLabel(status: CareStatus) {
@@ -925,6 +942,16 @@ export default function Home() {
   const [reportStartDate, setReportStartDate] = useState("");
   const [reportEndDate, setReportEndDate] = useState("");
 
+  const clearPrivateSessionData = useCallback(() => {
+    clearPrivateBrowserCache();
+    setData(initialData);
+    setRemoteMessageTemplates([]);
+    setGlobalSearch("");
+    setNotificationsOpen(false);
+    setRemoteUpdatedAt(null);
+    setLastSavedAt("");
+  }, []);
+
   const forceAccessLogout = useCallback(async (message: string) => {
     if (saveTimerRef.current) {
       window.clearTimeout(saveTimerRef.current);
@@ -949,9 +976,10 @@ export default function Home() {
       const supabase = getSupabaseClient();
       if (supabase) await supabase.auth.signOut();
     } finally {
+      clearPrivateSessionData();
       logoutInProgressRef.current = false;
     }
-  }, []);
+  }, [clearPrivateSessionData]);
 
   const saveRemoteStateNow = useCallback(async (payloadData: AppData) => {
     if (!isSupabaseConfigured()) return false;
@@ -1091,6 +1119,7 @@ export default function Home() {
       if (!isApprovedAccessStatus(accessStatus)) {
         await supabase?.auth.signOut();
         if (!cancelled) {
+          clearPrivateSessionData();
           setRemoteStateReady(true);
           setAccessMessage("Seu acesso ainda não está ativo. Fale com a administração.");
         }
@@ -1119,10 +1148,10 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [data.users, hasSession]);
+  }, [clearPrivateSessionData, data.users, hasSession]);
 
   useEffect(() => {
-    legacyStorageKeys.forEach((key) => window.localStorage.removeItem(key));
+    clearPrivateBrowserCache();
   }, []);
 
   useEffect(() => {
@@ -3520,6 +3549,7 @@ export default function Home() {
       } catch {
         setSyncStatus("Você saiu do sistema. Se havia alguma alteração pendente, confira a base no próximo acesso.");
       } finally {
+        clearPrivateSessionData();
         logoutInProgressRef.current = false;
       }
     })();
@@ -3895,6 +3925,7 @@ export default function Home() {
     setAccessMode("login");
     setAccessMessage("Senha atualizada. Entre novamente usando sua nova senha.");
     await supabase?.auth.signOut();
+    clearPrivateSessionData();
   }
 
   if (!hasSession) {
