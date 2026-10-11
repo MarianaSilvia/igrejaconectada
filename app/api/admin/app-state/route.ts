@@ -1,7 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { adminClient, administrativeRoles, churchRoleFromLabel, requireSession, type ChurchRole } from "../auth";
-import { congregationMatchesScope, isGlobalCongregationScope, normalizeCongregationScope } from "../../../congregation-scope";
+import { congregationMatchesScope, globalCongregationScope, isGlobalCongregationScope, normalizeCongregationScope } from "../../../congregation-scope";
 import { syncMembersTable } from "../../../member-table-sync";
 import { notifyImportantStateChanges } from "../../../push-service";
 import { payloadKeysByRole, visiblePayloadKeysByRole, visiblePublishedOnlyKeys } from "../../../state-access-policy";
@@ -126,9 +126,16 @@ function congregationScopeFromMetadata(user: User) {
   return normalizeCongregationScope(metadata?.church_gp_congregation_scope ?? metadata?.congregation_scope);
 }
 
-function congregationScopeFromPayload(payload: JsonRecord, user: User) {
+function congregationScopeFromPayload(payload: JsonRecord, user: User, role?: ChurchRole) {
+  const metadata = user.app_metadata as JsonRecord | undefined;
+  const metadataScope = metadata?.church_gp_congregation_scope ?? metadata?.congregation_scope;
+
+  if (role === "ADMIN") {
+    return textValue(metadataScope) ? normalizeCongregationScope(metadataScope) : globalCongregationScope;
+  }
+
   const accessUser = findAccessUser(payload, user);
-  return normalizeCongregationScope(accessUser?.congregationScope ?? congregationScopeFromMetadata(user));
+  return normalizeCongregationScope(accessUser?.congregationScope ?? metadataScope ?? congregationScopeFromMetadata(user));
 }
 
 function recordScopeValue(record: JsonRecord, key: string) {
@@ -444,7 +451,7 @@ function payloadWithVisibleKeys(payload: JsonRecord, role: ChurchRole, user: Use
 
 function sanitizedAdministrativePayloadForRole(payload: JsonRecord, role: ChurchRole, user: User) {
   const strippedPayload = normalizeStatePayloadForStorage(payload);
-  const scope = congregationScopeFromPayload(strippedPayload, user);
+  const scope = congregationScopeFromPayload(strippedPayload, user, role);
   if (role === "ADMIN") return filterPayloadByScope(strippedPayload, scope);
 
   return filterPayloadByScope(payloadWithVisibleKeys(strippedPayload, role, user), scope);
@@ -467,7 +474,7 @@ function mergeProfessorPayload(existingPayload: JsonRecord, incomingPayload: Jso
 function mergeAdministrativePayloadByRole(existingPayload: JsonRecord, incomingPayload: JsonRecord, role: ChurchRole, user: User) {
   const incoming = normalizeStatePayloadForStorage(incomingPayload);
   const existing = normalizeStatePayloadForStorage(existingPayload);
-  const scope = congregationScopeFromPayload(existing, user);
+  const scope = congregationScopeFromPayload(existing, user, role);
   if (role === "PROFESSOR") return mergeProfessorPayload(existingPayload, incomingPayload, user);
   if (!isGlobalCongregationScope(scope)) {
     const allowedKeys = role === "ADMIN" ? appStateCollectionKeys : payloadKeysByRole[role as Exclude<ChurchRole, "MEMBER">] ?? [];
@@ -809,7 +816,7 @@ export async function GET(request: Request) {
   const registrationRequests = await readRegistrationRequests(
     stored.client,
     effectiveRole,
-    isRecord(storedPayload) ? congregationScopeFromPayload(storedPayload, session.user) : "",
+    isRecord(storedPayload) ? congregationScopeFromPayload(storedPayload, session.user, effectiveRole) : "",
   );
 
   return NextResponse.json({
