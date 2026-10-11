@@ -249,6 +249,47 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
       })
       .sort((a, b) => String(a[1]).localeCompare(String(b[1]), "pt-BR"));
   }, [data.members]);
+  const normalizationChecklist = useMemo(() => {
+    const visitorsWithoutCongregation = data.visitors.filter((visitor) => normalizeCongregationScope(visitor.congregation) === globalCongregationScope);
+    const visitorsWithoutPhone = data.visitors.filter((visitor) => onlyDigits(visitor.phone).length < 8);
+    const kidsWithoutCongregation = data.kids.filter((kid) => normalizeCongregationScope(kid.congregation) === globalCongregationScope);
+    const kidsWithoutGuardianPhone = data.kids.filter((kid) => onlyDigits(kid.guardianPhone).length < 8);
+    const eventsWithoutCongregation = data.events.filter((event) => normalizeCongregationScope(event.congregation) === globalCongregationScope);
+    const eventsWithoutDate = data.events.filter((event) => !event.date || !event.time);
+    const careWithoutCongregation = data.careRequests.filter((request) => normalizeCongregationScope(request.congregation) === globalCongregationScope);
+    const careWithoutResponsible = data.careRequests.filter((request) => !request.responsible.trim() && request.status !== "Concluido");
+
+    return [
+      {
+        detail: visitorsWithoutCongregation.length || visitorsWithoutPhone.length
+          ? `${visitorsWithoutCongregation.length} sem congregação e ${visitorsWithoutPhone.length} sem telefone válido.`
+          : "Visitantes já têm base mínima para filtros e contato.",
+        ok: visitorsWithoutCongregation.length === 0 && visitorsWithoutPhone.length === 0,
+        title: "Visitantes",
+      },
+      {
+        detail: kidsWithoutCongregation.length || kidsWithoutGuardianPhone.length
+          ? `${kidsWithoutCongregation.length} sem congregação e ${kidsWithoutGuardianPhone.length} sem telefone do responsável.`
+          : "Kids está pronto para conferência por congregação e responsável.",
+        ok: kidsWithoutCongregation.length === 0 && kidsWithoutGuardianPhone.length === 0,
+        title: "Kids",
+      },
+      {
+        detail: eventsWithoutCongregation.length || eventsWithoutDate.length
+          ? `${eventsWithoutCongregation.length} sem congregação e ${eventsWithoutDate.length} sem data/horário.`
+          : "Agenda está consistente para publicação e filtros.",
+        ok: eventsWithoutCongregation.length === 0 && eventsWithoutDate.length === 0,
+        title: "Agenda",
+      },
+      {
+        detail: careWithoutCongregation.length || careWithoutResponsible.length
+          ? `${careWithoutCongregation.length} sem congregação e ${careWithoutResponsible.length} sem responsável em aberto.`
+          : "Pastoral está consistente para fila por congregação e responsável.",
+        ok: careWithoutCongregation.length === 0 && careWithoutResponsible.length === 0,
+        title: "Pastoral",
+      },
+    ];
+  }, [data.careRequests, data.events, data.kids, data.visitors]);
 
   function exportAudit(format: "pdf" | "csv") {
     const headers = ["Data e hora", "Módulo", "Ação"];
@@ -401,6 +442,25 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
           </button>
         </div>
         {!memberQualityRows.length && <p className="empty-state">Nenhuma pendência de cadastro encontrada nesta conferência.</p>}
+      </article>
+
+      <article className="surface wide">
+        <div className="panel-heading">
+          <h2>Próxima normalização</h2>
+          <span>Visitantes, Kids, Agenda e Pastoral</span>
+        </div>
+        <p className="body-copy">
+          Esta etapa ajuda a decidir quais módulos já estão prontos para sair do JSON principal no futuro. O ideal é corrigir congregação, contato e responsáveis antes de criar tabelas definitivas.
+        </p>
+        <div className="security-check-grid">
+          {normalizationChecklist.map((item) => (
+            <div className={item.ok ? "security-check-card ok" : "security-check-card warning"} key={item.title}>
+              <span>{item.ok ? "Pronto" : "Revisar"}</span>
+              <strong>{item.title}</strong>
+              <small>{item.detail}</small>
+            </div>
+          ))}
+        </div>
       </article>
 
       <article className="surface">
