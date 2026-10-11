@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { formatDateTime, normalizeSearchText } from "../app-helpers";
+import { globalCongregationScope, normalizeCongregationScope } from "../congregation-scope";
 import { moduleAccessByRole, modules, type AccessRole } from "../permissions";
 import { downloadCsv, printHtmlReport } from "../report-helpers";
 import type { AppData, AuditItem, KidRecord, MemberRecord, Notice } from "../types";
@@ -100,6 +101,54 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
       }),
     [data.users],
   );
+  const securityChecklist = useMemo(() => {
+    const activeAdmins = data.users.filter((user) => user.role === "Administrador" && user.status === "Ativo");
+    const activeLocalStaffWithoutScope = data.users.filter((user) => {
+      if (user.status !== "Ativo") return false;
+      if (user.role === "Administrador" || user.role === "Membro") return false;
+      return normalizeCongregationScope(user.congregationScope) === globalCongregationScope;
+    });
+    const membersWithoutCongregation = data.members.filter((member) => normalizeCongregationScope(member.congregation) === globalCongregationScope);
+    const legacyMemberPhotos = data.members.filter((member) => Boolean(member.photoDataUrl));
+    const legacyKidsPhotos = data.kids.filter((kid) => Boolean(kid.photoDataUrl));
+    const photosWithoutConsent = data.members.filter((member) => Boolean(member.photoUrl) && !member.photoConsent);
+
+    return [
+      {
+        detail: activeAdmins.length ? `${activeAdmins.length} administrador(es) ativo(s).` : "Crie ou reative um administrador antes de mudanças grandes.",
+        ok: activeAdmins.length > 0,
+        title: "Administrador ativo",
+      },
+      {
+        detail: activeLocalStaffWithoutScope.length
+          ? `${activeLocalStaffWithoutScope.length} acesso(s) local(is) ainda estão em “Todas”.`
+          : "Liderança local está vinculada a uma congregação.",
+        ok: activeLocalStaffWithoutScope.length === 0,
+        title: "Escopo por congregação",
+      },
+      {
+        detail: membersWithoutCongregation.length
+          ? `${membersWithoutCongregation.length} membro(s) sem congregação específica.`
+          : "Membros possuem congregação definida.",
+        ok: membersWithoutCongregation.length === 0,
+        title: "Membros com congregação",
+      },
+      {
+        detail: legacyMemberPhotos.length || legacyKidsPhotos.length
+          ? `${legacyMemberPhotos.length} foto(s) de membro e ${legacyKidsPhotos.length} foto(s) Kids ainda em base64.`
+          : "Fotos de membros não estão pesando o JSON principal.",
+        ok: legacyMemberPhotos.length === 0 && legacyKidsPhotos.length === 0,
+        title: "Fotos fora do JSON",
+      },
+      {
+        detail: photosWithoutConsent.length
+          ? `${photosWithoutConsent.length} foto(s) salvas sem autorização de exibição.`
+          : "Fotos salvas respeitam autorização de exibição.",
+        ok: photosWithoutConsent.length === 0,
+        title: "Consentimento de fotos",
+      },
+    ];
+  }, [data.kids, data.members, data.users]);
 
   function exportAudit(format: "pdf" | "csv") {
     const headers = ["Data e hora", "Módulo", "Ação"];
@@ -183,6 +232,25 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
                   : "Nenhum acesso ativo cadastrado"}
               </small>
               <p>{item.allowedModules.join(", ")}</p>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <article className="surface wide">
+        <div className="panel-heading">
+          <h2>Prontidão de segurança e Supabase</h2>
+          <span>Antes de crescer</span>
+        </div>
+        <p className="body-copy">
+          Estes pontos ajudam a preparar o sistema para normalização gradual, isolamento por congregação e revisão de permissões. Eles não substituem teste de RLS no Supabase, mas mostram o que já dá para conferir pelos dados atuais.
+        </p>
+        <div className="security-check-grid">
+          {securityChecklist.map((item) => (
+            <div className={item.ok ? "security-check-card ok" : "security-check-card warning"} key={item.title}>
+              <span>{item.ok ? "OK" : "Revisar"}</span>
+              <strong>{item.title}</strong>
+              <small>{item.detail}</small>
             </div>
           ))}
         </div>
