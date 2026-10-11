@@ -13,6 +13,13 @@ const securityHeaders = [
   { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
 ];
 
+const noStoreHeaders = [
+  {
+    key: 'Cache-Control',
+    value: 'no-store, max-age=0',
+  },
+];
+
 const nextConfig: NextConfig = {
   agentRules: false,
   async headers() {
@@ -23,20 +30,32 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-store, max-age=0',
-          },
-        ],
+        headers: noStoreHeaders,
+      },
+      {
+        source: '/sistema',
+        headers: noStoreHeaders,
+      },
+      {
+        source: '/api/admin/:path*',
+        headers: noStoreHeaders,
+      },
+      {
+        source: '/api/contact/:path*',
+        headers: noStoreHeaders,
+      },
+      {
+        source: '/api/push/:path*',
+        headers: noStoreHeaders,
+      },
+      {
+        source: '/api/auth/:path*',
+        headers: noStoreHeaders,
       },
       {
         source: '/sw.js',
         headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-store, max-age=0',
-          },
+          ...noStoreHeaders,
           {
             key: 'Service-Worker-Allowed',
             value: '/',
@@ -45,12 +64,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/manifest.webmanifest',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-store, max-age=0',
-          },
-        ],
+        headers: noStoreHeaders,
       },
     ];
   },
