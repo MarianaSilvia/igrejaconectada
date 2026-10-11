@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { formatDateTime, normalizeSearchText } from "../app-helpers";
 import { globalCongregationScope, normalizeCongregationScope } from "../congregation-scope";
 import { moduleAccessByRole, modules, type AccessRole } from "../permissions";
-import { downloadCsv, printHtmlReport } from "../report-helpers";
+import { downloadCsv, downloadExcelWorkbook, printHtmlReport } from "../report-helpers";
 import type { AppData, AuditItem, KidRecord, MemberRecord, Notice } from "../types";
 
 type AuditModuleFilter = "Todos" | "Membros" | "Acessos" | "Agenda" | "Visitantes" | "Pastoral" | "Sistema";
@@ -57,6 +57,11 @@ function auditRows(items: AuditItem[]) {
 
 function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
+}
+
+function memberGroups(member: MemberRecord) {
+  const groups = member.ministries?.length ? member.ministries : member.ministry ? [member.ministry] : [];
+  return groups.join(", ");
 }
 
 export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, monthlyKidsBirthdays, resetLocalData }: SettingsPanelProps) {
@@ -207,6 +212,43 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
       },
     ];
   }, [data.members]);
+  const memberQualityRows = useMemo(() => {
+    const phoneCounts = new Map<string, number>();
+    const cpfCounts = new Map<string, number>();
+
+    data.members.forEach((member) => {
+      const phone = onlyDigits(member.phone);
+      const cpf = onlyDigits(member.cpf);
+      if (phone) phoneCounts.set(phone, (phoneCounts.get(phone) ?? 0) + 1);
+      if (cpf) cpfCounts.set(cpf, (cpfCounts.get(cpf) ?? 0) + 1);
+    });
+
+    return data.members
+      .flatMap((member) => {
+        const issues: string[] = [];
+        const phone = onlyDigits(member.phone);
+        const cpf = onlyDigits(member.cpf);
+
+        if (phone.length < 8) issues.push("Telefone ausente ou inválido");
+        if (!member.email.trim()) issues.push("E-mail de acesso ausente");
+        if (!member.birthDate) issues.push("Data de nascimento ausente");
+        if (!memberGroups(member)) issues.push("Sem grupo vinculado");
+        if (phone && (phoneCounts.get(phone) ?? 0) > 1) issues.push("Telefone duplicado");
+        if (cpf && (cpfCounts.get(cpf) ?? 0) > 1) issues.push("CPF duplicado");
+
+        return issues.map((issue) => [
+          member.memberCode,
+          member.fullName,
+          member.congregation || "Não informado",
+          member.phone || "Não informado",
+          member.email || "Não informado",
+          member.cpf || "Não informado",
+          memberGroups(member) || "Sem grupo",
+          issue,
+        ]);
+      })
+      .sort((a, b) => String(a[1]).localeCompare(String(b[1]), "pt-BR"));
+  }, [data.members]);
 
   function exportAudit(format: "pdf" | "csv") {
     const headers = ["Data e hora", "Módulo", "Ação"];
@@ -233,6 +275,25 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
     link.click();
     URL.revokeObjectURL(url);
     log("Backup completo baixado em JSON");
+  }
+
+  function exportMemberQuality(format: "csv" | "excel") {
+    const headers = ["Código", "Nome", "Congregação", "Telefone", "E-mail", "CPF", "Grupos", "Pendência"];
+
+    if (format === "csv") {
+      downloadCsv("pendencias-cadastros-membros.csv", headers, memberQualityRows);
+      log("Pendências dos cadastros exportadas em CSV");
+      return;
+    }
+
+    downloadExcelWorkbook(
+      "pendencias-cadastros-membros.xls",
+      "Pendências dos cadastros de membros",
+      `Lista gerada em ${new Date().toLocaleString("pt-BR")} com ${memberQualityRows.length} pendência(s).`,
+      headers,
+      memberQualityRows,
+    );
+    log("Pendências dos cadastros exportadas para Excel");
   }
 
   return (
@@ -331,6 +392,15 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
             </div>
           ))}
         </div>
+        <div className="detail-actions">
+          <button className="secondary" disabled={!memberQualityRows.length} onClick={() => exportMemberQuality("csv")} type="button">
+            Exportar pendências CSV
+          </button>
+          <button className="secondary" disabled={!memberQualityRows.length} onClick={() => exportMemberQuality("excel")} type="button">
+            Exportar para Excel
+          </button>
+        </div>
+        {!memberQualityRows.length && <p className="empty-state">Nenhuma pendência de cadastro encontrada nesta conferência.</p>}
       </article>
 
       <article className="surface">
