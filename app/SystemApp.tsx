@@ -5083,14 +5083,21 @@ function RegistrationRequestsPanel({
                 <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>
                   {registrationStatusLabel(request.status)}
                 </span>
-                <small>{request.phone} - {request.email || "E-mail não informado"}</small>
-                <small>
-                  {request.city || "Cidade não informada"} {request.neighborhood ? `- ${request.neighborhood}` : ""}
-                </small>
                 <small>Congregação: {request.congregation || "Não informada"}</small>
                 <small>Enviado em {formatDate(request.createdAt.slice(0, 10))}</small>
+                <details className="record-sensitive-details registration-sensitive-details">
+                  <summary>Ver dados enviados</summary>
+                  <div className="record-sensitive-grid">
+                    <small>Telefone: {request.phone || "Não informado"}</small>
+                    <small>E-mail: {request.email || "Não informado"}</small>
+                    <small>
+                      Cidade: {request.city || "Não informada"}
+                      {request.neighborhood ? ` - ${request.neighborhood}` : ""}
+                    </small>
+                    {request.notes && <small>Observações: {request.notes}</small>}
+                  </div>
+                </details>
               </div>
-              {request.notes && <p>{request.notes}</p>}
               <div className="card-actions">
                 {request.status === "Aguardando aprovacao" && (
                   <button className="secondary" onClick={() => onMarkInReview(request)} type="button">

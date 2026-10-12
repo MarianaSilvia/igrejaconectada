@@ -2482,6 +2482,10 @@ textarea:focus {
   margin-top: 10px;
 }
 
+.registration-sensitive-details {
+  margin-top: 10px;
+}
+
 .care-summary-details {
   margin-bottom: 14px;
 }
