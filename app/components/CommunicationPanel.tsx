@@ -204,9 +204,13 @@ export function CommunicationPanel({
                 />
                 <div>
                   <strong>{recipient.name}</strong>
-                  <small>
-                    {recipient.group} - {recipient.phone}
-                  </small>
+                  <small>{recipient.group}</small>
+                  <details className="record-sensitive-details message-recipient-details">
+                    <summary>Ver contato</summary>
+                    <div className="record-sensitive-grid">
+                      <small>WhatsApp: {recipient.phone}</small>
+                    </div>
+                  </details>
                 </div>
                 <a className="whatsapp-link" href={whatsappUrl(recipient.phone, messageText, recipient.name)} rel="noreferrer" target="_blank">
                   Enviar

@@ -2486,6 +2486,10 @@ textarea:focus {
   margin-top: 10px;
 }
 
+.message-recipient-details {
+  margin-top: 8px;
+}
+
 .care-summary-details {
   margin-bottom: 14px;
 }
