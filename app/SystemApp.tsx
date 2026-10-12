@@ -1506,7 +1506,7 @@ export default function Home() {
     const pendingRegistrations = pendingRegistrationRequests.map((request) => ({
       id: `registration-${request.id}`,
       title: `Pré-cadastro: ${request.fullName}`,
-      body: `${request.requestedStatus} - ${request.phone}`,
+      body: `${request.requestedStatus} - ${request.congregation || "Congregação não informada"}`,
       module: "overview" as ModuleKey,
     }));
 
