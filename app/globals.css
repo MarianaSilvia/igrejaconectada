@@ -2474,6 +2474,10 @@ textarea:focus {
   margin-top: 8px;
 }
 
+.access-member-details {
+  margin-bottom: 6px;
+}
+
 .care-summary-details {
   margin-bottom: 14px;
 }

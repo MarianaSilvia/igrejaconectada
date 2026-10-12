@@ -58,8 +58,15 @@ export function UsersAccessPanel({
               <div>
                 <strong>{selectedAccessMember.fullName}</strong>
                 <small>
-                  {selectedAccessMember.memberType} - {selectedAccessMember.status} - {selectedAccessMember.phone}
+                  {selectedAccessMember.memberType} - {selectedAccessMember.status}
                 </small>
+                <details className="record-sensitive-details access-member-details">
+                  <summary>Ver contato vinculado</summary>
+                  <div className="record-sensitive-grid">
+                    <small>Telefone: {selectedAccessMember.phone || "Não informado"}</small>
+                    <small>E-mail: {selectedAccessMember.email || "Não informado"}</small>
+                  </div>
+                </details>
                 <small>
                   {selectedAccessExistingUser
                     ? `Acesso existente: ${selectedAccessExistingUser.role} - será atualizado`
