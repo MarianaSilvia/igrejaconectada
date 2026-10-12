@@ -47,7 +47,7 @@ export function UsersAccessPanel({
               <option value="">Criar acesso sem vincular membro</option>
               {data.members.map((member) => (
                 <option key={member.id} value={member.id}>
-                  {member.fullName} - {member.email || "sem e-mail"} - {member.memberType}
+                  {member.fullName} - {member.memberType}
                 </option>
               ))}
             </select>
@@ -148,8 +148,14 @@ export function UsersAccessPanel({
               <span className={`bullet-mark access-status-mark access-status-${user.status.toLowerCase()}`} />
               <div>
                 <strong>{user.name}</strong>
-                <small>{user.role} - {user.status} - {user.email}</small>
+                <small>{user.role} - {user.status}</small>
                 <small>Escopo: {user.congregationScope ?? globalCongregationScope}</small>
+                <details className="record-sensitive-details access-email-details">
+                  <summary>Ver e-mail de acesso</summary>
+                  <div className="record-sensitive-grid">
+                    <small>{user.email || "E-mail não informado"}</small>
+                  </div>
+                </details>
               </div>
               <div className="row-actions">
                 <button className={user.status === "Bloqueado" ? "secondary" : "danger-action"} onClick={() => updateAccessUserStatus(user, user.status === "Bloqueado" ? "Ativo" : "Bloqueado")} type="button">

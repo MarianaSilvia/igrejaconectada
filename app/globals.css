@@ -2478,6 +2478,10 @@ textarea:focus {
   margin-bottom: 6px;
 }
 
+.access-email-details {
+  margin-top: 8px;
+}
+
 .kids-sensitive-details {
   margin-top: 10px;
 }
