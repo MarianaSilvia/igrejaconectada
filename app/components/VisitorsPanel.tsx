@@ -163,10 +163,17 @@ export function VisitorsPanel({
                   {visitor.contactMade && visitor.integrationStatus === "Em acompanhamento" && <span className="notice-pill">Pronto para integrar</span>}
                 </div>
                 <small>
-                  {visitor.integrationStatus} - {visitor.contactMade ? "contato feito" : "contato pendente"} - {visitor.phone}
+                  {visitor.integrationStatus} - {visitor.contactMade ? "contato feito" : "contato pendente"}
                 </small>
-                <small>Convidado por: {visitor.invitedBy || "Não informado"}</small>
-                {visitor.notes && <small>{visitor.notes}</small>}
+                <small>Retorno: {visitor.returnDate ? formatDate(visitor.returnDate) : "Não agendado"}</small>
+                <details className="record-sensitive-details">
+                  <summary>Ver detalhes do visitante</summary>
+                  <div className="record-sensitive-grid">
+                    <small>WhatsApp: {visitor.phone || "Não informado"}</small>
+                    <small>Convidado por: {visitor.invitedBy || "Não informado"}</small>
+                    {visitor.notes && <small>Observações: {visitor.notes}</small>}
+                  </div>
+                </details>
               </div>
               <div className="row-actions">
                 <a className="whatsapp-link" href={whatsappUrl(visitor.phone, "Paz, {nome}! Ficamos felizes com sua visita. Podemos ajudar em algo?", visitor.fullName)} rel="noreferrer" target="_blank">

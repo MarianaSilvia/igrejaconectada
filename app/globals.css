@@ -2422,6 +2422,28 @@ textarea:focus {
   margin-top: 8px;
 }
 
+.record-sensitive-details {
+  background: rgba(15, 23, 42, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+  margin-top: 8px;
+  padding: 8px 10px;
+}
+
+.record-sensitive-details summary {
+  color: var(--accent-strong);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.record-sensitive-grid {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+
 .group-record.with-cover {
   grid-template-columns: 112px minmax(0, 1fr);
 }
