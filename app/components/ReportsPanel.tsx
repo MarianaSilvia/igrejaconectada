@@ -27,6 +27,18 @@ type ReportsPanelProps = {
   weekEvents: ChurchEvent[];
 };
 
+function previewCellValue(header: string, value: unknown) {
+  const label = normalizeSearchText(header);
+  const text = String(value ?? "");
+  if (!text.trim()) return "";
+
+  if (label.includes("cpf") || label.includes("telefone") || label.includes("whatsapp") || label.includes("email") || label.includes("e-mail")) {
+    return "Protegido na prévia";
+  }
+
+  return text;
+}
+
 export function ReportsPanel({
   absentRows,
   currentAccessRole,
@@ -331,7 +343,7 @@ export function ReportsPanel({
           {selectedReportPreview.rows.slice(0, 6).map((row, index) => (
             <div className="preview-row" key={`${reportPreviewKind}-${index}`} style={{ gridTemplateColumns: `repeat(${selectedReportPreview.headers.length}, minmax(120px, 1fr))` }}>
               {row.map((cell, cellIndex) => (
-                <span key={`${reportPreviewKind}-${index}-${cellIndex}`}>{String(cell ?? "")}</span>
+                <span key={`${reportPreviewKind}-${index}-${cellIndex}`}>{previewCellValue(selectedReportPreview.headers[cellIndex] ?? "", cell)}</span>
               ))}
             </div>
           ))}
