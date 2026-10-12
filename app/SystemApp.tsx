@@ -1765,6 +1765,7 @@ export default function Home() {
       clearMemberFilters();
     }
   }, [activeModule, canManageMembers, clearMemberFilters, hasActiveMemberFilters]);
+  const isRemoteLoading = hasSession && isSupabaseConfigured() && !remoteStateReady;
   const filteredVisitors = useMemo(
     () =>
       data.visitors
@@ -4226,6 +4227,23 @@ export default function Home() {
             </div>
           )}
 
+          {isRemoteLoading ? (
+            <section className="content-grid remote-loading-grid" aria-live="polite">
+              <article className="surface wide remote-loading-panel">
+                <span className="remote-loading-spinner" aria-hidden="true" />
+                <div>
+                  <p className="eyebrow">Carregando base Supabase</p>
+                  <h2>Buscando cadastros reais da igreja...</h2>
+                  <p>
+                    Aguarde um instante. O sistema está restaurando sua sessão e carregando membros, agenda,
+                    pastoral, mural e demais módulos direto da base principal.
+                  </p>
+                  <small>{syncStatus}</small>
+                </div>
+              </article>
+            </section>
+          ) : (
+            <>
           {activeModule === "overview" && (isAdminView ? (
             <section className="content-grid overview-streaming admin-overview">
               <div className={featuredMuralImage ? "hero-panel streaming-cover mural-hero-cover" : "hero-panel streaming-cover"}>
@@ -5039,6 +5057,8 @@ export default function Home() {
               <strong>Fale com a liderança</strong>
               <ContactUnreadBadge />
             </button>
+          )}
+            </>
           )}
 
         </section>
