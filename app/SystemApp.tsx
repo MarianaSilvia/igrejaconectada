@@ -890,6 +890,7 @@ export default function Home() {
   const [accessMessage, setAccessMessage] = useState("");
   const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
   const [activeModule, setActiveModule] = useState<ModuleKey>("overview");
+  const previousActiveModuleRef = useRef<ModuleKey>(activeModule);
   const [simpleViewEnabled, setSimpleViewEnabled] = useState(false);
   const [muralSpotlightIndex, setMuralSpotlightIndex] = useState(0);
   const [data, setData] = useState<AppData>(initialData);
@@ -1730,6 +1731,14 @@ export default function Home() {
     setMemberDiscipleshipFilter("Todos");
     setMemberPastoralFilter("Todos");
   }, []);
+  useEffect(() => {
+    const previousModule = previousActiveModuleRef.current;
+    previousActiveModuleRef.current = activeModule;
+
+    if (activeModule === "members" && previousModule !== "members" && canManageMembers && hasActiveMemberFilters) {
+      clearMemberFilters();
+    }
+  }, [activeModule, canManageMembers, clearMemberFilters, hasActiveMemberFilters]);
   const filteredVisitors = useMemo(
     () =>
       data.visitors
