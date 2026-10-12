@@ -3166,6 +3166,26 @@ textarea:focus {
   color: var(--muted);
 }
 
+.backup-json-details {
+  background: rgba(15, 23, 42, 0.42);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 10px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+}
+
+.backup-json-details summary {
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.backup-json-details p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 10px 0;
+}
+
 .backup-json {
   font-family: var(--font-geist-mono), Consolas, monospace;
   min-height: 300px;

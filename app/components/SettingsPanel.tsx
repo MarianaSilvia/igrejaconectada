@@ -605,7 +605,11 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
             {data.audit.length} auditorias.
           </small>
         </div>
-        <textarea className="backup-json" readOnly value={JSON.stringify(data, null, 2)} />
+        <details className="backup-json-details">
+          <summary>Visualizar JSON técnico do backup</summary>
+          <p>Use esta prévia apenas para conferência administrativa. O arquivo contém dados pessoais e deve ser tratado com cuidado.</p>
+          <textarea className="backup-json" readOnly value={JSON.stringify(data, null, 2)} />
+        </details>
         <div className="detail-actions">
           <button onClick={downloadFullBackup} type="button">
             Baixar backup completo
