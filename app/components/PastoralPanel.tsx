@@ -172,7 +172,10 @@ export function PastoralPanel({
             <h2>{selectedRequest.member}</h2>
             <span>{selectedRequest.category}</span>
           </div>
-          <p>{selectedRequest.summary}</p>
+          <details className="record-sensitive-details care-summary-details">
+            <summary>Ver descrição do pedido</summary>
+            <p>{selectedRequest.summary || "Sem descrição informada."}</p>
+          </details>
           <div className="flow-line" aria-label="Etapas do atendimento">
             {statusFlow.map((status) => (
               <span className={statusFlow.indexOf(status) <= statusFlow.indexOf(selectedRequest.status) ? "flow-step done" : "flow-step"} key={status}>

@@ -2474,6 +2474,16 @@ textarea:focus {
   margin-top: 8px;
 }
 
+.care-summary-details {
+  margin-bottom: 14px;
+}
+
+.care-summary-details p {
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 8px 0 0;
+}
+
 .group-record.with-cover {
   grid-template-columns: 112px minmax(0, 1fr);
 }
