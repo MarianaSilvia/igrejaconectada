@@ -3763,7 +3763,13 @@ export default function Home() {
                         <span>{member.fullName.slice(0, 1)}</span>
                         <div>
                           <strong>{member.fullName}</strong>
-                          <small>{member.phone || "Telefone não informado"} - {member.status}</small>
+                          <small>{member.status}</small>
+                          <details className="record-sensitive-details attendance-contact-details">
+                            <summary>Ver contato</summary>
+                            <div className="record-sensitive-grid">
+                              <small>Telefone: {member.phone || "Não informado"}</small>
+                            </div>
+                          </details>
                         </div>
                       </div>
                       <div className="attendance-status-buttons">
