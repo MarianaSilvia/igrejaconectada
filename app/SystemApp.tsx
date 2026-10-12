@@ -878,6 +878,31 @@ function normalizeAppData(value: Partial<AppData>): AppData {
   return normalizeAppDataWithDefaults(value, initialData);
 }
 
+function emptyRemoteAppData(): AppData {
+  return normalizeAppData({
+    careRequests: [],
+    events: [],
+    notices: [],
+    mural: [],
+    users: [],
+    members: [],
+    registrationRequests: [],
+    visitors: [],
+    kids: [],
+    schoolClasses: [],
+    discipleshipClasses: [],
+    ministries: [],
+    attendanceSessions: [],
+    messageTemplates: [],
+    messageCampaigns: [],
+    transactions: [],
+    assets: [],
+    devotionals: [],
+    audit: [],
+    notificationReadIds: [],
+  });
+}
+
 export default function Home() {
   const saveTimerRef = useRef<number | null>(null);
   const lastSavedPayloadRef = useRef("");
@@ -1155,6 +1180,7 @@ export default function Home() {
       }
       setAccessMessage("");
       setAccessMode("login");
+      setData(emptyRemoteAppData());
       setRemoteStateReady(false);
       setSyncStatus("Sessão restaurada. Cadastros serão carregados da base Supabase.");
       setHasSession(true);
@@ -3554,6 +3580,7 @@ export default function Home() {
     setSessionUserId(user.id);
     setSessionEmail(loginEmail);
     setSessionRole(accessRoleForSession(data.users, loginEmail, metadata));
+    setData(emptyRemoteAppData());
     setRemoteStateReady(false);
     setSyncStatus("Sessão Supabase ativa. Novos dados serão sincronizados.");
     setHasSession(true);
