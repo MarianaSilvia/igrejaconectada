@@ -2400,6 +2400,29 @@ textarea:focus {
   gap: 10px;
 }
 
+.member-list-tools {
+  align-items: center;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.22);
+  border-radius: 14px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+}
+
+.member-list-tools p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.member-list-tools button {
+  flex: 0 0 auto;
+}
+
 .member-sensitive-details {
   background: rgba(15, 23, 42, 0.32);
   border: 1px solid rgba(148, 163, 184, 0.16);
@@ -2420,6 +2443,13 @@ textarea:focus {
   display: grid;
   gap: 4px;
   margin-top: 8px;
+}
+
+@media (max-width: 700px) {
+  .member-list-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 .record-sensitive-details {

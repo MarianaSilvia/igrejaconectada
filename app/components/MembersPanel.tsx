@@ -1,4 +1,4 @@
-import type { ChangeEvent, Dispatch, SetStateAction } from "react";
+import { useState, type ChangeEvent, type Dispatch, type SetStateAction } from "react";
 import {
   ageFromBirthDate,
   ageGroupFromBirthDate,
@@ -133,6 +133,7 @@ export function MembersPanel({
   weeklyBirthdays,
   createMember,
 }: MembersPanelProps) {
+  const [showAllMemberDetails, setShowAllMemberDetails] = useState(false);
   const canShowForm = canManageMembers || editingMemberId === currentMember?.id;
   const missingFormFields = missingMemberFields(memberForm);
   const updateMemberName = (fullName: string) => {
@@ -622,6 +623,14 @@ export function MembersPanel({
             Mostrando {filteredMembers.length} de {totalMemberCount} membros. Use Limpar filtros para visualizar todos os cadastros.
           </p>
         )}
+        {canManageMembers && filteredMembers.length > 0 && (
+          <div className="member-list-tools" aria-label="Controles da lista de membros">
+            <p>Os contatos e dados completos ficam protegidos nos cards. Use o botão abaixo para expandir ou recolher todos.</p>
+            <button className="secondary" onClick={() => setShowAllMemberDetails((value) => !value)} type="button">
+              {showAllMemberDetails ? "Recolher dados completos" : "Mostrar dados completos"}
+            </button>
+          </div>
+        )}
         {canManageMembers && (
           <div className="birthday-grid">
             <div className="birthday-card">
@@ -669,7 +678,7 @@ export function MembersPanel({
                     <small>
                       Função ministerial: {member.ministerialFunction || "Não informada"} - Aniv. {birthdayLabel(member.birthDate)}
                     </small>
-                    <details className="member-sensitive-details">
+                    <details className="member-sensitive-details" open={canManageMembers && showAllMemberDetails}>
                       <summary>Ver dados completos</summary>
                       <div className="member-sensitive-grid">
                         <small>Telefone: {member.phone || "Não informado"}</small>
