@@ -13,6 +13,7 @@
     "build:sites": "vinext build",
     "start:sites": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "check:members": "node scripts/check-member-sync.mjs",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
