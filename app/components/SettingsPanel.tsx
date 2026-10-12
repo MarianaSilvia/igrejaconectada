@@ -4,7 +4,8 @@ import { formatDateTime, normalizeSearchText } from "../app-helpers";
 import { globalCongregationScope, normalizeCongregationScope } from "../congregation-scope";
 import { moduleAccessByRole, modules, type AccessRole } from "../permissions";
 import { downloadCsv, downloadExcelWorkbook, printHtmlReport } from "../report-helpers";
-import type { AppData, AuditItem, KidRecord, MemberRecord, Notice } from "../types";
+import { getSupabaseClient } from "../supabase-client";
+import type { AppData, AuditItem, KidRecord, MemberRecord, MemberSyncStatus, Notice } from "../types";
 
 type AuditModuleFilter = "Todos" | "Membros" | "Acessos" | "Agenda" | "Visitantes" | "Pastoral" | "Sistema";
 type AuditPeriodFilter = "Todos" | "Hoje" | "7 dias" | "30 dias";
@@ -68,6 +69,9 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
   const [auditSearch, setAuditSearch] = useState("");
   const [auditModule, setAuditModule] = useState<AuditModuleFilter>("Todos");
   const [auditPeriod, setAuditPeriod] = useState<AuditPeriodFilter>("Todos");
+  const [memberSyncStatus, setMemberSyncStatus] = useState<MemberSyncStatus | null>(null);
+  const [memberSyncLoading, setMemberSyncLoading] = useState(false);
+  const [memberSyncMessage, setMemberSyncMessage] = useState("");
 
   const filteredAudit = useMemo(() => {
     const search = normalizeSearchText(auditSearch);
@@ -504,6 +508,81 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
     log("Pendências de normalização exportadas para Excel");
   }
 
+  async function memberSyncRequest(method: "GET" | "POST", path = "/api/admin/member-sync-status") {
+    const supabase = getSupabaseClient();
+    const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+      setMemberSyncMessage("Sessão administrativa não encontrada. Entre novamente e tente conferir.");
+      return null;
+    }
+
+    const response = await fetch(path, {
+      method,
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const result = (await response.json().catch(() => ({}))) as Partial<MemberSyncStatus> & {
+      error?: string;
+      message?: string;
+    };
+
+    if (!response.ok) {
+      setMemberSyncMessage(result.error ?? "Não foi possível concluir a conferência de membros.");
+      return null;
+    }
+
+    return result;
+  }
+
+  async function refreshMemberSyncStatus() {
+    setMemberSyncLoading(true);
+    setMemberSyncMessage("");
+
+    try {
+      const result = await memberSyncRequest("GET");
+      if (result?.status) {
+        setMemberSyncStatus(result as MemberSyncStatus);
+        setMemberSyncMessage(result.message ?? "");
+      }
+    } finally {
+      setMemberSyncLoading(false);
+    }
+  }
+
+  async function syncMembersMirror() {
+    setMemberSyncLoading(true);
+    setMemberSyncMessage("");
+
+    try {
+      const result = await memberSyncRequest("POST");
+      if (result?.status) {
+        setMemberSyncStatus(result as MemberSyncStatus);
+        setMemberSyncMessage(result.message ?? "");
+        log("Espelho da tabela members sincronizado pelo painel de configurações");
+      }
+    } finally {
+      setMemberSyncLoading(false);
+    }
+  }
+
+  async function restoreMembersJson() {
+    setMemberSyncLoading(true);
+    setMemberSyncMessage("");
+
+    try {
+      const result = await memberSyncRequest("POST", "/api/admin/member-sync-status/restore-json");
+      if (result) {
+        setMemberSyncMessage(result.message ?? "JSON principal conferido a partir da tabela members.");
+        log("JSON principal de membros conferido a partir da tabela members");
+      }
+    } finally {
+      setMemberSyncLoading(false);
+    }
+
+    await refreshMemberSyncStatus();
+  }
+
   return (
     <section className="content-grid">
       <article className="surface wide">
@@ -615,6 +694,51 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
               <small>{item.detail}</small>
             </div>
           ))}
+        </div>
+      </article>
+
+      <article className="surface wide">
+        <div className="panel-heading">
+          <h2>Sincronização dos membros</h2>
+          <span>JSON principal e tabela members</span>
+        </div>
+        <p className="body-copy">
+          Use esta conferência quando os membros sumirem da tela ou quando houver diferença entre a base principal e a tabela espelho. A restauração pelo espelho só fica disponível quando a tabela members tiver mais cadastros que o JSON principal.
+        </p>
+        {memberSyncStatus ? (
+          <div className={`member-sync-card member-sync-${memberSyncStatus.status.toLowerCase()}`}>
+            <div>
+              <strong>{memberSyncStatus.status === "Atencao" ? "Atenção na sincronização" : memberSyncStatus.status}</strong>
+              <small>{memberSyncMessage || memberSyncStatus.message}</small>
+            </div>
+            <div className="member-sync-grid">
+              <span>JSON: {memberSyncStatus.jsonTotal}</span>
+              <span>Tabela: {memberSyncStatus.tableTotal}</span>
+              <span>Sem código: {memberSyncStatus.missingCodeCount}</span>
+              <span>CPF duplicado: {memberSyncStatus.duplicateCpfCount}</span>
+              <span>Telefone duplicado: {memberSyncStatus.duplicatePhoneCount}</span>
+              <span>Faltando na tabela: {memberSyncStatus.missingInTableCount}</span>
+              <span>Sobra na tabela: {memberSyncStatus.extraInTableCount}</span>
+            </div>
+          </div>
+        ) : (
+          <p className="empty-state">Clique em conferir para comparar a base principal com a tabela members.</p>
+        )}
+        <div className="detail-actions">
+          <button className="secondary" disabled={memberSyncLoading} onClick={refreshMemberSyncStatus} type="button">
+            {memberSyncLoading ? "Conferindo..." : "Conferir membros"}
+          </button>
+          <button className="secondary" disabled={memberSyncLoading} onClick={syncMembersMirror} type="button">
+            Sincronizar espelho
+          </button>
+          <button
+            className="secondary"
+            disabled={memberSyncLoading || !memberSyncStatus || memberSyncStatus.tableTotal <= memberSyncStatus.jsonTotal}
+            onClick={restoreMembersJson}
+            type="button"
+          >
+            Restaurar JSON pela tabela
+          </button>
         </div>
       </article>
 
