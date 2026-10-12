@@ -661,48 +661,47 @@ export function MembersPanel({
                     <strong>{member.fullName}</strong>
                     <small className="member-code-line">Código: {member.memberCode || "Aguardando código"}</small>
                     <small>
-                      {member.memberType} - {member.status} - {member.role || "Sem função"} - {member.phone}
+                      {member.memberType} - {member.status} - {member.role || "Sem função"}
                     </small>
                     <small>
-                      CPF: {member.cpf || "Não informado"} - Sexo: {member.gender || "Não informado"} - Idade: {member.age || "Não informada"}
+                      {member.congregation || "Congregação não informada"} - Grupos: {groupsLabel}
                     </small>
                     <small>
-                      Faixa etária: {member.ageGroup || "Não informada"} - Escolaridade: {member.education || "Não informada"}
+                      Função ministerial: {member.ministerialFunction || "Não informada"} - Aniv. {birthdayLabel(member.birthDate)}
                     </small>
-                    {(member.fatherName || member.motherName) && (
-                      <small>
-                        Filiação: {member.fatherName || "Pai não informado"} / {member.motherName || "Mãe não informada"}
-                      </small>
-                    )}
-                    {member.spouseName && <small>Cônjuge: {member.spouseName}</small>}
-                    <small>
-                      Endereço: {member.address || "Não informado"}
-                      {member.neighborhood ? ` - ${member.neighborhood}` : ""}
-                      {member.city ? ` - ${member.city}` : ""}
-                      {member.zipCode ? ` - CEP ${member.zipCode}` : ""}
-                    </small>
-                    <small>
-                      Grupos: {groupsLabel} - {member.congregation || "Congregação não informada"} - Aniv. {birthdayLabel(member.birthDate)}
-                    </small>
-                    <small>
-                      Função ministerial: {member.ministerialFunction || "Não informada"}
-                    </small>
-                    <small>
-                      Cargos: {member.role || "Sem cargo"} - Categorias: {member.categories || "Não informado"}
-                    </small>
-                    <small>
-                      EBD: {schoolClassName || "Não matriculado"} - Discipulado: {discipleshipClassName || "Não matriculado"}
-                    </small>
-                    <small>
-                      Origem: {member.registrationSource || "Não informada"} - Situação: {member.pastoralStatus || "Sem acompanhamento definido"}
-                    </small>
-                    {(member.conversionDate || member.baptismDate) && (
-                      <small>
-                        Conversão: {formatDate(member.conversionDate)} - Batismo: {formatDate(member.baptismDate)}
-                      </small>
-                    )}
-                    {member.createdAt && <small>Criado em: {formatDate(member.createdAt.slice(0, 10))}</small>}
-                    {member.memberVisibleNotes && <small>Nota ao membro: {member.memberVisibleNotes}</small>}
+                    <details className="member-sensitive-details">
+                      <summary>Ver dados completos</summary>
+                      <div className="member-sensitive-grid">
+                        <small>Telefone: {member.phone || "Não informado"}</small>
+                        <small>E-mail: {member.email || "Não informado"}</small>
+                        <small>CPF: {member.cpf || "Não informado"}</small>
+                        <small>Sexo: {member.gender || "Não informado"} - Idade: {member.age || "Não informada"}</small>
+                        <small>Faixa etária: {member.ageGroup || "Não informada"}</small>
+                        <small>Escolaridade: {member.education || "Não informada"}</small>
+                        {(member.fatherName || member.motherName) && (
+                          <small>
+                            Filiação: {member.fatherName || "Pai não informado"} / {member.motherName || "Mãe não informada"}
+                          </small>
+                        )}
+                        {member.spouseName && <small>Cônjuge: {member.spouseName}</small>}
+                        <small>
+                          Endereço: {member.address || "Não informado"}
+                          {member.neighborhood ? ` - ${member.neighborhood}` : ""}
+                          {member.city ? ` - ${member.city}` : ""}
+                          {member.zipCode ? ` - CEP ${member.zipCode}` : ""}
+                        </small>
+                        <small>Cargos: {member.role || "Sem cargo"} - Categorias: {member.categories || "Não informado"}</small>
+                        <small>EBD: {schoolClassName || "Não matriculado"} - Discipulado: {discipleshipClassName || "Não matriculado"}</small>
+                        <small>Origem: {member.registrationSource || "Não informada"} - Situação: {member.pastoralStatus || "Sem acompanhamento definido"}</small>
+                        {(member.conversionDate || member.baptismDate) && (
+                          <small>
+                            Conversão: {formatDate(member.conversionDate)} - Batismo: {formatDate(member.baptismDate)}
+                          </small>
+                        )}
+                        {member.createdAt && <small>Criado em: {formatDate(member.createdAt.slice(0, 10))}</small>}
+                        {member.memberVisibleNotes && <small>Nota ao membro: {member.memberVisibleNotes}</small>}
+                      </div>
+                    </details>
                     {missingFields.length > 0 && (
                       <small className="member-incomplete-line">Ficha incompleta: {missingFields.join(", ")}</small>
                     )}
