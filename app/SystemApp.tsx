@@ -4565,7 +4565,13 @@ export default function Home() {
                     <div>
                       <strong>{currentMember.fullName}</strong>
                       <small>{currentMember.memberType} - {currentMember.status}</small>
-                      <small>{currentMember.phone} - {currentMember.email || "E-mail não informado"}</small>
+                      <details className="record-sensitive-details member-home-contact-details">
+                        <summary>Ver contato da ficha</summary>
+                        <div className="record-sensitive-grid">
+                          <small>Telefone: {currentMember.phone || "Não informado"}</small>
+                          <small>E-mail: {currentMember.email || "Não informado"}</small>
+                        </div>
+                      </details>
                     </div>
                   </div>
                 ) : (
