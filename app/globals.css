@@ -2478,6 +2478,10 @@ textarea:focus {
   margin-bottom: 6px;
 }
 
+.kids-sensitive-details {
+  margin-top: 10px;
+}
+
 .care-summary-details {
   margin-bottom: 14px;
 }

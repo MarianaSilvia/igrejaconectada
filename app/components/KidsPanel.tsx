@@ -163,9 +163,17 @@ export function KidsPanel({
                   <small>
                     {kid.ageGroup} - {kid.className || "Turma não informada"} - Aniv. {birthdayLabel(kid.birthDate)}
                   </small>
-                  <small>
-                    Resp. {kid.guardianName} - {kid.guardianPhone} - Retirada: {kid.authorizedPickup || "não informada"}
-                  </small>
+                  <small>Responsável: {kid.guardianName || "Não informado"} - {kid.relationship || "parentesco não informado"}</small>
+                  <details className="record-sensitive-details kids-sensitive-details">
+                    <summary>Ver dados do responsável</summary>
+                    <div className="record-sensitive-grid">
+                      <small>Telefone: {kid.guardianPhone || "Não informado"}</small>
+                      <small>E-mail: {kid.guardianEmail || "Não informado"}</small>
+                      <small>Retirada autorizada: {kid.authorizedPickup || "Não informada"}</small>
+                      <small>Alergias ou cuidados: {kid.allergies || "Não informado"}</small>
+                      {kid.notes && <small>Observações: {kid.notes}</small>}
+                    </div>
+                  </details>
                 </div>
               </div>
               <div className="record-actions">
