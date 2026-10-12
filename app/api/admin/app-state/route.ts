@@ -130,9 +130,7 @@ function congregationScopeFromPayload(payload: JsonRecord, user: User, role?: Ch
   const metadata = user.app_metadata as JsonRecord | undefined;
   const metadataScope = metadata?.church_gp_congregation_scope ?? metadata?.congregation_scope;
 
-  if (role === "ADMIN") {
-    return textValue(metadataScope) ? normalizeCongregationScope(metadataScope) : globalCongregationScope;
-  }
+  if (role === "ADMIN") return globalCongregationScope;
 
   const accessUser = findAccessUser(payload, user);
   return normalizeCongregationScope(accessUser?.congregationScope ?? metadataScope ?? congregationScopeFromMetadata(user));
