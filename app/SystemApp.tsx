@@ -1713,6 +1713,23 @@ export default function Home() {
         .sort(sortMembersByName),
     [data.discipleshipClasses, data.schoolClasses, memberDiscipleshipFilter, memberGroupFilter, memberPastoralFilter, memberSchoolFilter, memberStatusFilter, memberTypeFilter, searchQuery, visibleMembers],
   );
+  const hasActiveMemberFilters =
+    Boolean(searchQuery) ||
+    memberStatusFilter !== "Todos" ||
+    memberTypeFilter !== "Todos" ||
+    memberGroupFilter !== "Todos" ||
+    memberSchoolFilter !== "Todos" ||
+    memberDiscipleshipFilter !== "Todos" ||
+    memberPastoralFilter !== "Todos";
+  const clearMemberFilters = useCallback(() => {
+    setGlobalSearch("");
+    setMemberStatusFilter("Todos");
+    setMemberTypeFilter("Todos");
+    setMemberGroupFilter("Todos");
+    setMemberSchoolFilter("Todos");
+    setMemberDiscipleshipFilter("Todos");
+    setMemberPastoralFilter("Todos");
+  }, []);
   const filteredVisitors = useMemo(
     () =>
       data.visitors
@@ -4748,6 +4765,9 @@ export default function Home() {
               memberStatusFilter={memberStatusFilter}
               memberTypeFilter={memberTypeFilter}
               monthlyBirthdays={monthlyBirthdays}
+              hasActiveMemberFilters={hasActiveMemberFilters}
+              totalMemberCount={visibleMembers.length}
+              clearMemberFilters={clearMemberFilters}
               removeMemberPhoto={removeMemberPhoto}
               roleOptions={roleOptions}
               saveMemberAccess={saveMemberAccess}

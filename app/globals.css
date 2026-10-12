@@ -1972,6 +1972,22 @@ button.secondary.full {
   padding: 0 12px;
 }
 
+.filter-bar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.filter-summary {
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.22);
+  border-radius: 10px;
+  color: #b9e8ff;
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+}
+
 .agenda-week-summary {
   display: flex;
   flex-wrap: wrap;

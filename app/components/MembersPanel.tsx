@@ -50,6 +50,9 @@ type MembersPanelProps = {
   memberStatusFilter: string;
   memberTypeFilter: string;
   monthlyBirthdays: MemberRecord[];
+  hasActiveMemberFilters: boolean;
+  totalMemberCount: number;
+  clearMemberFilters: () => void;
   removeMemberPhoto: () => void | Promise<void>;
   roleOptions: string[];
   saveMemberAccess: (member: MemberRecord) => void | Promise<void>;
@@ -109,6 +112,9 @@ export function MembersPanel({
   memberStatusFilter,
   memberTypeFilter,
   monthlyBirthdays,
+  hasActiveMemberFilters,
+  totalMemberCount,
+  clearMemberFilters,
   removeMemberPhoto,
   roleOptions,
   saveMemberAccess,
@@ -537,7 +543,9 @@ export function MembersPanel({
         <div className="panel-heading">
           <h2>{canManageMembers ? "Membros cadastrados" : "Meu cadastro"}</h2>
           <span>
-            {filteredMembers.length} registro{filteredMembers.length === 1 ? "" : "s"}
+            {canManageMembers
+              ? `${filteredMembers.length} de ${totalMemberCount} registro${totalMemberCount === 1 ? "" : "s"}`
+              : `${filteredMembers.length} registro${filteredMembers.length === 1 ? "" : "s"}`}
           </span>
         </div>
         {canManageMembers && (
@@ -604,7 +612,15 @@ export function MembersPanel({
                 <option>Integrado</option>
               </select>
             </label>
+            <button disabled={!hasActiveMemberFilters} onClick={clearMemberFilters} type="button">
+              Limpar filtros
+            </button>
           </div>
+        )}
+        {canManageMembers && filteredMembers.length !== totalMemberCount && (
+          <p className="filter-summary">
+            Mostrando {filteredMembers.length} de {totalMemberCount} membros. Use Limpar filtros para visualizar todos os cadastros.
+          </p>
         )}
         {canManageMembers && (
           <div className="birthday-grid">
