@@ -690,19 +690,21 @@ export function MembersPanel({
                   </div>
                   <div>
                     <strong>{member.fullName}</strong>
-                    <small className="member-code-line">Código: {member.memberCode || "Aguardando código"}</small>
-                    <small>
-                      {member.memberType} - {member.status} - {member.role || "Sem função"}
+                    <div className="member-card-tags" aria-label="Resumo do membro">
+                      <span>{member.memberCode || "Sem código"}</span>
+                      <span>{member.memberType}</span>
+                      <span>{member.status}</span>
+                    </div>
+                    <small className="member-main-line">
+                      {member.congregation || "Congregação não informada"} · {groupsLabel}
                     </small>
-                    <small>
-                      {member.congregation || "Congregação não informada"} - Grupos: {groupsLabel}
-                    </small>
-                    <small>
-                      Função ministerial: {member.ministerialFunction || "Não informada"} - Aniv. {birthdayLabel(member.birthDate)}
+                    <small className="member-main-line">
+                      {member.role || "Sem função"} · {member.ministerialFunction || "Função ministerial não informada"}
                     </small>
                     <details className="member-sensitive-details" open={canManageMembers && showAllMemberDetails}>
                       <summary>Ver dados completos</summary>
                       <div className="member-sensitive-grid">
+                        <small>Aniversário: {birthdayLabel(member.birthDate)}</small>
                         <small>Telefone: {member.phone || "Não informado"}</small>
                         <small>E-mail: {member.email || "Não informado"}</small>
                         <small>CPF: {member.cpf || "Não informado"}</small>

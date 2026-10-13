@@ -11871,3 +11871,59 @@ textarea::placeholder {
     grid-template-columns: 1fr;
   }
 }
+
+/* Cards mais limpos em membros e pastoral */
+.member-card-tags,
+.care-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.member-card-tags span,
+.care-card-meta small {
+  background: rgba(15, 111, 168, 0.08);
+  border: 1px solid rgba(15, 111, 168, 0.14);
+  border-radius: 999px;
+  color: var(--primary-strong);
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1.1;
+  padding: 7px 10px;
+}
+
+.member-main-line {
+  color: #4c5d72 !important;
+  display: block;
+  margin-top: 7px;
+}
+
+.care-card-meta small {
+  background: rgba(225, 29, 72, 0.07);
+  border-color: rgba(225, 29, 72, 0.14);
+  color: #be123c;
+}
+
+.care-next-step {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 14px;
+  color: #92400e !important;
+  display: inline-flex;
+  font-weight: 900;
+  margin-top: 4px;
+  padding: 8px 10px;
+  width: fit-content;
+}
+
+@media (max-width: 760px) {
+  .member-card-tags span,
+  .care-card-meta small {
+    font-size: 0.72rem;
+  }
+
+  .member-main-line {
+    font-size: 0.82rem;
+  }
+}

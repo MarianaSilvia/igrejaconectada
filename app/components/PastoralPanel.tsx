@@ -147,8 +147,11 @@ export function PastoralPanel({
               <button className="care-list-main" onClick={() => setSelectedRequestId(request.id)} type="button">
                 <span className={`status-chip ${request.status.toLowerCase().replaceAll(" ", "-")}`}>{careStatusLabel(request.status)}</span>
                 <strong>{request.member}</strong>
-                <small>{request.responsible || "Sem responsável definido"}</small>
-                <small>{suggestedNextStep(request)}</small>
+                <span className="care-card-meta">
+                  <small>{request.category}</small>
+                  <small>{request.responsible || "Sem responsável"}</small>
+                </span>
+                <small className="care-next-step">{suggestedNextStep(request)}</small>
               </button>
               {canManagePastoral && (
                 <div className="care-list-actions">
