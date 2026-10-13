@@ -174,7 +174,15 @@ export function GroupsPanel({
                       {ministryStatusLabel(ministry.status)} - Líder: {ministry.leader}
                       {ministry.assistant ? ` - Auxiliar: ${ministry.assistant}` : ""}
                     </small>
-                    <small>{ministry.meetingDay || "Reunião não definida"} - {ministry.notes || "Sem observações"}</small>
+                    <small>{ministry.meetingDay || "Reunião não definida"}</small>
+                    {ministry.notes && (
+                      <details className="record-sensitive-details group-notes-details">
+                        <summary>Ver observações</summary>
+                        <div className="record-sensitive-grid">
+                          <small>{ministry.notes}</small>
+                        </div>
+                      </details>
+                    )}
                   </div>
                 </div>
                 <div className="record-actions">

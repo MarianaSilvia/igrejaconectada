@@ -8491,6 +8491,91 @@ button.secondary,
   color: #7c8da5;
 }
 
+/* Final member-admin visibility guard: keep the Members module complete on desktop and mobile. */
+.app-shell,
+.workspace {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.topbar,
+.topbar-actions,
+.push-control,
+.profile-pill,
+.members-management-grid,
+.members-management-grid > *,
+.member-list-panel,
+.member-record-list,
+.member-record,
+.member-row,
+.member-sensitive-grid {
+  min-width: 0;
+}
+
+.topbar {
+  flex-wrap: wrap;
+  width: min(1280px, 100%);
+}
+
+.topbar-actions {
+  flex: 1 1 520px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.members-management-grid {
+  align-items: start;
+  grid-template-columns: minmax(340px, 0.92fr) minmax(420px, 1.08fr);
+}
+
+.members-management-grid #member-form-panel,
+.members-management-grid .member-list-panel {
+  width: 100%;
+}
+
+.member-list-panel .filter-bar {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.member-record-list {
+  max-width: 100%;
+}
+
+.member-record {
+  overflow: hidden;
+}
+
+.member-row {
+  align-items: flex-start;
+}
+
+.member-row > div:last-child,
+.member-sensitive-grid,
+.member-sensitive-grid small {
+  overflow-wrap: anywhere;
+}
+
+.member-sensitive-grid {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 1200px) {
+  .members-management-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar-actions {
+    flex-basis: 100%;
+    justify-content: stretch;
+  }
+
+  .members-management-grid {
+    gap: 14px;
+  }
+}
+
 /* Intelligence / BI module */
 .intelligence-panel {
   align-items: start;

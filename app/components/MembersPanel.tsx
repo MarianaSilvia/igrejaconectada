@@ -133,7 +133,7 @@ export function MembersPanel({
   weeklyBirthdays,
   createMember,
 }: MembersPanelProps) {
-  const [showAllMemberDetails, setShowAllMemberDetails] = useState(false);
+  const [showAllMemberDetails, setShowAllMemberDetails] = useState(() => canManageMembers);
   const canShowForm = canManageMembers || editingMemberId === currentMember?.id;
   const missingFormFields = missingMemberFields(memberForm);
   const updateMemberName = (fullName: string) => {
@@ -159,7 +159,7 @@ export function MembersPanel({
     canManageMembers || member.id === currentMember?.id || member.photoConsent ? member.photoUrl || member.photoDataUrl : "";
 
   return (
-    <section className="content-grid">
+    <section className="content-grid members-management-grid">
       {canShowForm ? (
         <article className={editingMemberId ? "surface editing-surface" : "surface"} id="member-form-panel">
           <div className="panel-heading">
@@ -625,7 +625,7 @@ export function MembersPanel({
         )}
         {canManageMembers && filteredMembers.length > 0 && (
           <div className="member-list-tools" aria-label="Controles da lista de membros">
-            <p>Os contatos e dados completos ficam protegidos nos cards. Use o botão abaixo para expandir ou recolher todos.</p>
+            <p>Administrador geral: os dados completos dos membros podem ficar visíveis para conferência. Use o botão para recolher quando quiser.</p>
             <button className="secondary" onClick={() => setShowAllMemberDetails((value) => !value)} type="button">
               {showAllMemberDetails ? "Recolher dados completos" : "Mostrar dados completos"}
             </button>

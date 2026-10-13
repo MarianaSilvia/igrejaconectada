@@ -123,7 +123,14 @@ export function AssetsPanel({
                 <strong>{asset.name}</strong>
                 <small>{asset.category} - {asset.location || "Sem local"} - {asset.responsible || "Sem responsável"}</small>
                 <small>{asset.lastMaintenance ? `Manutenção: ${formatDate(asset.lastMaintenance)}` : "Sem manutenção registrada"}</small>
-                {asset.notes && <small>{asset.notes}</small>}
+                {asset.notes && (
+                  <details className="record-sensitive-details asset-notes-details">
+                    <summary>Ver observações</summary>
+                    <div className="record-sensitive-grid">
+                      <small>{asset.notes}</small>
+                    </div>
+                  </details>
+                )}
               </div>
               {canManageAssets && (
                 <div className="row-actions">
