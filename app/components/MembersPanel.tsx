@@ -563,73 +563,82 @@ export function MembersPanel({
           </span>
         </div>
         {canManageMembers && (
-          <div className="filter-bar">
-            <label>
-              Status
-              <select onChange={(event) => setMemberStatusFilter(event.target.value)} value={memberStatusFilter}>
-                <option>Todos</option>
-                <option>Membro ativo</option>
-                <option>Visitante</option>
-                <option>Novo convertido</option>
-                <option value="Transferencia">{memberStatusLabel("Transferencia")}</option>
-              </select>
-            </label>
-            <label>
-              Tipo
-              <select onChange={(event) => setMemberTypeFilter(event.target.value)} value={memberTypeFilter}>
-                <option>Todos</option>
-                <option>Membro</option>
-                <option>Visitante</option>
-                <option>Congregado</option>
-                <option value="Lideranca">{memberTypeLabel("Lideranca")}</option>
-              </select>
-            </label>
-            <label>
-              Grupo
-              <select onChange={(event) => setMemberGroupFilter(event.target.value)} value={memberGroupFilter}>
-                <option>Todos</option>
-                {groupOptions.map((group) => (
-                  <option key={group}>{group}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Classe EBD
-              <select onChange={(event) => setMemberSchoolFilter(event.target.value)} value={memberSchoolFilter}>
-                <option>Todos</option>
-                {data.schoolClasses.map((schoolClass) => (
-                  <option key={schoolClass.id} value={schoolClass.id}>
-                    {schoolClass.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Discipulado
-              <select onChange={(event) => setMemberDiscipleshipFilter(event.target.value)} value={memberDiscipleshipFilter}>
-                <option>Todos</option>
-                {data.discipleshipClasses.map((discipleshipClass) => (
-                  <option key={discipleshipClass.id} value={discipleshipClass.id}>
-                    {discipleshipClass.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Situação pastoral
-              <select onChange={(event) => setMemberPastoralFilter(event.target.value)} value={memberPastoralFilter}>
-                <option>Todos</option>
-                <option>Sem acompanhamento definido</option>
-                <option>Acompanhamento regular</option>
-                <option>Precisa de contato</option>
-                <option>Em discipulado</option>
-                <option>Integrado</option>
-              </select>
-            </label>
-            <button disabled={!hasActiveMemberFilters} onClick={clearMemberFilters} type="button">
-              Limpar filtros
-            </button>
-          </div>
+          <details className="module-filter-drawer" open={hasActiveMemberFilters || undefined}>
+            <summary>
+              <span>
+                <strong>Filtros da lista</strong>
+                <small>{hasActiveMemberFilters ? "Filtros ativos na visualização" : "Status, tipo, grupo, classe e acompanhamento"}</small>
+              </span>
+              <b>{hasActiveMemberFilters ? "Editando filtros" : "Abrir filtros"}</b>
+            </summary>
+            <div className="filter-bar">
+              <label>
+                Status
+                <select onChange={(event) => setMemberStatusFilter(event.target.value)} value={memberStatusFilter}>
+                  <option>Todos</option>
+                  <option>Membro ativo</option>
+                  <option>Visitante</option>
+                  <option>Novo convertido</option>
+                  <option value="Transferencia">{memberStatusLabel("Transferencia")}</option>
+                </select>
+              </label>
+              <label>
+                Tipo
+                <select onChange={(event) => setMemberTypeFilter(event.target.value)} value={memberTypeFilter}>
+                  <option>Todos</option>
+                  <option>Membro</option>
+                  <option>Visitante</option>
+                  <option>Congregado</option>
+                  <option value="Lideranca">{memberTypeLabel("Lideranca")}</option>
+                </select>
+              </label>
+              <label>
+                Grupo
+                <select onChange={(event) => setMemberGroupFilter(event.target.value)} value={memberGroupFilter}>
+                  <option>Todos</option>
+                  {groupOptions.map((group) => (
+                    <option key={group}>{group}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Classe EBD
+                <select onChange={(event) => setMemberSchoolFilter(event.target.value)} value={memberSchoolFilter}>
+                  <option>Todos</option>
+                  {data.schoolClasses.map((schoolClass) => (
+                    <option key={schoolClass.id} value={schoolClass.id}>
+                      {schoolClass.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Discipulado
+                <select onChange={(event) => setMemberDiscipleshipFilter(event.target.value)} value={memberDiscipleshipFilter}>
+                  <option>Todos</option>
+                  {data.discipleshipClasses.map((discipleshipClass) => (
+                    <option key={discipleshipClass.id} value={discipleshipClass.id}>
+                      {discipleshipClass.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Situação pastoral
+                <select onChange={(event) => setMemberPastoralFilter(event.target.value)} value={memberPastoralFilter}>
+                  <option>Todos</option>
+                  <option>Sem acompanhamento definido</option>
+                  <option>Acompanhamento regular</option>
+                  <option>Precisa de contato</option>
+                  <option>Em discipulado</option>
+                  <option>Integrado</option>
+                </select>
+              </label>
+              <button disabled={!hasActiveMemberFilters} onClick={clearMemberFilters} type="button">
+                Limpar filtros
+              </button>
+            </div>
+          </details>
         )}
         {canManageMembers && filteredMembers.length !== totalMemberCount && (
           <p className="filter-summary">

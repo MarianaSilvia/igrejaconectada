@@ -71,6 +71,7 @@ export function AgendaPanel({
   const publicWeekEvents = weekEvents.filter((event) => event.published).length;
   const internalWeekEvents = weekEvents.length - publicWeekEvents;
   const registrationWeekEvents = weekEvents.filter((event) => event.registrationUrl).length;
+  const hasActiveAgendaFilters = eventGroupFilter !== "Todos" || eventStatusFilter !== "Todos" || visibilityFilter !== "Todos";
 
   return (
     <section className="content-grid agenda-management-grid">
@@ -163,7 +164,7 @@ export function AgendaPanel({
             {visibleWeekEvents.length} exibido{visibleWeekEvents.length === 1 ? "" : "s"} de {totalEvents} eventos
           </span>
         </div>
-        <div className="filter-bar">
+        <div className="agenda-list-tools" aria-label="Controles rápidos da agenda">
           <button className="secondary" onClick={() => setEventWeekOffset((offset) => offset - 1)} type="button">
             Semana anterior
           </button>
@@ -173,33 +174,6 @@ export function AgendaPanel({
           <button className="secondary" onClick={() => setEventWeekOffset((offset) => offset + 1)} type="button">
             Próxima semana
           </button>
-          <label>
-            Grupo
-            <select onChange={(event) => setEventGroupFilter(event.target.value)} value={eventGroupFilter}>
-              <option>Todos</option>
-              {groupOptions.map((group) => (
-                <option key={group}>{group}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Status
-            <select onChange={(event) => setEventStatusFilter(event.target.value)} value={eventStatusFilter}>
-              <option>Todos</option>
-              <option value="Programado">Programado</option>
-              <option value="Confirmado">Confirmado</option>
-              <option value="Concluido">Concluído</option>
-            </select>
-          </label>
-          <label>
-            Visibilidade
-            <select onChange={(event) => setVisibilityFilter(event.target.value as AgendaVisibilityFilter)} value={visibilityFilter}>
-              <option value="Todos">Todos</option>
-              <option value="Publicos">Públicos</option>
-              <option value="Internos">Internos</option>
-              <option value="Com inscricao">Com inscrição</option>
-            </select>
-          </label>
           <button className="secondary" onClick={() => exportReport("agenda", "pdf")} type="button">
             Imprimir semana
           </button>
@@ -207,6 +181,44 @@ export function AgendaPanel({
             Compartilhar agenda do dia
           </button>
         </div>
+        <details className="module-filter-drawer agenda-filter-drawer" open={hasActiveAgendaFilters || undefined}>
+          <summary>
+            <span>
+              <strong>Filtros da agenda</strong>
+              <small>{hasActiveAgendaFilters ? "Filtros ativos na semana" : "Grupo, status e visibilidade"}</small>
+            </span>
+            <b>{hasActiveAgendaFilters ? "Editando filtros" : "Abrir filtros"}</b>
+          </summary>
+          <div className="filter-bar">
+            <label>
+              Grupo
+              <select onChange={(event) => setEventGroupFilter(event.target.value)} value={eventGroupFilter}>
+                <option>Todos</option>
+                {groupOptions.map((group) => (
+                  <option key={group}>{group}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Status
+              <select onChange={(event) => setEventStatusFilter(event.target.value)} value={eventStatusFilter}>
+                <option>Todos</option>
+                <option value="Programado">Programado</option>
+                <option value="Confirmado">Confirmado</option>
+                <option value="Concluido">Concluído</option>
+              </select>
+            </label>
+            <label>
+              Visibilidade
+              <select onChange={(event) => setVisibilityFilter(event.target.value as AgendaVisibilityFilter)} value={visibilityFilter}>
+                <option value="Todos">Todos</option>
+                <option value="Publicos">Públicos</option>
+                <option value="Internos">Internos</option>
+                <option value="Com inscricao">Com inscrição</option>
+              </select>
+            </label>
+          </div>
+        </details>
         <div className="agenda-week-summary">
           <span><strong>{publicWeekEvents}</strong> públicos</span>
           <span><strong>{internalWeekEvents}</strong> internos</span>
