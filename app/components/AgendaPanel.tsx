@@ -230,12 +230,20 @@ export function AgendaPanel({
               <span className="date-box">{formatDate(event.date)}</span>
               <div>
                 <strong>{event.title}</strong>
-                <small>
-                  {event.time || "Sem horário"} - {event.ministry} - {eventStatusLabel(event.status)} - {event.published ? "Público" : "Interno"}
-                </small>
-                <small>{event.location || "Local não informado"} - {event.responsible || "Sem responsável"}</small>
-                {event.description && <small>{event.description}</small>}
-                {event.registrationUrl && <small>Inscrição: {event.registrationUrl}</small>}
+                <div className="agenda-card-tags" aria-label="Resumo do evento">
+                  <span>{event.time || "Sem horário"}</span>
+                  <span>{event.ministry || "Sem grupo"}</span>
+                  <span>{eventStatusLabel(event.status)}</span>
+                  <span>{event.published ? "Público" : "Interno"}</span>
+                </div>
+                <small className="agenda-main-line">{event.location || "Local não informado"} · {event.responsible || "Sem responsável"}</small>
+                {(event.description || event.registrationUrl) && (
+                  <details className="record-sensitive-details agenda-event-details">
+                    <summary>Ver detalhes</summary>
+                    {event.description && <small>{event.description}</small>}
+                    {event.registrationUrl && <small>Inscrição: {event.registrationUrl}</small>}
+                  </details>
+                )}
               </div>
               <div className="row-actions">
                 <button className="secondary" onClick={() => shareEvent(event)} type="button">

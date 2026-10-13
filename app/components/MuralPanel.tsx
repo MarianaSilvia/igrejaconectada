@@ -103,45 +103,54 @@ export function MuralPanel({
           <h2>{canManageMural ? "Administrar mural" : "Mural da igreja"}</h2>
           <span>{canManageMural ? `${totalPublishedMuralItems} publicados` : `${memberVisibleTotal} itens gerais`}</span>
         </div>
-        <div className="table-like">
+        <div className="mural-board">
           {filteredMuralItems.map((item) => (
-            <div className="table-row" key={item.id}>
-              <div>
+            <div className={item.featured ? "mural-admin-card featured" : "mural-admin-card"} key={item.id}>
+              <div className="mural-admin-content">
                 {(item.imageDataUrl || item.bannerUrl) && (
                   <div className="mural-media">
                     <ResponsiveImage src={item.imageDataUrl || item.bannerUrl} />
                   </div>
                 )}
-                <strong>{item.title}</strong>
-                <small>{item.category} - expira em {formatDate(item.expiresAt)}</small>
+                <div className="mural-admin-text">
+                  <strong>{item.title}</strong>
+                  <div className="mural-card-tags" aria-label="Resumo do mural">
+                    <span>{item.category || "Sem categoria"}</span>
+                    <span>{item.published ? "Publicado" : "Rascunho"}</span>
+                    {item.featured && <span>Destaque</span>}
+                  </div>
+                  <small className="mural-main-line">Expira em {formatDate(item.expiresAt)}</small>
+                </div>
                 {item.socialUrl && (
                   <a className="inline-link" href={item.socialUrl} rel="noreferrer" target="_blank">
                     Abrir rede social
                   </a>
                 )}
               </div>
-              {canManageMural && (
-                <label className="switch">
-                  Publicado
-                  <input checked={item.published} onChange={() => toggleMural(item.id, "published")} type="checkbox" />
-                </label>
-              )}
-              {canManageMural && (
-                <label className="switch">
-                  Destaque
-                  <input checked={item.featured} onChange={() => toggleMural(item.id, "featured")} type="checkbox" />
-                </label>
-              )}
-              {item.published && !isExpiredDate(item.expiresAt) && (
-                <button className="secondary" onClick={() => shareMuralItem(item)} type="button">
-                  Compartilhar
-                </button>
-              )}
-              {canManageMural && (
-                <button className="danger-action" onClick={() => deleteMuralItem(item)} type="button">
-                  Excluir
-                </button>
-              )}
+              <div className="mural-admin-actions">
+                {canManageMural && (
+                  <label className="switch">
+                    Publicado
+                    <input checked={item.published} onChange={() => toggleMural(item.id, "published")} type="checkbox" />
+                  </label>
+                )}
+                {canManageMural && (
+                  <label className="switch">
+                    Destaque
+                    <input checked={item.featured} onChange={() => toggleMural(item.id, "featured")} type="checkbox" />
+                  </label>
+                )}
+                {item.published && !isExpiredDate(item.expiresAt) && (
+                  <button className="secondary" onClick={() => shareMuralItem(item)} type="button">
+                    Compartilhar
+                  </button>
+                )}
+                {canManageMural && (
+                  <button className="danger-action" onClick={() => deleteMuralItem(item)} type="button">
+                    Excluir
+                  </button>
+                )}
+              </div>
             </div>
           ))}
           {!canManageMural && !filteredMuralItems.length && (
@@ -155,24 +164,33 @@ export function MuralPanel({
           )}
           {!canManageMural &&
             publishedNotices.map((notice) => (
-              <div className="table-row" key={`notice-${notice.id}`}>
+              <div className="mural-admin-card" key={`notice-${notice.id}`}>
                 <div>
                   <strong>{notice.title}</strong>
-                  <small>Aviso - {notice.audience} - {notice.channel}</small>
-                  <small>{notice.body}</small>
+                  <div className="mural-card-tags" aria-label="Resumo do aviso">
+                    <span>Aviso</span>
+                    <span>{notice.audience}</span>
+                    <span>{notice.channel}</span>
+                  </div>
+                  <details className="record-sensitive-details agenda-event-details">
+                    <summary>Ver aviso</summary>
+                    <small>{notice.body}</small>
+                  </details>
                 </div>
               </div>
             ))}
           {!canManageMural &&
             weekEvents.map((event) => (
-              <div className="table-row" key={`event-${event.id}`}>
+              <div className="mural-admin-card mural-event-card" key={`event-${event.id}`}>
                 <span className="date-box">{formatDate(event.date)}</span>
                 <div>
                   <strong>{event.title}</strong>
-                  <small>
-                    Evento - {event.time || "Sem horário"} - {event.ministry} - {eventStatusLabel(event.status)}
-                  </small>
-                  <small>{event.location || "Local não informado"} - {event.responsible || "Sem responsável"}</small>
+                  <div className="mural-card-tags" aria-label="Resumo do evento">
+                    <span>Evento</span>
+                    <span>{event.time || "Sem horário"}</span>
+                    <span>{eventStatusLabel(event.status)}</span>
+                  </div>
+                  <small className="mural-main-line">{event.location || "Local não informado"} · {event.responsible || "Sem responsável"}</small>
                 </div>
               </div>
             ))}
