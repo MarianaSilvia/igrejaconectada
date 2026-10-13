@@ -71,7 +71,7 @@ self.addEventListener("push", (event) => {
   const importantModules = ["pastoral", "registrations", "registrationRequests"];
   const isImportant = importantModules.includes(targetModule);
   const options = {
-    body: payload.body || "Voce tem um novo aviso da igreja.",
+    body: payload.body || "Você tem um novo aviso da igreja.",
     icon: "/icon-192.png",
     badge: "/icon-192.png",
     data: {

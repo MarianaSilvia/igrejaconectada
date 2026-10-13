@@ -488,8 +488,8 @@ const initialData: AppData = {
       notices: [
         {
           id: "school-notice-1",
-          title: "Levar Biblia e caderno",
-          body: "A proxima aula tera leitura dirigida em grupos.",
+          title: "Levar Bíblia e caderno",
+          body: "A próxima aula terá leitura dirigida em grupos.",
           status: "Publicado",
           audience: "Classe adultos",
           channel: "App",
@@ -503,15 +503,15 @@ const initialData: AppData = {
       name: "Classe jovens",
       teacher: "Líder Ana",
       students: 22,
-      nextLesson: "Identidade crista",
+      nextLesson: "Identidade cristã",
       notices: [],
     },
     {
       id: "class-new",
       name: "Classe novos convertidos",
-      teacher: "Diac. Paulo",
+      teacher: "Diác. Paulo",
       students: 12,
-      nextLesson: "Primeiros passos da fe",
+      nextLesson: "Primeiros passos da fé",
       notices: [],
     },
   ],
@@ -521,12 +521,12 @@ const initialData: AppData = {
       name: "Discipulado 1",
       teacher: "Pr. Marcos",
       students: 16,
-      nextLesson: "Fundamentos da fe crista",
+      nextLesson: "Fundamentos da fé cristã",
       notices: [
         {
           id: "discipleship-notice-1",
           title: "Encontro de acompanhamento",
-          body: "Trazer Biblia e anotacoes da ultima aula para revisao em grupo.",
+          body: "Trazer Bíblia e anotações da última aula para revisão em grupo.",
           status: "Publicado",
           audience: "Discipulado 1",
           channel: "App",
@@ -545,8 +545,8 @@ const initialData: AppData = {
     },
     {
       id: "discipleship-baptism",
-      name: "Preparacao para o batismo",
-      teacher: "Diac. Paulo",
+      name: "Preparação para o batismo",
+      teacher: "Diác. Paulo",
       students: 10,
       nextLesson: "Nova vida em Cristo",
       notices: [],
@@ -4900,7 +4900,7 @@ export default function Home() {
               renderAttendancePanel={(classRecord) => renderAttendancePanel("school", classRecord)}
               setNoticeForm={setSchoolNoticeForm}
               title="Classes da EBD"
-              whatsappPlaceholder="Ex.: Material da proxima aula"
+              whatsappPlaceholder="Ex.: Material da próxima aula"
             />
           )}
 
