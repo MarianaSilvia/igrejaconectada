@@ -133,9 +133,10 @@ export function MembersPanel({
   weeklyBirthdays,
   createMember,
 }: MembersPanelProps) {
-  const [showAllMemberDetails, setShowAllMemberDetails] = useState(() => canManageMembers);
+  const [showAllMemberDetails, setShowAllMemberDetails] = useState(true);
   const canShowForm = canManageMembers || editingMemberId === currentMember?.id;
   const missingFormFields = missingMemberFields(memberForm);
+
   const updateMemberName = (fullName: string) => {
     setMemberForm((form) => ({ ...form, fullName }));
   };
