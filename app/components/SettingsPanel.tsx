@@ -706,44 +706,53 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
           <h2>Sincronização dos membros</h2>
           <span>JSON principal e tabela members</span>
         </div>
-        <p className="body-copy">
-          Use esta conferência quando os membros sumirem da tela ou quando houver diferença entre a base principal e a tabela espelho. A restauração pelo espelho só fica disponível quando a tabela members tiver mais cadastros que o JSON principal.
-        </p>
-        {memberSyncStatus ? (
-          <div className={`member-sync-card member-sync-${memberSyncStatus.status.toLowerCase()}`}>
-            <div>
-              <strong>{memberSyncStatus.status === "Atencao" ? "Atenção na sincronização" : memberSyncStatus.status}</strong>
-              <small>{memberSyncMessage || memberSyncStatus.message}</small>
+        <details className="settings-maintenance-drawer" open={memberSyncStatus?.status === "Atencao" || undefined}>
+          <summary>
+            <span>
+              <strong>Conferência técnica dos membros</strong>
+              <small>Use quando algum cadastro não aparecer ou quando houver diferença no espelho.</small>
+            </span>
+            <b>{memberSyncStatus?.status === "Atencao" ? "Atenção" : "Abrir manutenção"}</b>
+          </summary>
+          <p className="body-copy">
+            Use esta conferência quando os membros sumirem da tela ou quando houver diferença entre a base principal e a tabela espelho. A restauração pelo espelho só fica disponível quando a tabela members tiver mais cadastros que o JSON principal.
+          </p>
+          {memberSyncStatus ? (
+            <div className={`member-sync-card member-sync-${memberSyncStatus.status.toLowerCase()}`}>
+              <div>
+                <strong>{memberSyncStatus.status === "Atencao" ? "Atenção na sincronização" : memberSyncStatus.status}</strong>
+                <small>{memberSyncMessage || memberSyncStatus.message}</small>
+              </div>
+              <div className="member-sync-grid">
+                <span>JSON: {memberSyncStatus.jsonTotal}</span>
+                <span>Tabela: {memberSyncStatus.tableTotal}</span>
+                <span>Sem código: {memberSyncStatus.missingCodeCount}</span>
+                <span>CPF duplicado: {memberSyncStatus.duplicateCpfCount}</span>
+                <span>Telefone duplicado: {memberSyncStatus.duplicatePhoneCount}</span>
+                <span>Faltando na tabela: {memberSyncStatus.missingInTableCount}</span>
+                <span>Sobra na tabela: {memberSyncStatus.extraInTableCount}</span>
+              </div>
             </div>
-            <div className="member-sync-grid">
-              <span>JSON: {memberSyncStatus.jsonTotal}</span>
-              <span>Tabela: {memberSyncStatus.tableTotal}</span>
-              <span>Sem código: {memberSyncStatus.missingCodeCount}</span>
-              <span>CPF duplicado: {memberSyncStatus.duplicateCpfCount}</span>
-              <span>Telefone duplicado: {memberSyncStatus.duplicatePhoneCount}</span>
-              <span>Faltando na tabela: {memberSyncStatus.missingInTableCount}</span>
-              <span>Sobra na tabela: {memberSyncStatus.extraInTableCount}</span>
-            </div>
+          ) : (
+            <p className="empty-state">Clique em conferir para comparar a base principal com a tabela members.</p>
+          )}
+          <div className="detail-actions">
+            <button className="secondary" disabled={memberSyncLoading} onClick={refreshMemberSyncStatus} type="button">
+              {memberSyncLoading ? "Conferindo..." : "Conferir membros"}
+            </button>
+            <button className="secondary" disabled={memberSyncLoading} onClick={syncMembersMirror} type="button">
+              Sincronizar espelho
+            </button>
+            <button
+              className="secondary"
+              disabled={memberSyncLoading || !memberSyncStatus || memberSyncStatus.tableTotal <= memberSyncStatus.jsonTotal}
+              onClick={restoreMembersJson}
+              type="button"
+            >
+              Restaurar JSON pela tabela
+            </button>
           </div>
-        ) : (
-          <p className="empty-state">Clique em conferir para comparar a base principal com a tabela members.</p>
-        )}
-        <div className="detail-actions">
-          <button className="secondary" disabled={memberSyncLoading} onClick={refreshMemberSyncStatus} type="button">
-            {memberSyncLoading ? "Conferindo..." : "Conferir membros"}
-          </button>
-          <button className="secondary" disabled={memberSyncLoading} onClick={syncMembersMirror} type="button">
-            Sincronizar espelho
-          </button>
-          <button
-            className="secondary"
-            disabled={memberSyncLoading || !memberSyncStatus || memberSyncStatus.tableTotal <= memberSyncStatus.jsonTotal}
-            onClick={restoreMembersJson}
-            type="button"
-          >
-            Restaurar JSON pela tabela
-          </button>
-        </div>
+        </details>
       </article>
 
       <article className="surface wide">
@@ -751,27 +760,36 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
           <h2>Qualidade dos cadastros</h2>
           <span>Antes da normalização</span>
         </div>
-        <p className="body-copy">
-          Esta conferência mostra pontos que podem dificultar login, relatórios, comunicação por WhatsApp e filtros por grupo quando os dados forem migrados para tabelas próprias.
-        </p>
-        <div className="data-quality-grid">
-          {memberQualityChecklist.map((item) => (
-            <div className={item.ok ? "data-quality-card ok" : "data-quality-card warning"} key={item.title}>
-              <span>{item.ok ? "OK" : `${item.count} revisar`}</span>
-              <strong>{item.title}</strong>
-              <small>{item.detail}</small>
-            </div>
-          ))}
-        </div>
-        <div className="detail-actions">
-          <button className="secondary" disabled={!memberQualityRows.length} onClick={() => exportMemberQuality("csv")} type="button">
-            Exportar pendências CSV
-          </button>
-          <button className="secondary" disabled={!memberQualityRows.length} onClick={() => exportMemberQuality("excel")} type="button">
-            Exportar para Excel
-          </button>
-        </div>
-        {!memberQualityRows.length && <p className="empty-state">Nenhuma pendência de cadastro encontrada nesta conferência.</p>}
+        <details className="settings-maintenance-drawer" open={memberQualityRows.length > 0 || undefined}>
+          <summary>
+            <span>
+              <strong>Conferir pendências de cadastro</strong>
+              <small>{memberQualityRows.length ? `${memberQualityRows.length} ponto(s) para revisar` : "Nenhuma pendência encontrada agora"}</small>
+            </span>
+            <b>{memberQualityRows.length ? "Revisar" : "Tudo certo"}</b>
+          </summary>
+          <p className="body-copy">
+            Esta conferência mostra pontos que podem dificultar login, relatórios, comunicação por WhatsApp e filtros por grupo quando os dados forem migrados para tabelas próprias.
+          </p>
+          <div className="data-quality-grid">
+            {memberQualityChecklist.map((item) => (
+              <div className={item.ok ? "data-quality-card ok" : "data-quality-card warning"} key={item.title}>
+                <span>{item.ok ? "OK" : `${item.count} revisar`}</span>
+                <strong>{item.title}</strong>
+                <small>{item.detail}</small>
+              </div>
+            ))}
+          </div>
+          <div className="detail-actions">
+            <button className="secondary" disabled={!memberQualityRows.length} onClick={() => exportMemberQuality("csv")} type="button">
+              Exportar pendências CSV
+            </button>
+            <button className="secondary" disabled={!memberQualityRows.length} onClick={() => exportMemberQuality("excel")} type="button">
+              Exportar para Excel
+            </button>
+          </div>
+          {!memberQualityRows.length && <p className="empty-state">Nenhuma pendência de cadastro encontrada nesta conferência.</p>}
+        </details>
       </article>
 
       <article className="surface wide">
@@ -779,27 +797,36 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
           <h2>Próxima normalização</h2>
           <span>Visitantes, Kids, Agenda e Pastoral</span>
         </div>
-        <p className="body-copy">
-          Esta etapa ajuda a decidir quais módulos já estão prontos para sair do JSON principal no futuro. O ideal é corrigir congregação, contato e responsáveis antes de criar tabelas definitivas.
-        </p>
-        <div className="security-check-grid">
-          {normalizationChecklist.map((item) => (
-            <div className={item.ok ? "security-check-card ok" : "security-check-card warning"} key={item.title}>
-              <span>{item.ok ? "Pronto" : "Revisar"}</span>
-              <strong>{item.title}</strong>
-              <small>{item.detail}</small>
-            </div>
-          ))}
-        </div>
-        <div className="detail-actions">
-          <button className="secondary" disabled={!normalizationRows.length} onClick={() => exportNormalizationReadiness("csv")} type="button">
-            Exportar normalização CSV
-          </button>
-          <button className="secondary" disabled={!normalizationRows.length} onClick={() => exportNormalizationReadiness("excel")} type="button">
-            Exportar para Excel
-          </button>
-        </div>
-        {!normalizationRows.length && <p className="empty-state">Nenhuma pendência encontrada nos próximos módulos para normalização.</p>}
+        <details className="settings-maintenance-drawer" open={normalizationRows.length > 0 || undefined}>
+          <summary>
+            <span>
+              <strong>Preparação para futuras tabelas</strong>
+              <small>{normalizationRows.length ? `${normalizationRows.length} pendência(s) antes da normalização` : "Módulos prontos nesta conferência"}</small>
+            </span>
+            <b>{normalizationRows.length ? "Revisar" : "Pronto"}</b>
+          </summary>
+          <p className="body-copy">
+            Esta etapa ajuda a decidir quais módulos já estão prontos para sair do JSON principal no futuro. O ideal é corrigir congregação, contato e responsáveis antes de criar tabelas definitivas.
+          </p>
+          <div className="security-check-grid">
+            {normalizationChecklist.map((item) => (
+              <div className={item.ok ? "security-check-card ok" : "security-check-card warning"} key={item.title}>
+                <span>{item.ok ? "Pronto" : "Revisar"}</span>
+                <strong>{item.title}</strong>
+                <small>{item.detail}</small>
+              </div>
+            ))}
+          </div>
+          <div className="detail-actions">
+            <button className="secondary" disabled={!normalizationRows.length} onClick={() => exportNormalizationReadiness("csv")} type="button">
+              Exportar normalização CSV
+            </button>
+            <button className="secondary" disabled={!normalizationRows.length} onClick={() => exportNormalizationReadiness("excel")} type="button">
+              Exportar para Excel
+            </button>
+          </div>
+          {!normalizationRows.length && <p className="empty-state">Nenhuma pendência encontrada nos próximos módulos para normalização.</p>}
+        </details>
       </article>
 
       <article className="surface">
