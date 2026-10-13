@@ -73,9 +73,9 @@ export function AgendaPanel({
   const registrationWeekEvents = weekEvents.filter((event) => event.registrationUrl).length;
 
   return (
-    <section className="content-grid">
+    <section className="content-grid agenda-management-grid">
       {canManageEvents && (
-        <article className="surface">
+        <article className="surface agenda-form-panel">
           <div className="panel-heading">
             <h2>{editingEventId ? "Editar evento" : "Novo evento"}</h2>
             <span>{editingEventId ? "Atualizando agenda" : "Agenda"}</span>
@@ -156,7 +156,7 @@ export function AgendaPanel({
         </article>
       )}
 
-      <article className="surface">
+      <article className="surface agenda-list-panel">
         <div className="panel-heading">
           <h2>Agenda da semana</h2>
           <span>
@@ -212,9 +212,9 @@ export function AgendaPanel({
           <span><strong>{internalWeekEvents}</strong> internos</span>
           <span><strong>{registrationWeekEvents}</strong> com inscrição</span>
         </div>
-        <div className="row-list">
+        <div className="row-list agenda-event-list">
           {visibleWeekEvents.map((event) => (
-            <div className={`data-row access-user-row ${agendaThemeClass(event)}`} key={event.id}>
+            <div className={`data-row access-user-row agenda-event-record ${agendaThemeClass(event)}`} key={event.id}>
               <span className="date-box">{formatDate(event.date)}</span>
               <div>
                 <strong>{event.title}</strong>

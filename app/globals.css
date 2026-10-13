@@ -10775,3 +10775,211 @@ textarea::placeholder {
     grid-template-columns: auto minmax(0, 1fr);
   }
 }
+
+/* Agenda - etapa visual 4 */
+.agenda-management-grid {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(340px, 0.72fr) minmax(0, 1.28fr);
+  margin-inline: auto;
+  max-width: 1480px;
+  width: 100%;
+}
+
+.agenda-management-grid .agenda-form-panel,
+.agenda-management-grid .agenda-list-panel {
+  min-width: 0;
+}
+
+.agenda-form-panel {
+  overflow: hidden;
+  padding: 0;
+  position: sticky;
+  top: 18px;
+}
+
+.agenda-form-panel > .panel-heading,
+.agenda-list-panel > .panel-heading {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(19, 184, 211, 0.16), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(242, 248, 255, 0.96));
+  border-bottom: 1px solid rgba(15, 111, 168, 0.1);
+  margin: 0;
+  padding: 22px;
+}
+
+.agenda-form-panel > .form-grid {
+  padding: 18px 22px 22px;
+}
+
+.agenda-list-panel {
+  padding: 0;
+}
+
+.agenda-list-panel > .filter-bar {
+  background: #f8fbff;
+  border: 1px solid rgba(15, 111, 168, 0.12);
+  border-radius: 20px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin: 18px 22px 0;
+  padding: 14px;
+}
+
+.agenda-list-panel > .filter-bar button,
+.agenda-list-panel > .filter-bar .secondary {
+  align-self: end;
+  background: #ffffff;
+  border: 1px solid rgba(15, 111, 168, 0.18);
+  border-radius: 14px;
+  color: var(--primary-strong);
+  font-weight: 900;
+  min-height: 44px;
+}
+
+.agenda-week-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 14px 22px 0;
+}
+
+.agenda-week-summary span {
+  background:
+    radial-gradient(circle at 90% 20%, rgba(19, 184, 211, 0.12), transparent 32%),
+    #ffffff;
+  border: 1px solid rgba(15, 111, 168, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 12px 28px rgba(15, 35, 65, 0.06);
+  color: var(--muted);
+  padding: 14px;
+}
+
+.agenda-week-summary strong {
+  color: var(--primary-strong);
+  display: block;
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.agenda-event-list {
+  display: grid;
+  gap: 14px;
+  max-height: calc(100dvh - 295px);
+  overflow-y: auto;
+  padding: 18px 22px 22px;
+  scrollbar-gutter: stable;
+}
+
+.agenda-event-record {
+  align-items: start;
+  background:
+    radial-gradient(circle at 100% 0%, var(--agenda-a, rgba(19, 184, 211, 0.12)), transparent 34%),
+    #ffffff;
+  border: 1px solid rgba(15, 111, 168, 0.12);
+  border-radius: 22px;
+  box-shadow: 0 16px 38px rgba(15, 35, 65, 0.08);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr) minmax(170px, auto);
+  padding: 16px;
+}
+
+.agenda-event-record .date-box {
+  align-self: stretch;
+  border-radius: 18px;
+  display: grid;
+  min-height: 72px;
+  place-items: center;
+  text-align: center;
+  width: 76px;
+}
+
+.agenda-event-record strong {
+  color: var(--text);
+  font-size: 1.08rem;
+  line-height: 1.25;
+}
+
+.agenda-event-record small {
+  color: var(--muted);
+  display: block;
+  line-height: 1.4;
+}
+
+.agenda-event-record .row-actions {
+  align-items: stretch;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
+  min-width: 0;
+}
+
+.agenda-event-record .row-actions button {
+  min-height: 40px;
+}
+
+@media (max-width: 1180px) {
+  .agenda-management-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .agenda-form-panel {
+    position: static;
+  }
+
+  .agenda-event-list {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+@media (max-width: 760px) {
+  .agenda-management-grid {
+    gap: 14px;
+  }
+
+  .agenda-form-panel > .panel-heading,
+  .agenda-list-panel > .panel-heading,
+  .agenda-form-panel > .form-grid,
+  .agenda-event-list {
+    padding-inline: 14px;
+  }
+
+  .agenda-list-panel > .filter-bar,
+  .agenda-week-summary {
+    margin-inline: 14px;
+  }
+
+  .agenda-week-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .agenda-event-record {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .agenda-event-record .row-actions {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 460px) {
+  .agenda-event-record {
+    border-radius: 18px;
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .agenda-event-record .date-box {
+    min-height: 54px;
+    width: 100%;
+  }
+
+  .agenda-event-record .row-actions {
+    grid-template-columns: 1fr;
+  }
+}
