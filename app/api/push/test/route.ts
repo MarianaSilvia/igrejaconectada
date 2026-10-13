@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   if (session.response || !session.user) return session.response;
 
   if (!isPushConfigured()) {
-    return NextResponse.json({ error: "Notificacoes ainda nao configuradas no servidor." }, { status: 503 });
+    return NextResponse.json({ error: "Notificações ainda não configuradas no servidor." }, { status: 503 });
   }
 
   const client = adminClient();

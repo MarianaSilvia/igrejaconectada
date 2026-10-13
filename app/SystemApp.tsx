@@ -198,7 +198,7 @@ const initialData: AppData = {
       scheduleDate: "2026-09-04",
       scheduleTime: "19:30",
       summary: "Solicitou conversa com a liderança sobre acompanhamento familiar.",
-      returnNote: "Confirmar presenca um dia antes e registrar encaminhamento.",
+      returnNote: "Confirmar presença um dia antes e registrar encaminhamento.",
       createdAt: "2026-09-01T18:20:00.000Z",
       updatedAt: "2026-09-02T12:10:00.000Z",
     },
@@ -1027,7 +1027,7 @@ export default function Home() {
     if (!isSupabaseConfigured()) return false;
 
     setSaveState("saving");
-    setSyncStatus("Salvando alteracoes na Supabase...");
+    setSyncStatus("Salvando alterações na Supabase...");
     const supabase = getSupabaseClient();
     const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
     const token = sessionData.session?.access_token;
@@ -1050,7 +1050,7 @@ export default function Home() {
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
-        await forceAccessLogout(result.error ?? "Sua sessao expirou ou seu acesso foi alterado. Entre novamente.");
+        await forceAccessLogout(result.error ?? "Sua sessão expirou ou seu acesso foi alterado. Entre novamente.");
         return false;
       }
 
@@ -1097,7 +1097,7 @@ export default function Home() {
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
-        await forceAccessLogout(result.error ?? "Sua sessao expirou ou seu acesso foi alterado. Entre novamente.");
+        await forceAccessLogout(result.error ?? "Sua sessão expirou ou seu acesso foi alterado. Entre novamente.");
         return false;
       }
 
@@ -1221,7 +1221,7 @@ export default function Home() {
 
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-          await forceAccessLogout(result.error ?? "Sua sessao expirou ou seu acesso foi alterado. Entre novamente.");
+          await forceAccessLogout(result.error ?? "Sua sessão expirou ou seu acesso foi alterado. Entre novamente.");
           return;
         }
 
@@ -1240,7 +1240,7 @@ export default function Home() {
         setSyncStatus("Cadastros carregados da base Supabase.");
       } else {
         setRemoteUpdatedAt(result.updatedAt ?? null);
-        setSyncStatus("Base pronta. Cadastros deste painel serao preservados no Supabase.");
+        setSyncStatus("Base pronta. Cadastros deste painel serão preservados no Supabase.");
       }
 
       setRemoteStateReady(true);
@@ -1261,7 +1261,7 @@ export default function Home() {
     if (payload === lastSavedPayloadRef.current) return;
 
     setSaveState("saving");
-    setSyncStatus("Salvando alteracoes...");
+    setSyncStatus("Salvando alterações...");
 
     if (saveTimerRef.current) {
       window.clearTimeout(saveTimerRef.current);

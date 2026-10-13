@@ -85,7 +85,7 @@ function parseDataUrl(dataUrl?: string) {
   const mimeType = match[1].toLowerCase();
   const base64 = match[2].replace(/\s/g, "");
 
-  if (!allowedMimeTypes.has(mimeType)) return { error: "Formato de imagem nao permitido." };
+  if (!allowedMimeTypes.has(mimeType)) return { error: "Formato de imagem não permitido." };
   if (base64.length > maxBase64Length) return { error: "Foto muito grande. Envie uma foto menor." };
 
   return { mimeType, buffer: Buffer.from(base64, "base64") };
@@ -178,7 +178,7 @@ export async function DELETE(request: Request) {
   const memberId = textValue(payload?.memberId, 140);
   const fileKey = safeFileKey(payload?.fileKey);
 
-  if (!fileKey) return NextResponse.json({ error: "Foto nao informada para remocao." }, { status: 400 });
+  if (!fileKey) return NextResponse.json({ error: "Foto não informada para remoção." }, { status: 400 });
   if (!(await canManagePhoto(memberId, session.role, session.user))) {
     return NextResponse.json({ error: "Você não tem permissão para remover esta foto." }, { status: 403 });
   }

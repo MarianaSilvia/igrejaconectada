@@ -710,7 +710,7 @@ function mergeCareRequest(existingRequest: JsonRecord | undefined, incomingReque
 function mergeMemberPayload(existingPayload: JsonRecord, incomingPayload: JsonRecord, user: User) {
   const currentMember = findCurrentMember(existingPayload, user);
   if (!currentMember) {
-    return { response: NextResponse.json({ error: "Cadastro do membro nao localizado para este login." }, { status: 403 }) };
+    return { response: NextResponse.json({ error: "Cadastro do membro não localizado para este login." }, { status: 403 }) };
   }
 
   const currentMemberId = textValue(currentMember.id);
@@ -829,7 +829,7 @@ export async function PUT(request: Request) {
   const { payload, baseUpdatedAt } = (await request.json()) as AppStatePayload;
 
   if (!payload || !isRecord(payload)) {
-    return NextResponse.json({ error: "Estado invalido para salvar na base." }, { status: 400 });
+    return NextResponse.json({ error: "Estado inválido para salvar na base." }, { status: 400 });
   }
 
   const stored = await readStoredPayload();
@@ -840,7 +840,7 @@ export async function PUT(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Existe uma versao mais recente salva na base. Suas alteracoes locais nao foram gravadas para evitar perda de dados. Use Recarregar dados da base antes de salvar novamente.",
+          "Existe uma versão mais recente salva na base. Suas alterações locais não foram gravadas para evitar perda de dados. Use Recarregar dados da base antes de salvar novamente.",
         updatedAt: stored.updatedAt,
       },
       { status: 409 },
