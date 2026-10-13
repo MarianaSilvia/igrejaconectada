@@ -15,6 +15,18 @@ import type { AppData, MemberFormTab, MemberRecord } from "../types";
 
 const ministerialFunctionOptions = ["", "Auxiliar oficial", "Diácono", "Presbítero", "Evangelista", "Pastor"];
 
+function memberFormTabLabel(tab: MemberFormTab) {
+  return tab === "Observacoes" ? "Observações" : tab;
+}
+
+function memberStatusLabel(status: MemberRecord["status"] | "Todos") {
+  return status === "Transferencia" ? "Transferência" : status;
+}
+
+function memberTypeLabel(type: MemberRecord["memberType"] | "Todos") {
+  return type === "Lideranca" ? "Liderança" : type;
+}
+
 type MemberForm = Omit<MemberRecord, "id">;
 type MemberCredentialForm = {
   memberId: string;
@@ -171,12 +183,12 @@ export function MembersPanel({
             <div className="member-form-tabs full" role="tablist" aria-label="Seções do cadastro">
               {availableMemberFormTabs.map((tab) => (
                 <button className={memberFormTab === tab ? "active" : ""} key={tab} onClick={() => setMemberFormTab(tab)} type="button">
-                  {tab}
+                  {memberFormTabLabel(tab)}
                 </button>
               ))}
             </div>
             <div className="member-section-banner full">
-              <strong>{memberFormTab}</strong>
+              <strong>{memberFormTabLabel(memberFormTab)}</strong>
               <small>
                 {memberFormTab === "Dados" && "Revise nome, filiação, CPF, contato, nascimento e endereço."}
                 {memberFormTab === "Igreja" && "Revise tipo, status, funções, grupo, congregação, datas espirituais e batismos."}
@@ -340,7 +352,7 @@ export function MembersPanel({
                   <option>Membro</option>
                   <option>Visitante</option>
                   <option>Congregado</option>
-                  <option>Lideranca</option>
+                  <option value="Lideranca">Liderança</option>
                 </select>
               </label>
             )}
@@ -351,7 +363,7 @@ export function MembersPanel({
                   <option>Membro ativo</option>
                   <option>Visitante</option>
                   <option>Novo convertido</option>
-                  <option>Transferencia</option>
+                  <option value="Transferencia">Transferência</option>
                 </select>
               </label>
             )}
@@ -404,7 +416,7 @@ export function MembersPanel({
                   <option>Novo convertido</option>
                   <option>Congregado</option>
                   <option>Kids</option>
-                  <option>Lideranca</option>
+                  <option value="Lideranca">Liderança</option>
                   <option>Obreiro</option>
                 </select>
               </label>
@@ -482,12 +494,12 @@ export function MembersPanel({
                 <option>Visita presencial</option>
                 <option>Indicação</option>
                 <option>Evento</option>
-                <option>Transferencia</option>
+                <option value="Transferencia">Transferência</option>
               </select>
             </label>
             {canManageMembers && (
               <label data-member-section="Igreja">
-                Situacao pastoral
+                Situação pastoral
                 <select onChange={(event) => setMemberForm((form) => ({ ...form, pastoralStatus: event.target.value }))} value={memberForm.pastoralStatus}>
                   <option>Sem acompanhamento definido</option>
                   <option>Acompanhamento regular</option>
@@ -559,7 +571,7 @@ export function MembersPanel({
                 <option>Membro ativo</option>
                 <option>Visitante</option>
                 <option>Novo convertido</option>
-                <option>Transferencia</option>
+                <option value="Transferencia">{memberStatusLabel("Transferencia")}</option>
               </select>
             </label>
             <label>
@@ -569,7 +581,7 @@ export function MembersPanel({
                 <option>Membro</option>
                 <option>Visitante</option>
                 <option>Congregado</option>
-                <option>Lideranca</option>
+                <option value="Lideranca">{memberTypeLabel("Lideranca")}</option>
               </select>
             </label>
             <label>
@@ -604,7 +616,7 @@ export function MembersPanel({
               </select>
             </label>
             <label>
-              Situacao pastoral
+              Situação pastoral
               <select onChange={(event) => setMemberPastoralFilter(event.target.value)} value={memberPastoralFilter}>
                 <option>Todos</option>
                 <option>Sem acompanhamento definido</option>
