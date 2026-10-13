@@ -12103,3 +12103,47 @@ textarea::placeholder {
     font-size: 0.72rem;
   }
 }
+
+/* Comunicação e relatórios com leitura mais limpa */
+.message-card-tags,
+.report-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.message-card-tags span,
+.report-card-tags span {
+  background: rgba(15, 111, 168, 0.08);
+  border: 1px solid rgba(15, 111, 168, 0.14);
+  border-radius: 999px;
+  color: var(--primary-strong);
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1.1;
+  padding: 7px 10px;
+}
+
+.message-row {
+  align-items: start;
+}
+
+.message-row > input[type="checkbox"] {
+  margin-top: 10px;
+}
+
+.report-card {
+  align-content: start;
+}
+
+.report-card .row-actions {
+  margin-top: 14px;
+}
+
+@media (max-width: 760px) {
+  .message-card-tags span,
+  .report-card-tags span {
+    font-size: 0.72rem;
+  }
+}

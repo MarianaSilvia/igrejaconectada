@@ -259,7 +259,10 @@ export function ReportsPanel({
             .map(([kind, title, count]) => (
               <div className="report-card" key={kind}>
                 <strong>{title}</strong>
-                <small>{count}</small>
+                <div className="report-card-tags" aria-label="Resumo do relatório">
+                  <span>{count}</span>
+                  <span>{kind === reportPreviewKind ? "Prévia aberta" : "Disponível"}</span>
+                </div>
                 <div className="row-actions">
                   <button className="secondary" onClick={() => setReportPreviewKind(kind)} type="button">
                     Prévia

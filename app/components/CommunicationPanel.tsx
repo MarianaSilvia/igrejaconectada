@@ -204,7 +204,10 @@ export function CommunicationPanel({
                 />
                 <div>
                   <strong>{recipient.name}</strong>
-                  <small>{recipient.group}</small>
+                  <div className="message-card-tags" aria-label="Resumo do destinatário">
+                    <span>{recipient.group || "Sem grupo"}</span>
+                    <span>{selectedMessageRecipientIds.includes(recipient.id) ? "No lote" : "Fora do lote"}</span>
+                  </div>
                   <details className="record-sensitive-details message-recipient-details">
                     <summary>Ver contato</summary>
                     <div className="record-sensitive-grid">
@@ -232,10 +235,14 @@ export function CommunicationPanel({
               <span className="date-box">{campaign.recipientCount}</span>
               <div>
                 <strong>{campaign.audience}</strong>
-                <small>
-                  {formatDateTime(campaign.createdAt)} - modelo {campaign.templateId}
-                </small>
-                <small>{campaign.text.slice(0, 120)}</small>
+                <div className="message-card-tags" aria-label="Resumo da campanha">
+                  <span>{formatDateTime(campaign.createdAt)}</span>
+                  <span>{campaign.templateId}</span>
+                </div>
+                <details className="record-sensitive-details message-recipient-details">
+                  <summary>Ver texto enviado</summary>
+                  <small>{campaign.text}</small>
+                </details>
               </div>
             </div>
           ))}
