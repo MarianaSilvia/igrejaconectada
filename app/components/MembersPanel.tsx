@@ -174,7 +174,7 @@ export function MembersPanel({
   return (
     <section className="content-grid members-management-grid">
       {canShowForm ? (
-        <article className={editingMemberId ? "surface editing-surface" : "surface"} id="member-form-panel">
+        <article className={editingMemberId ? "surface member-form-panel editing-surface" : "surface member-form-panel"} id="member-form-panel">
           <div className="panel-heading">
             <h2>{editingMemberId ? "Editar ficha" : "Ficha completa"}</h2>
             <span>{canManageMembers ? (editingMemberId ? "Atualizando cadastro" : "Membro ou visitante") : "Meu cadastro"}</span>
@@ -540,7 +540,7 @@ export function MembersPanel({
           </div>
         </article>
       ) : (
-        <article className="surface" id="member-form-panel">
+        <article className="surface member-form-panel" id="member-form-panel">
           <div className="panel-heading">
             <h2>Meu cadastro</h2>
             <span>{currentMember ? "Visualização pessoal" : "Não vinculado"}</span>
@@ -553,7 +553,7 @@ export function MembersPanel({
         </article>
       )}
 
-      <article className="surface member-list-panel">
+      <article className="surface member-list-panel members-list-panel">
         <div className="panel-heading">
           <h2>{canManageMembers ? "Membros cadastrados" : "Meu cadastro"}</h2>
           <span>
