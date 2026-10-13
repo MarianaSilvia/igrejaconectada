@@ -12054,3 +12054,52 @@ textarea::placeholder {
     grid-template-columns: 1fr;
   }
 }
+
+/* Visitantes, Kids e acessos com resumo em etiquetas */
+.visitor-card-tags,
+.kids-card-tags,
+.access-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.visitor-card-tags span,
+.kids-card-tags span,
+.access-card-tags span {
+  background: rgba(15, 111, 168, 0.08);
+  border: 1px solid rgba(15, 111, 168, 0.14);
+  border-radius: 999px;
+  color: var(--primary-strong);
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1.1;
+  padding: 7px 10px;
+}
+
+.kids-card-tags span {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.18);
+  color: #15803d;
+}
+
+.access-card-tags span {
+  background: rgba(100, 116, 139, 0.08);
+  border-color: rgba(100, 116, 139, 0.16);
+  color: #334155;
+}
+
+.kid-main-line {
+  color: #4c5d72 !important;
+  display: block;
+  margin-top: 8px;
+}
+
+@media (max-width: 760px) {
+  .visitor-card-tags span,
+  .kids-card-tags span,
+  .access-card-tags span {
+    font-size: 0.72rem;
+  }
+}

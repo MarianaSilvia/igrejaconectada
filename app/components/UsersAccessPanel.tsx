@@ -149,8 +149,11 @@ export function UsersAccessPanel({
               <span className={`bullet-mark access-status-mark access-status-${user.status.toLowerCase()}`} />
               <div>
                 <strong>{user.name}</strong>
-                <small>{accessRoleLabel(user.role)} - {user.status}</small>
-                <small>Escopo: {user.congregationScope ?? globalCongregationScope}</small>
+                <div className="access-card-tags" aria-label="Resumo do acesso">
+                  <span>{accessRoleLabel(user.role)}</span>
+                  <span>{user.status}</span>
+                  <span>{user.congregationScope ?? globalCongregationScope}</span>
+                </div>
                 <details className="record-sensitive-details access-email-details">
                   <summary>Ver e-mail de acesso</summary>
                   <div className="record-sensitive-grid">

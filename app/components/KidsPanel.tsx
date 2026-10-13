@@ -160,10 +160,12 @@ export function KidsPanel({
                 <div className="member-avatar kids-avatar">{kid.photoDataUrl ? <ResponsiveImage sizes="76px" src={kid.photoDataUrl} /> : kid.childName.slice(0, 1)}</div>
                 <div>
                   <strong>{kid.childName}</strong>
-                  <small>
-                    {kid.ageGroup} - {kid.className || "Turma não informada"} - Aniv. {birthdayLabel(kid.birthDate)}
-                  </small>
-                  <small>Responsável: {kid.guardianName || "Não informado"} - {kid.relationship || "parentesco não informado"}</small>
+                  <div className="kids-card-tags" aria-label="Resumo Kids">
+                    <span>{kid.ageGroup}</span>
+                    <span>{kid.className || "Turma não informada"}</span>
+                    <span>Aniv. {birthdayLabel(kid.birthDate)}</span>
+                  </div>
+                  <small className="kid-main-line">Responsável: {kid.guardianName || "Não informado"} · {kid.relationship || "parentesco não informado"}</small>
                   <details className="record-sensitive-details kids-sensitive-details">
                     <summary>Ver dados do responsável</summary>
                     <div className="record-sensitive-grid">

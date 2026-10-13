@@ -158,14 +158,15 @@ export function VisitorsPanel({
               <span className="date-box">{formatDate(visitor.firstVisitDate)}</span>
               <div>
                 <strong>{visitor.fullName}</strong>
+                <div className="visitor-card-tags" aria-label="Resumo do visitante">
+                  <span>{visitor.integrationStatus}</span>
+                  <span>{visitor.contactMade ? "Contato feito" : "Contato pendente"}</span>
+                  <span>{visitor.returnDate ? `Retorno ${formatDate(visitor.returnDate)}` : "Sem retorno"}</span>
+                </div>
                 <div className="notice-stack">
                   {!visitor.contactMade && <span className="notice-pill">Sem contato feito</span>}
                   {visitor.contactMade && visitor.integrationStatus === "Em acompanhamento" && <span className="notice-pill">Pronto para integrar</span>}
                 </div>
-                <small>
-                  {visitor.integrationStatus} - {visitor.contactMade ? "contato feito" : "contato pendente"}
-                </small>
-                <small>Retorno: {visitor.returnDate ? formatDate(visitor.returnDate) : "Não agendado"}</small>
                 <details className="record-sensitive-details">
                   <summary>Ver detalhes do visitante</summary>
                   <div className="record-sensitive-grid">
