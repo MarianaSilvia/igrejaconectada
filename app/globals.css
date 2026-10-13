@@ -9712,3 +9712,376 @@ button.secondary,
     padding: 22px;
   }
 }
+
+/* Igreja Conectada redesign - camada final clara e setorizada */
+:root {
+  --bg: #f3f7fb;
+  --surface: #ffffff;
+  --surface-soft: #f8fbff;
+  --surface-strong: #eef5fb;
+  --text: #102033;
+  --muted: #5f6f86;
+  --border: rgba(16, 32, 51, 0.12);
+  --primary: #0f6fa8;
+  --primary-strong: #075985;
+  --accent: #13b8d3;
+  --success: #22a977;
+  --warning: #f59e0b;
+  --danger: #e11d48;
+  --shadow: 0 18px 50px rgba(15, 35, 65, 0.12);
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(19, 184, 211, 0.16), transparent 34vw),
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 30vw),
+    linear-gradient(180deg, #f9fcff 0%, #eef5fb 100%);
+  color: var(--text);
+}
+
+.app-shell {
+  background:
+    linear-gradient(rgba(15, 111, 168, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 111, 168, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, #f9fcff 0%, #eef5fb 100%);
+  background-size: 42px 42px, 42px 42px, auto;
+  color: var(--text);
+}
+
+.sidebar {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(15, 35, 65, 0.1);
+  box-shadow: 14px 0 36px rgba(15, 35, 65, 0.08);
+  gap: 18px;
+  overflow-y: auto;
+}
+
+.brand-block {
+  background: linear-gradient(135deg, rgba(15, 111, 168, 0.1), rgba(19, 184, 211, 0.08));
+  border: 1px solid rgba(15, 111, 168, 0.14);
+  border-radius: 22px;
+  padding: 14px;
+}
+
+.brand-mark {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 111, 168, 0.24);
+}
+
+.brand-block strong,
+.brand-block span,
+.user-chip strong,
+.module-button,
+.sector-button,
+.surface h1,
+.surface h2,
+.surface h3,
+.topbar h1 {
+  color: var(--text);
+}
+
+.brand-block p,
+.brand-block small,
+.user-chip span,
+.module-context,
+.module-section-title,
+.metric-card p,
+.surface p,
+.surface small {
+  color: var(--muted);
+}
+
+.sector-switcher {
+  display: grid;
+  gap: 8px;
+}
+
+.sector-button {
+  align-items: flex-start;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  cursor: pointer;
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  text-align: left;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  width: 100%;
+}
+
+.sector-button strong {
+  font-size: 0.92rem;
+}
+
+.sector-button span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.sector-button:hover,
+.sector-button.active {
+  background: linear-gradient(135deg, rgba(15, 111, 168, 0.1), rgba(19, 184, 211, 0.08));
+  border-color: rgba(15, 111, 168, 0.18);
+  transform: translateX(2px);
+}
+
+.sector-button.active strong {
+  color: var(--primary-strong);
+}
+
+.module-list-sector {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  gap: 7px;
+  padding: 10px;
+}
+
+.module-section-title {
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin: 2px 6px 4px;
+  text-transform: uppercase;
+}
+
+.module-button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font-weight: 800;
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+.module-button span {
+  background: rgba(15, 111, 168, 0.08);
+  color: var(--primary-strong);
+}
+
+.module-button:hover,
+.module-button.active {
+  background: #ffffff;
+  border-color: rgba(15, 111, 168, 0.14);
+  box-shadow: 0 12px 26px rgba(15, 35, 65, 0.08);
+  color: var(--primary-strong);
+}
+
+.module-button.active span {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #ffffff;
+}
+
+.topbar {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(15, 35, 65, 0.1);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  margin: 18px 18px 0;
+  padding: 18px 20px;
+}
+
+.topbar h1 {
+  letter-spacing: -0.02em;
+}
+
+.module-context {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 4px 0 0;
+}
+
+.workspace {
+  padding: 18px;
+}
+
+.surface,
+.dashboard-hero,
+.metric-card,
+.mini-panel,
+.member-record,
+.access-record,
+.event-record,
+.notice-card,
+.group-card,
+.care-card,
+.report-card,
+.public-card,
+.modal-card {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(15, 35, 65, 0.1);
+  box-shadow: 0 16px 42px rgba(15, 35, 65, 0.1);
+  color: var(--text);
+}
+
+.surface,
+.dashboard-hero,
+.mini-panel {
+  border-radius: 26px;
+}
+
+.metric-card,
+.member-record,
+.access-record,
+.event-record,
+.notice-card,
+.group-card,
+.care-card,
+.report-card,
+.public-card {
+  border-radius: 20px;
+}
+
+input,
+select,
+textarea,
+.search-input,
+.mobile-module-picker select {
+  background: #ffffff;
+  border-color: rgba(15, 35, 65, 0.16);
+  color: var(--text);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #7a8798;
+}
+
+.primary-button,
+.secondary-button,
+.ghost-button,
+.danger-button,
+.toolbar-button,
+.icon-button {
+  border-radius: 14px;
+  font-weight: 800;
+}
+
+.primary-button {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 14px 28px rgba(15, 111, 168, 0.18);
+}
+
+.secondary-button,
+.toolbar-button,
+.icon-button {
+  background: #ffffff;
+  border-color: rgba(15, 111, 168, 0.18);
+  color: var(--primary-strong);
+}
+
+.ghost-button {
+  background: rgba(15, 111, 168, 0.08);
+  border-color: rgba(15, 111, 168, 0.14);
+  color: var(--primary-strong);
+}
+
+.danger-button {
+  background: rgba(225, 29, 72, 0.08);
+  border-color: rgba(225, 29, 72, 0.22);
+  color: #be123c;
+}
+
+.status-pill,
+.badge,
+.event-badge {
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.floating-contact-button {
+  align-items: center;
+  border-radius: 999px;
+  bottom: 28px;
+  box-shadow: 0 16px 34px rgba(15, 111, 168, 0.24);
+  display: inline-flex;
+  height: 58px;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0;
+  right: 28px;
+  width: 58px;
+}
+
+.floating-contact-button span:not(.floating-contact-icon),
+.floating-contact-button small {
+  display: none;
+}
+
+.floating-contact-icon {
+  font-size: 1.35rem;
+}
+
+.overview-streaming .streaming-rail {
+  scrollbar-color: rgba(15, 111, 168, 0.35) transparent;
+}
+
+@media (max-width: 1120px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-bottom: 1px solid rgba(15, 35, 65, 0.1);
+    border-right: 0;
+    max-height: none;
+  }
+
+  .sector-switcher {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .module-list-sector {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    background-size: 34px 34px, 34px 34px, auto;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .topbar {
+    border-radius: 0 0 24px 24px;
+    margin: 0;
+    padding: 16px;
+  }
+
+  .topbar h1 {
+    font-size: clamp(1.65rem, 7vw, 2.35rem);
+    line-height: 1.05;
+  }
+
+  .workspace {
+    padding: 14px 12px 96px;
+  }
+
+  .surface,
+  .dashboard-hero,
+  .mini-panel {
+    border-radius: 22px;
+  }
+
+  .floating-contact-button {
+    bottom: 86px;
+    height: 54px;
+    right: 16px;
+    width: 54px;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .ghost-button,
+  .danger-button {
+    min-height: 46px;
+  }
+}

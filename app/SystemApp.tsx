@@ -186,6 +186,20 @@ function registrationStatusLabel(status: RegistrationRequest["status"]) {
   return status;
 }
 
+const moduleSectors: Array<{
+  key: string;
+  label: string;
+  hint: string;
+  modules: ModuleKey[];
+}> = [
+  { key: "dashboard", label: "Painel", hint: "Resumo e ações do dia", modules: ["overview"] },
+  { key: "people", label: "Pessoas", hint: "Membros, acessos e visitas", modules: ["members", "visitors", "users"] },
+  { key: "church", label: "Igreja", hint: "Agenda, mural e grupos", modules: ["events", "mural", "notices", "ministries", "messages"] },
+  { key: "care", label: "Cuidado", hint: "Pastoral e liderança", modules: ["pastoral", "contact", "kids"] },
+  { key: "education", label: "Ensino", hint: "EBD, discipulado e palavra", modules: ["school", "discipleship", "devotional"] },
+  { key: "management", label: "Gestão", hint: "Relatórios e administração", modules: ["intelligence", "reports", "finance", "assets", "settings"] },
+];
+
 const initialData: AppData = {
   careRequests: [
     {
@@ -1367,6 +1381,25 @@ export default function Home() {
     () => modules.filter((module) => canAccessModule(currentAccessRole, module.key)),
     [currentAccessRole],
   );
+  const visibleModuleKeys = useMemo(() => new Set(visibleModules.map((module) => module.key)), [visibleModules]);
+  const visibleModuleSectors = useMemo(
+    () =>
+      moduleSectors
+        .map((sector) => ({
+          ...sector,
+          items: sector.modules
+            .filter((moduleKey) => visibleModuleKeys.has(moduleKey))
+            .map((moduleKey) => modules.find((module) => module.key === moduleKey))
+            .filter((module): module is (typeof modules)[number] => Boolean(module)),
+        }))
+        .filter((sector) => sector.items.length > 0),
+    [visibleModuleKeys],
+  );
+  const activeModuleSector = useMemo(
+    () => visibleModuleSectors.find((sector) => sector.modules.includes(activeModule)) ?? visibleModuleSectors[0],
+    [activeModule, visibleModuleSectors],
+  );
+  const activeSectionModules = activeModuleSector?.items ?? visibleModules;
   const visibleMembers = useMemo(
     () => (canManageMembers ? data.members : currentMember ? [currentMember] : []),
     [canManageMembers, currentMember, data.members],
@@ -4031,8 +4064,23 @@ export default function Home() {
             </div>
           </div>
 
-          <nav className="module-list" aria-label="Módulos do sistema">
-            {visibleModules.map((module) => (
+          <nav className="sector-switcher" aria-label="Setores do sistema">
+            {visibleModuleSectors.map((sector) => (
+              <button
+                className={activeModuleSector?.key === sector.key ? "sector-button active" : "sector-button"}
+                key={sector.key}
+                onClick={() => setActiveModule(sector.items[0]?.key ?? "overview")}
+                type="button"
+              >
+                <strong>{sector.label}</strong>
+                <span>{sector.hint}</span>
+              </button>
+            ))}
+          </nav>
+
+          <nav className="module-list module-list-sector" aria-label={`Módulos do setor ${activeModuleSector?.label ?? "atual"}`}>
+            <p className="module-section-title">{activeModuleSector?.label ?? "Módulos"}</p>
+            {activeSectionModules.map((module) => (
               <button
                 className={activeModule === module.key ? "module-button active" : "module-button"}
                 key={module.key}
@@ -4125,13 +4173,18 @@ export default function Home() {
             <div>
               <p className="eyebrow">{currentLongDate}</p>
               <h1>{visibleModules.find((module) => module.key === activeModule)?.label}</h1>
+              {activeModuleSector && <p className="module-context">{activeModuleSector.label} · {activeModuleSector.hint}</p>}
               <label className="mobile-module-picker">
                 Ir para módulo
                 <select onChange={(event) => setActiveModule(event.target.value as ModuleKey)} value={activeModule}>
-                  {visibleModules.map((module) => (
-                    <option key={module.key} value={module.key}>
-                      {module.label}
-                    </option>
+                  {visibleModuleSectors.map((sector) => (
+                    <optgroup key={sector.key} label={sector.label}>
+                      {sector.items.map((module) => (
+                        <option key={module.key} value={module.key}>
+                          {module.label}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </label>
