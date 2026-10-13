@@ -119,6 +119,12 @@ export function accessRoleFromMetadata(value: unknown): AccessRole {
   return accessRoleByChurchRole[churchRoleFromLabel(value)];
 }
 
+export function accessRoleLabel(role: AccessRole) {
+  if (role === "Lider") return "Líder";
+  if (role === "Secretario") return "Secretário";
+  return role;
+}
+
 export function churchRoleFromAccessRole(role: AccessRole): ChurchRole {
   return churchRoleByAccessRole[role] ?? "MEMBER";
 }

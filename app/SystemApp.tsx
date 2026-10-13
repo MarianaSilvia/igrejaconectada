@@ -82,7 +82,7 @@ import {
   normalizeAppData as normalizeAppDataWithDefaults,
   normalizeMessageTemplate,
 } from "./data-normalization";
-import { accessRoleFromMetadata, canAccessModule, canManageModule, isAdministrativeRole, modules, type AccessRole, type ModuleKey } from "./permissions";
+import { accessRoleFromMetadata, accessRoleLabel, canAccessModule, canManageModule, isAdministrativeRole, modules, type AccessRole, type ModuleKey } from "./permissions";
 import { buildReportDefinition } from "./report-builders";
 import { downloadExcelWorkbook, escapeHtml, printHtmlDocument, printHtmlReport } from "./report-helpers";
 import { buildPrintableDocument, type PrintableDocumentKind } from "./document-templates";
@@ -578,7 +578,7 @@ const initialData: AppData = {
       name: "Intercessao",
       leader: "Marta Souza",
       assistant: "",
-      meetingDay: "Terca-feira",
+      meetingDay: "Terça-feira",
       volunteers: 9,
       status: "Em formacao",
       notes: "Abrir novos horarios de oracao.",
@@ -2447,7 +2447,7 @@ export default function Home() {
 
   function requireModuleAccess(moduleKey: ModuleKey, action: string) {
     if (canManageModule(currentAccessRole, moduleKey)) return true;
-    setSyncStatus(`${currentAccessRole}: ${action} não está liberado para este perfil.`);
+    setSyncStatus(`${accessRoleLabel(currentAccessRole)}: ${action} não está liberado para este perfil.`);
     return false;
   }
 
@@ -4170,7 +4170,7 @@ export default function Home() {
                 <span>{profileInitial}</span>
                 <div>
                   <strong>{profileName}</strong>
-                  <small>{currentAccessRole}</small>
+                  <small>{accessRoleLabel(currentAccessRole)}</small>
                 </div>
               </div>
               <button className="logout-button" onClick={handleLogout} type="button">

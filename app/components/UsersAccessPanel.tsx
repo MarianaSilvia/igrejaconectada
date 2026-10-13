@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { congregationOptions, globalCongregationScope } from "../congregation-scope";
+import { accessRoleLabel } from "../permissions";
 import type { AccessUser, AccessUserForm, AppData, MemberRecord } from "../types";
 
 type UsersAccessPanelProps = {
@@ -69,7 +70,7 @@ export function UsersAccessPanel({
                 </details>
                 <small>
                   {selectedAccessExistingUser
-                    ? `Acesso existente: ${selectedAccessExistingUser.role} - será atualizado`
+                    ? `Acesso existente: ${accessRoleLabel(selectedAccessExistingUser.role)} - será atualizado`
                     : "Pronto para virar acesso administrativo"}
                 </small>
               </div>
@@ -98,9 +99,9 @@ export function UsersAccessPanel({
             Perfil
             <select onChange={(event) => setUserForm((form) => ({ ...form, role: event.target.value as AccessUser["role"] }))} value={userForm.role}>
               <option>Administrador</option>
-              <option>Lider</option>
+              <option value="Lider">Líder</option>
               <option>Professor</option>
-              <option>Secretario</option>
+              <option value="Secretario">Secretário</option>
               <option>Tesoureiro</option>
             </select>
           </label>
@@ -148,7 +149,7 @@ export function UsersAccessPanel({
               <span className={`bullet-mark access-status-mark access-status-${user.status.toLowerCase()}`} />
               <div>
                 <strong>{user.name}</strong>
-                <small>{user.role} - {user.status}</small>
+                <small>{accessRoleLabel(user.role)} - {user.status}</small>
                 <small>Escopo: {user.congregationScope ?? globalCongregationScope}</small>
                 <details className="record-sensitive-details access-email-details">
                   <summary>Ver e-mail de acesso</summary>

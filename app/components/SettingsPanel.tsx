@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 import { formatDateTime, normalizeSearchText } from "../app-helpers";
 import { globalCongregationScope, normalizeCongregationScope } from "../congregation-scope";
-import { moduleAccessByRole, modules, type AccessRole } from "../permissions";
+import { accessRoleLabel, moduleAccessByRole, modules, type AccessRole } from "../permissions";
 import { downloadCsv, downloadExcelWorkbook, printHtmlReport } from "../report-helpers";
 import { getSupabaseClient } from "../supabase-client";
 import type { AppData, AuditItem, KidRecord, MemberRecord, MemberSyncStatus, Notice } from "../types";
@@ -117,7 +117,7 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
   const profileTestRows = useMemo(
     () =>
       profileChecklist.map((item) => [
-        item.role,
+        accessRoleLabel(item.role),
         item.activeUsers.length,
         item.ready ? "Pronto para testar" : "Criar ou reativar acesso antes",
         item.allowedModules.join(", "),
@@ -635,7 +635,7 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
           {profileChecklist.map((item) => (
             <div className={item.ready ? "profile-check-card ready" : "profile-check-card warning"} key={item.role}>
               <span>{item.ready ? "Pronto para teste" : "Precisa criar acesso"}</span>
-              <strong>{item.role}</strong>
+              <strong>{accessRoleLabel(item.role)}</strong>
               <small>
                 {item.activeUsers.length
                   ? `${item.activeUsers.length} acesso${item.activeUsers.length === 1 ? "" : "s"} ativo${item.activeUsers.length === 1 ? "" : "s"}`

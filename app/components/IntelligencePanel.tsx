@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { AccessRole, ModuleKey } from "../permissions";
+import { accessRoleLabel, type AccessRole, type ModuleKey } from "../permissions";
 import type { AppData, ChurchEvent, MemberRecord, RegistrationRequest } from "../types";
 import { dateAfterDays, formatDate, sortEventsByDate } from "../app-helpers";
 import { escapeHtml, printHtmlDocument } from "../report-helpers";
@@ -1203,7 +1203,7 @@ export function IntelligencePanel({
           <span><strong>{panelData.members.length}</strong> pessoas cadastradas</span>
           <span><strong>{panelUpcomingPanelEvents.length}</strong> eventos próximos</span>
           <span><strong>{pendingCare.length}</strong> pedidos em acompanhamento</span>
-          <span><strong>{currentAccessRole}</strong> visualizando</span>
+          <span><strong>{accessRoleLabel(currentAccessRole)}</strong> visualizando</span>
         </div>
         <div className="intelligence-scope-control">
           <label htmlFor="intelligence-congregation-filter">

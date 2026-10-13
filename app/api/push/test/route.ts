@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   const result = await sendPushToUser(client, session.user.id, {
     title: "Igreja Conectada",
-    body: "Teste de notificacao ativado com sucesso neste aparelho.",
+    body: "Teste de notificação ativado com sucesso neste aparelho.",
     module: "overview",
   });
 
