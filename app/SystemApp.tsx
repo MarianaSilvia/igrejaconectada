@@ -4305,11 +4305,10 @@ export default function Home() {
                     <ResponsiveImage src={featuredMuralImage} />
                   </div>
                 )}
-                <p className="eyebrow">Painel inteligente da igreja</p>
-                <h2>Prioridades, pessoas e grupos em tempo real.</h2>
+                <p className="eyebrow">Painel da igreja</p>
+                <h2>O que precisa de atenção hoje.</h2>
                 <p>
-                  Acompanhe pedidos pastorais, eventos, comunicados e a rotina da igreja em uma central viva,
-                  pronta para crescer com dados reais.
+                  Veja agenda, pedidos, pré-cadastros e comunicados em uma visão simples para conduzir a rotina da igreja.
                 </p>
                 {featuredMuralItem && <span className="mural-hero-label">Destaque do mural: {featuredMuralItem.title}</span>}
                 <div className="smart-hero-strip" aria-label="Resumo do painel inteligente">
@@ -4339,7 +4338,7 @@ export default function Home() {
                     Abrir fila pastoral
                   </button>
                   <button className="secondary" onClick={() => setNotificationsOpen(true)} type="button">
-                    Ver ações de hoje
+                    Ver avisos
                   </button>
                 </div>
               </div>

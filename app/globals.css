@@ -10085,3 +10085,329 @@ textarea::placeholder {
     min-height: 46px;
   }
 }
+
+/* Painel principal - etapa visual 2 */
+.overview-streaming {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  margin-inline: auto;
+  max-width: 1440px;
+  width: 100%;
+}
+
+.overview-streaming > * {
+  grid-column: span 6;
+  min-width: 0;
+}
+
+.overview-streaming > .wide,
+.overview-streaming > .hero-panel,
+.overview-streaming > .action-strip {
+  grid-column: 1 / -1;
+}
+
+.overview-streaming .streaming-cover {
+  isolation: isolate;
+  min-height: 300px;
+  overflow: hidden;
+  padding: clamp(24px, 4vw, 42px);
+  position: relative;
+}
+
+.overview-streaming .streaming-cover h2 {
+  color: var(--text);
+  font-size: clamp(2.1rem, 5vw, 4.4rem);
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  max-width: 780px;
+}
+
+.overview-streaming .streaming-cover p {
+  color: #45566c;
+  font-size: clamp(1rem, 1.6vw, 1.2rem);
+  max-width: 660px;
+}
+
+.overview-streaming .mural-hero-background {
+  inset: 0;
+  opacity: 0.36;
+  position: absolute;
+  z-index: -2;
+}
+
+.overview-streaming .mural-hero-background::after {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.74)),
+    radial-gradient(circle at 85% 20%, rgba(19, 184, 211, 0.24), transparent 42%);
+  content: "";
+  inset: 0;
+  position: absolute;
+}
+
+.smart-hero-strip {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 24px;
+}
+
+.smart-hero-strip button,
+.today-grid > div,
+.priority-grid button,
+.member-home-grid button,
+.member-quick-actions button {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.96));
+  border: 1px solid rgba(15, 111, 168, 0.13);
+  border-radius: 18px;
+  box-shadow: 0 14px 32px rgba(15, 35, 65, 0.08);
+  color: var(--text);
+  min-width: 0;
+  padding: 16px;
+  text-align: left;
+}
+
+.smart-hero-strip button {
+  display: grid;
+  gap: 5px;
+  min-height: 112px;
+}
+
+.smart-hero-strip button:hover,
+.priority-grid button:hover,
+.member-home-grid button:hover,
+.member-quick-actions button:hover {
+  border-color: rgba(15, 111, 168, 0.26);
+  box-shadow: 0 18px 38px rgba(15, 111, 168, 0.13);
+  transform: translateY(-2px);
+}
+
+.smart-hero-strip span,
+.today-grid span,
+.priority-grid span,
+.member-home-grid span {
+  color: var(--primary-strong);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.smart-hero-strip strong,
+.today-grid strong,
+.member-home-grid strong {
+  color: var(--text);
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  line-height: 1.15;
+}
+
+.smart-hero-strip small,
+.today-grid small,
+.member-home-grid small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.overview-streaming .hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.overview-streaming .hero-actions button {
+  min-height: 48px;
+  padding-inline: 20px;
+}
+
+.action-strip.streaming-rail {
+  display: grid;
+  gap: 14px;
+  grid-auto-flow: unset;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  overflow: visible;
+  padding: 0;
+}
+
+.overview-streaming .action-tile {
+  aspect-ratio: auto;
+  border: 1px solid rgba(15, 111, 168, 0.12);
+  min-height: 148px;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.overview-streaming .action-tile strong {
+  font-size: clamp(2rem, 4vw, 3.4rem);
+}
+
+.overview-streaming .streaming-section {
+  padding: clamp(18px, 3vw, 26px);
+}
+
+.today-grid,
+.priority-grid,
+.member-home-grid,
+.member-quick-actions {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.priority-grid button {
+  display: grid;
+  gap: 8px;
+  min-height: 124px;
+}
+
+.priority-grid strong {
+  color: var(--danger);
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 0.95;
+}
+
+.member-quick-actions {
+  padding: 16px;
+}
+
+.member-quick-actions button {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-height: 78px;
+}
+
+.member-quick-actions button span {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(15, 111, 168, 0.12), rgba(19, 184, 211, 0.12));
+  border-radius: 16px;
+  color: var(--primary-strong);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 1.35rem;
+  height: 46px;
+  justify-content: center;
+  width: 46px;
+}
+
+.overview-streaming .devotional-card {
+  background:
+    radial-gradient(circle at 88% 10%, rgba(245, 158, 11, 0.2), transparent 36%),
+    linear-gradient(145deg, #fff8e8, #ffffff 62%);
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.overview-streaming .devotional-card h2 {
+  color: #92400e;
+}
+
+.overview-streaming .birthday-spotlight-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  max-height: none;
+  overflow: visible;
+}
+
+.overview-streaming .birthday-person-card {
+  align-items: center;
+  background: #ffffff;
+  border-color: rgba(15, 111, 168, 0.12);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.overview-streaming .panel-heading {
+  align-items: center;
+  gap: 12px;
+}
+
+.overview-streaming .panel-heading h2 {
+  color: var(--text);
+}
+
+.overview-streaming .panel-heading span {
+  color: var(--muted);
+}
+
+@media (max-width: 1020px) {
+  .overview-streaming > * {
+    grid-column: 1 / -1;
+  }
+
+  .smart-hero-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .overview-streaming {
+    gap: 14px;
+  }
+
+  .overview-streaming .streaming-cover {
+    min-height: 0;
+    padding: 22px 16px;
+  }
+
+  .overview-streaming .streaming-cover h2 {
+    font-size: clamp(2rem, 11vw, 3rem);
+  }
+
+  .smart-hero-strip,
+  .action-strip.streaming-rail,
+  .today-grid,
+  .priority-grid,
+  .member-home-grid,
+  .member-quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .smart-hero-strip button,
+  .overview-streaming .action-tile,
+  .today-grid > div,
+  .priority-grid button,
+  .member-home-grid button,
+  .member-quick-actions button {
+    min-height: auto;
+  }
+
+  .overview-streaming .action-tile {
+    padding: 18px;
+  }
+
+  .overview-streaming .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .overview-streaming .hero-actions button,
+  .overview-streaming .hero-actions button:first-child,
+  .overview-streaming .hero-actions button.secondary {
+    width: 100%;
+  }
+
+  .overview-streaming .mural-stack {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 430px) {
+  .overview-streaming .streaming-section,
+  .member-quick-actions {
+    padding: 14px;
+  }
+
+  .smart-hero-strip button,
+  .today-grid > div,
+  .priority-grid button,
+  .member-home-grid button,
+  .member-quick-actions button {
+    border-radius: 16px;
+    padding: 14px;
+  }
+}
