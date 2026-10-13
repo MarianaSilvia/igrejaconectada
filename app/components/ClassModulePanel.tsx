@@ -57,9 +57,9 @@ export function ClassModulePanel({
   };
 
   return (
-    <section className="content-grid">
+    <section className="content-grid class-module-grid">
       {canManage && (
-        <article className="surface">
+        <article className="surface class-notice-panel">
           <div className="panel-heading">
             <h2>{noticeTitle}</h2>
             <span>Por classe</span>
@@ -101,7 +101,7 @@ export function ClassModulePanel({
         </article>
       )}
 
-      <article className="surface">
+      <article className="surface class-list-panel">
         <div className="panel-heading">
           <h2>{title}</h2>
           <div className="panel-heading-actions">
@@ -113,13 +113,13 @@ export function ClassModulePanel({
             )}
           </div>
         </div>
-        <div className="row-list">
+        <div className="row-list class-list">
           {classes.map((classRecord) => {
             const linkedMembers = linkedMembersForClass(classRecord);
             const summary = attendanceSummaryForClass(classRecord);
 
             return (
-            <div className="data-row class-row" key={classRecord.id}>
+            <div className="data-row class-row class-card-row" key={classRecord.id}>
               <span className="date-box">{linkedMembers.length}</span>
               <div>
                 <strong>{classRecord.name}</strong>
