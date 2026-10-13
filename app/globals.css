@@ -11539,3 +11539,135 @@ textarea::placeholder {
     grid-template-columns: 1fr;
   }
 }
+
+/* Mobile/PWA - etapa visual final */
+@media (max-width: 760px) {
+  html,
+  body,
+  #__next {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    background: #f3f7fb;
+  }
+
+  .app-shell {
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  .workspace {
+    padding-bottom: calc(108px + env(safe-area-inset-bottom));
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+
+  .mobile-module-picker select,
+  input,
+  select,
+  textarea,
+  button,
+  .primary-action,
+  .secondary,
+  .danger-action,
+  .whatsapp-link {
+    font-size: 16px;
+  }
+
+  button,
+  .primary-action,
+  .secondary,
+  .danger-action,
+  .whatsapp-link,
+  .mobile-tabbar button {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .surface,
+  .hero-panel,
+  .streaming-section,
+  .member-form-panel,
+  .members-list-panel,
+  .agenda-form-panel,
+  .agenda-list-panel,
+  .class-notice-panel,
+  .class-list-panel,
+  .pastoral-layout > .surface,
+  .contact-layout > .surface {
+    box-shadow: 0 14px 32px rgba(15, 35, 65, 0.08);
+    width: 100%;
+  }
+
+  .row-list,
+  .member-record-list,
+  .agenda-event-list,
+  .class-list,
+  .care-list,
+  .contact-thread-list,
+  .contact-messages {
+    max-width: 100%;
+  }
+
+  .data-row,
+  .member-record,
+  .agenda-event-record,
+  .class-card-row,
+  .care-list-item,
+  .contact-thread-card {
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-tabbar {
+    backdrop-filter: blur(18px);
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(15, 111, 168, 0.12);
+    border-radius: 22px 22px 0 0;
+    bottom: 0;
+    box-shadow: 0 -16px 36px rgba(15, 35, 65, 0.12);
+    gap: 6px;
+    left: 0;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    right: 0;
+  }
+
+  .mobile-tabbar button {
+    border-radius: 16px;
+    color: #607086;
+    flex: 1 0 auto;
+    font-size: 0.74rem;
+    font-weight: 900;
+    min-width: 68px;
+  }
+
+  .mobile-tabbar button.active {
+    background: linear-gradient(135deg, rgba(15, 111, 168, 0.12), rgba(19, 184, 211, 0.1));
+    color: var(--primary-strong);
+  }
+
+  .floating-contact-button {
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    right: 14px;
+  }
+}
+
+@media (max-width: 390px) {
+  .workspace {
+    padding-inline: 10px;
+  }
+
+  .topbar {
+    padding-inline: 12px;
+  }
+
+  .mobile-tabbar button {
+    min-width: 62px;
+    padding-inline: 8px;
+  }
+}

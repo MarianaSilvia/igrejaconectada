@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     "Sistema conectado para membros, secretaria, agenda, mural, atendimento pastoral, EBD, Discipulado e comunicação da igreja.",
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'Igreja Conectada',
   },
   icons: {
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#080910',
+  themeColor: '#0f6fa8',
   viewportFit: 'cover',
 };
 
