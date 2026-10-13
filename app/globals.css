@@ -11671,3 +11671,112 @@ textarea::placeholder {
     padding-inline: 8px;
   }
 }
+
+/* Organização estrutural - painel mais limpo */
+.admin-nav-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 249, 252, 0.86));
+  border: 1px solid rgba(15, 111, 168, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 14px 32px rgba(15, 35, 65, 0.08);
+  color: var(--text);
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.admin-nav-card strong {
+  color: var(--text);
+  font-size: 0.96rem;
+}
+
+.admin-nav-card span,
+.admin-nav-card small,
+.admin-nav-card a {
+  color: #607086;
+  line-height: 1.35;
+}
+
+.admin-nav-card button {
+  background: rgba(15, 111, 168, 0.08);
+  border: 1px solid rgba(15, 111, 168, 0.16);
+  border-radius: 14px;
+  color: var(--primary-strong);
+  font-weight: 900;
+  min-height: 42px;
+}
+
+.admin-review-drawer {
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-review-drawer > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  list-style: none;
+  padding: 18px 22px;
+}
+
+.admin-review-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-review-drawer > summary span {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-review-drawer > summary strong {
+  color: var(--text);
+  font-size: clamp(1.05rem, 2vw, 1.28rem);
+}
+
+.admin-review-drawer > summary small {
+  color: var(--muted);
+}
+
+.admin-review-drawer > summary b {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  border-radius: 999px;
+  color: #ffffff;
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  padding: 10px 14px;
+}
+
+.admin-review-drawer > .registration-queue-panel {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.admin-overview .today-panel,
+.admin-overview .priority-panel,
+.admin-overview .agenda-preview,
+.admin-overview .mural-preview-panel,
+.admin-overview .birthday-spotlight-panel,
+.admin-overview .devotional-card {
+  scroll-margin-top: 110px;
+}
+
+@media (max-width: 760px) {
+  .admin-nav-card {
+    display: none;
+  }
+
+  .admin-overview .smart-hero-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-review-drawer > summary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-review-drawer > summary b {
+    text-align: center;
+  }
+}

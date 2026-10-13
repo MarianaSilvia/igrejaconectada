@@ -120,7 +120,7 @@ import {
   upsertVisitorData,
 } from "./system-actions";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase-client";
-import { agendaThemeClass, agendaThemeKey, moduleCoverClass, type ModuleCoverKey } from "./visual-covers";
+import { agendaThemeClass, agendaThemeKey } from "./visual-covers";
 import type {
   AccessMode,
   AccessUser,
@@ -991,7 +991,7 @@ export default function Home() {
   const [remoteStateReady, setRemoteStateReady] = useState(!isSupabaseConfigured());
   const [syncStatus, setSyncStatus] = useState(isSupabaseConfigured() ? "Supabase pronto para login." : "Acesso bloqueado: configure o Supabase no ambiente de produção.");
   const [saveState, setSaveState] = useState<SaveState>("idle");
-  const [lastSavedAt, setLastSavedAt] = useState("");
+  const [, setLastSavedAt] = useState("");
   const [remoteUpdatedAt, setRemoteUpdatedAt] = useState<string | null>(null);
   const [reportPreviewKind, setReportPreviewKind] = useState<ReportKind>("members");
   const [reportCongregationFilter, setReportCongregationFilter] = useState("Todas");
@@ -3444,121 +3444,6 @@ export default function Home() {
     setSyncStatus("Backup desta tela baixado. Agora você pode atualizar os dados da base com mais segurança.");
   }
 
-  const actionHighlights = [
-    {
-      label: "Pré-cadastros",
-      value: pendingRegistrationRequests.length.toString(),
-      hint: "aguardando análise",
-      module: "overview" as ModuleKey,
-      cover: "registrations" as ModuleCoverKey,
-    },
-    {
-      label: "Atenção pastoral",
-      value: data.careRequests.filter((request) => !request.responsible && request.status !== "Concluido").length.toString(),
-      hint: "sem responsável",
-      module: "pastoral" as ModuleKey,
-      cover: "pastoral" as ModuleCoverKey,
-    },
-    {
-      label: "Agenda da semana",
-      value: upcomingPanelEvents.length.toString(),
-      hint: "encontros restantes",
-      module: "events" as ModuleKey,
-      cover: "agenda" as ModuleCoverKey,
-    },
-    {
-      label: "Visitantes",
-      value: data.visitors.filter((visitor) => visitor.integrationStatus !== "Integrado").length.toString(),
-      hint: "em acompanhamento",
-      module: "visitors" as ModuleKey,
-      cover: "visitors" as ModuleCoverKey,
-    },
-    {
-      label: "Comunicados ativos",
-      value: activeNotices.filter((notice) => notice.status === "Publicado").length.toString(),
-      hint: "publicados",
-      module: "notices" as ModuleKey,
-      cover: "notices" as ModuleCoverKey,
-    },
-    {
-      label: "Área Kids",
-      value: data.kids.length.toString(),
-      hint: "crianças cadastradas",
-      module: "kids" as ModuleKey,
-      cover: "kids" as ModuleCoverKey,
-    },
-    {
-      label: "Membros",
-      value: data.members.length.toString(),
-      hint: "cadastros ativos",
-      module: "members" as ModuleKey,
-      cover: "members" as ModuleCoverKey,
-    },
-    {
-      label: "EBD",
-      value: data.schoolClasses.length.toString(),
-      hint: "classes organizadas",
-      module: "school" as ModuleKey,
-      cover: "school" as ModuleCoverKey,
-    },
-    {
-      label: "Discipulado",
-      value: data.discipleshipClasses.length.toString(),
-      hint: "turmas ativas",
-      module: "discipleship" as ModuleKey,
-      cover: "discipleship" as ModuleCoverKey,
-    },
-    {
-      label: "Grupos",
-      value: data.ministries.length.toString(),
-      hint: "grupos cadastrados",
-      module: "ministries" as ModuleKey,
-      cover: "groups" as ModuleCoverKey,
-    },
-    {
-      label: "Mural",
-      value: data.mural.filter((item) => item.published).length.toString(),
-      hint: "destaques publicados",
-      module: "mural" as ModuleKey,
-      cover: "mural" as ModuleCoverKey,
-    },
-    {
-      label: "Comunicação",
-      value: data.messageCampaigns.length.toString(),
-      hint: "campanhas registradas",
-      module: "messages" as ModuleKey,
-      cover: "messages" as ModuleCoverKey,
-    },
-    {
-      label: "Fale com a liderança",
-      value: "Privado",
-      hint: "mensagens por área",
-      module: "contact" as ModuleKey,
-      cover: "contact" as ModuleCoverKey,
-    },
-    {
-      label: "Inteligência",
-      value: "BI",
-      hint: "alertas e indicadores",
-      module: "intelligence" as ModuleKey,
-      cover: "intelligence" as ModuleCoverKey,
-    },
-    {
-      label: "Relatórios",
-      value: "8",
-      hint: "modelos disponíveis",
-      module: "reports" as ModuleKey,
-      cover: "reports" as ModuleCoverKey,
-    },
-    {
-      label: "Atendimentos",
-      value: data.careRequests.filter((request) => request.status !== "Concluido").length.toString(),
-      hint: "em acompanhamento",
-      module: "pastoral" as ModuleKey,
-      cover: "pastoral" as ModuleCoverKey,
-    },
-  ];
-
   function switchAccessMode(mode: AccessMode) {
     setAccessMode(mode);
     setAccessMessage("");
@@ -4094,20 +3979,13 @@ export default function Home() {
           </nav>
 
           {isAdminView ? (
-            <div className="connection-card">
-              <span className={`status-dot ${saveState}`} />
-              <div>
-                <strong>{isSupabaseConfigured() ? "Supabase preparado" : "Supabase obrigatório"}</strong>
-                <span>{syncStatus}</span>
-                {lastSavedAt && <small>Último salvamento: {lastSavedAt}</small>}
-                {saveState === "conflict" && <small>Salvamento pausado para proteger os dados.</small>}
-                {(saveState === "error" || saveState === "conflict") && hasSession && isSupabaseConfigured() && (
-                  <button className="sync-reload-button" onClick={reloadRemoteStateNow} type="button">
-                    {saveState === "conflict" ? "Recarregar antes de continuar" : "Recarregar dados da base"}
-                  </button>
-                )}
-                <small><a href="/excluir-conta">Privacidade e exclusão de conta</a></small>
-              </div>
+            <div className="admin-nav-card">
+              <strong>Administração</strong>
+              <span>Dados técnicos e backups ficam em Configurações.</span>
+              <button onClick={() => setActiveModule("settings")} type="button">
+                Abrir configurações
+              </button>
+              <small><a href="/excluir-conta">Privacidade e exclusão de conta</a></small>
             </div>
           ) : (
             <div className="member-help-card">
@@ -4146,22 +4024,8 @@ export default function Home() {
           >
             Agenda
           </button>}
-          {canAccessModule(currentAccessRole, "contact") && <button
-            className={activeModule === "contact" ? "active" : ""}
-            onClick={() => setActiveModule("contact")}
-            type="button"
-          >
-            Liderança
-          </button>}
-          {canAccessModule(currentAccessRole, "visitors") && <button
-            className={activeModule === "visitors" ? "active" : ""}
-            onClick={() => setActiveModule("visitors")}
-            type="button"
-          >
-            Visitas
-          </button>}
           <button className={notificationsOpen ? "active" : ""} onClick={() => setNotificationsOpen((open) => !open)} type="button">
-            Ações
+            Mais
           </button>
           <button className="logout-tab" onClick={handleLogout} type="button">
             Sair
@@ -4343,16 +4207,6 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="action-strip streaming-rail">
-                {actionHighlights.filter((item) => canAccessModule(currentAccessRole, item.module)).map((item) => (
-                  <button className={`action-tile ${moduleCoverClass(item.cover)}`} key={item.label} onClick={() => setActiveModule(item.module)} type="button">
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                    <small>{item.hint}</small>
-                  </button>
-                ))}
-              </div>
-
               <article className="surface wide streaming-section today-panel">
                 <div className="panel-heading">
                   <h2>Hoje na igreja</h2>
@@ -4400,16 +4254,25 @@ export default function Home() {
                 </div>
               </article>
 
-              {canManageRegistrationRequests && (
-                <RegistrationRequestsPanel
-                  copyPublicRegistrationLink={copyPublicRegistrationLink}
-                  onApproveMember={approveRegistrationAsMember}
-                  onApproveVisitor={approveRegistrationAsVisitor}
-                  onDecline={declineRegistrationRequest}
-                  onMarkInReview={markRegistrationInReview}
-                  onReview={reviewRegistrationRequest}
-                  requests={data.registrationRequests}
-                />
+              {canManageRegistrationRequests && pendingRegistrationRequests.length > 0 && (
+                <details className="surface wide streaming-section admin-review-drawer" open>
+                  <summary>
+                    <span>
+                      <strong>Pré-cadastros aguardando análise</strong>
+                      <small>{pendingRegistrationRequests.length} solicitação(ões) precisam de revisão.</small>
+                    </span>
+                    <b>Ver fila</b>
+                  </summary>
+                  <RegistrationRequestsPanel
+                    copyPublicRegistrationLink={copyPublicRegistrationLink}
+                    onApproveMember={approveRegistrationAsMember}
+                    onApproveVisitor={approveRegistrationAsVisitor}
+                    onDecline={declineRegistrationRequest}
+                    onMarkInReview={markRegistrationInReview}
+                    onReview={reviewRegistrationRequest}
+                    requests={data.registrationRequests}
+                  />
+                </details>
               )}
 
               {monthlyBirthdays.length > 0 && birthdaySpotlightPanel}
