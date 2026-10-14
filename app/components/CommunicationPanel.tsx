@@ -161,18 +161,29 @@ export function CommunicationPanel({
               Selecionar todos
             </button>
           </div>
-          <label className="full">
-            Nome do novo modelo
-            <input onChange={(event) => setCustomTemplateLabel(event.target.value)} placeholder="Ex.: Convite culto de domingo" value={customTemplateLabel} />
-          </label>
-          <label className="full">
-            Texto do novo modelo
-            <textarea onChange={(event) => setCustomTemplateText(event.target.value)} placeholder="Use {nome} para personalizar." value={customTemplateText} />
-          </label>
-          <button className="secondary full" disabled={!customTemplateLabel.trim() || !customTemplateText.trim()} onClick={saveCustomMessageTemplate} type="button">
-            Salvar modelo
-          </button>
         </div>
+        <details className="module-compact-drawer communication-template-drawer">
+          <summary>
+            <span>
+              <strong>Criar novo modelo de mensagem</strong>
+              <small>Guarde textos usados com frequência, como convites e avisos.</small>
+            </span>
+            <b>Modelo</b>
+          </summary>
+          <div className="form-grid">
+            <label className="full">
+              Nome do novo modelo
+              <input onChange={(event) => setCustomTemplateLabel(event.target.value)} placeholder="Ex.: Convite culto de domingo" value={customTemplateLabel} />
+            </label>
+            <label className="full">
+              Texto do novo modelo
+              <textarea onChange={(event) => setCustomTemplateText(event.target.value)} placeholder="Use {nome} para personalizar." value={customTemplateText} />
+            </label>
+            <button className="secondary full" disabled={!customTemplateLabel.trim() || !customTemplateText.trim()} onClick={saveCustomMessageTemplate} type="button">
+              Salvar modelo
+            </button>
+          </div>
+        </details>
       </article>
 
       <article className="surface">
@@ -224,12 +235,15 @@ export function CommunicationPanel({
         </div>
       </article>
 
-      <article className="surface">
-        <div className="panel-heading">
-          <h2>Histórico de campanhas</h2>
-          <span>{data.messageCampaigns.length} registros</span>
-        </div>
-        <div className="row-list">
+      <details className="surface module-compact-drawer communication-history-drawer">
+        <summary>
+          <span>
+            <strong>Histórico de campanhas</strong>
+            <small>Consulte os últimos envios registrados quando precisar conferir uma campanha.</small>
+          </span>
+          <b>{data.messageCampaigns.length} registro(s)</b>
+        </summary>
+        <div className="row-list communication-history-list">
           {data.messageCampaigns.map((campaign) => (
             <div className="data-row" key={campaign.id}>
               <span className="date-box">{campaign.recipientCount}</span>
@@ -248,7 +262,7 @@ export function CommunicationPanel({
           ))}
           {!data.messageCampaigns.length && <p className="empty-state">Nenhuma campanha registrada ainda.</p>}
         </div>
-      </article>
+      </details>
     </section>
   );
 }

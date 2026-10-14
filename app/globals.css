@@ -12221,6 +12221,70 @@ textarea::placeholder {
   background: rgba(15, 23, 42, 0.62);
 }
 
+.module-compact-drawer {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(15, 111, 168, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 12px 28px rgba(15, 35, 65, 0.05);
+  margin-top: 14px;
+  overflow: hidden;
+}
+
+.module-compact-drawer > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  list-style: none;
+  padding: 15px 18px;
+}
+
+.module-compact-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.module-compact-drawer > summary span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.module-compact-drawer > summary strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.module-compact-drawer > summary small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.module-compact-drawer > summary b {
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  border-radius: 999px;
+  color: var(--primary-strong);
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  padding: 8px 12px;
+}
+
+.module-compact-drawer > :not(summary) {
+  margin-inline: 18px;
+}
+
+.module-compact-drawer > :last-child {
+  margin-bottom: 18px;
+}
+
+.communication-history-list {
+  max-height: min(430px, 52dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
 @media (max-width: 760px) {
   .settings-maintenance-drawer > summary {
     align-items: stretch;
@@ -12233,6 +12297,22 @@ textarea::placeholder {
   }
 
   .audit-list-compact {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .module-compact-drawer > summary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .module-compact-drawer > summary b {
+    text-align: center;
+    width: 100%;
+  }
+
+  .communication-history-list {
     max-height: none;
     overflow: visible;
     padding-right: 0;
