@@ -125,35 +125,53 @@ export function KidsPanel({
           </span>
         </div>
         {canManageKids && (
-          <div className="filter-bar">
-            <label>
-              Turma ou faixa
-              <select onChange={(event) => setKidClassFilter(event.target.value)} value={kidClassFilter}>
-                <option>Todos</option>
-                {kidClassOptions.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <details className="module-compact-drawer kids-filter-drawer" open={kidClassFilter !== "Todos" || undefined}>
+            <summary>
+              <span>
+                <strong>Filtrar Kids</strong>
+                <small>{kidClassFilter === "Todos" ? "Use quando precisar ver uma turma ou faixa específica." : `Filtro ativo: ${kidClassFilter}`}</small>
+              </span>
+              <b>{kidClassFilter === "Todos" ? "Abrir filtro" : "Filtrando"}</b>
+            </summary>
+            <div className="filter-bar">
+              <label>
+                Turma ou faixa
+                <select onChange={(event) => setKidClassFilter(event.target.value)} value={kidClassFilter}>
+                  <option>Todos</option>
+                  {kidClassOptions.map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </details>
         )}
         {canManageKids && (
-          <div className="birthday-grid">
-            <div className="birthday-card kids-birthday">
-              <strong>Aniversariantes Kids do mês</strong>
-              <span>{monthlyKidsBirthdays.length}</span>
-              <small>
-                {monthlyKidsBirthdays.length ? monthlyKidsBirthdays.map((kid) => `${kid.childName} (${birthdayLabel(kid.birthDate)})`).join(", ") : "Nenhum aniversário Kids neste mês."}
-              </small>
+          <details className="module-compact-drawer kids-summary-drawer">
+            <summary>
+              <span>
+                <strong>Resumo Kids</strong>
+                <small>Aniversariantes do mês e contatos responsáveis.</small>
+              </span>
+              <b>{monthlyKidsBirthdays.length} aniv. / {guardianCount} resp.</b>
+            </summary>
+            <div className="birthday-grid">
+              <div className="birthday-card kids-birthday">
+                <strong>Aniversariantes Kids do mês</strong>
+                <span>{monthlyKidsBirthdays.length}</span>
+                <small>
+                  {monthlyKidsBirthdays.length ? monthlyKidsBirthdays.map((kid) => `${kid.childName} (${birthdayLabel(kid.birthDate)})`).join(", ") : "Nenhum aniversário Kids neste mês."}
+                </small>
+              </div>
+              <div className="birthday-card kids-birthday">
+                <strong>Responsáveis</strong>
+                <span>{guardianCount}</span>
+                <small>Contatos para check-in, retirada e avisos do departamento.</small>
+              </div>
             </div>
-            <div className="birthday-card kids-birthday">
-              <strong>Responsáveis</strong>
-              <span>{guardianCount}</span>
-              <small>Contatos para check-in, retirada e avisos do departamento.</small>
-            </div>
-          </div>
+          </details>
         )}
-        <div className="row-list">
+        <div className="row-list kids-record-list">
           {filteredKids.map((kid) => (
             <div className="member-record kids-record" key={kid.id}>
               <div className="data-row member-row">
