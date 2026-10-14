@@ -12384,6 +12384,45 @@ textarea::placeholder {
   scrollbar-gutter: stable;
 }
 
+.registration-request-grid {
+  max-height: min(620px, 64dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
+.registration-request-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.92));
+  border: 1px solid rgba(15, 111, 168, 0.14);
+  border-radius: 18px;
+  box-shadow: 0 14px 32px rgba(15, 35, 65, 0.08);
+}
+
+.registration-request-card p,
+.registration-request-card small {
+  color: var(--muted);
+}
+
+.registration-status-tabs button {
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  color: var(--primary-strong);
+}
+
+.registration-status-tabs button.active {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.registration-status-tabs span {
+  background: rgba(15, 111, 168, 0.1);
+}
+
+.registration-status-tabs button.active span {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .notices-record-list {
   max-height: min(620px, 64dvh);
   overflow-y: auto;
@@ -12487,6 +12526,12 @@ textarea::placeholder {
   }
 
   .report-absent-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .registration-request-grid {
     max-height: none;
     overflow: visible;
     padding-right: 0;
