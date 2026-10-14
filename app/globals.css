@@ -8878,6 +8878,10 @@ button.secondary,
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-height: min(430px, 52dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
 }
 
 .formation-class-card > span {
@@ -8916,6 +8920,10 @@ button.secondary,
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-height: min(460px, 55dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
 }
 
 .funnel-card {
@@ -9281,6 +9289,10 @@ button.secondary,
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-height: min(430px, 52dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
 }
 
 .automation-readiness-card {
@@ -9345,6 +9357,10 @@ button.secondary,
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-height: min(430px, 52dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
 }
 
 .governance-card {
@@ -9537,6 +9553,15 @@ button.secondary,
   .finance-assets-grid,
   .compact-report-grid {
     grid-template-columns: 1fr;
+  }
+
+  .formation-class-grid,
+  .follow-up-funnel-grid,
+  .automation-readiness-grid,
+  .governance-grid {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 
   .congregation-summary-card div {
