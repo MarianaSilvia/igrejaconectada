@@ -83,15 +83,22 @@ export function NoticesPanel({ activeNotices, canCreateNotice, canManageNotices,
           <h2>Comunicados</h2>
           <span>{activeNotices.length} avisos ativos</span>
         </div>
-        <div className="row-list">
+        <div className="row-list notices-record-list">
           {activeNotices.map((notice) => (
             <div className="data-row access-user-row" key={notice.id}>
               <span className="bullet-mark" />
               <div>
                 <strong>{notice.title}</strong>
-                <small>{notice.status} - {notice.audience} - {notice.channel}</small>
+                <div className="message-card-tags" aria-label="Resumo do comunicado">
+                  <span>{notice.status}</span>
+                  <span>{notice.audience || "Sem público"}</span>
+                  <span>{notice.channel}</span>
+                </div>
                 <small>Expira em {formatDate(notice.expiresAt)} - {notice.retentionDays} dias no ar</small>
-                <small>{notice.body}</small>
+                <details className="record-sensitive-details notice-body-details">
+                  <summary>Ver mensagem</summary>
+                  <small>{notice.body || "Sem mensagem cadastrada."}</small>
+                </details>
               </div>
               {canManageNotices && (
                 <div className="row-actions">
