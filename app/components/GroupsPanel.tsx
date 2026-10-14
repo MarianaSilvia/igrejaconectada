@@ -155,7 +155,7 @@ export function GroupsPanel({
           <h2>Grupos</h2>
           <span>{ministries.length} grupo{ministries.length === 1 ? "" : "s"}</span>
         </div>
-        <div className="row-list">
+        <div className="row-list groups-record-list">
           {ministries.map((ministry) => {
             const groupCover = groupCoverFor(ministry.name);
 
@@ -170,11 +170,12 @@ export function GroupsPanel({
                   <span className="date-box">{ministry.volunteers}</span>
                   <div>
                     <strong>{ministry.name}</strong>
-                    <small>
-                      {ministryStatusLabel(ministry.status)} - Líder: {ministry.leader}
-                      {ministry.assistant ? ` - Auxiliar: ${ministry.assistant}` : ""}
-                    </small>
-                    <small>{ministry.meetingDay || "Reunião não definida"}</small>
+                    <div className="message-card-tags" aria-label="Resumo do grupo">
+                      <span>{ministryStatusLabel(ministry.status)}</span>
+                      <span>Líder: {ministry.leader || "Não definido"}</span>
+                      <span>{ministry.meetingDay || "Reunião não definida"}</span>
+                    </div>
+                    {ministry.assistant && <small>Auxiliar: {ministry.assistant}</small>}
                     {ministry.notes && (
                       <details className="record-sensitive-details group-notes-details">
                         <summary>Ver observações</summary>
