@@ -103,7 +103,7 @@ export function MuralPanel({
           <h2>{canManageMural ? "Administrar mural" : "Mural da igreja"}</h2>
           <span>{canManageMural ? `${totalPublishedMuralItems} publicados` : `${memberVisibleTotal} itens gerais`}</span>
         </div>
-        <div className="mural-board">
+        <div className="mural-board mural-board-scroll">
           {filteredMuralItems.map((item) => (
             <div className={item.featured ? "mural-admin-card featured" : "mural-admin-card"} key={item.id}>
               <div className="mural-admin-content">

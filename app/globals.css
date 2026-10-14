@@ -12377,6 +12377,13 @@ textarea::placeholder {
   scrollbar-gutter: stable;
 }
 
+.mural-board-scroll {
+  max-height: min(720px, 68dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
 @media (max-width: 760px) {
   .settings-maintenance-drawer > summary {
     align-items: stretch;
@@ -12459,6 +12466,12 @@ textarea::placeholder {
   }
 
   .notices-record-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .mural-board-scroll {
     max-height: none;
     overflow: visible;
     padding-right: 0;
