@@ -12346,6 +12346,14 @@ textarea::placeholder {
   padding: 0 0 18px;
 }
 
+.contact-summary-drawer {
+  margin-bottom: 12px;
+}
+
+.contact-summary-drawer .contact-summary-grid {
+  margin-top: 0;
+}
+
 @media (max-width: 760px) {
   .settings-maintenance-drawer > summary {
     align-items: stretch;

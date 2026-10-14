@@ -330,51 +330,60 @@ export function ContactLeadershipPanel({ openPastoral }: ContactLeadershipPanelP
 
       <article className="surface contact-inbox">
         <div className="panel-heading"><h2>{isStaff ? "Caixa de atendimento" : "Minhas conversas"}</h2><span>{unreadThreads} não lidas</span></div>
-        <div className="contact-summary-grid" aria-label="Resumo das conversas">
-          <div>
-            <strong>{openThreads}</strong>
-            <span>Em aberto</span>
+        <details className="module-compact-drawer contact-summary-drawer" open={unreadThreads > 0 || unassignedThreads > 0 || undefined}>
+          <summary>
+            <span>
+              <strong>Resumo da caixa</strong>
+              <small>{unreadThreads || unassignedThreads ? "Há conversas que pedem atenção." : "Abra para ver os indicadores da fila."}</small>
+            </span>
+            <b>{openThreads} aberta{openThreads === 1 ? "" : "s"}</b>
+          </summary>
+          <div className="contact-summary-grid" aria-label="Resumo das conversas">
+            <div>
+              <strong>{openThreads}</strong>
+              <span>Em aberto</span>
+            </div>
+            <div>
+              <strong>{unreadThreads}</strong>
+              <span>Não lidas</span>
+            </div>
+            {isStaff ? (
+              <>
+                <div>
+                  <strong>{unassignedThreads}</strong>
+                  <span>Para encaminhar</span>
+                </div>
+                <div>
+                  <strong>{assignedToMeThreads}</strong>
+                  <span>Minhas</span>
+                </div>
+                <div>
+                  <strong>{waitingMemberThreads}</strong>
+                  <span>Aguardando membro</span>
+                </div>
+                <div>
+                  <strong>{closedThreads}</strong>
+                  <span>Concluídas</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <strong>{waitingLeadershipThreads}</strong>
+                  <span>Aguardando liderança</span>
+                </div>
+                <div>
+                  <strong>{waitingMemberThreads}</strong>
+                  <span>Aguardando você</span>
+                </div>
+                <div>
+                  <strong>{closedThreads}</strong>
+                  <span>Concluídas</span>
+                </div>
+              </>
+            )}
           </div>
-          <div>
-            <strong>{unreadThreads}</strong>
-            <span>Não lidas</span>
-          </div>
-          {isStaff ? (
-            <>
-              <div>
-                <strong>{unassignedThreads}</strong>
-                <span>Para encaminhar</span>
-              </div>
-              <div>
-                <strong>{assignedToMeThreads}</strong>
-                <span>Minhas</span>
-              </div>
-              <div>
-                <strong>{waitingMemberThreads}</strong>
-                <span>Aguardando membro</span>
-              </div>
-              <div>
-                <strong>{closedThreads}</strong>
-                <span>Concluídas</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <strong>{waitingLeadershipThreads}</strong>
-                <span>Aguardando liderança</span>
-              </div>
-              <div>
-                <strong>{waitingMemberThreads}</strong>
-                <span>Aguardando você</span>
-              </div>
-              <div>
-                <strong>{closedThreads}</strong>
-                <span>Concluídas</span>
-              </div>
-            </>
-          )}
-        </div>
+        </details>
         <div className="contact-tabs" role="tablist" aria-label="Filtros de conversa">
           <button className={filter === "open" ? "active" : ""} onClick={() => setFilter("open")} type="button">Em aberto</button>
           {isStaff && <button className={filter === "unassigned" ? "active" : ""} onClick={() => setFilter("unassigned")} type="button">Encaminhar</button>}
