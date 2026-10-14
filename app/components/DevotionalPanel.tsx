@@ -100,12 +100,16 @@ export function DevotionalPanel({
               <span className="date-box">{formatDate(devotional.publishedAt)}</span>
               <div>
                 <strong>{devotional.title}</strong>
-                <small>
-                  {devotional.verse || "Sem versículo"} - {devotional.status}
-                  {devotional.createdByAutomation ? " - Automático" : ""}
-                </small>
-                {devotional.theme && <small>Tema: {devotional.theme}</small>}
-                <small>{devotional.body}</small>
+                <div className="message-card-tags" aria-label="Resumo do devocional">
+                  <span>{devotional.status}</span>
+                  <span>{devotional.createdByAutomation ? "Automático" : "Manual"}</span>
+                  <span>{devotional.theme || "Sem tema"}</span>
+                </div>
+                <small>{devotional.verse || "Sem versículo"}</small>
+                <details className="record-sensitive-details devotional-body-details">
+                  <summary>Ver mensagem</summary>
+                  <small>{devotional.body || "Sem mensagem cadastrada."}</small>
+                </details>
               </div>
               {canManageDevotional && (
                 <div className="row-actions">
@@ -124,21 +128,30 @@ export function DevotionalPanel({
       </article>
 
       {canManageDevotional && (
-        <article className="surface wide">
-          <div className="panel-heading">
-            <h2>Banco de devocionais</h2>
-            <span>{libraryDevotionals.length} aprovados</span>
-          </div>
+        <details className="surface wide module-compact-drawer devotional-library-drawer">
+          <summary>
+            <span>
+              <strong>Banco de devocionais</strong>
+              <small>Textos aprovados que entram na seleção automática semanal.</small>
+            </span>
+            <b>{libraryDevotionals.length} aprovado(s)</b>
+          </summary>
           <p className="form-hint">Textos com status Aprovado entram na seleção automática semanal.</p>
-          <div className="row-list">
+          <div className="row-list devotional-library-list">
             {libraryDevotionals.map((devotional) => (
               <div className="data-row access-user-row" key={devotional.id}>
                 <span className="date-box">{devotional.usedAt ? "Usado" : "Novo"}</span>
                 <div>
                   <strong>{devotional.title}</strong>
-                  <small>{devotional.verse || "Sem versículo"} - {devotional.theme || "Sem tema"}</small>
-                  <small>{devotional.usedAt ? `Último uso: ${formatDate(devotional.usedAt)}` : "Ainda não usado pela automação"}</small>
-                  <small>{devotional.body}</small>
+                  <div className="message-card-tags" aria-label="Resumo do texto aprovado">
+                    <span>{devotional.theme || "Sem tema"}</span>
+                    <span>{devotional.usedAt ? `Usado em ${formatDate(devotional.usedAt)}` : "Ainda não usado"}</span>
+                  </div>
+                  <small>{devotional.verse || "Sem versículo"}</small>
+                  <details className="record-sensitive-details devotional-body-details">
+                    <summary>Ver texto aprovado</summary>
+                    <small>{devotional.body || "Sem mensagem cadastrada."}</small>
+                  </details>
                 </div>
                 <div className="row-actions">
                   <button className="secondary" onClick={() => editDevotional(devotional)} type="button">
@@ -152,7 +165,7 @@ export function DevotionalPanel({
             ))}
             {!libraryDevotionals.length && <p className="empty-state">Nenhum devocional aprovado no banco ainda.</p>}
           </div>
-        </article>
+        </details>
       )}
     </section>
   );

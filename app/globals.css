@@ -12285,6 +12285,13 @@ textarea::placeholder {
   scrollbar-gutter: stable;
 }
 
+.devotional-library-list {
+  max-height: min(460px, 55dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
 @media (max-width: 760px) {
   .settings-maintenance-drawer > summary {
     align-items: stretch;
@@ -12313,6 +12320,12 @@ textarea::placeholder {
   }
 
   .communication-history-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .devotional-library-list {
     max-height: none;
     overflow: visible;
     padding-right: 0;
