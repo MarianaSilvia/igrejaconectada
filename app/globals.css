@@ -12292,6 +12292,13 @@ textarea::placeholder {
   scrollbar-gutter: stable;
 }
 
+.finance-transaction-list {
+  max-height: min(560px, 58dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
 @media (max-width: 760px) {
   .settings-maintenance-drawer > summary {
     align-items: stretch;
@@ -12326,6 +12333,12 @@ textarea::placeholder {
   }
 
   .devotional-library-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .finance-transaction-list {
     max-height: none;
     overflow: visible;
     padding-right: 0;

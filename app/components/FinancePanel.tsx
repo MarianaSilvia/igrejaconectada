@@ -143,32 +143,54 @@ export function FinancePanel({
             <strong>{outgoingTotal}</strong>
           </div>
         </div>
-        <div className="filter-bar">
-          <label>
-            Tipo
-            <select onChange={(event) => setFinanceTypeFilter(event.target.value)} value={financeTypeFilter}>
-              <option>Todos</option>
-              <option>Entrada</option>
-              <option value="Saida">Saída</option>
-              <option value="Dizimo">Dízimo</option>
-              <option>Oferta</option>
-            </select>
-          </label>
-          <button className="secondary" onClick={() => exportReport("finance", "pdf")} type="button">
-            PDF
-          </button>
-          <button className="secondary" onClick={() => exportReport("finance", "excel")} type="button">
-            Excel
-          </button>
-        </div>
-        <div className="row-list">
+        <details className="module-compact-drawer finance-filter-drawer" open={financeTypeFilter !== "Todos" || undefined}>
+          <summary>
+            <span>
+              <strong>Filtros e exportação</strong>
+              <small>{financeTypeFilter === "Todos" ? "Use quando precisar separar lançamentos ou gerar relatório." : `Filtro ativo: ${financeTypeFilter}`}</small>
+            </span>
+            <b>{financeTypeFilter === "Todos" ? "Abrir filtros" : "Filtrando"}</b>
+          </summary>
+          <div className="filter-bar">
+            <label>
+              Tipo
+              <select onChange={(event) => setFinanceTypeFilter(event.target.value)} value={financeTypeFilter}>
+                <option>Todos</option>
+                <option>Entrada</option>
+                <option value="Saida">Saída</option>
+                <option value="Dizimo">Dízimo</option>
+                <option>Oferta</option>
+              </select>
+            </label>
+            <button className="secondary" onClick={() => exportReport("finance", "pdf")} type="button">
+              PDF
+            </button>
+            <button className="secondary" onClick={() => exportReport("finance", "excel")} type="button">
+              Excel
+            </button>
+          </div>
+        </details>
+        <div className="row-list finance-transaction-list">
           {filteredTransactions.map((transaction) => (
             <div className="data-row access-user-row" key={transaction.id}>
               <span className="date-box">{formatDate(transaction.date)}</span>
               <div>
                 <strong>{transaction.description}</strong>
-                <small>{transaction.type} - {transaction.category} - {transaction.status}</small>
-                <small>{transaction.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} - {transaction.method}</small>
+                <div className="message-card-tags" aria-label="Resumo do lançamento">
+                  <span>{transaction.type === "Saida" ? "Saída" : transaction.type}</span>
+                  <span>{transaction.category || "Sem categoria"}</span>
+                  <span>{transaction.status}</span>
+                </div>
+                <small>
+                  {transaction.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} - {transaction.method}
+                </small>
+                <details className="record-sensitive-details finance-transaction-details">
+                  <summary>Ver detalhes</summary>
+                  <div className="record-sensitive-grid">
+                    <small>Membro: {transaction.memberName || "Não vinculado"}</small>
+                    <small>Observações: {transaction.notes || "Não informado"}</small>
+                  </div>
+                </details>
               </div>
               {canManageFinance && (
                 <div className="row-actions">
