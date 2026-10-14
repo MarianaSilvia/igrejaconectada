@@ -12352,6 +12352,20 @@ textarea::placeholder {
   scrollbar-gutter: stable;
 }
 
+.communication-recipient-list {
+  max-height: min(620px, 64dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
+.devotional-published-list {
+  max-height: min(560px, 58dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
 .devotional-library-list {
   max-height: min(460px, 55dvh);
   overflow-y: auto;
@@ -12542,6 +12556,18 @@ textarea::placeholder {
   }
 
   .communication-history-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .communication-recipient-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .devotional-published-list {
     max-height: none;
     overflow: visible;
     padding-right: 0;

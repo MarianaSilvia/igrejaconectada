@@ -192,7 +192,7 @@ export function CommunicationPanel({
           <span>{selectedMessageRecipients.length} no lote atual</span>
         </div>
         <p className="body-copy">O WhatsApp pode bloquear muitas abas ao mesmo tempo. Se necessário, envie pela lista individual abaixo.</p>
-        <div className="row-list">
+        <div className="row-list communication-recipient-list">
           {messageRecipients.length === 0 ? (
             <div className="data-row">
               <span className="bullet-mark" />

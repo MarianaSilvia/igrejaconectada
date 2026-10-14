@@ -94,7 +94,7 @@ export function DevotionalPanel({
           <h2>Devocionais publicados</h2>
           <span>{scheduledDevotionals.length} registros</span>
         </div>
-        <div className="row-list">
+        <div className="row-list devotional-published-list">
           {scheduledDevotionals.map((devotional) => (
             <div className="data-row access-user-row" key={devotional.id}>
               <span className="date-box">{formatDate(devotional.publishedAt)}</span>
