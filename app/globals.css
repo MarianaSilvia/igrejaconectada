@@ -12436,6 +12436,16 @@ textarea::placeholder {
   background: rgba(255, 255, 255, 0.2);
 }
 
+.overview-streaming .agenda-preview .row-list,
+.overview-streaming .notices-preview .row-list,
+.overview-streaming .care-preview .row-list,
+.overview-streaming .mural-preview-panel .mural-stack {
+  max-height: min(540px, 58dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
 .notices-record-list {
   max-height: min(620px, 64dvh);
   overflow-y: auto;
@@ -12545,6 +12555,15 @@ textarea::placeholder {
   }
 
   .registration-request-grid {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .overview-streaming .agenda-preview .row-list,
+  .overview-streaming .notices-preview .row-list,
+  .overview-streaming .care-preview .row-list,
+  .overview-streaming .mural-preview-panel .mural-stack {
     max-height: none;
     overflow: visible;
     padding-right: 0;
