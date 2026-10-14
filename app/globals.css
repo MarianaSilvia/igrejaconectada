@@ -12206,6 +12206,21 @@ textarea::placeholder {
   margin-bottom: 18px;
 }
 
+.audit-control-drawer {
+  margin-top: 12px;
+}
+
+.audit-list-compact {
+  max-height: min(430px, 52dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
+.audit-list-compact .audit-item {
+  background: rgba(15, 23, 42, 0.62);
+}
+
 @media (max-width: 760px) {
   .settings-maintenance-drawer > summary {
     align-items: stretch;
@@ -12215,5 +12230,11 @@ textarea::placeholder {
   .settings-maintenance-drawer > summary b {
     text-align: center;
     width: 100%;
+  }
+
+  .audit-list-compact {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 }

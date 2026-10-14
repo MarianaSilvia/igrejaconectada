@@ -97,6 +97,7 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
         .filter((item) => item.total > 0),
     [data.audit],
   );
+  const auditHasActiveFilters = Boolean(auditSearch.trim()) || auditModule !== "Todos" || auditPeriod !== "Todos";
   const profileChecklist = useMemo(
     () =>
       profileTestRoles.map((role) => {
@@ -844,44 +845,62 @@ export function SettingsPanel({ activeNotices, data, log, monthlyBirthdays, mont
             </div>
           ))}
         </div>
-        <div className="filter-bar">
-          <label>
-            Buscar
-            <input placeholder="Ação, módulo ou data" value={auditSearch} onChange={(event) => setAuditSearch(event.target.value)} />
-          </label>
-          <label>
-            Módulo
-            <select value={auditModule} onChange={(event) => setAuditModule(event.target.value as AuditModuleFilter)}>
-              {auditModuleOptions.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Período
-            <select value={auditPeriod} onChange={(event) => setAuditPeriod(event.target.value as AuditPeriodFilter)}>
-              {auditPeriodOptions.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
-          </label>
-          <button className="secondary" onClick={() => exportAudit("pdf")} type="button">
-            PDF
-          </button>
-          <button className="secondary" onClick={() => exportAudit("csv")} type="button">
-            CSV
-          </button>
-        </div>
-        <div className="audit-list">
-          {filteredAudit.map((item) => (
-            <div className="audit-item" key={item.id}>
-              <span className="status-chip">{auditModuleFor(item.action)}</span>
-              <strong>{item.action}</strong>
-              <small>{formatDateTime(item.when)}</small>
-            </div>
-          ))}
-          {!filteredAudit.length && <p className="empty-state">Nenhum evento de auditoria encontrado para este filtro.</p>}
-        </div>
+        <details className="settings-maintenance-drawer audit-control-drawer" open={auditHasActiveFilters || undefined}>
+          <summary>
+            <span>
+              <strong>Filtrar e exportar auditoria</strong>
+              <small>{auditHasActiveFilters ? "Filtros ativos nesta consulta" : "Abra apenas quando precisar localizar ou exportar eventos"}</small>
+            </span>
+            <b>{auditHasActiveFilters ? "Filtrando" : "Abrir filtros"}</b>
+          </summary>
+          <div className="filter-bar">
+            <label>
+              Buscar
+              <input placeholder="Ação, módulo ou data" value={auditSearch} onChange={(event) => setAuditSearch(event.target.value)} />
+            </label>
+            <label>
+              Módulo
+              <select value={auditModule} onChange={(event) => setAuditModule(event.target.value as AuditModuleFilter)}>
+                {auditModuleOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Período
+              <select value={auditPeriod} onChange={(event) => setAuditPeriod(event.target.value as AuditPeriodFilter)}>
+                {auditPeriodOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+            <button className="secondary" onClick={() => exportAudit("pdf")} type="button">
+              PDF
+            </button>
+            <button className="secondary" onClick={() => exportAudit("csv")} type="button">
+              CSV
+            </button>
+          </div>
+        </details>
+        <details className="settings-maintenance-drawer audit-control-drawer">
+          <summary>
+            <span>
+              <strong>Histórico de eventos</strong>
+              <small>Lista administrativa com os registros encontrados no filtro atual</small>
+            </span>
+            <b>{filteredAudit.length} evento(s)</b>
+          </summary>
+          <div className="audit-list audit-list-compact">
+            {filteredAudit.map((item) => (
+              <div className="audit-item" key={item.id}>
+                <span className="status-chip">{auditModuleFor(item.action)}</span>
+                <strong>{item.action}</strong>
+                <small>{formatDateTime(item.when)}</small>
+              </div>
+            ))}
+            {!filteredAudit.length && <p className="empty-state">Nenhum evento de auditoria encontrado para este filtro.</p>}
+          </div>
+        </details>
       </article>
     </section>
   );
