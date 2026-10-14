@@ -128,6 +128,7 @@ export function ReportsPanel({
   };
   const reportIsScoped = reportCongregationFilter !== "Todas";
   const reportHasPeriod = Boolean(reportStartDate || reportEndDate);
+  const reportHasActiveFilters = reportIsScoped || reportHasPeriod;
   const dateFromKey = (value: string) => {
     if (!value) return null;
     const date = new Date(`${value.slice(0, 10)}T12:00:00`);
@@ -214,41 +215,52 @@ export function ReportsPanel({
             <h2>Relatórios operacionais</h2>
             <span>PDF e Excel</span>
           </div>
-          <label className="report-scope-filter">
-            Congregação
-            <select onChange={(event) => setReportCongregationFilter(event.target.value)} value={reportCongregationFilter}>
-              {congregationOptions.map((congregation) => (
-                <option key={congregation} value={congregation}>
-                  {congregation}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="report-period-filter">
-            <button className="secondary" onClick={applyCurrentWeek} type="button">
-              Semana atual
-            </button>
-            <button className="secondary" onClick={applyCurrentMonth} type="button">
-              Mês atual
-            </button>
-            <label>
-              De
-              <input onChange={(event) => setReportStartDate(event.target.value)} type="date" value={reportStartDate} />
-            </label>
-            <label>
-              Até
-              <input onChange={(event) => setReportEndDate(event.target.value)} type="date" value={reportEndDate} />
-            </label>
-            {(reportStartDate || reportEndDate) && (
-              <button className="secondary" onClick={() => {
-                setReportStartDate("");
-                setReportEndDate("");
-              }} type="button">
-                Limpar
-              </button>
-            )}
-          </div>
         </div>
+        <details className="module-compact-drawer reports-filter-drawer" open={reportHasActiveFilters || undefined}>
+          <summary>
+            <span>
+              <strong>Filtros dos relatórios</strong>
+              <small>{reportHasActiveFilters ? `Aplicado: ${reportCongregationFilter}${reportHasPeriod ? " / período definido" : ""}` : "Abra para filtrar por congregação ou período."}</small>
+            </span>
+            <b>{reportHasActiveFilters ? "Filtrando" : "Abrir filtros"}</b>
+          </summary>
+          <div className="reports-filter-controls">
+            <label className="report-scope-filter">
+              Congregação
+              <select onChange={(event) => setReportCongregationFilter(event.target.value)} value={reportCongregationFilter}>
+                {congregationOptions.map((congregation) => (
+                  <option key={congregation} value={congregation}>
+                    {congregation}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="report-period-filter">
+              <button className="secondary" onClick={applyCurrentWeek} type="button">
+                Semana atual
+              </button>
+              <button className="secondary" onClick={applyCurrentMonth} type="button">
+                Mês atual
+              </button>
+              <label>
+                De
+                <input onChange={(event) => setReportStartDate(event.target.value)} type="date" value={reportStartDate} />
+              </label>
+              <label>
+                Até
+                <input onChange={(event) => setReportEndDate(event.target.value)} type="date" value={reportEndDate} />
+              </label>
+              {(reportStartDate || reportEndDate) && (
+                <button className="secondary" onClick={() => {
+                  setReportStartDate("");
+                  setReportEndDate("");
+                }} type="button">
+                  Limpar
+                </button>
+              )}
+            </div>
+          </div>
+        </details>
         <div className="report-grid">
           {reportCards
             .filter(([kind]) => {

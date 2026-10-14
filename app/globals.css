@@ -12354,6 +12354,22 @@ textarea::placeholder {
   margin-top: 0;
 }
 
+.reports-filter-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.reports-filter-drawer {
+  margin-bottom: 14px;
+}
+
+.report-grid {
+  max-height: min(660px, 64dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
 @media (max-width: 760px) {
   .settings-maintenance-drawer > summary {
     align-items: stretch;
@@ -12424,6 +12440,12 @@ textarea::placeholder {
   }
 
   .class-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .report-grid {
     max-height: none;
     overflow: visible;
     padding-right: 0;
