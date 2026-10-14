@@ -9490,6 +9490,13 @@ button.secondary,
   margin-bottom: 16px;
 }
 
+.intelligence-panel .intelligence-card > .row-list {
+  max-height: min(360px, 48dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
 @media (max-width: 820px) {
   .intelligence-score-panel {
     align-items: flex-start;
@@ -9534,6 +9541,12 @@ button.secondary,
 
   .congregation-summary-card div {
     grid-template-columns: 1fr;
+  }
+
+  .intelligence-panel .intelligence-card > .row-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 }
 
