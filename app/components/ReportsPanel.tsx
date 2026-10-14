@@ -349,7 +349,7 @@ export function ReportsPanel({
           <h2>Prévia do relatório</h2>
           <span>{selectedReportPreview.title}</span>
         </div>
-        <div className="preview-table">
+        <div className="preview-table report-preview-scroll">
           <div className="preview-row preview-head" style={{ gridTemplateColumns: `repeat(${selectedReportPreview.headers.length}, minmax(120px, 1fr))` }}>
             {selectedReportPreview.headers.map((header) => (
               <strong key={header}>{header}</strong>
@@ -371,7 +371,7 @@ export function ReportsPanel({
           <h2>Prévia de faltosos</h2>
           <span>{scopedAbsentRows.length} alertas</span>
         </div>
-        <div className="row-list">
+        <div className="row-list report-absent-list">
           {scopedAbsentRows.map(([name, phone, status, recent, month]) => (
             <div className="data-row" key={`${String(name)}-${String(phone)}`}>
               <span className="date-box">{String(month)}</span>

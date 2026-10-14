@@ -2183,7 +2183,7 @@ button.secondary.full {
 
 .preview-row {
   border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-  color: #cbd5e1;
+  color: var(--text);
   display: grid;
   gap: 8px;
   min-width: max-content;
@@ -2191,7 +2191,7 @@ button.secondary.full {
 }
 
 .preview-row strong {
-  color: #e0f2fe;
+  color: var(--text);
   font-size: 12px;
 }
 
@@ -2201,7 +2201,7 @@ button.secondary.full {
 }
 
 .preview-head {
-  background: rgba(34, 211, 238, 0.08);
+  background: rgba(15, 111, 168, 0.08);
   border-radius: 8px;
   padding: 10px;
 }
@@ -12370,6 +12370,20 @@ textarea::placeholder {
   scrollbar-gutter: stable;
 }
 
+.report-preview-scroll {
+  max-height: min(430px, 52dvh);
+  overflow: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
+.report-absent-list {
+  max-height: min(430px, 52dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
 .notices-record-list {
   max-height: min(620px, 64dvh);
   overflow-y: auto;
@@ -12460,6 +12474,19 @@ textarea::placeholder {
   }
 
   .report-grid {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .report-preview-scroll {
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
+  .report-absent-list {
     max-height: none;
     overflow: visible;
     padding-right: 0;
