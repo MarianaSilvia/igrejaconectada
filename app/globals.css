@@ -12313,6 +12313,13 @@ textarea::placeholder {
   scrollbar-gutter: stable;
 }
 
+.visitors-record-list {
+  max-height: min(620px, 64dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
 @media (max-width: 760px) {
   .settings-maintenance-drawer > summary {
     align-items: stretch;
@@ -12365,6 +12372,12 @@ textarea::placeholder {
   }
 
   .groups-record-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .visitors-record-list {
     max-height: none;
     overflow: visible;
     padding-right: 0;

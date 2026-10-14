@@ -126,33 +126,46 @@ export function VisitorsPanel({
           <h2>Visitantes em acompanhamento</h2>
           <span>{filteredVisitors.length} registros</span>
         </div>
-        <div className="filter-bar">
-          <label>
-            Status
-            <select onChange={(event) => setVisitorStatusFilter(event.target.value)} value={visitorStatusFilter}>
-              <option>Todos</option>
-              <option>Primeira visita</option>
-              <option>Retornou</option>
-              <option>Em acompanhamento</option>
-              <option>Integrado</option>
-            </select>
-          </label>
-          <label>
-            Contato
-            <select onChange={(event) => setVisitorContactFilter(event.target.value)} value={visitorContactFilter}>
-              <option>Todos</option>
-              <option>Contato pendente</option>
-              <option>Contato feito</option>
-            </select>
-          </label>
-          <button className="secondary" onClick={() => exportReport("visitors", "pdf")} type="button">
-            PDF
-          </button>
-          <button className="secondary" onClick={() => exportReport("visitors", "excel")} type="button">
-            Excel
-          </button>
-        </div>
-        <div className="row-list">
+        <details className="module-compact-drawer visitors-filter-drawer" open={visitorStatusFilter !== "Todos" || visitorContactFilter !== "Todos" || undefined}>
+          <summary>
+            <span>
+              <strong>Filtros e exportação</strong>
+              <small>
+                {visitorStatusFilter === "Todos" && visitorContactFilter === "Todos"
+                  ? "Use para separar visitantes por acompanhamento, contato ou relatório."
+                  : `Filtros ativos: ${visitorStatusFilter} / ${visitorContactFilter}`}
+              </small>
+            </span>
+            <b>{visitorStatusFilter === "Todos" && visitorContactFilter === "Todos" ? "Abrir filtros" : "Filtrando"}</b>
+          </summary>
+          <div className="filter-bar">
+            <label>
+              Status
+              <select onChange={(event) => setVisitorStatusFilter(event.target.value)} value={visitorStatusFilter}>
+                <option>Todos</option>
+                <option>Primeira visita</option>
+                <option>Retornou</option>
+                <option>Em acompanhamento</option>
+                <option>Integrado</option>
+              </select>
+            </label>
+            <label>
+              Contato
+              <select onChange={(event) => setVisitorContactFilter(event.target.value)} value={visitorContactFilter}>
+                <option>Todos</option>
+                <option>Contato pendente</option>
+                <option>Contato feito</option>
+              </select>
+            </label>
+            <button className="secondary" onClick={() => exportReport("visitors", "pdf")} type="button">
+              PDF
+            </button>
+            <button className="secondary" onClick={() => exportReport("visitors", "excel")} type="button">
+              Excel
+            </button>
+          </div>
+        </details>
+        <div className="row-list visitors-record-list">
           {filteredVisitors.map((visitor) => (
             <div className="data-row access-user-row" key={visitor.id}>
               <span className="date-box">{formatDate(visitor.firstVisitDate)}</span>
