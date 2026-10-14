@@ -117,19 +117,19 @@ export function ClassModulePanel({
           {classes.map((classRecord) => {
             const linkedMembers = linkedMembersForClass(classRecord);
             const summary = attendanceSummaryForClass(classRecord);
+            const attendancePanel = renderAttendancePanel(classRecord);
 
             return (
             <div className="data-row class-row class-card-row" key={classRecord.id}>
               <span className="date-box">{linkedMembers.length}</span>
               <div>
                 <strong>{classRecord.name}</strong>
-                <small>
-                  Professor: {classRecord.teacher} - Próxima aula: {classRecord.nextLesson}
-                </small>
-                <small>
-                  {linkedMembers.length} aluno{linkedMembers.length === 1 ? "" : "s"} vinculado{linkedMembers.length === 1 ? "" : "s"} - {summary.sessions} chamada
-                  {summary.sessions === 1 ? "" : "s"} registrada{summary.sessions === 1 ? "" : "s"}
-                </small>
+                <div className="message-card-tags" aria-label="Resumo da classe">
+                  <span>Professor: {classRecord.teacher || "Não informado"}</span>
+                  <span>{linkedMembers.length} aluno{linkedMembers.length === 1 ? "" : "s"}</span>
+                  <span>{summary.sessions} chamada{summary.sessions === 1 ? "" : "s"}</span>
+                </div>
+                <small>Próxima aula: {classRecord.nextLesson || "Não definida"}</small>
                 <span className="class-attendance-meter">
                   <span>Frequência da turma</span>
                   <strong>{summary.records ? `${summary.rate}%` : "Sem chamada"}</strong>
@@ -149,7 +149,18 @@ export function ClassModulePanel({
                     ))
                   )}
                 </div>
-                {renderAttendancePanel(classRecord)}
+                {attendancePanel && (
+                  <details className="module-compact-drawer class-attendance-drawer" open={!canManage || undefined}>
+                    <summary>
+                      <span>
+                        <strong>{canManage ? "Chamada e histórico" : "Minha frequência"}</strong>
+                        <small>{canManage ? "Abra para lançar presença, salvar PDF ou conferir aulas anteriores." : "Abra para acompanhar sua presença nesta classe."}</small>
+                      </span>
+                      <b>{canManage ? "Abrir chamada" : "Ver frequência"}</b>
+                    </summary>
+                    {attendancePanel}
+                  </details>
+                )}
               </div>
             </div>
             );

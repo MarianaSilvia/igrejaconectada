@@ -12327,6 +12327,25 @@ textarea::placeholder {
   scrollbar-gutter: stable;
 }
 
+.class-list {
+  max-height: min(680px, 66dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
+.class-attendance-drawer {
+  margin-top: 12px;
+}
+
+.class-attendance-drawer .credential-panel {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 0 0 18px;
+}
+
 @media (max-width: 760px) {
   .settings-maintenance-drawer > summary {
     align-items: stretch;
@@ -12391,6 +12410,12 @@ textarea::placeholder {
   }
 
   .kids-record-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .class-list {
     max-height: none;
     overflow: visible;
     padding-right: 0;
