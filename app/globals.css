@@ -12299,6 +12299,13 @@ textarea::placeholder {
   scrollbar-gutter: stable;
 }
 
+.assets-record-list {
+  max-height: min(560px, 58dvh);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+}
+
 @media (max-width: 760px) {
   .settings-maintenance-drawer > summary {
     align-items: stretch;
@@ -12339,6 +12346,12 @@ textarea::placeholder {
   }
 
   .finance-transaction-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .assets-record-list {
     max-height: none;
     overflow: visible;
     padding-right: 0;

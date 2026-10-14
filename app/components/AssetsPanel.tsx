@@ -97,31 +97,44 @@ export function AssetsPanel({
           <h2>Patrimônio cadastrado</h2>
           <span>{filteredAssets.length} itens</span>
         </div>
-        <div className="filter-bar">
-          <label>
-            Estado
-            <select onChange={(event) => setAssetConditionFilter(event.target.value)} value={assetConditionFilter}>
-              <option>Todos</option>
-              <option>Novo</option>
-              <option>Bom</option>
-              <option value="Manutencao">Manutenção</option>
-              <option>Baixado</option>
-            </select>
-          </label>
-          <button className="secondary" onClick={() => exportReport("assets", "pdf")} type="button">
-            PDF
-          </button>
-          <button className="secondary" onClick={() => exportReport("assets", "excel")} type="button">
-            Excel
-          </button>
-        </div>
-        <div className="row-list">
+        <details className="module-compact-drawer assets-filter-drawer" open={assetConditionFilter !== "Todos" || undefined}>
+          <summary>
+            <span>
+              <strong>Filtros e exportação</strong>
+              <small>{assetConditionFilter === "Todos" ? "Use para localizar bens por estado ou gerar relatório." : `Filtro ativo: ${assetConditionFilter}`}</small>
+            </span>
+            <b>{assetConditionFilter === "Todos" ? "Abrir filtros" : "Filtrando"}</b>
+          </summary>
+          <div className="filter-bar">
+            <label>
+              Estado
+              <select onChange={(event) => setAssetConditionFilter(event.target.value)} value={assetConditionFilter}>
+                <option>Todos</option>
+                <option>Novo</option>
+                <option>Bom</option>
+                <option value="Manutencao">Manutenção</option>
+                <option>Baixado</option>
+              </select>
+            </label>
+            <button className="secondary" onClick={() => exportReport("assets", "pdf")} type="button">
+              PDF
+            </button>
+            <button className="secondary" onClick={() => exportReport("assets", "excel")} type="button">
+              Excel
+            </button>
+          </div>
+        </details>
+        <div className="row-list assets-record-list">
           {filteredAssets.map((asset) => (
             <div className="data-row access-user-row" key={asset.id}>
               <span className="status-chip">{asset.condition}</span>
               <div>
                 <strong>{asset.name}</strong>
-                <small>{asset.category} - {asset.location || "Sem local"} - {asset.responsible || "Sem responsável"}</small>
+                <div className="message-card-tags" aria-label="Resumo do patrimônio">
+                  <span>{asset.category || "Sem categoria"}</span>
+                  <span>{asset.location || "Sem local"}</span>
+                  <span>{asset.responsible || "Sem responsável"}</span>
+                </div>
                 <small>{asset.lastMaintenance ? `Manutenção: ${formatDate(asset.lastMaintenance)}` : "Sem manutenção registrada"}</small>
                 {asset.notes && (
                   <details className="record-sensitive-details asset-notes-details">
