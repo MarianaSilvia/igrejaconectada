@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { birthdayDateThisYear, normalizeSearchText, whatsappUrl } from "../app-helpers";
 import { printableDocumentDefinitions, type PrintableDocumentKind } from "../document-templates";
 import { canAccessModule, type AccessRole } from "../permissions";
+import { congregationMatchesScope } from "../congregation-scope";
 import type { AppData, ChurchEvent, MemberRecord, ReportKind } from "../types";
 import type { ReportDefinition } from "../report-builders";
 
@@ -63,7 +64,7 @@ export function ReportsPanel({
   const [documentSearch, setDocumentSearch] = useState("");
   const selectedDocument = printableDocumentDefinitions.find((document) => document.kind === documentKind) ?? printableDocumentDefinitions[0];
   const documentTargets = useMemo(() => {
-    const matchesDocumentScope = (congregation?: string) => reportCongregationFilter === "Todas" || congregation === reportCongregationFilter;
+    const matchesDocumentScope = (congregation?: string) => congregationMatchesScope(congregation, reportCongregationFilter);
 
     if (selectedDocument.target === "kid") {
       return data.kids.filter((kid) => matchesDocumentScope(kid.congregation)).map((kid) => ({ id: kid.id, label: kid.childName }));
@@ -159,7 +160,7 @@ export function ReportsPanel({
     if (end && date > end) return false;
     return true;
   };
-  const belongsToReportScope = (congregation?: string) => !reportIsScoped || congregation === reportCongregationFilter;
+  const belongsToReportScope = (congregation?: string) => !reportIsScoped || congregationMatchesScope(congregation, reportCongregationFilter);
   const scopedMembers = data.members.filter((member) => belongsToReportScope(member.congregation));
   const reportMembers = reportHasPeriod ? scopedMembers.filter((member) => isDateInReportPeriod(member.createdAt || member.joinedAt)) : scopedMembers;
   const scopedVisitors = data.visitors.filter((visitor) => belongsToReportScope(visitor.congregation) && isDateInReportPeriod(visitor.firstVisitDate || visitor.returnDate));
