@@ -121,6 +121,8 @@ function memberFile(data: AppData, member: MemberRecord): PrintableDocument {
         "Igreja e acompanhamento",
         [
           field("Congregação", member.congregation),
+          field("Status", member.status),
+          field("Tipo de membro", member.memberType),
           field("Grupos", memberGroupLabel(member)),
           field("Cargos", member.role),
           field("Função ministerial", member.ministerialFunction),
