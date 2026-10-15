@@ -84,8 +84,8 @@ import {
 } from "./data-normalization";
 import { accessRoleFromMetadata, accessRoleLabel, canAccessModule, canManageModule, isAdministrativeRole, modules, type AccessRole, type ModuleKey } from "./permissions";
 import { buildReportDefinition } from "./report-builders";
-import { downloadExcelWorkbook, escapeHtml, printHtmlDocument, printHtmlReport } from "./report-helpers";
-import { buildPrintableDocument, type PrintableDocumentKind } from "./document-templates";
+import { downloadExcelWorkbook, escapeHtml, printHtmlDocument, printHtmlDocuments, printHtmlReport } from "./report-helpers";
+import { buildPrintableDocument, buildPrintableMemberFiles, type PrintableDocumentKind } from "./document-templates";
 import { agendaEventShareText, dailyAgendaShareText, muralShareText, publicAgendaUrl, publicMuralUrl, sharePublicContent } from "./share-helpers";
 import {
   convertVisitorToMemberData,
@@ -2319,6 +2319,26 @@ export default function Home() {
     setSyncStatus(`Documento preparado: ${document.title}.`);
   }
 
+  function generatePrintableMemberFiles(memberIds: string[]) {
+    if (currentAccessRole !== "Administrador" && currentAccessRole !== "Secretario") {
+      setSyncStatus("Apenas administração e secretaria podem gerar documentos cadastrais.");
+      return;
+    }
+
+    const documents = buildPrintableMemberFiles(data, memberIds);
+    if (!documents.length) {
+      setSyncStatus("Nenhum membro encontrado para gerar fichas cadastrais.");
+      return;
+    }
+
+    if (!printHtmlDocuments(`Fichas cadastrais - ${documents.length} membros`, documents)) {
+      setSyncStatus("Não foi possível abrir as fichas. Libere pop-ups para imprimir ou salvar em PDF.");
+      return;
+    }
+
+    log(`Fichas cadastrais preparadas em lote: ${documents.length} membros`);
+    setSyncStatus(`${documents.length} fichas cadastrais preparadas para imprimir ou salvar em PDF.`);
+  }
   function readPhoto(event: ChangeEvent<HTMLInputElement>, onReady: (photoDataUrl: string) => void) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -4942,6 +4962,7 @@ export default function Home() {
               data={data}
               exportReport={exportReport}
               generatePrintableDocument={generatePrintableDocument}
+              generatePrintableMemberFiles={generatePrintableMemberFiles}
               monthlyBirthdays={monthlyBirthdays}
               reportPreviewKind={reportPreviewKind}
               reportCongregationFilter={reportCongregationFilter}

@@ -14,6 +14,7 @@ type ReportsPanelProps = {
   data: AppData;
   exportReport: (kind: ReportKind, format: "pdf" | "excel", congregationScope?: string) => void;
   generatePrintableDocument: (kind: PrintableDocumentKind, targetId: string) => void;
+  generatePrintableMemberFiles: (memberIds: string[]) => void;
   monthlyBirthdays: MemberRecord[];
   reportCongregationFilter: string;
   reportEndDate: string;
@@ -45,6 +46,7 @@ export function ReportsPanel({
   data,
   exportReport,
   generatePrintableDocument,
+  generatePrintableMemberFiles,
   monthlyBirthdays,
   reportCongregationFilter,
   reportEndDate,
@@ -83,6 +85,7 @@ export function ReportsPanel({
 
     return scopedDocumentMembers.map((member) => ({ id: member.id, label: member.fullName }));
   }, [data.kids, data.members, documentKind, reportCongregationFilter, selectedDocument.target]);
+  const memberFileTargets = useMemo(() => documentTargets.slice().sort((first, second) => first.label.localeCompare(second.label, "pt-BR", { sensitivity: "base" })), [documentTargets]);
   const visibleDocumentTargets = useMemo(() => {
     const search = normalizeSearchText(documentSearch);
     if (!search) return documentTargets;
@@ -335,6 +338,18 @@ export function ReportsPanel({
               Gerar PDF / Imprimir
             </button>
           </div>
+          {documentKind === "member-file" && memberFileTargets.length > 0 && (
+            <div className="document-bulk-actions">
+              <div>
+                <strong>Fichas cadastrais em lote</strong>
+                <span>{memberFileTargets.length} membro{memberFileTargets.length === 1 ? "" : "s"} no filtro atual. Uma ficha por página.</span>
+              </div>
+              <button onClick={() => generatePrintableMemberFiles(memberFileTargets.map((target) => target.id))} type="button">
+                Gerar {memberFileTargets.length} ficha{memberFileTargets.length === 1 ? "" : "s"} / PDF
+              </button>
+            </div>
+          )}
+
           {!documentTargets.length && (
             <p className="empty-state">
               Nenhum cadastro disponível para este modelo{reportCongregationFilter !== "Todas" ? ` em ${reportCongregationFilter}` : ""}.

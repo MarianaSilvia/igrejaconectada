@@ -20,7 +20,7 @@ export const printableDocumentDefinitions: Array<{ kind: PrintableDocumentKind; 
   { kind: "kid-presentation", title: "Apresentação de criança", target: "kid" },
 ];
 
-type PrintableDocument = {
+export type PrintableDocument = {
   bodyHtml: string;
   title: string;
 };
@@ -28,6 +28,10 @@ type PrintableDocument = {
 function valueOrFallback(value: unknown) {
   const text = typeof value === "string" ? value.trim() : String(value ?? "").trim();
   return text || "Não informado";
+}
+
+function booleanLabel(value: boolean) {
+  return value ? "Sim" : "Não";
 }
 
 function field(label: string, value: unknown) {
@@ -62,8 +66,9 @@ function signatureBlock(label = "Pastor / Secretaria") {
 }
 
 function memberPhoto(member: MemberRecord) {
-  if (member.photoUrl) {
-    return `<img alt="${escapeHtml(member.fullName)}" class="member-file-photo" src="${escapeHtml(member.photoUrl)}" />`;
+  const photoSource = member.photoUrl || member.photoDataUrl;
+  if (photoSource) {
+    return `<img alt="${escapeHtml(member.fullName)}" class="member-file-photo" src="${escapeHtml(photoSource)}" />`;
   }
 
   return `<div class="member-file-photo placeholder">${escapeHtml(member.fullName.slice(0, 1) || "M")}</div>`;
@@ -120,13 +125,23 @@ function memberFile(data: AppData, member: MemberRecord): PrintableDocument {
           field("Cargos", member.role),
           field("Função ministerial", member.ministerialFunction),
           field("Categorias", member.categories),
+          field("Ministério", member.ministry),
+          field("Igreja anterior", member.previousChurch),
           field("EBD", schoolClass),
           field("Discipulado", discipleshipClass),
           field("Conversão", formatDate(member.conversionDate)),
           field("Batismo", formatDate(member.baptismDate)),
+          field("Batizado nas águas", booleanLabel(member.waterBaptized)),
+          field("Batizado no Espírito Santo", booleanLabel(member.holySpiritBaptized)),
           field("Origem do cadastro", member.registrationSource),
+          field("Data de entrada", formatDate(member.joinedAt)),
+          field("Criado em", formatDate(member.createdAt)),
           field("Situação pastoral", member.pastoralStatus),
         ].join(""),
+      )}
+      ${section(
+        "Privacidade e registros",
+        [field("Autoriza exibir foto", booleanLabel(member.photoConsent)), field("Arquivo da foto", member.photoFileKey)].join(""),
       )}
       ${section(
         "Observações",
@@ -246,4 +261,13 @@ export function buildPrintableDocument(data: AppData, kind: PrintableDocumentKin
   if (kind === "discipleship-certificate") return certificate(data, member, "discipleship");
 
   return null;
+}
+
+export function buildPrintableMemberFiles(data: AppData, memberIds: string[]): PrintableDocument[] {
+  const selectedIds = new Set(memberIds);
+
+  return data.members
+    .filter((member) => selectedIds.has(member.id))
+    .sort((first, second) => first.fullName.localeCompare(second.fullName, "pt-BR", { sensitivity: "base" }))
+    .map((member) => memberFile(data, member));
 }
