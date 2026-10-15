@@ -4,6 +4,20 @@ export const congregationOptions = ["sede/Farroupilha", "Congre.Maringá", "Cong
 
 export type CongregationScope = (typeof congregationOptions)[number] | typeof globalCongregationScope;
 
+const congregationAliases: Record<string, (typeof congregationOptions)[number]> = {
+  sede: "sede/Farroupilha",
+  farroupilha: "sede/Farroupilha",
+  maringa: "Congre.Maringá",
+  congreemaringa: "Congre.Maringá",
+  pains: "Congre.Pains",
+  congrepains: "Congre.Pains",
+};
+
+function congregationKey(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+
 export function normalizeCongregationScope(value: unknown): CongregationScope {
   if (typeof value !== "string") return globalCongregationScope;
 
@@ -12,7 +26,8 @@ export function normalizeCongregationScope(value: unknown): CongregationScope {
     return globalCongregationScope;
   }
 
-  return congregationOptions.find((option) => option.toLowerCase() === scope.toLowerCase()) ?? globalCongregationScope;
+  const directMatch = congregationOptions.find((option) => option.toLowerCase() === scope.toLowerCase());
+  return directMatch ?? congregationAliases[congregationKey(scope)] ?? globalCongregationScope;
 }
 
 export function isGlobalCongregationScope(value: unknown) {
@@ -24,7 +39,8 @@ export function congregationMatchesScope(value: unknown, scope: unknown) {
   if (normalizedScope === globalCongregationScope) return true;
 
   const congregation = typeof value === "string" ? value.trim() : "";
-  if (!congregation || congregation.toLowerCase() === globalCongregationScope.toLowerCase()) return true;
+  if (!congregation) return false;
+  if (congregation.toLowerCase() === globalCongregationScope.toLowerCase()) return true;
 
-  return congregation.toLowerCase() === normalizedScope.toLowerCase();
+  return congregationKey(congregation) === congregationKey(normalizedScope);
 }
