@@ -1,7 +1,13 @@
 import type { User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { adminClient, administrativeRoles, churchRoleFromLabel, requireSession, type ChurchRole } from "../auth";
-import { congregationMatchesScope, globalCongregationScope, isGlobalCongregationScope, normalizeCongregationScope } from "../../../congregation-scope";
+import {
+  congregationMatchesScope,
+  globalCongregationScope,
+  isGlobalCongregationScope,
+  normalizeCongregationScope,
+  unassignedCongregationScope,
+} from "../../../congregation-scope";
 import { syncMembersTable } from "../../../member-table-sync";
 import { notifyImportantStateChanges } from "../../../push-service";
 import { payloadKeysByRole, visiblePayloadKeysByRole, visiblePublishedOnlyKeys } from "../../../state-access-policy";
@@ -808,12 +814,18 @@ export async function GET(request: Request) {
 
   const storedPayload = await payloadWithMembersMirrorFallback(stored.client, stored.payload);
   const effectiveRole = administrativeRoles.has(session.role) ? session.role : roleFromPayload(storedPayload, session.user);
+  const scope = isRecord(storedPayload)
+    ? congregationScopeFromPayload(storedPayload, session.user, effectiveRole)
+    : unassignedCongregationScope;
+  if (effectiveRole !== "ADMIN" && administrativeRoles.has(effectiveRole) && scope === unassignedCongregationScope) {
+    return NextResponse.json({ error: "Sua conta administrativa ainda não está vinculada a uma congregação." }, { status: 403 });
+  }
   const sanitizedPayload = sanitizePayloadForResponse(storedPayload, effectiveRole, session.user);
   const payload = isRecord(sanitizedPayload) ? await withSignedMemberPhotos(stored.client, sanitizedPayload) : sanitizedPayload;
   const registrationRequests = await readRegistrationRequests(
     stored.client,
     effectiveRole,
-    isRecord(storedPayload) ? congregationScopeFromPayload(storedPayload, session.user, effectiveRole) : "",
+    scope,
   );
 
   return NextResponse.json({
