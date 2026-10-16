@@ -2657,6 +2657,7 @@ export default function Home() {
       created?: number;
       updated?: number;
       errors?: Array<{ email: string; message: string }>;
+      skipped?: number;
       error?: string;
     };
 
@@ -2666,8 +2667,10 @@ export default function Home() {
     }
 
     const failures = result.errors?.length ?? 0;
+    const skippedMessage = result.skipped ? `, ${result.skipped} sem e-mail utilizável` : "";
+    const failureMessage = failures ? `, ${failures} com erro` : "";
     setSyncStatus(
-      `Senhas padronizadas: ${result.updated ?? 0} atualizadas, ${result.created ?? 0} criadas${failures ? `, ${failures} com erro` : ""}.`,
+      `Senhas padronizadas: ${result.updated ?? 0} atualizadas, ${result.created ?? 0} criadas${skippedMessage}${failureMessage}.`,
     );
   }
 
