@@ -34,11 +34,28 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   const payload = isRecord(data?.payload) ? data.payload : {};
-  const localMembers = recordsFrom(payload.users).filter((user) => {
-    const role = textValue(user.role).toLowerCase();
-    const status = textValue(user.status).toLowerCase();
-    return role === "membro" && status !== "bloqueado" && normalizeEmail(user.email).includes("@");
-  });
+  const memberRecords = recordsFrom(payload.members);
+  const legacyAccessMembers = recordsFrom(payload.users);
+  const localMembers = (memberRecords.length
+    ? memberRecords
+        .filter((member) => !/bloqueado|cancelado|inativo/i.test(textValue(member.status)))
+        .map((member) => ({
+          email: normalizeEmail(member.email),
+          name: textValue(member.fullName) || normalizeEmail(member.email),
+          congregationScope: normalizeCongregationScope(member.congregation),
+        }))
+    : legacyAccessMembers
+        .filter((user) => {
+          const role = textValue(user.role).toLowerCase();
+          const status = textValue(user.status).toLowerCase();
+          return role === "membro" && status !== "bloqueado" && normalizeEmail(user.email).includes("@");
+        })
+        .map((user) => ({
+          email: normalizeEmail(user.email),
+          name: textValue(user.name) || normalizeEmail(user.email),
+          congregationScope: normalizeCongregationScope(user.congregationScope),
+        })))
+    .filter((member) => member.email.includes("@") && !member.email.endsWith("@igrejaconectada.local"));
 
   const { data: authData, error: listError } = await client.auth.admin.listUsers({ page: 1, perPage: 1000 });
   if (listError) return NextResponse.json({ error: listError.message }, { status: 400 });
@@ -47,7 +64,7 @@ export async function POST(request: Request) {
   const results = {
     created: 0,
     updated: 0,
-    skipped: 0,
+    skipped: Math.max(0, memberRecords.length - localMembers.length),
     errors: [] as Array<{ email: string; message: string }>,
   };
 
@@ -94,7 +111,7 @@ export async function POST(request: Request) {
     }
   }
 
-  results.skipped = Math.max(0, localMembers.length - results.created - results.updated - results.errors.length);
+  results.skipped += Math.max(0, localMembers.length - results.created - results.updated - results.errors.length);
 
   return NextResponse.json(results);
 }
