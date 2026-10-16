@@ -3,3 +3,8 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   workerd: true
+
+overrides:
+  sharp: 0.35.5
+  source-map-js: 1.2.2
+
