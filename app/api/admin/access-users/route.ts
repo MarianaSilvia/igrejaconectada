@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminClient, churchRoleFromLabel, requireSession } from "../auth";
-import { isGlobalCongregationScope, normalizeCongregationScope } from "../../../congregation-scope";
+import { globalCongregationScope, isGlobalCongregationScope, normalizeCongregationScope, unassignedCongregationScope } from "../../../congregation-scope";
 import { churchRoleFromAccessRole, type AccessRole } from "../../../permissions";
 
 type AccessUserPayload = {
@@ -80,13 +80,12 @@ async function accessManagerContext(client: NonNullable<ReturnType<typeof adminC
   const payload = isRecord(data?.payload) ? data.payload : {};
   const localUser = recordsFrom(payload.users).find((user) => textValue(user.email).toLowerCase() === email.toLowerCase());
   const canManage = metadataRole === "ADMIN" || Boolean(localUser && churchRoleFromLabel(localUser.role) === "ADMIN");
-  const scope = normalizeCongregationScope(
-    localUser?.congregationScope ??
-      (metadataRole === "ADMIN" ? undefined : "") ??
-      undefined,
-  );
+  const scope = metadataRole === "ADMIN"
+    ? globalCongregationScope
+    : normalizeCongregationScope(localUser?.congregationScope);
+  const scopedCanManage = canManage && (metadataRole === "ADMIN" || scope !== unassignedCongregationScope);
 
-  return { canManage, payload, scope };
+  return { canManage: scopedCanManage, payload, scope };
 }
 
 function targetAccessUser(payload: JsonRecord, userId?: string, email?: string) {

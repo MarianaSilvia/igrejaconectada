@@ -5,6 +5,7 @@ import {
   congregationOptions,
   globalCongregationScope,
   normalizeCongregationScope,
+  unassignedCongregationScope,
 } from "../../congregation-scope";
 import { churchRoleFromLabel, type ChurchRole } from "../../permissions";
 import { adminClient, requireSession } from "../admin/auth";
@@ -116,7 +117,7 @@ export async function contactContext(request: Request) {
       ? memberScope
       : accessScope;
 
-  if (session.role !== "ADMIN" && scope === globalCongregationScope) {
+  if (session.role !== "ADMIN" && (scope === globalCongregationScope || scope === unassignedCongregationScope)) {
     return {
       response: NextResponse.json(
         { error: "Este acesso ainda não tem congregação vinculada para falar com a liderança." },
