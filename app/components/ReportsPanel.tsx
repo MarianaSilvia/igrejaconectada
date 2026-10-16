@@ -87,6 +87,9 @@ export function ReportsPanel({
     return scopedDocumentMembers.map((member) => ({ id: member.id, label: member.fullName }));
   }, [data.kids, data.members, documentKind, reportCongregationFilter, selectedDocument.target]);
   const memberFileTargets = useMemo(() => documentTargets.slice().sort((first, second) => first.label.localeCompare(second.label, "pt-BR", { sensitivity: "base" })), [documentTargets]);
+  const allMemberFileTargets = useMemo(() => data.members
+    .map((member) => ({ id: member.id, label: member.fullName }))
+    .sort((first, second) => first.label.localeCompare(second.label, "pt-BR", { sensitivity: "base" })), [data.members]);
   const visibleDocumentTargets = useMemo(() => {
     const search = normalizeSearchText(documentSearch);
     if (!search) return documentTargets;
@@ -348,6 +351,11 @@ export function ReportsPanel({
               <button onClick={() => generatePrintableMemberFiles(memberFileTargets.map((target) => target.id))} type="button">
                 Gerar {memberFileTargets.length} ficha{memberFileTargets.length === 1 ? "" : "s"} / PDF
               </button>
+              {currentAccessRole === "Administrador" && allMemberFileTargets.length > memberFileTargets.length && (
+                <button className="secondary" onClick={() => generatePrintableMemberFiles(allMemberFileTargets.map((target) => target.id))} type="button">
+                  Gerar todas as {allMemberFileTargets.length} fichas / PDF
+                </button>
+              )}
             </div>
           )}
 
