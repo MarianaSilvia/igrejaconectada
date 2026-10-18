@@ -1,0 +1,11 @@
+DROP INDEX IF EXISTS public.idx_fk_cells_cells_church_id_fkey_9705996;
+DROP INDEX IF EXISTS public.idx_fk_church_affiliations_church_affiliations_church_i_8081bd8;
+DROP INDEX IF EXISTS public.idx_fk_churches_churches_parent_fk_514a355;
+DROP INDEX IF EXISTS public.idx_fk_churches_churches_billing_account_fk_9beb433;
+DROP INDEX IF EXISTS public.idx_fk_communication_preferences_communication_preferen_ff6fdcc;
+DROP INDEX IF EXISTS public.idx_fk_event_certificates_event_certificates_registrati_1c4adc0;
+DROP INDEX IF EXISTS public.idx_fk_event_registrations_event_registrations_pix_char_dbcecda;
+DROP INDEX IF EXISTS public.idx_fk_kids_children_kids_children_church_id_person_id__24a7f8a;
+DROP INDEX IF EXISTS public.idx_fk_people_people_church_id_fkey_2c1eb90;
+DROP INDEX IF EXISTS public.idx_fk_platform_memberships_platform_memberships_user_i_5edf6f1;
+DROP INDEX IF EXISTS public.idx_fk_treasury_payments_treasury_payments_church_id_bi_5be9e30;

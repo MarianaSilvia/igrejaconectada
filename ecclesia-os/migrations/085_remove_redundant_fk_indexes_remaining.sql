@@ -1,0 +1,5 @@
+DROP INDEX IF EXISTS public.idx_fk_church_affiliations_church_affiliations_church_i_8081bd8;
+DROP INDEX IF EXISTS public.idx_fk_churches_churches_parent_fk_514a355;
+DROP INDEX IF EXISTS public.idx_fk_churches_churches_billing_account_fk_9beb433;
+DROP INDEX IF EXISTS public.idx_fk_communication_preferences_communication_preferen_ff6fdcc;
+DROP INDEX IF EXISTS public.idx_fk_event_certificates_event_certificates_registrati_1c4adc0;
