@@ -78,3 +78,19 @@ Os testes de navegador usam Edge por padrão. Em ambientes onde ele não inicia,
 - Executar auditoria WCAG com leitor de tela, teclado, contraste e ampliação; as verificações atuais cobrem comportamento visual básico, não certificação.
 - Definir RPO/RTO com o contratante, retenção de cópias, observabilidade, resposta a incidentes e acesso de suporte auditado.
 - Validar uma rede e duas igrejas reais, com responsáveis nomeados e treinamento, antes de liberar produção.
+
+## Checklist de publicação atual
+
+A implantação de homologação usa o serviço Render `ecclesia-os-api-v2` e o frontend Vercel `ecclesia-os`.
+
+1. No Render, configurar o health check para `/health` e confirmar resposta HTTP 200.
+2. Criar secrets no painel do Render; nunca commitá-los no GitHub ou no Vercel.
+3. Preencher `DATABASE_URL`, `SERVICE_DATABASE_URL`, `MIGRATION_DATABASE_URL`, `DATA_KEY_HEX`, `MFA_KEY_HEX` e `PUBLIC_ORIGIN`.
+4. Manter `RUN_INTEGRATION_WORKER=false` no web e executar o worker em serviço separado quando houver fila real.
+5. Executar `npm run pilot:preflight:homologation` e `npm run test:postgres`.
+6. Cadastrar a sede e duas congregações, convidar secretárias e ativar MFA.
+7. Testar o isolamento entre as três unidades e revisar a auditoria.
+8. Configurar a conexão Vercel para permitir a verificação protegida de `/`, `/app` e `/api/health`.
+9. Somente depois da homologação, considerar Efí em produção e retirar o modo demo.
+
+O deploy atual está live, mas permanece em modo demo até que os secrets e o PostgreSQL externo sejam configurados.
