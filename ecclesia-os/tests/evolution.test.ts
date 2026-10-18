@@ -840,7 +840,7 @@ test("comunicação externa respeita consentimento e fila de entrega", async () 
   assert.equal(created.data.status, "queued");
   const pending = await db.transaction((q) =>
     q(
-      "SELECT id,status,attempts FROM communication_deliveries WHERE message_id=$1",
+      "SELECT id,person_id,status,attempts FROM communication_deliveries WHERE message_id=$1",
       [created.data.id],
     ),
   );
@@ -883,7 +883,7 @@ test("comunicação externa respeita consentimento e fila de entrega", async () 
   assert.equal(bounced.last_error, "Mailbox inexistente");
   const [disabled] = await db.transaction((q) =>
     q("SELECT email_opt_in FROM communication_preferences WHERE person_id=$1", [
-      person.id,
+      pending[0].person_id,
     ]),
   );
   assert.equal(disabled.email_opt_in, false);
@@ -896,7 +896,7 @@ test("comunicação externa respeita consentimento e fila de entrega", async () 
   await db.transaction((q) =>
     q(
       "UPDATE communication_preferences SET email_opt_in=true WHERE person_id=$1",
-      [person.id],
+      [pending[0].person_id],
     ),
   );
 });
@@ -970,7 +970,7 @@ test("transporte webhook envia somente o endereço autorizado", async () => {
   try {
     const [delivery] = await db.transaction((q) =>
       q(
-        "SELECT id FROM communication_deliveries WHERE message_id=$1 AND status='queued' LIMIT 1",
+        "SELECT id FROM communication_deliveries WHERE message_id=$1 AND status='queued' ORDER BY available_at,id LIMIT 1",
         [created.data.id],
       ),
     );
