@@ -1,0 +1,12 @@
+.button.primary {
+  background: var(--primary);
+  border-color: color-mix(in srgb, var(--primary), white 20%);
+}
+.button.primary:hover {
+  background: color-mix(in srgb, var(--primary), white 8%);
+}
+.nav-item.active {
+  color: var(--accent);
+  box-shadow: inset 3px 0 var(--accent);
+  background: color-mix(in srgb, var(--primary) 17%, transparent);
+}

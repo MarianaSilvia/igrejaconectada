@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prototipo de chatbot para WhatsApp</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace" aria-label="Simulador do chatbot">
+        <aside class="panel">
+          <div>
+            <p class="eyebrow">MVP de atendimento</p>
+            <h1>Chatbot para WhatsApp da loja</h1>
+            <p class="intro">
+              Simule o primeiro atendimento, veja como o bot apresenta produtos e copie um resumo de pedido para confirmar manualmente.
+            </p>
+          </div>
+
+          <div class="status-grid" aria-label="Indicadores do prototipo">
+            <div>
+              <span id="status-step">Inicio</span>
+              <strong>Etapa</strong>
+            </div>
+            <div>
+              <span id="status-total">R$ 0,00</span>
+              <strong>Total estimado</strong>
+            </div>
+          </div>
+
+          <div class="operator-card">
+            <h2>Resumo para atendente</h2>
+            <pre id="order-summary">Nenhum pedido montado ainda.</pre>
+            <button id="copy-summary" type="button">Copiar resumo</button>
+          </div>
+        </aside>
+
+        <section class="phone" aria-label="Conversa">
+          <header class="phone-header">
+            <div class="avatar" aria-hidden="true">L</div>
+            <div>
+              <strong>Loja no WhatsApp</strong>
+              <span>assistente online</span>
+            </div>
+          </header>
+
+          <div id="chat-log" class="chat-log" aria-live="polite"></div>
+
+          <form id="chat-form" class="composer">
+            <input id="message-input" type="text" autocomplete="off" placeholder="Digite uma mensagem..." />
+            <button type="submit">Enviar</button>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>

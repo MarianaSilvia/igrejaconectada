@@ -1,0 +1,16 @@
+{
+  "name": "EcclesiaOS",
+  "short_name": "EcclesiaOS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101726",
+  "theme_color": "#101726",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

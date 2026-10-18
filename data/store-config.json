@@ -1,0 +1,89 @@
+{
+  "storeName": "Loja",
+  "currency": "BRL",
+  "humanHandoffMessage": "Vou chamar uma pessoa da loja. Enquanto isso, ja deixei o contexto organizado para o atendimento.",
+  "openingMessage": "Oi! Sou o assistente da loja. Posso te ajudar a ver produtos, montar um pedido ou chamar uma pessoa do atendimento.",
+  "deliveryInfo": "Atendemos entrega e retirada. Frete, prazo e disponibilidade devem ser confirmados pela loja antes de finalizar.",
+  "pickupInfo": "Retirada na loja mediante confirmacao do pedido e combinacao de horario.",
+  "paymentInfo": "A loja pode aceitar Pix, cartao, dinheiro ou link de pagamento. Dados sensiveis de cartao nunca devem ser coletados no chat.",
+  "paymentMethods": [
+    {
+      "id": "pix",
+      "label": "Pix",
+      "keywords": ["pix", "chave pix"],
+      "instructions": "A loja envia a chave Pix apos confirmar o pedido.",
+      "active": true
+    },
+    {
+      "id": "cartao",
+      "label": "Cartao",
+      "keywords": ["cartao", "cartao de credito", "cartao de debito"],
+      "instructions": "Pagamento por cartao deve ser combinado em link seguro ou maquininha.",
+      "active": true
+    },
+    {
+      "id": "dinheiro",
+      "label": "Dinheiro",
+      "keywords": ["dinheiro", "troco"],
+      "instructions": "Informe se precisa de troco nas observacoes do pedido.",
+      "active": true
+    }
+  ],
+  "businessHours": {
+    "timezone": "America/Sao_Paulo",
+    "weekly": [
+      { "day": 0, "closed": true },
+      { "day": 1, "open": "09:00", "close": "18:00" },
+      { "day": 2, "open": "09:00", "close": "18:00" },
+      { "day": 3, "open": "09:00", "close": "18:00" },
+      { "day": 4, "open": "09:00", "close": "18:00" },
+      { "day": 5, "open": "09:00", "close": "18:00" },
+      { "day": 6, "open": "09:00", "close": "13:00" }
+    ]
+  },
+  "deliveryZones": [
+    {
+      "id": "centro",
+      "name": "Centro",
+      "keywords": ["centro"],
+      "fee": 8,
+      "eta": "ate 60 min",
+      "minOrder": 0,
+      "active": true
+    },
+    {
+      "id": "retirada",
+      "name": "Retirada na loja",
+      "keywords": ["retirada", "buscar"],
+      "fee": 0,
+      "eta": "combinar horario",
+      "minOrder": 0,
+      "active": true
+    }
+  ],
+  "orderStatusMessages": {
+    "pending_confirmation": "{storeName}: recebemos seu pedido {orderId}. Ele esta aguardando confirmacao da loja.",
+    "confirmed": "{storeName}: seu pedido {orderId} foi confirmado pela loja.",
+    "cancelled": "{storeName}: seu pedido {orderId} foi cancelado pela loja.",
+    "done": "{storeName}: seu pedido {orderId} foi finalizado. Obrigado pela preferencia."
+  },
+  "handoffRules": [
+    "Cliente pede desconto fora das regras.",
+    "Cliente demonstra irritacao ou faz reclamacao.",
+    "Pedido depende de estoque, producao personalizada ou prazo especial.",
+    "Cliente pergunta algo fora da base de conhecimento.",
+    "Pagamento falha ou precisa de comprovante."
+  ],
+  "handoffKeywords": [
+    "reclamacao",
+    "reclamar",
+    "cancelar",
+    "troca",
+    "devolucao",
+    "desconto",
+    "comprovante",
+    "problema",
+    "atendente",
+    "humano"
+  ]
+}

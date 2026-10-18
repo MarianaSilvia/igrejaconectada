@@ -1,0 +1,28 @@
+{
+  "name": "chatbot-whatsapp-loja",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MVP local de chatbot de WhatsApp para atendimento e pedidos de loja.",
+  "scripts": {
+    "setup": "node scripts/setup-env.js",
+    "secret": "node scripts/generate-secret.js",
+    "store:apply": "node scripts/apply-store-profile.js",
+    "retention:purge": "node scripts/purge-data.js",
+    "start": "node backend/server.js",
+    "backup": "node scripts/backup-data.js",
+    "restore": "node scripts/restore-data.js",
+    "smoke:offline": "node scripts/offline-smoke.js",
+    "check": "node --check backend/server.js && node --check backend/env.js && node --check backend/data-paths.js && node --check backend/data-validators.js && node --check backend/bot-engine.js && node --check backend/whatsapp-adapter.js && node --check backend/self-test.js && node --check backend/integration-test.js && node --check scripts/setup-env.js && node --check scripts/generate-secret.js && node --check scripts/apply-store-profile.js && node --check scripts/purge-data.js && node --check scripts/verify-whatsapp.js && node --check scripts/send-whatsapp-test.js && node --check scripts/production-check.js && node --check scripts/backup-data.js && node --check scripts/restore-data.js && node --check scripts/offline-smoke.js && node --check prototype/script.js && node --check admin/script.js",
+    "test": "node backend/self-test.js && node backend/integration-test.js",
+    "check:production": "node scripts/production-check.js --production",
+    "check:production:offline": "node scripts/production-check.js --production --offline",
+    "production:report": "node scripts/production-check.js --production --offline --report reports/production-readiness.md",
+    "verify:whatsapp": "node scripts/verify-whatsapp.js",
+    "send:whatsapp": "node scripts/send-whatsapp-test.js",
+    "doctor": "node scripts/doctor.js",
+    "doctor:offline": "node scripts/doctor.js --offline"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

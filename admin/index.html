@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Painel do chatbot</title>
+    <link rel="stylesheet" href="/admin/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Operacao local</p>
+          <h1>Painel do chatbot</h1>
+        </div>
+        <nav aria-label="Atalhos">
+          <a href="/prototype">Abrir prototipo</a>
+          <span id="refresh-status" class="refresh-status">Aguardando atualizacao</span>
+          <button id="refresh" type="button">Atualizar</button>
+          <button id="logout" class="secondary" type="button">Sair</button>
+        </nav>
+      </header>
+
+      <section id="auth-panel" class="surface auth-panel" hidden>
+        <div>
+          <h2>Acesso administrativo</h2>
+          <p>Informe o token definido em ADMIN_TOKEN para operar o painel protegido.</p>
+        </div>
+        <form id="auth-form" class="auth-form">
+          <input id="auth-token" type="password" autocomplete="current-password" placeholder="ADMIN_TOKEN" />
+          <button type="submit">Entrar</button>
+        </form>
+      </section>
+
+      <section class="metrics" aria-label="Resumo">
+        <div>
+          <span id="metric-products">0</span>
+          <strong>Produtos ativos</strong>
+        </div>
+        <div>
+          <span id="metric-stock-alerts">0</span>
+          <strong>Estoque alerta</strong>
+        </div>
+        <div>
+          <span id="metric-orders">0</span>
+          <strong>Pedidos</strong>
+        </div>
+        <div>
+          <span id="metric-pending">0</span>
+          <strong>Pendentes</strong>
+        </div>
+        <div>
+          <span id="metric-conversations">0</span>
+          <strong>Conversas</strong>
+        </div>
+        <div>
+          <span id="metric-handoffs">0</span>
+          <strong>Atendimentos</strong>
+        </div>
+        <div>
+          <span id="metric-outbox">0</span>
+          <strong>Saida</strong>
+        </div>
+      </section>
+
+      <section class="layout">
+        <section class="surface readiness-area">
+          <div class="section-head">
+            <div>
+              <h2>Prontidao</h2>
+              <p>Resumo do que ja esta pronto para uso local e o que ainda falta para producao.</p>
+            </div>
+          </div>
+          <div id="readiness-list" class="readiness-list"></div>
+        </section>
+
+        <section class="surface whatsapp-area">
+          <div class="section-head">
+            <div>
+              <h2>WhatsApp real</h2>
+              <p>Use estes dados para configurar e testar o webhook quando o backend estiver publicado em HTTPS.</p>
+            </div>
+          </div>
+          <div class="whatsapp-grid">
+            <label>URL local do webhook<input id="whatsapp-webhook-url" type="text" readonly /></label>
+            <label>URL de verificacao<input id="whatsapp-verify-url" type="text" readonly /></label>
+            <label>Comando de teste<input id="whatsapp-test-command" type="text" readonly /></label>
+          </div>
+        </section>
+
+        <section class="surface config-area">
+          <div class="section-head">
+            <div>
+              <h2>Configuracao da loja</h2>
+              <p>Mensagens principais usadas pelo bot em atendimento, entrega, pagamento e passagem para humano.</p>
+            </div>
+            <button id="save-config" type="button">Salvar configuracao</button>
+          </div>
+          <div class="config-grid">
+            <label>Nome da loja<input id="config-store-name" type="text" /></label>
+            <label>Moeda<input id="config-currency" type="text" /></label>
+            <label>Mensagem inicial<textarea id="config-opening"></textarea></label>
+            <label>Entrega<textarea id="config-delivery"></textarea></label>
+            <label>Retirada<textarea id="config-pickup"></textarea></label>
+            <label>Pagamento<textarea id="config-payment"></textarea></label>
+            <label>Formas de pagamento<textarea id="config-payment-methods"></textarea></label>
+            <label>Zonas de entrega<textarea id="config-delivery-zones"></textarea></label>
+            <label>Atendente<textarea id="config-handoff"></textarea></label>
+            <label>Fuso horario<input id="config-business-timezone" type="text" /></label>
+            <label>Horario de atendimento<textarea id="config-business-hours"></textarea></label>
+            <label>Regras para atendente<textarea id="config-handoff-rules"></textarea></label>
+            <label>Palavras que chamam atendente<textarea id="config-handoff-keywords"></textarea></label>
+            <label>Mensagem pedido pendente<textarea id="config-order-pending"></textarea></label>
+            <label>Mensagem pedido confirmado<textarea id="config-order-confirmed"></textarea></label>
+            <label>Mensagem pedido cancelado<textarea id="config-order-cancelled"></textarea></label>
+            <label>Mensagem pedido finalizado<textarea id="config-order-done"></textarea></label>
+          </div>
+        </section>
+
+        <section class="surface store-profile-area">
+          <div class="section-head">
+            <div>
+              <h2>Perfil da loja</h2>
+              <p>Importe configuracao, catalogo e FAQs reais em um unico arquivo validado.</p>
+            </div>
+            <div class="button-row">
+              <a id="download-store-profile" href="/store-profile.json">Baixar perfil atual</a>
+              <label class="file-action">
+                Validar perfil
+                <input id="validate-store-profile-file" type="file" accept="application/json,.json" />
+              </label>
+              <label class="file-action">
+                Aplicar perfil
+                <input id="apply-store-profile-file" type="file" accept="application/json,.json" />
+              </label>
+            </div>
+          </div>
+          <div id="store-profile-status" class="profile-status">Nenhum perfil validado nesta sessao.</div>
+        </section>
+
+        <section class="surface catalog-area">
+          <div class="section-head">
+            <div>
+              <h2>Catalogo</h2>
+              <p>Edite produtos de teste e salve para o backend usar nas proximas conversas.</p>
+            </div>
+            <button id="add-product" type="button">Adicionar produto</button>
+          </div>
+          <div id="catalog-list" class="catalog-list"></div>
+          <div class="actions">
+            <button id="save-catalog" type="button">Salvar catalogo</button>
+          </div>
+        </section>
+
+        <section class="surface faq-area">
+          <div class="section-head">
+            <div>
+              <h2>Perguntas frequentes</h2>
+              <p>Cadastre respostas curtas para duvidas comuns. O bot usa palavras-chave para encontrar a melhor resposta.</p>
+            </div>
+            <button id="add-faq" type="button">Adicionar FAQ</button>
+          </div>
+          <div id="faq-list" class="faq-list"></div>
+          <div class="actions">
+            <button id="save-faqs" type="button">Salvar FAQs</button>
+          </div>
+        </section>
+
+        <section class="surface orders-area">
+          <div class="section-head">
+            <div>
+              <h2>Pedidos</h2>
+              <p>Pedidos entram como pendentes para confirmacao manual.</p>
+            </div>
+            <div class="button-row">
+              <a id="export-orders" href="/orders.csv">Exportar CSV</a>
+              <button id="clear-orders" type="button">Limpar testes</button>
+            </div>
+          </div>
+          <div class="order-tools" aria-label="Filtros de pedidos">
+            <label>Buscar<input id="order-search" type="search" placeholder="Cliente, pedido, endereco ou observacao" /></label>
+            <label>Status<select id="order-status-filter">
+              <option value="all">Todos</option>
+              <option value="pending_confirmation">Pendente</option>
+              <option value="confirmed">Confirmado</option>
+              <option value="cancelled">Cancelado</option>
+              <option value="done">Finalizado</option>
+            </select></label>
+            <button id="clear-order-filters" class="secondary" type="button">Limpar filtros</button>
+          </div>
+          <div id="orders-list" class="orders-list"></div>
+        </section>
+
+        <section class="surface handoff-area">
+          <div class="section-head">
+            <div>
+              <h2>Atendimento humano</h2>
+              <p>Pedidos de atendente entram aqui para acompanhamento manual.</p>
+            </div>
+            <a id="export-handoffs" href="/handoffs.csv">Exportar CSV</a>
+          </div>
+          <div class="handoff-tools" aria-label="Filtros de atendimento humano">
+            <label>Buscar<input id="handoff-search" type="search" placeholder="Sessao, motivo, mensagem ou nota" /></label>
+            <label>Status<select id="handoff-status-filter">
+              <option value="all">Todos</option>
+              <option value="open">Aberto</option>
+              <option value="in_progress">Em atendimento</option>
+              <option value="resolved">Resolvido</option>
+              <option value="cancelled">Cancelado</option>
+            </select></label>
+            <button id="clear-handoff-filters" class="secondary" type="button">Limpar filtros</button>
+          </div>
+          <div id="handoffs-list" class="handoffs-list"></div>
+        </section>
+
+        <section class="surface tester-area">
+          <div class="section-head">
+            <div>
+              <h2>Teste rapido</h2>
+              <p>Envie mensagens para o backend local sem abrir o prototipo.</p>
+            </div>
+            <button id="reset-session" type="button">Reiniciar conversa</button>
+          </div>
+          <div id="tester-log" class="tester-log" aria-live="polite"></div>
+          <form id="tester-form" class="tester-form">
+            <input id="tester-input" type="text" autocomplete="off" placeholder="Ex.: Fazer pedido" />
+            <button type="submit">Enviar</button>
+          </form>
+        </section>
+
+        <section class="surface audit-area">
+          <div class="section-head">
+            <div>
+              <h2>Historico e backup</h2>
+              <p>Veja eventos recentes, acompanhe conversas e baixe um backup completo dos dados locais.</p>
+            </div>
+            <div class="button-row">
+              <a id="download-backup" href="/backup.json">Baixar backup</a>
+              <a id="export-conversations" href="/conversations.json">Conversas JSON</a>
+              <a id="export-events" href="/events.csv">Eventos CSV</a>
+              <a id="export-outbox" href="/outbox.csv">Saida CSV</a>
+              <label class="file-action">
+                Restaurar backup
+                <input id="restore-backup-file" type="file" accept="application/json,.json" />
+              </label>
+              <button id="clear-history" type="button">Limpar historico</button>
+            </div>
+          </div>
+          <div class="audit-grid">
+            <section>
+              <h3>Eventos recentes</h3>
+              <div id="events-list" class="compact-list"></div>
+            </section>
+            <section>
+              <h3>Conversas</h3>
+              <div id="conversations-list" class="compact-list"></div>
+            </section>
+            <section>
+              <h3>Caixa de saida</h3>
+              <div id="outbox-list" class="compact-list"></div>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/admin/script.js"></script>
+  </body>
+</html>

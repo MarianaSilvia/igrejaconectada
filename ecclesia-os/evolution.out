@@ -1,0 +1,32 @@
+✔ calendar dates preserve the day while instants use Brazil timezone (7188.9926ms)
+✔ database DATE remains a calendar string in API serialization (13.8894ms)
+✔ registration pagination includes old pending submissions beyond the first 200 (810.1965ms)
+✔ leaders see only assigned cells and people; removal immediately ends access (355.1036ms)
+✔ diretório público de grupos recebe interesse com consentimento (189.9176ms)
+✔ patrimônio mantém inventário e manutenção no módulo habilitado (310.1406ms)
+✔ assistência protege descrição e acompanha encaminhamento (222.6142ms)
+✔ biblioteca controla catálogo, empréstimo e devolução (332.563ms)
+✔ membro controla preferências de comunicação pelo portal (174.8872ms)
+✔ Pix intent survives an ambiguous provider timeout and resumes the same txid (308.6894ms)
+✔ treasury requires independent approval, supports partial idempotent payments and reversals (801.6541ms)
+✔ agenda rejects overlapping resources, rolls back recurrences and checks volunteer availability (503.2763ms)
+✔ tasks keep pastoral content restricted and reject stale updates (212.1354ms)
+✔ invitations are one-use, invalid TOTP attempts persist and existing identities are protected (340.0825ms)
+✔ offboarding revokes sessions and returns tasks for authorized handoff (238.3881ms)
+✔ MFA secrets are sealed and backup codes are consumed once (534.0129ms)
+✔ event registrations enforce capacity and workflows keep an auditable process (994.3404ms)
+✔ evento registra presença e emite certificado idempotente (363.453ms)
+✔ ensino conecta curso, turma, frequência e certificado (474.2582ms)
+✔ ministério registra treinamento e substituição auditada de escala (440.4092ms)
+✔ planejamento de culto mantém ordem, ensaio e materiais por celebração (329.6427ms)
+✔ Kids exige responsável autorizado e token único para retirada (658.3821ms)
+✔ governança institucional separa filiação, credencial e anuidade (374.5851ms)
+✔ assembleia permite convocação central e confirmação de delegado da igreja (220.7117ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 20059.0977

@@ -1,0 +1,686 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Chatbot WhatsApp Loja API",
+    "version": "0.1.0",
+    "description": "API local para chatbot de WhatsApp com painel, catalogo, pedidos, FAQ, auditoria, backup e webhook."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "AdminBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Use ADMIN_TOKEN quando configurado."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Checagem simples de saude",
+        "responses": {
+          "200": { "description": "Servidor saudavel" }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Checagem de prontidao local/producao",
+        "security": [{ "AdminBearer": [] }],
+        "responses": {
+          "200": { "description": "Status de prontidao" },
+          "401": { "description": "Nao autorizado" }
+        }
+      }
+    },
+    "/chat": {
+      "post": {
+        "summary": "Simula/envia mensagem ao motor do bot",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["message"],
+                "properties": {
+                  "sessionId": { "type": "string", "maxLength": 200, "example": "cliente-1" },
+                  "message": { "type": "string", "maxLength": 4000, "example": "Fazer pedido" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Resposta do bot" },
+          "400": { "description": "Dados invalidos" },
+          "413": { "description": "Payload muito grande" },
+          "429": { "description": "Limite de mensagens excedido" }
+        }
+      }
+    },
+    "/webhooks/whatsapp": {
+      "get": {
+        "summary": "Verificacao de webhook da Meta",
+        "parameters": [
+          { "name": "hub.mode", "in": "query", "schema": { "type": "string" } },
+          { "name": "hub.verify_token", "in": "query", "schema": { "type": "string" } },
+          { "name": "hub.challenge", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Challenge aceito" },
+          "403": { "description": "Token invalido" }
+        }
+      },
+      "post": {
+        "summary": "Recebe evento de mensagem ou status do WhatsApp",
+        "parameters": [
+          {
+            "name": "X-Hub-Signature-256",
+            "in": "header",
+            "schema": { "type": "string" },
+            "description": "Obrigatorio quando WHATSAPP_APP_SECRET estiver definido."
+          }
+        ],
+        "responses": {
+          "200": { "description": "Evento processado" },
+          "403": { "description": "Assinatura invalida" },
+          "413": { "description": "Payload muito grande" }
+        }
+      }
+    },
+    "/catalog": {
+      "get": {
+        "summary": "Lista catalogo",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "Catalogo" } }
+      },
+      "post": {
+        "summary": "Salva catalogo",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "Catalogo salvo" } }
+      }
+    },
+    "/faqs": {
+      "get": {
+        "summary": "Lista FAQs",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "FAQs" } }
+      },
+      "post": {
+        "summary": "Salva FAQs",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "FAQs salvas" } }
+      }
+    },
+    "/config": {
+      "get": {
+        "summary": "Le configuracao da loja",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "Configuracao" } }
+      },
+      "post": {
+        "summary": "Salva configuracao da loja",
+        "security": [{ "AdminBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["config"],
+                "properties": {
+                  "config": {
+                    "type": "object",
+                    "properties": {
+                      "storeName": { "type": "string" },
+                      "currency": { "type": "string" },
+                      "openingMessage": { "type": "string" },
+                      "deliveryInfo": { "type": "string" },
+                      "pickupInfo": { "type": "string" },
+                      "paymentInfo": { "type": "string" },
+                      "paymentMethods": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": { "type": "string" },
+                            "label": { "type": "string" },
+                            "keywords": {
+                              "type": "array",
+                              "items": { "type": "string" }
+                            },
+                            "instructions": { "type": "string" },
+                            "active": { "type": "boolean" }
+                          }
+                        }
+                      },
+                      "humanHandoffMessage": { "type": "string" },
+                      "businessHours": {
+                        "type": "object",
+                        "properties": {
+                          "timezone": { "type": "string", "example": "America/Sao_Paulo" },
+                          "weekly": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "day": { "type": "integer", "minimum": 0, "maximum": 6 },
+                                "open": { "type": "string", "example": "09:00" },
+                                "close": { "type": "string", "example": "18:00" },
+                                "closed": { "type": "boolean" }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "deliveryZones": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": { "type": "string" },
+                            "name": { "type": "string" },
+                            "keywords": {
+                              "type": "array",
+                              "items": { "type": "string" }
+                            },
+                            "fee": { "type": "number", "minimum": 0 },
+                            "eta": { "type": "string" },
+                            "minOrder": { "type": "number", "minimum": 0 },
+                            "active": { "type": "boolean" }
+                          }
+                        }
+                      },
+                      "handoffRules": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                      },
+                      "handoffKeywords": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                      },
+                      "orderStatusMessages": {
+                        "type": "object",
+                        "properties": {
+                          "pending_confirmation": { "type": "string" },
+                          "confirmed": { "type": "string" },
+                          "cancelled": { "type": "string" },
+                          "done": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Configuracao salva" } }
+      }
+    },
+    "/store-profile.json": {
+      "get": {
+        "summary": "Baixa perfil atual da loja",
+        "security": [{ "AdminBearer": [] }],
+        "responses": {
+          "200": { "description": "Perfil com configuracao, catalogo e FAQs" },
+          "401": { "description": "Nao autorizado" }
+        }
+      }
+    },
+    "/store-profile/validate": {
+      "post": {
+        "summary": "Valida perfil da loja antes de aplicar",
+        "security": [{ "AdminBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["profile"],
+                "properties": {
+                  "profile": {
+                    "type": "object",
+                    "required": ["config", "catalog"],
+                    "properties": {
+                      "config": { "type": "object" },
+                      "catalog": { "type": "array", "items": { "type": "object" } },
+                      "faqs": { "type": "array", "items": { "type": "object" } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Resultado da validacao" },
+          "400": { "description": "Perfil invalido" },
+          "401": { "description": "Nao autorizado" },
+          "413": { "description": "Payload muito grande" }
+        }
+      }
+    },
+    "/store-profile/apply": {
+      "post": {
+        "summary": "Aplica perfil da loja",
+        "security": [{ "AdminBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["profile", "confirmApply"],
+                "properties": {
+                  "confirmApply": { "type": "boolean" },
+                  "profile": {
+                    "type": "object",
+                    "required": ["config", "catalog"],
+                    "properties": {
+                      "config": { "type": "object" },
+                      "catalog": { "type": "array", "items": { "type": "object" } },
+                      "faqs": { "type": "array", "items": { "type": "object" } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Perfil aplicado com backup pre-store-profile" },
+          "400": { "description": "Confirmacao ausente, perfil invalido ou dados de exemplo" },
+          "401": { "description": "Nao autorizado" },
+          "413": { "description": "Payload muito grande" }
+        }
+      }
+    },
+    "/conversations/export": {
+      "get": {
+        "summary": "Exporta transcript de uma conversa",
+        "security": [{ "AdminBearer": [] }],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "minLength": 1, "maxLength": 200 }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Transcript em texto" },
+          "400": { "description": "sessionId ausente" }
+        }
+      }
+    },
+    "/conversations": {
+      "get": {
+        "summary": "Lista conversas para o painel",
+        "security": [{ "AdminBearer": [] }],
+        "responses": {
+          "200": { "description": "Conversas por sessao" },
+          "401": { "description": "Nao autorizado" }
+        }
+      }
+    },
+    "/conversations.json": {
+      "get": {
+        "summary": "Exporta todas as conversas em JSON",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "Conversas em JSON" } }
+      }
+    },
+    "/conversations/clear": {
+      "post": {
+        "summary": "Limpa historico de conversas",
+        "security": [{ "AdminBearer": [] }],
+        "responses": {
+          "200": { "description": "Conversas limpas" },
+          "401": { "description": "Nao autorizado" }
+        }
+      }
+    },
+    "/events": {
+      "get": {
+        "summary": "Lista eventos recentes",
+        "security": [{ "AdminBearer": [] }],
+        "responses": {
+          "200": { "description": "Eventos recentes" },
+          "401": { "description": "Nao autorizado" }
+        }
+      }
+    },
+    "/events.csv": {
+      "get": {
+        "summary": "Exporta eventos em CSV",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "Eventos em CSV" } }
+      }
+    },
+    "/events/clear": {
+      "post": {
+        "summary": "Limpa eventos recentes",
+        "security": [{ "AdminBearer": [] }],
+        "responses": {
+          "200": { "description": "Eventos limpos" },
+          "401": { "description": "Nao autorizado" }
+        }
+      }
+    },
+    "/outbox": {
+      "get": {
+        "summary": "Lista caixa de saida",
+        "security": [{ "AdminBearer": [] }],
+        "responses": {
+          "200": { "description": "Mensagens de saida" },
+          "401": { "description": "Nao autorizado" }
+        }
+      }
+    },
+    "/outbox.csv": {
+      "get": {
+        "summary": "Exporta caixa de saida em CSV",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "Caixa de saida em CSV" } }
+      }
+    },
+    "/outbox/clear": {
+      "post": {
+        "summary": "Limpa caixa de saida",
+        "security": [{ "AdminBearer": [] }],
+        "responses": {
+          "200": { "description": "Caixa de saida limpa" },
+          "401": { "description": "Nao autorizado" }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "summary": "Lista pedidos",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "Pedidos" } }
+      }
+    },
+    "/orders.csv": {
+      "get": {
+        "summary": "Exporta pedidos em CSV",
+        "security": [{ "AdminBearer": [] }],
+        "responses": {
+          "200": { "description": "Pedidos em CSV" },
+          "401": { "description": "Nao autorizado" }
+        }
+      }
+    },
+    "/orders/status": {
+      "post": {
+        "summary": "Atualiza status, notas internas e opcionalmente avisa o cliente",
+        "security": [{ "AdminBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["id"],
+                "properties": {
+                  "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+                  "status": {
+                    "type": "string",
+                    "enum": ["pending_confirmation", "confirmed", "cancelled", "done"]
+                  },
+                  "internalNotes": { "type": "string" },
+                  "notifyCustomer": { "type": "boolean" },
+                  "notificationText": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Pedido atualizado" } }
+      }
+    },
+    "/orders/clear": {
+      "post": {
+        "summary": "Limpa pedidos",
+        "security": [{ "AdminBearer": [] }],
+        "responses": {
+          "200": { "description": "Pedidos limpos" },
+          "401": { "description": "Nao autorizado" }
+        }
+      }
+    },
+    "/handoffs": {
+      "get": {
+        "summary": "Lista atendimentos humanos",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "Atendimentos" } }
+      }
+    },
+    "/handoffs.csv": {
+      "get": {
+        "summary": "Exporta atendimentos humanos em CSV",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "CSV de atendimentos humanos" } }
+      }
+    },
+    "/handoffs/status": {
+      "post": {
+        "summary": "Atualiza status e notas de atendimento humano",
+        "security": [{ "AdminBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["id"],
+                "properties": {
+                  "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+                  "status": {
+                    "type": "string",
+                    "enum": ["open", "in_progress", "resolved", "cancelled"]
+                  },
+                  "notes": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Atendimento atualizado" },
+          "400": { "description": "Status invalido" },
+          "404": { "description": "Atendimento nao encontrado" }
+        }
+      }
+    },
+    "/messages/send": {
+      "post": {
+        "summary": "Envia/registra resposta manual de atendente",
+        "security": [{ "AdminBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sessionId", "text"],
+                "properties": {
+                  "sessionId": { "type": "string", "minLength": 1 },
+                  "text": { "type": "string", "minLength": 1, "maxLength": 2000 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Mensagem registrada/enviada" },
+          "400": { "description": "Dados invalidos" }
+        }
+      }
+    },
+    "/backup.json": {
+      "get": {
+        "summary": "Baixa backup completo",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "Backup completo" } }
+      }
+    },
+    "/backup/restore": {
+      "post": {
+        "summary": "Restaura backup completo",
+        "security": [{ "AdminBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["backup", "confirmRestore"],
+                "properties": {
+                  "confirmRestore": {
+                    "type": "boolean",
+                    "enum": [true],
+                    "description": "Deve ser true para confirmar explicitamente que a restauracao vai sobrescrever os dados atuais."
+                  },
+                  "backup": {
+                    "type": "object",
+                    "description": "Backup completo gerado por GET /backup.json ou npm run backup."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Backup restaurado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "preRestoreBackup": {
+                      "type": "string",
+                      "description": "Caminho do snapshot criado automaticamente antes de sobrescrever os dados."
+                    },
+                    "orders": { "type": "integer" },
+                    "sessions": { "type": "integer" },
+                    "conversations": { "type": "integer" },
+                    "handoffs": { "type": "integer" },
+                    "outbox": { "type": "integer" },
+                    "rateLimits": { "type": "integer" },
+                    "processedWebhooks": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Backup invalido" },
+          "413": { "description": "Payload muito grande" }
+        }
+      }
+    },
+    "/sessions/reset": {
+      "post": {
+        "summary": "Reinicia uma sessao ou todas as sessoes",
+        "security": [{ "AdminBearer": [] }],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": { "type": "string", "minLength": 1, "maxLength": 200 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Sessao ou sessoes reiniciadas" },
+          "400": { "description": "Dados invalidos" }
+        }
+      }
+    },
+    "/outbox/retry": {
+      "post": {
+        "summary": "Reenvia mensagem da caixa de saida",
+        "security": [{ "AdminBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["id"],
+                "properties": {
+                  "id": { "type": "string", "minLength": 1, "maxLength": 200 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Tentativa registrada" },
+          "400": { "description": "Mensagem inexistente ou nao reenviavel" }
+        }
+      }
+    },
+    "/rate-limits/clear": {
+      "post": {
+        "summary": "Limpa contadores temporarios de limite de mensagens",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "Rate-limits limpos" } }
+      }
+    },
+    "/processed-webhooks/clear": {
+      "post": {
+        "summary": "Limpa controle de webhooks ja processados",
+        "security": [{ "AdminBearer": [] }],
+        "responses": { "200": { "description": "Controle de webhooks limpo" } }
+      }
+    },
+    "/privacy/delete-session": {
+      "post": {
+        "summary": "Remove dados pessoais de uma sessao",
+        "security": [{ "AdminBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sessionId"],
+                "properties": {
+                  "sessionId": { "type": "string", "minLength": 1, "maxLength": 200 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Sessao removida/anonimizada" },
+          "400": { "description": "Dados invalidos" }
+        }
+      }
+    }
+  }
+}

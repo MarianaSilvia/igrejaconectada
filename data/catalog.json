@@ -1,0 +1,38 @@
+[
+  {
+    "id": "1",
+    "category": "Mais vendidos",
+    "name": "Produto destaque",
+    "price": 49.9,
+    "stock": null,
+    "description": "Boa opcao para quem quer comprar rapido.",
+    "available": true
+  },
+  {
+    "id": "2",
+    "category": "Mais vendidos",
+    "name": "Kit presente",
+    "price": 89.9,
+    "stock": null,
+    "description": "Combo pronto para presentear.",
+    "available": true
+  },
+  {
+    "id": "3",
+    "category": "Novidades",
+    "name": "Lancamento da semana",
+    "price": 64.9,
+    "stock": null,
+    "description": "Item novo no catalogo.",
+    "available": true
+  },
+  {
+    "id": "4",
+    "category": "Promocoes",
+    "name": "Oferta especial",
+    "price": 39.9,
+    "stock": null,
+    "description": "Preco promocional sujeito a confirmacao.",
+    "available": true
+  }
+]

@@ -1,0 +1,54 @@
+{
+  "name": "ecclesia-os",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server/index.ts",
+    "build": "tsc --noEmit && vite build",
+    "start": "tsx src/server/index.ts",
+    "worker": "tsx scripts/integration-worker.ts",
+    "test": "tsx --test --test-concurrency=1 tests/*.test.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "provision": "tsx scripts/provision.ts",
+    "format": "prettier --write src tests scripts package.json tsconfig.json vite.config.ts",
+    "test:browser": "node scripts/browser-smoke.mjs",
+    "test:registration-browser": "node --import tsx scripts/registration-browser.mjs",
+    "test:evolution-browser": "node --import tsx scripts/evolution-browser.mjs",
+    "backup": "tsx scripts/backup.ts",
+    "restore": "tsx scripts/restore.ts",
+    "test:postgres": "tsx scripts/postgres-smoke.ts",
+    "pilot:preflight": "tsx scripts/pilot-preflight.ts",
+    "pilot:preflight:homologation": "tsx scripts/pilot-preflight.ts --homologation",
+    "pilot:verify": "npm run build && npm test && npm run pilot:preflight",
+    "pilot:verify:browser": "npm run pilot:verify && npm run test:evolution-browser",
+    "pilot:verify:postgres": "npm run pilot:preflight && npm run test:postgres"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.3.14",
+    "csv-parse": "^6.1.0",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "pg": "^8.16.3",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "sharp": "^0.35.5",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.9.1",
+    "@types/pg": "^8.15.5",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "prettier": "^3.9.10",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,757 @@
+:root {
+  --bg: #f4f0e8;
+  --ink: #1f2c33;
+  --muted: #65737a;
+  --surface: #fffaf2;
+  --line: #ded4c4;
+  --accent: #0f8067;
+  --accent-dark: #075844;
+  --danger: #a93c33;
+  --soft: #e7f4ef;
+  --shadow: 0 18px 48px rgba(36, 28, 18, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+.file-action {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  padding: 0 14px;
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.file-action input {
+  display: none;
+}
+
+button.secondary {
+  background: var(--soft);
+  color: var(--accent-dark);
+  border: 1px solid rgba(15, 128, 103, 0.24);
+}
+
+button.danger {
+  background: #f7e7e4;
+  color: var(--danger);
+  border: 1px solid rgba(169, 60, 51, 0.22);
+}
+
+.shell {
+  width: min(1280px, 100%);
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.topbar nav,
+.actions,
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.refresh-status {
+  color: var(--muted);
+  font-size: 0.86rem;
+  min-width: 142px;
+  text-align: right;
+}
+
+.section-head {
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.auth-panel {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.auth-panel[hidden],
+.metrics[hidden],
+.layout[hidden],
+#logout[hidden] {
+  display: none;
+}
+
+.auth-form {
+  display: flex;
+  gap: 8px;
+  min-width: min(420px, 100%);
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  padding: 0 12px;
+}
+
+.eyebrow,
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+.eyebrow {
+  margin-bottom: 6px;
+  color: var(--accent-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1;
+}
+
+h2 {
+  margin-bottom: 6px;
+  font-size: 1.1rem;
+}
+
+p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.metrics div,
+.surface {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.metrics div {
+  padding: 16px;
+}
+
+.metrics span {
+  display: block;
+  color: var(--accent-dark);
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.metrics strong {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(420px, 1.2fr) minmax(320px, 0.8fr);
+  grid-template-areas:
+    "readiness readiness"
+    "whatsapp whatsapp"
+    "config orders"
+    "profile orders"
+    "catalog orders"
+    "faq handoffs"
+    "tester handoffs"
+    "audit audit";
+  gap: 18px;
+}
+
+.surface {
+  padding: 18px;
+}
+
+.catalog-area {
+  grid-area: catalog;
+}
+
+.readiness-area {
+  grid-area: readiness;
+}
+
+.whatsapp-area {
+  grid-area: whatsapp;
+}
+
+.faq-area {
+  grid-area: faq;
+}
+
+.config-area {
+  grid-area: config;
+}
+
+.store-profile-area {
+  grid-area: profile;
+}
+
+.orders-area {
+  grid-area: orders;
+}
+
+.tester-area {
+  grid-area: tester;
+}
+
+.audit-area {
+  grid-area: audit;
+}
+
+.handoff-area {
+  grid-area: handoffs;
+}
+
+.catalog-list,
+.faq-list,
+.orders-list,
+.handoffs-list,
+.readiness-list,
+.tester-log,
+.compact-list {
+  display: grid;
+  gap: 10px;
+}
+
+.order-tools,
+.handoff-tools {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 170px auto;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+.order-tools label,
+.handoff-tools label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.order-tools input,
+.order-tools select,
+.handoff-tools input,
+.handoff-tools select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 9px 10px;
+}
+
+.audit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.readiness-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.readiness-item {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+  padding: 12px;
+}
+
+.readiness-item strong {
+  display: block;
+  margin-bottom: 7px;
+}
+
+.readiness-item span {
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  color: #fff;
+  background: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.readiness-item.warning span {
+  background: #9a6b10;
+}
+
+.readiness-item.missing span {
+  background: var(--danger);
+}
+
+.readiness-item p {
+  font-size: 0.86rem;
+}
+
+.profile-status {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--muted);
+  padding: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.profile-status.ok {
+  border-color: rgba(15, 128, 103, 0.35);
+  background: rgba(231, 244, 239, 0.72);
+  color: var(--accent-dark);
+}
+
+.profile-status.warning {
+  border-color: rgba(154, 107, 16, 0.35);
+  background: rgba(255, 246, 225, 0.72);
+  color: #765008;
+}
+
+.audit-grid h3 {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+}
+
+.compact-item {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+  padding: 10px;
+}
+
+.compact-item strong {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.compact-item span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.compact-item pre {
+  max-height: 140px;
+  overflow: auto;
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  color: var(--muted);
+  font-family: Consolas, Monaco, monospace;
+  font-size: 0.8rem;
+}
+
+.conversation-preview {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.conversation-message {
+  border-left: 3px solid var(--line);
+  background: rgba(244, 240, 232, 0.56);
+  padding: 7px 9px;
+}
+
+.conversation-message.user {
+  border-left-color: var(--accent);
+}
+
+.conversation-message.operator {
+  border-left-color: #6c5ce7;
+}
+
+.conversation-message span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.conversation-message p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.whatsapp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.config-grid label,
+.whatsapp-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.config-grid label:nth-child(n + 3) {
+  grid-column: span 2;
+}
+
+.config-grid input,
+.config-grid textarea,
+.whatsapp-grid input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  padding: 9px 10px;
+}
+
+.whatsapp-grid input {
+  background: #fff;
+  color: var(--ink);
+}
+
+.config-grid textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.product-row {
+  display: grid;
+  grid-template-columns: 70px minmax(120px, 1fr) minmax(120px, 0.8fr) 110px 90px minmax(140px, 1fr) 120px 80px auto;
+  gap: 8px;
+  align-items: start;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+  padding: 10px;
+}
+
+.product-row.stock-low {
+  border-color: rgba(189, 128, 0, 0.5);
+}
+
+.product-row.stock-out {
+  border-color: rgba(169, 60, 51, 0.55);
+  background: rgba(247, 231, 228, 0.58);
+}
+
+.stock-badge {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.stock-low .stock-badge {
+  color: #8a5d00;
+}
+
+.stock-out .stock-badge {
+  color: var(--danger);
+}
+
+.faq-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.7fr) minmax(160px, 1fr) minmax(180px, 1.2fr) minmax(140px, 1fr) 100px auto;
+  gap: 8px;
+  align-items: start;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+  padding: 10px;
+}
+
+.faq-row label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.product-row label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.product-row .check-label,
+.faq-row .check-label {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+
+.product-row .check-label input,
+.faq-row .check-label input {
+  width: auto;
+  min-height: auto;
+}
+
+.product-row input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  padding: 9px 10px;
+}
+
+.faq-row input,
+.faq-row textarea {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  padding: 9px 10px;
+}
+
+.faq-row textarea {
+  resize: vertical;
+}
+
+.product-row textarea {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  padding: 9px 10px;
+  resize: vertical;
+}
+
+.actions {
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.order-card {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.68);
+  padding: 12px;
+}
+
+.handoff-card {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.68);
+  padding: 12px;
+}
+
+.handoff-card p {
+  margin-bottom: 8px;
+}
+
+.handoff-card textarea,
+.handoff-card select,
+.order-card textarea,
+.order-card select {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 9px 10px;
+}
+
+.handoff-card textarea,
+.order-card textarea {
+  min-height: 70px;
+  margin: 8px 0;
+  resize: vertical;
+}
+
+.order-card pre {
+  margin: 10px 0;
+  white-space: pre-wrap;
+  color: var(--muted);
+  font-family: Consolas, Monaco, monospace;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.order-history,
+.handoff-history {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.order-history strong,
+.handoff-history strong {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.order-history p,
+.handoff-history p {
+  font-size: 0.82rem;
+}
+
+.empty {
+  border: 1px dashed var(--line);
+  padding: 18px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.tester-log {
+  max-height: 280px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.bubble {
+  max-width: 90%;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  white-space: pre-wrap;
+}
+
+.bubble.user {
+  justify-self: end;
+  background: #dcf4e9;
+}
+
+.tester-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.tester-form input {
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  padding: 0 12px;
+}
+
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  max-width: 360px;
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 900px) {
+  .shell {
+    padding: 16px;
+  }
+
+  .topbar,
+  .section-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .topbar nav {
+    align-items: stretch;
+  }
+
+  .metrics,
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .layout {
+    grid-template-areas:
+      "readiness"
+      "whatsapp"
+      "config"
+      "profile"
+      "catalog"
+      "faq"
+      "orders"
+      "handoffs"
+      "tester"
+      "audit";
+  }
+
+  .product-row,
+  .faq-row,
+  .order-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .config-grid,
+  .whatsapp-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .config-grid label:nth-child(n + 3) {
+    grid-column: span 1;
+  }
+
+  .audit-grid,
+  .readiness-list {
+    grid-template-columns: 1fr;
+  }
+}

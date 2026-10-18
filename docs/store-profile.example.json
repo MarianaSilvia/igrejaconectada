@@ -1,0 +1,110 @@
+{
+  "config": {
+    "storeName": "Minha Loja",
+    "currency": "BRL",
+    "humanHandoffMessage": "Vou chamar uma pessoa da equipe para continuar seu atendimento.",
+    "openingMessage": "Oi! Sou o assistente da Minha Loja. Posso mostrar produtos, montar seu pedido ou chamar atendimento.",
+    "deliveryInfo": "Entregamos em bairros atendidos pela loja e tambem temos retirada no balcao. Prazo e frete sao confirmados antes da finalizacao.",
+    "pickupInfo": "Retirada no balcao da Rua Exemplo, 123, de segunda a sexta das 9h as 18h.",
+    "paymentInfo": "Aceitamos Pix, cartao e dinheiro na retirada. Dados sensiveis de cartao nao sao coletados pelo WhatsApp.",
+    "paymentMethods": [
+      {
+        "id": "pix",
+        "label": "Pix",
+        "keywords": ["pix", "chave pix"],
+        "instructions": "A equipe envia a chave Pix depois de confirmar disponibilidade e valor final.",
+        "active": true
+      },
+      {
+        "id": "cartao",
+        "label": "Cartao",
+        "keywords": ["cartao", "credito", "debito"],
+        "instructions": "Pagamento por cartao acontece por link seguro ou maquininha na retirada.",
+        "active": true
+      },
+      {
+        "id": "dinheiro",
+        "label": "Dinheiro",
+        "keywords": ["dinheiro", "troco"],
+        "instructions": "O cliente pode informar troco nas observacoes.",
+        "active": true
+      }
+    ],
+    "businessHours": {
+      "timezone": "America/Sao_Paulo",
+      "weekly": [
+        { "day": 0, "closed": true },
+        { "day": 1, "open": "09:00", "close": "18:00" },
+        { "day": 2, "open": "09:00", "close": "18:00" },
+        { "day": 3, "open": "09:00", "close": "18:00" },
+        { "day": 4, "open": "09:00", "close": "18:00" },
+        { "day": 5, "open": "09:00", "close": "18:00" },
+        { "day": 6, "open": "09:00", "close": "13:00" }
+      ]
+    },
+    "deliveryZones": [
+      {
+        "id": "centro",
+        "name": "Centro",
+        "keywords": ["centro", "rua principal"],
+        "fee": 8,
+        "eta": "ate 60 min",
+        "minOrder": 0,
+        "active": true
+      },
+      {
+        "id": "retirada",
+        "name": "Retirada na loja",
+        "keywords": ["retirada", "buscar"],
+        "fee": 0,
+        "eta": "combinar horario",
+        "minOrder": 0,
+        "active": true
+      }
+    ],
+    "orderStatusMessages": {
+      "pending_confirmation": "{storeName}: recebemos seu pedido {orderId}. Ele esta aguardando confirmacao da equipe.",
+      "confirmed": "{storeName}: seu pedido {orderId} foi confirmado.",
+      "cancelled": "{storeName}: seu pedido {orderId} foi cancelado.",
+      "done": "{storeName}: seu pedido {orderId} foi finalizado. Obrigado pela preferencia."
+    },
+    "handoffRules": [
+      "Cliente pede desconto fora das regras.",
+      "Cliente solicita troca, devolucao ou cancelamento.",
+      "Pedido depende de disponibilidade especial."
+    ],
+    "handoffKeywords": [
+      "atendente",
+      "humano",
+      "troca",
+      "devolucao",
+      "cancelar",
+      "desconto",
+      "comprovante"
+    ]
+  },
+  "catalog": [
+    {
+      "id": "produto-1",
+      "category": "Mais vendidos",
+      "name": "Produto real 1",
+      "price": 49.9,
+      "stock": null,
+      "description": "Descricao curta do produto.",
+      "available": true
+    }
+  ],
+  "faqs": [
+    {
+      "id": "entrega",
+      "question": "Como funciona a entrega?",
+      "answer": "A equipe confirma prazo e frete antes de finalizar o pedido.",
+      "keywords": [
+        "entrega",
+        "frete",
+        "prazo"
+      ],
+      "active": true
+    }
+  ]
+}

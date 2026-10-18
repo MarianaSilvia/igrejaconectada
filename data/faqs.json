@@ -1,0 +1,26 @@
+[
+  {
+    "id": "horario",
+    "question": "Qual e o horario de atendimento?",
+    "answer": "Nosso atendimento humano confirma horarios reais da loja. Se quiser, posso chamar uma pessoa para confirmar agora.",
+    "keywords": [
+      "horario",
+      "abre",
+      "fecha",
+      "funcionamento"
+    ],
+    "active": true
+  },
+  {
+    "id": "troca",
+    "question": "Como funciona troca ou devolucao?",
+    "answer": "Trocas e devolucoes precisam ser confirmadas pela loja conforme o produto e a data da compra. Posso chamar um atendente para analisar seu caso.",
+    "keywords": [
+      "troca",
+      "devolucao",
+      "devolver",
+      "garantia"
+    ],
+    "active": true
+  }
+]
