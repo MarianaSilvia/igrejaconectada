@@ -2,6 +2,10 @@
 
 Atualizado em 18/10/2026. Projeto Supabase: `vsqumzgcbkeiiokpwdzm`.
 
+## Estado atual do preflight
+
+`npm run pilot:preflight:homologation` confirma modo, três URLs, papéis distintos, chaves distintas, callbacks de comunicação e migrações até `086`. Permanecem pendentes domínio HTTPS público e configuração Efí (`efi` e `efiConfigValid`).
+
 ## Confirmado
 
 - [x] Projeto Supabase `EcclesiaOS` ativo em `sa-east-1`.
