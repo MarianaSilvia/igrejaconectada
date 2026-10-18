@@ -48,3 +48,7 @@ O projeto foi verificado pelo Supabase Database Advisors e não apresenta alerta
 ## Próxima operação
 
 Depois que as credenciais forem configuradas, crie a primeira rede, igreja sede e usuário administrador pelo fluxo de provisionamento. Só então faça a importação de membros fictícios e o teste de duas igrejas antes de inserir dados reais.
+
+Na verificação de 18/10/2026, o projeto estava `ACTIVE_HEALTHY`, com 134 tabelas públicas e os papéis `ecclesia_app`, `ecclesia_service` e `ecclesia_migration` configurados como usuários sem superusuário e sem `BYPASSRLS`. O banco permanece vazio para evitar a criação de dados fictícios sem uma decisão de implantação.
+
+O smoke test local alcança o endpoint direto somente quando o ambiente possui rota IPv6 para o host `db.<project-ref>.supabase.co`. Nesta máquina, o DNS retorna apenas IPv6 e a rede local não possui rota para esse endereço (`ENETUNREACH`). Isso é uma limitação de conectividade do ambiente de execução; não indica falha de migração ou de RLS. Em um servidor com IPv6, use o endpoint direto acima. Em uma rede somente IPv4, configure o pooler IPv4 do painel do Supabase com uma credencial/tenant compatível e repita `npm run test:postgres`.
