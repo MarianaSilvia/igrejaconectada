@@ -125,6 +125,20 @@ export class Database {
       if (this.pool) (client as pg.PoolClient).release();
     }
   }
+  async verifyMigrationPrivileges() {
+    if (!this.pool)
+      throw new Error(
+        "MIGRATION_DATABASE_URL deve apontar para um PostgreSQL externo; o modo demo não executa este preflight.",
+      );
+    const result = await this.pool.query(
+      "SELECT current_user, has_schema_privilege(current_user,'public','USAGE') AS schema_usage, has_schema_privilege(current_user,'public','CREATE') AS schema_create, has_database_privilege(current_user,current_database(),'CONNECT') AS db_connect",
+    );
+    const role = result.rows[0];
+    if (!role?.schema_usage || !role?.schema_create || !role?.db_connect)
+      throw new Error(
+        `O papel de migração ${role?.current_user ?? "desconhecido"} não possui USAGE, CREATE no schema public e CONNECT. Aplique DDL pelo canal administrativo do Supabase ou use um papel de migração dedicado com ownership controlado; nunca use ecclesia_app ou ecclesia_service.`,
+      );
+  }
   async verifyRuntimeSeparation() {
     if (!this.pool || !this.servicePool)
       throw new Error(
