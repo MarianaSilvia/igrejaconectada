@@ -10,7 +10,7 @@ Quando o Chrome e o Playwright estiverem disponíveis, executar `npm run pilot:v
 - Criar um PostgreSQL externo separado do snapshot local.
 - Seguir o modelo de papéis e variáveis em [HOMOLOGACAO_POSTGRES.md](HOMOLOGACAO_POSTGRES.md).
 - Configurar `DATABASE_URL`, `SERVICE_DATABASE_URL` e `MIGRATION_DATABASE_URL`, além de `DATA_KEY_HEX` e `MFA_KEY_HEX`, por segredo, com logins e chaves distintos.
-- Executar todas as migrações até a `063` e restaurar um backup em um banco de teste vazio.
+- Executar todas as migrações até a `086` e restaurar um backup em um banco de teste vazio. No projeto Supabase EcclesiaOS, essas 86 migrações já estão aplicadas; a próxima validação é o smoke test PostgreSQL externo com o pooler oficial.
 - Iniciar o web sem worker integrado (`RUN_INTEGRATION_WORKER=false`) e o worker em processo separado.
 - Registrar versão, migrações aplicadas, origem permitida, TLS e resultado do health check.
 
