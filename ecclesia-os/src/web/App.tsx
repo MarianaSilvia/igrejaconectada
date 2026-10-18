@@ -377,6 +377,8 @@ export default function App() {
                       "Pedidos protegidos, encaminhamentos e resultados com acesso restrito.",
                     media:
                       "Avisos, vídeos e galerias publicados com segurança.",
+                    platform:
+                      "Contratos, uso e receita da operação comercial.",
                   }[page]
                 }
               </p>
@@ -629,5 +631,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
     </div>
   );
 }
+
+
 
 
