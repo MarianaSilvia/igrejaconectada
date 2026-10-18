@@ -38,9 +38,17 @@ try {
       [network.id, config.region],
     );
     const [church] = await q(
-      "INSERT INTO churches(network_id,region_id,name) VALUES($1,$2,$3) RETURNING id",
+      "INSERT INTO churches(network_id,region_id,name,unit_type) VALUES($1,$2,$3,'sede') RETURNING id",
       [network.id, region.id, config.church],
     );
+    const [billing] = await q(
+      "INSERT INTO billing_accounts(name,owner_church_id) VALUES($1,$2) RETURNING id",
+      [config.church, church.id],
+    );
+    await q("UPDATE churches SET billing_account_id=$2 WHERE id=$1", [
+      church.id,
+      billing.id,
+    ]);
     const [user] = await q(
       "INSERT INTO users(name,email,password_hash,totp_secret) VALUES($1,$2,$3,$4) RETURNING id",
       [
