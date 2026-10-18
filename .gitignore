@@ -5,3 +5,13 @@ backup-*.json
 backups/
 reports/
 pedidos-chatbot.csv
+
+# Runtime data (never publish operational records)
+data/conversations.json
+data/events.json
+data/handoffs.json
+data/orders.json
+data/outbox.json
+data/processed-webhooks.json
+data/rate-limits.json
+data/sessions.json
