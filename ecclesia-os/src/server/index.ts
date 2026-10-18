@@ -121,6 +121,7 @@ if (mode === "homologation" && communicationTransport === "webhook") {
   if (webhookUrls.some((url) => !url || !url.startsWith("https://")))
     throw new Error("Homologação exige webhooks HTTPS para e-mail e SMS.");
 }
+const host = process.env.HOST ?? (process.env.RENDER ? "0.0.0.0" : "127.0.0.1");
 const server = tlsReady
   ? https.createServer(
       {
@@ -132,11 +133,26 @@ const server = tlsReady
       },
       app,
     )
-  : app.listen(port, "127.0.0.1", () =>
-      console.log(`EcclesiaOS · ${mode} · ${origin}`),
+  : app.listen(port, host, () =>
+      console.log(`EcclesiaOS · ${mode} · ${origin} · ${host}:${port}`),
     );
 if (tlsReady)
-  server.listen(port, () => console.log(`EcclesiaOS · ${mode} · ${origin}`));
+  server.listen(port, host, () =>
+    console.log(`EcclesiaOS · ${mode} · ${origin} · ${host}:${port}`),
+  );
+app.get("/health", async (_req, res) => {
+  try {
+    await db.transaction((q) => q("SELECT 1"));
+    res.json({ ok: true, mode: mode });
+  } catch {
+    res.status(503).json({ ok: false });
+  }
+});
+app.get("/ready", async (_req, res) => {
+  const ready = Boolean(process.env.DATABASE_URL || mode === "demo") &&
+    key.length === 32 && origin.startsWith("http");
+  res.status(ready ? 200 : 503).json({ ok: ready, mode: mode });
+});
 let stopping = false;
 const stopWorker =
   process.env.RUN_INTEGRATION_WORKER === "false"
