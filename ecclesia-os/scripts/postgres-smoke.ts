@@ -13,6 +13,28 @@ if ((process.env.APP_MODE ?? "demo") !== "homologation") {
   process.exit();
 }
 
+const poolerHost = process.env.SUPABASE_POOLER_HOST;
+if (poolerHost) {
+  if (!/^[a-z0-9.-]+\.pooler\.supabase\.com$/i.test(poolerHost))
+    throw new Error("SUPABASE_POOLER_HOST deve ser o hostname oficial *.pooler.supabase.com copiado do painel.");
+  const poolerPort = process.env.SUPABASE_POOLER_PORT ?? "5432";
+  if (!/^(5432|6543)$/.test(poolerPort))
+    throw new Error("SUPABASE_POOLER_PORT deve ser 5432 (session) ou 6543 (transaction).");
+  const projectRef = process.env.SUPABASE_PROJECT_REF;
+  if (!projectRef || !/^[a-z0-9]{20}$/.test(projectRef))
+    throw new Error("SUPABASE_PROJECT_REF deve ser o ref do projeto Supabase.");
+  for (const name of ["DATABASE_URL", "SERVICE_DATABASE_URL", "MIGRATION_DATABASE_URL"]) {
+    const configured = process.env[name];
+    if (!configured) continue;
+    const url = new URL(configured);
+    const role = decodeURIComponent(url.username);
+    url.hostname = poolerHost;
+    url.port = poolerPort;
+    url.username = role + "." + projectRef;
+    url.searchParams.set("sslmode", "require");
+    process.env[name] = url.toString();
+  }
+}
 const requiredUrls = [
   "DATABASE_URL",
   "SERVICE_DATABASE_URL",
