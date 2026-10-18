@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx src/server/index.ts",
     "build": "tsc --noEmit && vite build",
+    "build:deploy": "vite build",
     "start": "tsx src/server/index.ts",
     "worker": "tsx scripts/integration-worker.ts",
     "test": "tsx --test --test-concurrency=1 tests/*.test.ts",
@@ -41,8 +42,6 @@
     "@types/node": "^24.9.1",
     "@types/pg": "^8.15.5",
     "@types/qrcode": "^1.5.5",
-    "@types/react": "^19.2.2",
-    "@types/react-dom": "^19.2.2",
     "prettier": "^3.9.10",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
