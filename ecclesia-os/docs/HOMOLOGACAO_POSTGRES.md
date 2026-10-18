@@ -19,7 +19,7 @@ O login da aplicação não deve ser proprietário da tabela, superusuário, `BY
 
 Depois de configurar os segredos:
 
-1. Execute `npm run db:migrate` usando `MIGRATION_DATABASE_URL`.
+1. Confirme que `MIGRATION_DATABASE_URL` usa um papel com `CREATE` e ownership controlado; no projeto Supabase atual, o papel `ecclesia_migration` ainda não atende essa condição, então aplique DDL pelo canal administrativo até a criação desse papel.
 2. Inicie o web com `RUN_INTEGRATION_WORKER=false`.
 3. Inicie o worker em processo separado com `SERVICE_DATABASE_URL`.
 4. Execute `npm run pilot:verify:postgres`.
@@ -33,3 +33,8 @@ O smoke test também exige `APP_MODE=homologation` para não testar acidentalmen
 O endpoint `/api/health/ready` informa apenas estados booleanos e inclui `serviceDatabase`, `migrationDatabase`, `efiTls` e `communication`; ele não devolve URLs, tokens, certificados ou chaves.
 
 Nunca comite esse arquivo preenchido nem coloque senhas reais no repositório. Chaves de dados e MFA devem ser distintas e guardadas em um gerenciador de segredos.
+
+
+## Formato mínimo do Efí
+
+Em homologação, `EFI_CONFIG_PATH` aponta para um JSON privado com uma lista de contas. Cada item precisa conter `churchId`, `accountId`, `clientId`, `clientSecret`, `pixKey` e `certificatePath`. O certificado deve existir no caminho local do ambiente e nunca deve ser incluído no Git. O preflight valida apenas a presença desses campos e do arquivo; a chamada real ao provedor ainda exige credenciais e certificado válidos.
