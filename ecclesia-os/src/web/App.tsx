@@ -375,6 +375,8 @@ export default function App() {
                       "Catálogo, empréstimos e devoluções vinculados às pessoas.",
                     assistance:
                       "Pedidos protegidos, encaminhamentos e resultados com acesso restrito.",
+                    platform:
+                      "Contratos, uso e receita agregada da operação comercial.",
                     media:
                       "Avisos, vídeos e galerias publicados com segurança.",
                   }[page]
