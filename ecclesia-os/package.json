@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx src/server/index.ts",
     "build": "tsc --noEmit && vite build",
-    "build:deploy": "vite build",
+    "build:deploy": "npm run build",
     "start": "tsx src/server/index.ts",
     "worker": "tsx scripts/integration-worker.ts",
     "test": "tsx --test --test-concurrency=1 tests/*.test.ts",
