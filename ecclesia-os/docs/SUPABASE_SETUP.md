@@ -60,3 +60,5 @@ Para o pooler IPv4 compartilhado, a documentação atual do Supabase exige copia
 A revisão de performance identificou FKs sem índice. As migrações `082_foreign_key_indexes` e `083_foreign_key_index_collision_fix` foram aplicadas; a consulta catalogal agora retorna `0` chaves estrangeiras públicas sem índice de cobertura. O advisor ainda pode listar políticas permissivas sobrepostas como informação de manutenção; elas não substituem a verificação de segurança, que permanece sem alertas.
 
 A análise das políticas RLS sobrepostas não encontrou grupos de políticas duplicadas com a mesma tabela, papel, operação e expressão (`0` grupos). Os avisos do advisor de performance refletem políticas complementares por escopo/compatibilidade, não cópias idênticas; qualquer consolidação deverá ser feita somente após testes específicos de autorização.
+
+Após a correção, o advisor de performance não lista mais índices duplicados. Restam avisos informativos de índices ainda não utilizados porque o banco de homologação está vazio, além de políticas permissivas complementares que não são duplicadas.
