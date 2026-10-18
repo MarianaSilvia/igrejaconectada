@@ -9,7 +9,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
 try {
-  await page.goto(process.env.TEST_ORIGIN ?? "http://localhost:3100");
+  await page.goto((process.env.TEST_ORIGIN ?? "http://localhost:3100") + "/app");
   await page
     .getByRole("button", { name: "Administração local admin@esperanca.demo" })
     .click();
@@ -24,18 +24,18 @@ try {
     path: ".local/qa/dashboard-dark.png",
     fullPage: true,
   });
-  for (const name of [
-    "Pessoas e famílias",
-    "Células e cuidado",
-    "Tesouraria e Pix",
-    "Governança",
-    "Portal do membro",
+  for (const [navigationLabel, heading] of [
+    ["Secretaria", "Secretaria"],
+    ["Grupos e cuidado", "Grupos e cuidado"],
+    ["Tesouraria", "Tesouraria"],
+    ["Governança", "Governança"],
+    ["Portal do membro", "Portal do membro"],
   ]) {
     await page
       .getByRole("navigation")
-      .getByRole("button", { name, exact: true })
+      .getByRole("button", { name: navigationLabel, exact: true })
       .click();
-    await page.getByRole("heading", { name, exact: true, level: 1 }).waitFor();
+    await page.getByRole("heading", { name: heading, exact: true, level: 1 }).waitFor();
     await page.waitForTimeout(300);
   }
   await page
