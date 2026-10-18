@@ -25,6 +25,7 @@ Atualizado em 18/10/2026. Projeto Supabase: `vsqumzgcbkeiiokpwdzm`.
 ## Pendências externas
 
 - [ ] Copiar o host real do Session pooler em **Supabase → Connect** para testar IPv4.
+- [ ] Revisar as políticas permissivas sobrepostas apontadas pelo advisor de performance; não há duplicatas idênticas, mas a consolidação deve ser validada por testes de autorização antes da produção.
 - [ ] Definir domínio HTTPS de homologação.
 - [ ] Configurar `DATA_KEY_HEX` e `MFA_KEY_HEX` no ambiente de execução (as chaves locais já existem no `.env`, sem versionamento).
 - [ ] Fornecer credenciais, certificado e CA do Efí para homologação.
