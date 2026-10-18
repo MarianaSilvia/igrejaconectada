@@ -135,11 +135,12 @@ export function Badge({
 }) {
   return <span className={`badge ${tone}`}>{children}</span>;
 }
-export function Empty({ children }: { children: ReactNode }) {
+export function Empty({ children, title, text }: { children?: ReactNode; title?: string; text?: string }) {
   return (
     <div className="empty">
       <Icon name="shield" size={32} />
-      <p>{children}</p>
+      {title && <strong>{title}</strong>}
+      {text ? <p>{text}</p> : children ? <p>{children}</p> : null}
     </div>
   );
 }
