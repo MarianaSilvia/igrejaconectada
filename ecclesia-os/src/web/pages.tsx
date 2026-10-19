@@ -2415,6 +2415,24 @@ export function Finance(props: PageProps & { mode: string }) {
     </>
   );
 }
+function StaticPixModal({ charge, onClose }: { charge: RecordData; onClose: () => void }) {
+  return (
+    <Modal title="Pix estático" onClose={onClose}>
+      <div className="credential">
+        {charge.qrDataUrl && (
+          <img width="280" height="280" src={charge.qrDataUrl} alt="QR Code Pix estático" />
+        )}
+        <p className="muted">Escaneie o QR Code ou copie a chave Pix abaixo. A confirmação deve ser feita manualmente pela tesouraria.</p>
+        <div className="toolbar">
+          <code style={{ overflowWrap: "anywhere" }}>{charge.pixKey}</code>
+          <button className="button secondary" onClick={() => navigator.clipboard?.writeText(charge.pixKey)}>
+            Copiar chave
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 function ChargeModal({
   charge,
   mode,
