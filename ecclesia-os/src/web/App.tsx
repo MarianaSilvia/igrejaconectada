@@ -89,6 +89,13 @@ const legacyPaths: Record<string, Page> = {
   "/app/comunicacao": "communication", "/app/governanca": "governance",
 };
 const initialPage = legacyPaths[window.location.pathname];
+const legacyRedirects: Record<string, string> = {
+  "/cells": "/app/grupos",
+  "/finance": "/app/tesouraria",
+  "/treasury": "/app/tesouraria",
+  "/operations": "/app/secretaria",
+  "/media": "/app/comunicacao",
+};
 export default function App() {
   const [context, setContext] = useState<RecordData | null>(null),
     [checking, setChecking] = useState(true),
@@ -128,6 +135,10 @@ export default function App() {
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    const canonical = legacyRedirects[window.location.pathname];
+    if (canonical) window.history.replaceState({}, "", canonical);
+  }, []);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.senior = String(senior);
