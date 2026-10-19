@@ -1,12 +1,23 @@
 -- Pilot access hardening: temporary passwords, MFA enrollment and network roles.
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS password_must_change boolean NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS password_changed_at timestamptz;
+  ADD COLUMN IF NOT EXISTS password_changed_at timestamptz,
+  ADD COLUMN IF NOT EXISTS mfa_enrollment_required boolean NOT NULL DEFAULT false;
 
 ALTER TABLE public.network_members
   ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'network_admin',
   ADD COLUMN IF NOT EXISTS granted_at timestamptz NOT NULL DEFAULT now(),
   ADD COLUMN IF NOT EXISTS revoked_at timestamptz;
+
+CREATE TABLE IF NOT EXISTS public.mfa_enrollment_challenges (
+  token_hash text PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  encrypted_secret text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  attempts integer NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS mfa_enrollment_challenges_user_idx
+  ON public.mfa_enrollment_challenges(user_id, expires_at);
 
 CREATE TABLE IF NOT EXISTS public.mfa_recovery_codes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
