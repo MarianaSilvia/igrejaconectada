@@ -2,6 +2,20 @@ import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { api, selectChurch, money, shortDate, type RecordData } from "./api";
 import { Icon, Badge, Empty, Field, Modal, Submit, formValues } from "./ui";
 import {
+  loginWithEmail,
+  registerWithEmail,
+  loginWithGoogle,
+  resetPassword,
+  getUserProfile,
+  translateFirebaseAuthError,
+  logoutFirebase,
+  syncFirstAdminProfile,
+  syncSaaSToFirestore,
+  auth,
+  onAuthStateChanged,
+  type User,
+} from "./firebase";
+import {
   Dashboard,
   People,
   Cells,
@@ -24,6 +38,8 @@ import AssetsPage from "./AssetsPage";
 import LibraryPage from "./LibraryPage";
 import AssistancePage from "./AssistancePage";
 import MediaPage from "./MediaPage";
+import FirebaseActivityLogs from "./FirebaseActivityLogs";
+import { logFirebaseActivity } from "./activityLogs";
 type Page =
   | "dashboard"
   | "network"
@@ -46,6 +62,7 @@ type Page =
   | "assistance"
   | "media"
   | "portal"
+  | "firebase-logs";
 type Area =
   | "dashboard" | "secretariat" | "groups" | "treasury" | "operations"
   | "participation" | "communication" | "governance" | "portal";
@@ -59,9 +76,13 @@ const areaTabs: Record<Area, AreaTab[]> = {
   participation: [{ page: "participation", label: "Eventos e processos" }, { page: "education", label: "Ensino e formação" }, { page: "kids", label: "Kids e check-in" }],
   communication: [{ page: "communication", label: "Comunicação" }, { page: "media", label: "Mural e mídia" }],
   governance: [
-    { page: "governance", label: "Rede e permissões" }, { page: "network", label: "Minha rede" },
-    { page: "institutional", label: "Institucional" }, { page: "assemblies", label: "Assembleias" },
-    { page: "assets", label: "Patrimônio" }, { page: "library", label: "Biblioteca" },
+    { page: "governance", label: "Rede e permissões" },
+    { page: "firebase-logs", label: "Logs Firebase & Segurança" },
+    { page: "network", label: "Minha rede" },
+    { page: "institutional", label: "Institucional" },
+    { page: "assemblies", label: "Assembleias" },
+    { page: "assets", label: "Patrimônio" },
+    { page: "library", label: "Biblioteca" },
     { page: "assistance", label: "Assistência social" },
   ],
   portal: [{ page: "portal", label: "Portal do membro" }],
@@ -94,6 +115,49 @@ const legacyRedirects: Record<string, string> = {
   "/operations": "/app/secretaria",
   "/media": "/app/comunicacao",
 };
+export interface ProtectedRouteProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  onLogin?: () => Promise<void>;
+}
+
+/**
+ * Componente wrapper de Rota Protegida que verifica o estado de autenticação
+ * do Firebase. Se o usuário não estiver autenticado, redireciona-o automaticamente
+ * para a tela de login.
+ */
+export function ProtectedRoute({
+  children,
+  fallback,
+  onLogin,
+}: ProtectedRouteProps) {
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(() => auth.currentUser);
+  const [authChecking, setAuthChecking] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+      setAuthChecking(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (authChecking) {
+    return (
+      <div className="loading-screen" role="status">
+        <Icon name="shield" size={40} />
+        <p>Verificando credenciais e acessos do Firebase…</p>
+      </div>
+    );
+  }
+
+  if (!firebaseUser) {
+    return fallback ? <>{fallback}</> : <Login onLogin={onLogin || (async () => {})} />;
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
   const [context, setContext] = useState<RecordData | null>(null),
     [checking, setChecking] = useState(true),
@@ -110,8 +174,24 @@ export default function App() {
     [search, setSearch] = useState("");
   const load = useCallback(async () => {
     try {
-      const c = await api("/context");
+      let c;
+      try {
+        c = await api("/context");
+      } catch (err) {
+        if (auth.currentUser) {
+          await api("/auth/firebase-sync", "POST", {
+            uid: auth.currentUser.uid,
+            email: auth.currentUser.email || "",
+            name: auth.currentUser.displayName || undefined,
+            role: "member",
+          });
+          c = await api("/context");
+        } else {
+          throw err;
+        }
+      }
       setContext(c);
+      void syncSaaSToFirestore(c);
       if (c.churches.length) {
         setChurch((old) => old || c.churches[0].id);
         selectChurch(c.churches[0].id);
@@ -129,10 +209,18 @@ export default function App() {
     } finally {
       setChecking(false);
     }
-  }, []);
+  }, [initialPage]);
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        setContext(null);
+      }
+    });
+    return () => unsub();
+  }, []);
   useEffect(() => {
     const canonical = legacyRedirects[window.location.pathname];
     if (canonical) window.history.replaceState({}, "", canonical);
@@ -166,17 +254,18 @@ export default function App() {
       theme === "light" ? color : (palette[color] ?? "#b7a8ff"),
     );
   }, [current?.primary_color, theme]);
-  if (checking)
-    return (
-      <div className="loading-screen">
-        <Icon name="home" size={40} />
-        <p>Preparando sua comunidade…</p>
-      </div>
-    );
-  if (!context) return <Login onLogin={load} />;
   const props = { church, revision, notify, refresh, pastoralRead: Boolean(current?.permissions?.pastoralRead) };
   return (
-    <div className="app-shell">
+    <ProtectedRoute onLogin={load} fallback={<Login onLogin={load} />}>
+      {checking ? (
+        <div className="loading-screen">
+          <Icon name="home" size={40} />
+          <p>Preparando sua comunidade…</p>
+        </div>
+      ) : !context ? (
+        <Login onLogin={load} />
+      ) : (
+        <div className="app-shell">
       <a href="#content" className="skip-link">
         Pular para o conteúdo
       </a>
@@ -234,6 +323,18 @@ export default function App() {
           <button
             className="account"
             onClick={async () => {
+              void logFirebaseActivity({
+                category: "auth",
+                action: "auth.logout",
+                severity: "info",
+                actorEmail: context?.user?.email,
+                actorUid: context?.user?.id,
+                status: "success",
+                summary: `Usuário ${context?.user?.email || "sessão"} desconectado do sistema.`,
+              });
+              try {
+                await logoutFirebase();
+              } catch {}
               await api("/auth/logout", "POST");
               setChurch("");
               selectChurch("");
@@ -324,9 +425,7 @@ export default function App() {
         <main id="content" tabIndex={-1}>
           <div className="environment">
             <span className="status-dot" />
-            {context.mode === "demo"
-              ? "DEMONSTRAÇÃO · DADOS FICTÍCIOS"
-              : "HOMOLOGAÇÃO · SEM PAGAMENTOS DE PRODUÇÃO"}
+            FIREBASE FIRESTORE ATIVO · DADOS EM NUVEM
             <span className="environment-date">
               {new Date().toLocaleDateString("pt-BR", {
                 day: "numeric",
@@ -386,6 +485,8 @@ export default function App() {
                       "Pedidos protegidos, encaminhamentos e resultados com acesso restrito.",
                     media:
                       "Avisos, vídeos e galerias publicados com segurança.",
+                    "firebase-logs":
+                      "Auditoria e monitoramento de autenticação Firebase, sincronização com Firestore e integridade de segurança.",
                   }[page]
                 }
               </p>
@@ -442,11 +543,15 @@ export default function App() {
             <Governance
               {...props}
               current={current}
+              context={context}
               reloadContext={async () => {
                 const c = await api("/context");
                 setContext(c);
               }}
             />
+          )}
+          {page === "firebase-logs" && (
+            <FirebaseActivityLogs key={church} {...props} context={context} />
           )}
           {page === "portal" && (
             <Portal key={church} {...props} mode={context.mode} />
@@ -475,66 +580,240 @@ export default function App() {
         </div>
       )}
     </div>
+      )}
+    </ProtectedRoute>
   );
 }
 function Login({ onLogin }: { onLogin: () => Promise<void> }) {
-  const [demo, setDemo] = useState<RecordData | null>(null),
+  const [mode, setMode] = useState<"login" | "register" | "recovery">("login"),
+    [name, setName] = useState(""),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
-    [newPassword, setNewPassword] = useState(""),
-    [code, setCode] = useState(""),
-    [challenge, setChallenge] = useState(""),
-    [enrollmentSecret, setEnrollmentSecret] = useState(""),
-    [passwordChange, setPasswordChange] = useState(false),
+    [showPassword, setShowPassword] = useState(false),
+    [role, setRole] = useState<"admin" | "member">("member"),
     [error, setError] = useState(""),
+    [successNotice, setSuccessNotice] = useState(""),
     [busy, setBusy] = useState(false);
-  useEffect(() => {
-    api("/demo-info").then(setDemo).catch(() => {});
-  }, []);
-  const finish = async (result: RecordData) => {
-    if (result.passwordChangeRequired) setPasswordChange(true);
-    else await onLogin();
+
+  const passwordRequirements = [
+    {
+      id: "len",
+      label:
+        password.length >= 14
+          ? "Mínimo de 14 caracteres (atingido)"
+          : `Mínimo de 14 caracteres (${password.length}/14)`,
+      met: password.length >= 14,
+    },
+    {
+      id: "upper",
+      label: "Pelo menos uma letra maiúscula (A-Z)",
+      met: /[A-Z]/.test(password),
+    },
+    {
+      id: "lower",
+      label: "Pelo menos uma letra minúscula (a-z)",
+      met: /[a-z]/.test(password),
+    },
+    {
+      id: "num",
+      label: "Pelo menos um número (0-9)",
+      met: /[0-9]/.test(password),
+    },
+  ];
+
+  const metCount = passwordRequirements.filter((r) => r.met).length;
+  const isStrongPassword = metCount === passwordRequirements.length;
+
+  let strengthLabel = "Digite sua senha";
+  let strengthColor = "var(--muted)";
+  let meterClass = "";
+  if (password.length > 0) {
+    if (metCount <= 1) {
+      strengthLabel = "Muito fraca";
+      strengthColor = "#e57373";
+      meterClass = "active-weak";
+    } else if (metCount === 2 || metCount === 3) {
+      strengthLabel = metCount === 2 ? "Razoável" : "Quase lá (boa)";
+      strengthColor = "#f5a623";
+      meterClass = "active-medium";
+    } else {
+      strengthLabel = "Senha forte e segura";
+      strengthColor = "#48bb78";
+      meterClass = "active-strong";
+    }
+  }
+
+  const handleFirebaseSync = async (
+    uid: string,
+    userEmail: string,
+    userName?: string,
+    userRole: "admin" | "member" | "leader" | "pastor" = "member",
+  ) => {
+    try {
+      await api("/auth/firebase-sync", "POST", {
+        uid,
+        email: userEmail,
+        name: userName || userEmail.split("@")[0],
+        role: userRole,
+      });
+      void logFirebaseActivity({
+        category: "sync",
+        action: "auth.sync_session_success",
+        severity: "success",
+        actorEmail: userEmail,
+        actorUid: uid,
+        actorRole: userRole,
+        target: "/api/auth/firebase-sync",
+        status: "success",
+        summary: `Sessão Firebase sincronizada no banco de dados para ${userEmail}.`,
+      });
+      await onLogin();
+    } catch (err: any) {
+      console.error("Firebase sync error:", err);
+      void logFirebaseActivity({
+        category: "sync",
+        action: "auth.sync_session_failure",
+        severity: "error",
+        actorEmail: userEmail,
+        actorUid: uid,
+        target: "/api/auth/firebase-sync",
+        status: "failure",
+        summary: `Falha na sincronização Firebase com o backend: ${err?.message || err}`,
+        details: { error: String(err) },
+      });
+      await onLogin();
+    }
   };
-  const login = async (e: FormEvent) => {
-    e.preventDefault();
+
+  const handleGoogleLogin = async () => {
     setBusy(true);
     setError("");
+    setSuccessNotice("");
     try {
-      if (passwordChange) {
-        await api("/auth/change-password", "POST", {
-          currentPassword: password,
-          newPassword,
-        });
-        await onLogin();
-      } else if (challenge) {
-        const result = await api(
-          enrollmentSecret ? "/auth/mfa/enroll" : "/auth/mfa",
-          "POST",
-          { challenge, code },
-        );
-        await finish(result);
-      } else {
-        const result = await api("/auth/login", "POST", { email, password });
-        if (result.mfaEnrollmentRequired) {
-          setChallenge(result.challenge);
-          setEnrollmentSecret(result.setupSecret);
-        } else if (result.mfaRequired) {
-          setChallenge(result.challenge);
-          if (demo) {
-            const d = await api("/demo-info");
-            setCode(d.code);
-          }
-        } else await finish(result);
+      const user = await loginWithGoogle();
+      let profile = await getUserProfile(user.uid);
+      if (!profile) {
+        profile = await syncFirstAdminProfile(user);
       }
-    } catch (e) {
-      setError((e as Error).message);
+      void logFirebaseActivity({
+        category: "auth",
+        action: "auth.google_login_success",
+        severity: "success",
+        actorEmail: user.email || "",
+        actorUid: user.uid,
+        actorRole: profile?.role || "admin",
+        status: "success",
+        summary: `Login com Google OAuth realizado com sucesso para ${user.email}.`,
+      });
+      await handleFirebaseSync(
+        user.uid,
+        user.email || "",
+        profile?.name || user.displayName || undefined,
+        profile?.role || "admin",
+      );
+    } catch (err: any) {
+      const msg = translateFirebaseAuthError(err);
+      setError(msg);
+      void logFirebaseActivity({
+        category: "security",
+        action: "auth.google_login_failed",
+        severity: "warning",
+        status: "failure",
+        summary: `Tentativa de login via Google cancelada ou com erro: ${msg}`,
+        details: { error: err?.message, code: err?.code },
+      });
     } finally {
       setBusy(false);
     }
   };
-  const challengeTitle = enrollmentSecret
-    ? "Configure seu autenticador"
-    : "Confirme sua identidade";
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setSuccessNotice("");
+
+    try {
+      if (mode === "recovery") {
+        if (!email.trim()) throw new Error("Por favor, informe seu e-mail.");
+        await resetPassword(email);
+        void logFirebaseActivity({
+          category: "auth",
+          action: "auth.password_reset_sent",
+          severity: "info",
+          actorEmail: email,
+          status: "success",
+          summary: `Instruções de redefinição de senha enviadas via Firebase Auth para ${email}.`,
+        });
+        setSuccessNotice(
+          "Enviamos as instruções para redefinição de senha para o seu e-mail pelo Firebase Authentication. Verifique sua caixa de entrada e spam.",
+        );
+        return;
+      }
+
+      if (mode === "register") {
+        if (!name.trim()) throw new Error("Por favor, informe seu nome completo.");
+        if (!isStrongPassword) {
+          throw new Error(
+            "A senha deve cumprir todos os requisitos de segurança forte: no mínimo 14 caracteres, letras maiúsculas, minúsculas e números.",
+          );
+        }
+
+        const user = await registerWithEmail(email, password, name, role);
+        void logFirebaseActivity({
+          category: "auth",
+          action: "auth.register_success",
+          severity: "success",
+          actorEmail: email,
+          actorUid: user.uid,
+          actorRole: role,
+          status: "success",
+          summary: `Novo usuário criado no Firebase Auth e salvo no Firestore: ${email} (${role}).`,
+        });
+        await handleFirebaseSync(user.uid, email, name, role);
+        return;
+      }
+
+      // mode === "login"
+      if (!email.trim() || !password) throw new Error("Informe e-mail e senha.");
+      const user = await loginWithEmail(email, password);
+      let profile = await getUserProfile(user.uid);
+      if (!profile) {
+        profile = await syncFirstAdminProfile(user);
+      }
+      void logFirebaseActivity({
+        category: "auth",
+        action: "auth.login_success",
+        severity: "success",
+        actorEmail: email,
+        actorUid: user.uid,
+        actorRole: profile?.role || "admin",
+        status: "success",
+        summary: `Autenticação por e-mail e senha efetuada com sucesso: ${email}.`,
+      });
+      await handleFirebaseSync(
+        user.uid,
+        user.email || email,
+        profile?.name || user.displayName || undefined,
+        profile?.role || "admin",
+      );
+    } catch (err: any) {
+      const msg = translateFirebaseAuthError(err);
+      setError(msg);
+      void logFirebaseActivity({
+        category: "security",
+        action: "auth.login_failed",
+        severity: "warning",
+        actorEmail: email,
+        status: "failure",
+        summary: `Falha de autenticação do usuário (${email || "não informado"}): ${msg}`,
+        details: { error: err?.message, code: err?.code },
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="login-layout">
       <section className="login-story">
@@ -542,74 +821,246 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
           <span className="brand-mark"><Icon name="home" size={30} /></span>
           ecclesiaOS
         </div>
-        <Badge tone="purple">UMA REDE. MUITAS COMUNIDADES.</Badge>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px" }}>
+          <Badge tone="purple">UMA REDE. MUITAS COMUNIDADES.</Badge>
+          <Badge tone="green">Firebase Auth Ativo</Badge>
+        </div>
         <h1>Gestão que organiza.<br /><span>Cuidado que aproxima.</span></h1>
-        <p>Conecte igrejas, fortaleça vínculos e acompanhe sua rede com clareza, respeito e propósito.</p>
+        <p>Autenticação segura via Firebase Authentication com perfis para membros e administradores salvos no banco de dados.</p>
         <div className="login-orbit">
           <span><Icon name="people" size={32} /></span>
           <span><Icon name="home" size={48} /></span>
           <span><Icon name="heart" size={32} /></span>
         </div>
-        <small>Autonomia local · Supervisão responsável · Privacidade pastoral</small>
+        <small>Segurança Firebase · Perfis de Administrador e Membro · Recuperação por E-mail</small>
       </section>
+
       <section className="login-card">
-        <div className="eyebrow">BEM-VINDO À SUA COMUNIDADE</div>
-        <h2>{passwordChange ? "Crie sua nova senha" : challenge ? challengeTitle : "Entre no EcclesiaOS"}</h2>
+        <div className="eyebrow">ACESSO SEGURO VIA FIREBASE</div>
+        <h2>
+          {mode === "register"
+            ? "Criar conta no EcclesiaOS"
+            : mode === "recovery"
+              ? "Recuperar senha"
+              : "Entre no EcclesiaOS"}
+        </h2>
         <p>
-          {passwordChange
-            ? "A senha provisória deve ser substituída antes de continuar."
-            : enrollmentSecret
-              ? "Adicione esta chave ao seu autenticador e confirme o código gerado."
-              : challenge
-                ? "Informe o código de seis dígitos do autenticador."
-                : "Um espaço seguro para servir melhor."}
+          {mode === "register"
+            ? "Preencha seus dados para criar sua conta no Firebase e definir sua função."
+            : mode === "recovery"
+              ? "Digite seu e-mail cadastrado para receber um link de redefinição pelo Firebase."
+              : "Acesse sua conta com seu e-mail e senha registrados no Firebase."}
         </p>
-        {enrollmentSecret && (
-          <p className="notice" role="status"><strong>Chave de configuração:</strong> {enrollmentSecret}</p>
+
+        <div style={{ display: "flex", gap: "8px", margin: "16px 0" }}>
+          <button
+            type="button"
+            className={mode === "login" ? "" : "secondary"}
+            style={{ flex: 1, height: "38px" }}
+            onClick={() => { setMode("login"); setError(""); setSuccessNotice(""); }}
+          >
+            Entrar
+          </button>
+          <button
+            type="button"
+            className={mode === "register" ? "" : "secondary"}
+            style={{ flex: 1, height: "38px" }}
+            onClick={() => { setMode("register"); setError(""); setSuccessNotice(""); }}
+          >
+            Criar conta
+          </button>
+          <button
+            type="button"
+            className={mode === "recovery" ? "" : "secondary"}
+            style={{ flex: 1, height: "38px" }}
+            onClick={() => { setMode("recovery"); setError(""); setSuccessNotice(""); }}
+          >
+            Recuperar senha
+          </button>
+        </div>
+
+        {successNotice && (
+          <p className="notice" role="status" style={{ background: "rgba(131, 214, 181, 0.15)", border: "1px solid var(--green)", color: "var(--green)", padding: "12px", borderRadius: "8px", marginBottom: "16px" }}>
+            {successNotice}
+          </p>
         )}
-        <form onSubmit={login}>
-          {passwordChange ? (
+
+        <form onSubmit={handleSubmit}>
+          {mode === "register" && (
             <>
-              <Field label="Senha provisória">
-                <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Field label="Nome completo">
+                <input
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Seu nome completo"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
               </Field>
-              <Field label="Nova senha">
-                <input type="password" autoComplete="new-password" minLength={14} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
-              </Field>
-            </>
-          ) : challenge ? (
-            <Field label="Código de autenticação">
-              <input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} required pattern="[0-9]{6}" />
-            </Field>
-          ) : (
-            <>
-              <Field label="E-mail">
-                <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </Field>
-              <Field label="Senha">
-                <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Field label="Perfil de acesso">
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as "admin" | "member")}
+                  style={{ width: "100%", padding: "10px", background: "var(--raised)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: "8px" }}
+                >
+                  <option value="member">Membro (Portal do Membro, escalas, contribuições)</option>
+                  <option value="admin">Administrador (Secretaria, grupos e tesouraria)</option>
+                </select>
               </Field>
             </>
           )}
+
+          <Field label="E-mail">
+            <input
+              type="email"
+              autoComplete="username"
+              placeholder="seuemail@exemplo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </Field>
+
+          {mode !== "recovery" && (
+            <Field label="Senha">
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  autoComplete={mode === "register" ? "new-password" : "current-password"}
+                  placeholder={
+                    mode === "register"
+                      ? "Mínimo de 14 caracteres (maiúsculas, minúsculas e números)"
+                      : "Sua senha de acesso"
+                  }
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ paddingRight: "44px" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  title={showPassword ? "Ocultar senha" : "Ver senha"}
+                  aria-label={showPassword ? "Ocultar senha" : "Ver senha"}
+                  style={{
+                    position: "absolute",
+                    right: "8px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--muted)",
+                    padding: "6px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon name={showPassword ? "shield" : "search"} size={16} />
+                </button>
+              </div>
+
+              {mode === "register" && (
+                <div className="password-requirements" aria-live="polite">
+                  <div className="password-strength-label">
+                    <span>Requisitos de senha forte</span>
+                    <span style={{ color: strengthColor, fontWeight: 700 }}>
+                      {strengthLabel}
+                    </span>
+                  </div>
+                  <div
+                    className="password-meter"
+                    role="progressbar"
+                    aria-valuenow={metCount}
+                    aria-valuemin={0}
+                    aria-valuemax={4}
+                    aria-label="Indicador de força da senha"
+                  >
+                    {[0, 1, 2, 3].map((index) => (
+                      <div
+                        key={index}
+                        className={`password-meter-segment ${
+                          index < metCount ? meterClass : ""
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div className="password-rule-list">
+                    {passwordRequirements.map((rule) => (
+                      <div
+                        key={rule.id}
+                        className={`password-rule-item ${rule.met ? "met" : ""}`}
+                      >
+                        <span className="password-rule-icon">
+                          {rule.met ? <Icon name="check" size={11} /> : "•"}
+                        </span>
+                        <span>{rule.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Field>
+          )}
+
           {error && <p className="error" role="alert">{error}</p>}
-          <Submit busy={busy} label={passwordChange ? "Salvar nova senha" : challenge ? "Confirmar e continuar" : "Entrar na comunidade"} />
+
+          <Submit
+            busy={busy}
+            label={
+              mode === "register"
+                ? "Criar conta no Firebase"
+                : mode === "recovery"
+                  ? "Enviar link de recuperação"
+                  : "Entrar com Firebase"
+            }
+          />
         </form>
-        {!passwordChange && !challenge && (
-          <p><a href="/recuperar-autenticador">Recuperar acesso com código de segurança</a></p>
-        )}
-        {demo && !passwordChange && !challenge && (
-          <div className="demo-accounts">
-            <span className="eyebrow">EXPLORE COM DADOS FICTÍCIOS</span>
-            <p>Escolha um perfil. Senha e MFA demonstrativos serão preenchidos.</p>
-            {demo.accounts.map((a: RecordData) => (
-              <button key={a.email} className="demo-account" onClick={() => { setEmail(a.email); setPassword(demo.password); setChallenge(""); }}>
-                <span>{a.label}<small>{a.email}</small></span>
-                <Icon name="arrow" size={17} />
-              </button>
-            ))}
+
+        {mode !== "recovery" && (
+          <div style={{ marginTop: "14px" }}>
+            <button
+              type="button"
+              className="secondary"
+              onClick={handleGoogleLogin}
+              disabled={busy}
+              style={{ width: "100%", height: "42px", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}
+            >
+              <Icon name="shield" size={16} />
+              <span>Entrar com conta Google (Firebase)</span>
+            </button>
           </div>
         )}
-        <small className="login-privacy"><Icon name="shield" size={14} /> Informações protegidas, acessos com responsabilidade.</small>
+
+        {mode === "login" && (
+          <p style={{ marginTop: "14px", textAlign: "center" }}>
+            <button
+              type="button"
+              onClick={() => { setMode("recovery"); setError(""); setSuccessNotice(""); }}
+              style={{ background: "transparent", border: "none", color: "var(--accent)", textDecoration: "underline", padding: 0 }}
+            >
+              Esqueceu sua senha? Clique para recuperar
+            </button>
+          </p>
+        )}
+
+        {mode === "recovery" && (
+          <p style={{ marginTop: "14px", textAlign: "center" }}>
+            <button
+              type="button"
+              onClick={() => { setMode("login"); setError(""); setSuccessNotice(""); }}
+              style={{ background: "transparent", border: "none", color: "var(--accent)", textDecoration: "underline", padding: 0 }}
+            >
+              Lembrou sua senha? Voltar para o login
+            </button>
+          </p>
+        )}
+
+        <small className="login-privacy" style={{ marginTop: "20px" }}>
+          <Icon name="shield" size={14} /> Autenticação oficial Firebase com credenciais em nuvem.
+        </small>
       </section>
     </div>
   );

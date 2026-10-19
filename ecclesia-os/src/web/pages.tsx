@@ -4,6 +4,8 @@ import { api, money, shortDate, downloadReceipt, type RecordData } from "./api";
 import { Icon, Badge, Empty, Field, Modal, Submit, formValues } from "./ui";
 import MemberForm from "./MemberForm";
 import RegistrationManager from "./RegistrationManager";
+import { auth, syncSaaSToFirestore } from "./firebase";
+import { FirebaseActivityLogs } from "./FirebaseActivityLogs";
 import "./registration.css";
 export interface PageProps {
   church: string;
@@ -2521,6 +2523,7 @@ function ChargeModal({
 export function Governance(
   props: PageProps & {
     current: RecordData;
+    context?: RecordData;
     reloadContext: () => Promise<void>;
   },
 ) {
@@ -2535,7 +2538,9 @@ export function Governance(
     );
   const [modal, setModal] = useState<"church" | "regional" | null>(null),
     [busy, setBusy] = useState(false),
-    [tab, setTab] = useState<"permissions" | "brand" | "audit">("permissions");
+    [tab, setTab] = useState<"permissions" | "brand" | "audit" | "firebase" | "firebase_logs">("permissions"),
+    [syncingFirebase, setSyncingFirebase] = useState(false),
+    [syncStats, setSyncStats] = useState<{ churches: number; members: number; at: string } | null>(null);
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     const b = formValues(e);
     setBusy(true);
@@ -2573,6 +2578,8 @@ export function Governance(
           ["permissions", "Concessões de acesso"],
           ["brand", "Identidade e plano"],
           ["audit", "Trilha de auditoria"],
+          ["firebase", "Banco Firebase & Acessos"],
+          ["firebase_logs", "Logs Firebase & Segurança"],
         ].map(([key, label]) => (
           <button
             className={tab === key ? "active" : ""}
@@ -2863,6 +2870,150 @@ export function Governance(
             </div>
           )}
         </section>
+      )}
+      {tab === "firebase" && (
+        <section className="panel" style={{ padding: "24px" }}>
+          <SectionHead
+            title="Banco de Dados Firebase & Autenticação de Usuários"
+            subtitle="Armazenamento no Cloud Firestore com controle de acessos para membros e administradores"
+          >
+            <button
+              className="button primary"
+              disabled={syncingFirebase}
+              onClick={async () => {
+                setSyncingFirebase(true);
+                try {
+                  let peopleList: any[] = [];
+                  try {
+                    peopleList = await api("/people");
+                  } catch {
+                    peopleList = [];
+                  }
+                  const res = await syncSaaSToFirestore(
+                    props.context || { churches: [props.current] },
+                    peopleList,
+                  );
+                  setSyncStats({
+                    churches: res.churchesCount,
+                    members: res.membersCount,
+                    at: new Date().toLocaleTimeString("pt-BR"),
+                  });
+                  props.notify(`SaaS sincronizado: ${res.churchesCount} igreja(s) e ${res.membersCount} membro(s) no Firebase Firestore.`);
+                } catch (err: any) {
+                  props.notify(`Falha ao sincronizar: ${err?.message || err}`);
+                } finally {
+                  setSyncingFirebase(false);
+                }
+              }}
+            >
+              <Icon name="check" size={16} />
+              {syncingFirebase ? "Sincronizando no Firestore…" : "Sincronizar dados no Firebase Firestore"}
+            </button>
+            <button
+              className="button secondary"
+              onClick={() => setTab("firebase_logs")}
+              style={{ marginLeft: "8px" }}
+            >
+              <Icon name="shield" size={16} />
+              Monitor de Logs &amp; Segurança
+            </button>
+          </SectionHead>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px", marginTop: "16px" }}>
+            <div style={{ padding: "16px", borderRadius: "10px", background: "var(--surface)", border: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                <span style={{ fontWeight: 600 }}>Cloud Firestore</span>
+                <Badge tone="green">Ativo e Conectado</Badge>
+              </div>
+              <p className="muted" style={{ fontSize: "13px", marginBottom: "8px" }}>
+                Banco NoSQL para persistência dos dados de igrejas, membros, células e movimentações.
+              </p>
+              <code style={{ fontSize: "11px", color: "var(--accent)" }}>
+                ai-studio-ecclesiaos-11d3b57f-be0f-4081-aa8a-8ed2c222a899
+              </code>
+            </div>
+
+            <div style={{ padding: "16px", borderRadius: "10px", background: "var(--surface)", border: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                <span style={{ fontWeight: 600 }}>Firebase Authentication</span>
+                <Badge tone="green">E-mail / Senha Forte</Badge>
+              </div>
+              <p className="muted" style={{ fontSize: "13px", marginBottom: "8px" }}>
+                Sistema oficial de credenciais, login seguro, auto-cadastro e recuperação de senha.
+              </p>
+              <span style={{ fontSize: "12px", color: "var(--foreground)" }}>
+                Usuário autenticado: <strong>{auth.currentUser?.email || "Sessão ativa"}</strong>
+              </span>
+            </div>
+          </div>
+
+          {syncStats && (
+            <div style={{ marginTop: "16px", padding: "12px 16px", borderRadius: "8px", background: "rgba(72, 187, 120, 0.12)", border: "1px solid #48bb78" }}>
+              <strong style={{ color: "#48bb78" }}>✓ Sincronização concluída às {syncStats.at}</strong>
+              <p style={{ margin: "4px 0 0", fontSize: "13px" }}>
+                {syncStats.churches} congregação(ões) e {syncStats.members} membro(s) salvos no Firebase Firestore com segurança.
+              </p>
+            </div>
+          )}
+
+          <h3 style={{ marginTop: "24px", marginBottom: "12px" }}>Estrutura de Coleções no Banco de Dados</h3>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Coleção / Caminho</th>
+                  <th>Finalidade no SaaS</th>
+                  <th>Controle de Acesso</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>/users/&#123;userId&#125;</code></td>
+                  <td>Perfis de membros e administradores cadastrados com logins e senhas</td>
+                  <td><Badge tone="blue">Membro próprio &amp; Admin</Badge></td>
+                </tr>
+                <tr>
+                  <td><code>/admins/&#123;userId&#125;</code></td>
+                  <td>Registros de administradores com permissões de gestão de rede</td>
+                  <td><Badge tone="purple">Somente Administrador</Badge></td>
+                </tr>
+                <tr>
+                  <td><code>/activity_logs/&#123;logId&#125;</code></td>
+                  <td>Logs de atividade do Firebase Authentication, segurança e sincronização</td>
+                  <td><Badge tone="purple">Somente Administrador</Badge></td>
+                </tr>
+                <tr>
+                  <td><code>/churches/&#123;churchId&#125;</code></td>
+                  <td>Igrejas, congregações, cidades e configurações visuais</td>
+                  <td><Badge tone="green">Membros autenticados</Badge></td>
+                </tr>
+                <tr>
+                  <td><code>/churches/&#123;churchId&#125;/members/&#123;memberId&#125;</code></td>
+                  <td>Cadastro e fichas de membros, contatos e ministérios</td>
+                  <td><Badge tone="green">Membros autenticados</Badge></td>
+                </tr>
+                <tr>
+                  <td><code>/churches/&#123;churchId&#125;/cells/&#123;cellId&#125;</code></td>
+                  <td>Células, grupos de crescimento, liderança e locais de reunião</td>
+                  <td><Badge tone="green">Membros autenticados</Badge></td>
+                </tr>
+                <tr>
+                  <td><code>/churches/&#123;churchId&#125;/transactions/&#123;id&#125;</code></td>
+                  <td>Registros financeiros e de prestação de contas da congregação</td>
+                  <td><Badge tone="purple">Administrador da igreja</Badge></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+      {tab === "firebase_logs" && (
+        <FirebaseActivityLogs
+          church={props.church}
+          context={props.context}
+          notify={props.notify}
+          refresh={props.refresh}
+        />
       )}
       {modal && (
         <Modal

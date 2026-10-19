@@ -2157,3 +2157,80 @@ dialog p {
   .module-tabs { padding: 8px 16px 0; }
   .module-tab { padding: 9px 10px; }
 }
+
+.password-requirements {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--raised, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.password-meter {
+  display: flex;
+  gap: 4px;
+  height: 5px;
+  margin: 4px 0 6px;
+}
+.password-meter-segment {
+  flex: 1;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--line, rgba(255, 255, 255, 0.12));
+  transition: background 0.25s ease;
+}
+.password-meter-segment.active-weak {
+  background: #e57373;
+}
+.password-meter-segment.active-medium {
+  background: #f5a623;
+}
+.password-meter-segment.active-strong {
+  background: #48bb78;
+}
+.password-strength-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.password-rule-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+.password-rule-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--muted);
+  transition: color 0.2s ease;
+}
+.password-rule-item.met {
+  color: #38b2ac;
+  font-weight: 500;
+}
+:root[data-theme="dark"] .password-rule-item.met {
+  color: #68d391;
+}
+.password-rule-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 10px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+}
+.password-rule-item.met .password-rule-icon {
+  background: rgba(72, 187, 120, 0.2);
+  color: #48bb78;
+}

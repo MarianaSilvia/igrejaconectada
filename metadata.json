@@ -1,0 +1,7 @@
+{
+  "name": "EcclesiaOS",
+  "description": "Gestão integrada para redes e convenções de igrejas com pessoas, finanças e membros.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

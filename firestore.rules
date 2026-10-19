@@ -1,0 +1,158 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'marianabsilva1987@gmail.com'
+      );
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'role']) &&
+             data.keys().hasOnly(['id', 'uid', 'name', 'email', 'role', 'churchId', 'status', 'createdAt', 'updatedAt']) &&
+             data.uid is string && data.uid.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+             data.email is string && data.email.size() <= 150 &&
+             data.role in ['admin', 'member', 'pastor', 'leader'] &&
+             (!('churchId' in data) || (data.churchId is string && data.churchId.size() <= 128)) &&
+             (!('status' in data) || (data.status in ['active', 'inactive']));
+    }
+
+    function isValidMember(data) {
+      return data.keys().hasAll(['name', 'churchId']) &&
+             data.keys().hasOnly(['id', 'name', 'email', 'phone', 'role', 'churchId', 'status', 'communion', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+             data.churchId is string && data.churchId.size() <= 128 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+             (!('role' in data) || (data.role in ['member', 'leader', 'pastor'])) &&
+             (!('communion' in data) || (data.communion in ['active', 'disciplined', 'not_informed'])) &&
+             (!('status' in data) || (data.status in ['active', 'visitor', 'inactive']));
+    }
+
+    function isValidChurch(data) {
+      return data.keys().hasAll(['name']) &&
+             data.keys().hasOnly(['id', 'name', 'city', 'state', 'primaryColor', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+             (!('city' in data) || (data.city is string && data.city.size() <= 100)) &&
+             (!('state' in data) || (data.state is string && data.state.size() <= 50)) &&
+             (!('primaryColor' in data) || (data.primaryColor is string && data.primaryColor.size() <= 20));
+    }
+
+    function isValidCell(data) {
+      return data.keys().hasAll(['name', 'churchId']) &&
+             data.keys().hasOnly(['id', 'churchId', 'name', 'leader', 'weekday', 'time', 'address', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+             data.churchId is string && data.churchId.size() <= 128 &&
+             (!('leader' in data) || (data.leader is string && data.leader.size() <= 120)) &&
+             (!('weekday' in data) || (data.weekday is string && data.weekday.size() <= 20)) &&
+             (!('time' in data) || (data.time is string && data.time.size() <= 10)) &&
+             (!('address' in data) || (data.address is string && data.address.size() <= 200));
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['description', 'churchId', 'amountCents', 'kind']) &&
+             data.keys().hasOnly(['id', 'churchId', 'description', 'amountCents', 'kind', 'category', 'occurredOn', 'createdAt']) &&
+             data.description is string && data.description.size() > 0 && data.description.size() <= 200 &&
+             data.churchId is string && data.churchId.size() <= 128 &&
+             data.amountCents is int &&
+             data.kind in ['income', 'expense'] &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 50)) &&
+             (!('occurredOn' in data) || (data.occurredOn is string && data.occurredOn.size() <= 30));
+    }
+
+    function isValidActivityLog(data) {
+      return data.keys().hasAll(['timestamp', 'category', 'action', 'severity', 'status', 'summary']) &&
+             data.keys().hasOnly(['id', 'timestamp', 'category', 'action', 'severity', 'actorEmail', 'actorUid', 'actorRole', 'target', 'status', 'summary', 'details']) &&
+             data.timestamp is string &&
+             data.category in ['auth', 'database', 'security', 'sync'] &&
+             data.action is string && data.action.size() <= 80 &&
+             data.severity in ['info', 'success', 'warning', 'error'] &&
+             data.status in ['success', 'failure', 'pending'] &&
+             data.summary is string && data.summary.size() <= 300;
+    }
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Activity Logs collection for security and synchronization monitoring
+    match /activity_logs/{logId} {
+      allow get, list: if isSignedIn() && (isAdmin() || request.auth.token.email == 'marianabsilva1987@gmail.com');
+      allow create: if isSignedIn() && isValidId(logId) && isValidActivityLog(incoming());
+      allow update, delete: if isAdmin() && isValidId(logId);
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && (isAdmin() || resource.data.uid == request.auth.uid);
+      allow create: if isSignedIn() &&
+                    isValidId(userId) &&
+                    request.auth.uid == userId &&
+                    isValidUser(incoming()) &&
+                    (incoming().role == 'member' || isAdmin() || request.auth.token.email == 'marianabsilva1987@gmail.com');
+      allow update: if isSignedIn() &&
+                    isValidId(userId) &&
+                    (request.auth.uid == userId || isAdmin()) &&
+                    isValidUser(incoming()) &&
+                    incoming().uid == existing().uid &&
+                    (isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'updatedAt']));
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // Admins collection
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId && request.auth.token.email == 'marianabsilva1987@gmail.com');
+    }
+
+    // Churches collection
+    match /churches/{churchId} {
+      allow read: if isSignedIn() && isValidId(churchId);
+      allow create, update: if isAdmin() && isValidId(churchId) && isValidChurch(incoming());
+      allow delete: if isAdmin() && isValidId(churchId);
+
+      // Members subcollection
+      match /members/{memberId} {
+        allow read: if isSignedIn() && isValidId(churchId) && isValidId(memberId);
+        allow create, update: if isAdmin() && isValidId(churchId) && isValidId(memberId) && isValidMember(incoming());
+        allow delete: if isAdmin() && isValidId(churchId) && isValidId(memberId);
+      }
+
+      // Cells subcollection
+      match /cells/{cellId} {
+        allow read: if isSignedIn() && isValidId(churchId) && isValidId(cellId);
+        allow create, update: if isAdmin() && isValidId(churchId) && isValidId(cellId) && isValidCell(incoming());
+        allow delete: if isAdmin() && isValidId(churchId) && isValidId(cellId);
+      }
+
+      // Transactions subcollection
+      match /transactions/{transactionId} {
+        allow read: if isSignedIn() && isValidId(churchId) && isValidId(transactionId);
+        allow create, update: if isAdmin() && isValidId(churchId) && isValidId(transactionId) && isValidTransaction(incoming());
+        allow delete: if isAdmin() && isValidId(churchId) && isValidId(transactionId);
+      }
+    }
+  }
+}

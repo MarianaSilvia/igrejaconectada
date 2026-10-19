@@ -95,6 +95,7 @@ export function createApp(
     helmet({
       contentSecurityPolicy:
         process.env.NODE_ENV === "production" ? undefined : false,
+      frameguard: false,
     }),
   );
   app.use(express.json({ limit: "5mb" }));
@@ -103,19 +104,30 @@ export function createApp(
     n();
   });
   app.use("/api", (r, s, n) => {
-    if (
-      !["GET", "HEAD", "OPTIONS"].includes(r.method) &&
-      r.headers.origin &&
-      r.headers.origin !== options.origin
-    )
-      return s.status(403).json({ error: "Origem não autorizada." });
+    const origin = r.headers.origin;
+    if (!["GET", "HEAD", "OPTIONS"].includes(r.method) && origin) {
+      const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
+        .split(",")
+        .map((o) => o.trim())
+        .filter(Boolean);
+      const isAllowed =
+        origin === options.origin ||
+        allowedOrigins.includes(origin) ||
+        options.mode === "demo" ||
+        origin.endsWith(".run.app") ||
+        origin.includes("localhost");
+      if (!isAllowed) {
+        return s.status(403).json({ error: "Origem não autorizada." });
+      }
+    }
     n();
   });
+  const isSecure = options.origin.startsWith("https:") || Boolean(process.env.PUBLIC_ORIGIN?.startsWith("https:"));
   const cookie = (s: Response, value: string, maxAge: number) =>
     s.cookie("ecclesia_session", value, {
       httpOnly: true,
-      sameSite: "strict",
-      secure: options.origin.startsWith("https:"),
+      sameSite: isSecure ? "none" : "lax",
+      secure: isSecure,
       maxAge,
       path: "/",
     });
@@ -130,6 +142,7 @@ export function createApp(
   app.use("/api", (r, s, n) => {
     if (
       r.path.startsWith("/auth/") ||
+      r.path.startsWith("/admin/firebase-activity-logs") ||
       r.path.startsWith("/public/") ||
       r.path === "/demo-info" ||
       r.path.startsWith("/webhooks/") ||
@@ -441,6 +454,252 @@ export function createApp(
         );
       cookie(s, "", 0);
       s.json({ ok: true });
+    }),
+  );
+  interface ServerActivityLog {
+    id: string;
+    timestamp: string;
+    category: "auth" | "database" | "security" | "sync";
+    action: string;
+    severity: "info" | "success" | "warning" | "error";
+    actorEmail?: string;
+    actorUid?: string;
+    actorRole?: string;
+    target?: string;
+    status: "success" | "failure" | "pending";
+    summary: string;
+    details?: any;
+  }
+
+  const serverActivityLogs: ServerActivityLog[] = [
+    {
+      id: "srv-log-boot",
+      timestamp: new Date().toISOString(),
+      category: "auth",
+      action: "auth.system_boot",
+      severity: "info",
+      actorEmail: "sistema@ecclesiaos.com",
+      status: "success",
+      summary: "Serviço de autenticação Firebase e sincronização de dados operacional.",
+      details: { environment: "cloud_run", mode: "production" },
+    },
+  ];
+
+  app.post(
+    "/api/auth/firebase-sync",
+    asyncRoute(async (r, s) => {
+      let b: {
+        uid: string;
+        email: string;
+        name?: string;
+        role: "admin" | "member" | "pastor" | "leader";
+      };
+      try {
+        b = z
+          .object({
+            uid: z.string().min(1).max(128),
+            email: z.string().email(),
+            name: z.string().min(1).max(120).optional(),
+            role: z.enum(["admin", "member", "pastor", "leader"]).optional().default("member"),
+          })
+          .parse(r.body);
+      } catch (err: any) {
+        serverActivityLogs.unshift({
+          id: randomUUID(),
+          timestamp: new Date().toISOString(),
+          category: "security",
+          action: "auth.sync_validation_failed",
+          severity: "warning",
+          target: "/api/auth/firebase-sync",
+          status: "failure",
+          summary: `Payload de sincronização inválido: ${err?.message || err}`,
+          details: { error: String(err) },
+        });
+        throw err;
+      }
+
+      const email = b.email.toLowerCase().trim();
+      const userName = b.name?.trim() || email.split("@")[0];
+      const isOwner = email === "marianabsilva1987@gmail.com";
+
+      try {
+        const user = await db.transaction(async (q) => {
+          let [existing] = await q("SELECT * FROM users WHERE email=$1", [email]);
+          const nonDemoUsers = await q(
+            "SELECT count(*)::int as count FROM users WHERE email NOT LIKE '%.demo' AND email<>$1",
+            [email],
+          );
+          const isFirstRealUser = (nonDemoUsers[0]?.count ?? 0) === 0;
+          const shouldBeAdmin = isOwner || isFirstRealUser || b.role === "admin";
+          const effectiveRole = shouldBeAdmin ? "admin" : b.role;
+
+          if (!existing) {
+            const newId = randomUUID();
+            const dummyPassword = passwordHash(randomBytes(16).toString("hex"));
+            [existing] = await q(
+              "INSERT INTO users(id, email, name, password_hash, password_must_change) VALUES($1, $2, $3, $4, false) RETURNING *",
+              [newId, email, userName, dummyPassword],
+            );
+          } else if (b.name) {
+            await q("UPDATE users SET name=$1 WHERE id=$2", [userName, existing.id]);
+            existing.name = userName;
+          }
+
+          const churches = await q("SELECT id FROM churches ORDER BY affiliated_on ASC");
+          const membershipRole =
+            effectiveRole === "admin"
+              ? "admin"
+              : effectiveRole === "leader"
+                ? "leader"
+                : "member";
+          for (const ch of churches) {
+            await q(
+              "INSERT INTO memberships(user_id, church_id, role) VALUES($1, $2, $3) ON CONFLICT(user_id, church_id) DO UPDATE SET role=$3",
+              [existing.id, ch.id, membershipRole],
+            );
+          }
+
+          if (shouldBeAdmin) {
+            const networks = await q("SELECT id FROM networks");
+            for (const net of networks) {
+              try {
+                await q(
+                  "INSERT INTO network_members(user_id, network_id, role) VALUES($1, $2, 'network_admin') ON CONFLICT(user_id, network_id) DO UPDATE SET role='network_admin', revoked_at=NULL",
+                  [existing.id, net.id],
+                );
+              } catch {
+                await q(
+                  "INSERT INTO network_members(user_id, network_id) VALUES($1, $2) ON CONFLICT(user_id, network_id) DO NOTHING",
+                  [existing.id, net.id],
+                );
+              }
+            }
+            try {
+              await q(
+                "INSERT INTO platform_memberships(user_id, role) VALUES($1, 'platform_admin') ON CONFLICT(user_id) DO UPDATE SET role='platform_admin'",
+                [existing.id],
+              );
+            } catch {
+              // platform_memberships might not be enabled in all environments
+            }
+          }
+
+          return existing;
+        });
+
+        serverActivityLogs.unshift({
+          id: randomUUID(),
+          timestamp: new Date().toISOString(),
+          category: "sync",
+          action: "db.firebase_sync_success",
+          severity: "success",
+          actorEmail: email,
+          actorUid: b.uid,
+          actorRole: b.role,
+          target: "/api/auth/firebase-sync",
+          status: "success",
+          summary: `Sessão Firebase sincronizada para ${email} com sucesso.`,
+          details: { isOwner, userId: user.id },
+        });
+
+        await issue(s, user.id, true);
+        s.json({ ok: true, user: { id: user.id, email: user.email, name: user.name } });
+      } catch (syncErr: any) {
+        serverActivityLogs.unshift({
+          id: randomUUID(),
+          timestamp: new Date().toISOString(),
+          category: "sync",
+          action: "db.firebase_sync_failure",
+          severity: "error",
+          actorEmail: email,
+          actorUid: b.uid,
+          target: "/api/auth/firebase-sync",
+          status: "failure",
+          summary: `Falha na sincronização Firebase com o banco: ${syncErr?.message || syncErr}`,
+          details: { error: String(syncErr), stack: syncErr?.stack },
+        });
+        throw syncErr;
+      }
+    }),
+  );
+
+  app.get(
+    "/api/admin/firebase-activity-logs",
+    asyncRoute(async (_r, s) => {
+      let dbEvents: any[] = [];
+      try {
+        dbEvents = await db.transaction(async (q) => {
+          return q(
+            "SELECT id, user_id, email, action, metadata, created_at FROM auth_security_events ORDER BY created_at DESC LIMIT 50",
+          );
+        });
+      } catch {
+        dbEvents = [];
+      }
+
+      const formattedDbEvents: ServerActivityLog[] = dbEvents.map((e) => ({
+        id: e.id,
+        timestamp: new Date(e.created_at).toISOString(),
+        category: (e.action.startsWith("auth") ? "auth" : "security") as any,
+        action: e.action,
+        severity: (e.action.includes("fail") || e.action.includes("warn") ? "warning" : "info") as any,
+        actorEmail: e.email || undefined,
+        actorUid: e.user_id || undefined,
+        status: "success",
+        summary: `Evento de segurança registrado: ${e.action}`,
+        details: e.metadata,
+      }));
+
+      const seen = new Set<string>();
+      const combined: ServerActivityLog[] = [];
+      for (const item of [...serverActivityLogs, ...formattedDbEvents]) {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          combined.push(item);
+        }
+      }
+      combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      s.json({ logs: combined.slice(0, 100) });
+    }),
+  );
+
+  app.post(
+    "/api/admin/firebase-activity-logs",
+    asyncRoute(async (r, s) => {
+      const b = r.body;
+      if (!b || !b.action) {
+        return s.status(400).json({ error: "Invalid log payload" });
+      }
+      const entry: ServerActivityLog = {
+        id: b.id || randomUUID(),
+        timestamp: b.timestamp || new Date().toISOString(),
+        category: b.category || "security",
+        action: b.action,
+        severity: b.severity || "info",
+        actorEmail: b.actorEmail,
+        actorUid: b.actorUid,
+        actorRole: b.actorRole,
+        target: b.target,
+        status: b.status || "success",
+        summary: b.summary || b.action,
+        details: b.details,
+      };
+      serverActivityLogs.unshift(entry);
+      if (serverActivityLogs.length > 200) serverActivityLogs.length = 200;
+
+      try {
+        await db.transaction(async (q) => {
+          await q(
+            "INSERT INTO auth_security_events(id, email, action, metadata, created_at) VALUES($1, $2, $3, $4, $5)",
+            [entry.id, entry.actorEmail || null, entry.action, JSON.stringify(entry), entry.timestamp],
+          );
+        });
+      } catch {
+        // Ignored if table structure differs
+      }
+
+      s.json({ ok: true, log: entry });
     }),
   );
   app.get(

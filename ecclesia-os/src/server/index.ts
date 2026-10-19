@@ -54,7 +54,7 @@ if (process.env.DATA_KEY_HEX) {
 }
 if (key.length !== 32)
   throw new Error("DATA_KEY_HEX deve conter 64 caracteres hexadecimais.");
-const port = Number(process.env.PORT ?? 3100),
+const port = Number(process.env.PORT ?? 3000),
   origin = process.env.PUBLIC_ORIGIN ?? `http://localhost:${port}`;
 const efi = new Efi([]);
 if (mode === "homologation" && !origin.startsWith("https://"))
@@ -81,13 +81,31 @@ const app = createApp(db, {
 });
 if (existsSync("dist/index.html")) {
   app.use(express.static(path.resolve("dist"), { maxAge: 0 }));
-  app.get("/{*path}", (_r, s) => s.sendFile(path.resolve("dist/index.html")));
+  app.use((req, res, next) => {
+    if (req.method === "GET" && !req.path.startsWith("/api")) {
+      return res.sendFile(path.resolve("dist/index.html"));
+    }
+    next();
+  });
 } else {
   const { createServer } = await import("vite");
   const vite = await createServer({
     configFile: path.resolve("vite.config.ts"),
+    server: { middlewareMode: true },
   });
   app.use(vite.middlewares);
+  app.use("*", async (req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api")) return next();
+    try {
+      const htmlPath = path.resolve("src/web/index.html");
+      const template = await readFile(htmlPath, "utf-8");
+      const html = await vite.transformIndexHtml(req.originalUrl, template);
+      res.status(200).set({ "Content-Type": "text/html" }).end(html);
+    } catch (e) {
+      vite.ssrFixStacktrace(e as Error);
+      next(e);
+    }
+  });
 }
 const communicationTransport = (process.env.COMMUNICATION_TRANSPORT ??
   "disabled") as CommunicationTransport;

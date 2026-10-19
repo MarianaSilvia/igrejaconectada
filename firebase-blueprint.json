@@ -1,0 +1,144 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Perfil de usuário autenticado no sistema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "uid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["admin", "member", "pastor", "leader"], "maxLength": 20 },
+        "churchId": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["active", "inactive"], "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Registro de autorização administrativa",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 150 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId"]
+    },
+    "Church": {
+      "title": "Church",
+      "description": "Igreja cadastrada no sistema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "city": { "type": "string", "maxLength": 100 },
+        "state": { "type": "string", "maxLength": 50 },
+        "primaryColor": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "Member": {
+      "title": "Member",
+      "description": "Ficha e cadastro do membro da igreja",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "role": { "type": "string", "enum": ["member", "leader", "pastor"], "maxLength": 20 },
+        "churchId": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["active", "visitor", "inactive"], "maxLength": 20 },
+        "communion": { "type": "string", "enum": ["active", "disciplined", "not_informed"], "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "churchId"]
+    },
+    "Cell": {
+      "title": "Cell",
+      "description": "Célula ou pequeno grupo da igreja",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "churchId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 120 },
+        "leader": { "type": "string", "maxLength": 120 },
+        "weekday": { "type": "string", "maxLength": 20 },
+        "time": { "type": "string", "maxLength": 10 },
+        "address": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "churchId"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Registro financeiro de contribuições e movimentações",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "churchId": { "type": "string", "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 200 },
+        "amountCents": { "type": "integer" },
+        "kind": { "type": "string", "enum": ["income", "expense"], "maxLength": 20 },
+        "category": { "type": "string", "maxLength": 50 },
+        "occurredOn": { "type": "string", "maxLength": 30 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["description", "churchId", "amountCents", "kind"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Log de auditoria e segurança de autenticação Firebase e sincronização de banco",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "category": { "type": "string", "enum": ["auth", "database", "security", "sync"], "maxLength": 20 },
+        "action": { "type": "string", "maxLength": 80 },
+        "severity": { "type": "string", "enum": ["info", "success", "warning", "error"], "maxLength": 20 },
+        "actorEmail": { "type": "string", "maxLength": 150 },
+        "actorUid": { "type": "string", "maxLength": 128 },
+        "actorRole": { "type": "string", "maxLength": 50 },
+        "target": { "type": "string", "maxLength": 150 },
+        "status": { "type": "string", "enum": ["success", "failure", "pending"], "maxLength": 20 },
+        "summary": { "type": "string", "maxLength": 300 }
+      },
+      "required": ["timestamp", "category", "action", "severity", "status", "summary"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Perfis de usuários do sistema"
+    },
+    "/admins/{userId}": {
+      "schema": "Admin",
+      "description": "Identificadores de administradores autorizados"
+    },
+    "/activity_logs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Logs de atividade do Firebase Authentication e sincronização de dados"
+    },
+    "/churches/{churchId}": {
+      "schema": "Church",
+      "description": "Informações das igrejas"
+    },
+    "/churches/{churchId}/members/{memberId}": {
+      "schema": "Member",
+      "description": "Membros pertencentes a uma igreja"
+    },
+    "/churches/{churchId}/cells/{cellId}": {
+      "schema": "Cell",
+      "description": "Células e pequenos grupos"
+    },
+    "/churches/{churchId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Movimentações financeiras da igreja"
+    }
+  }
+}
