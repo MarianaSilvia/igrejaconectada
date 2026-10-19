@@ -21,7 +21,6 @@ if (!["demo", "homologation"].includes(mode))
   throw new Error(
     "Esta versão habilita demo e homologação. Produção exige concluir o checklist de lançamento em docs/OPERACAO.md.",
   );
-const db = await openDatabase();
 if (
   mode === "homologation" &&
   (!(process.env.ECCLESIA_DATABASE_URL ?? process.env.DATABASE_URL) ||
@@ -38,6 +37,7 @@ if (
   throw new Error(
     "Homologação exige credenciais distintas para DATABASE_URL (ecclesia_app) e SERVICE_DATABASE_URL (ecclesia_service).",
   );
+const db = await openDatabase();
 if (!(process.env.ECCLESIA_DATABASE_URL ?? process.env.DATABASE_URL)) await db.migrate();
 if (mode === "demo") await seed(db);
 let key: Buffer;
