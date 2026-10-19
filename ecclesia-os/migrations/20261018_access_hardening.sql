@@ -40,6 +40,11 @@ CREATE TABLE IF NOT EXISTS public.auth_security_events (
 CREATE INDEX IF NOT EXISTS auth_security_events_user_idx
   ON public.auth_security_events(user_id, created_at DESC);
 
+ALTER TABLE public.mfa_enrollment_challenges ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS mfa_enrollment_challenges_service_only ON public.mfa_enrollment_challenges;
+CREATE POLICY mfa_enrollment_challenges_service_only ON public.mfa_enrollment_challenges
+  FOR ALL TO ecclesia_app USING (false) WITH CHECK (false);
+
 ALTER TABLE public.mfa_recovery_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.auth_security_events ENABLE ROW LEVEL SECURITY;
 
