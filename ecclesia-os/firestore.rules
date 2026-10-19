@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function owner() {
+      return signedIn() && request.auth.token.email == 'marianabsilva1987@gmail.com' && request.auth.token.email_verified == true;
+    }
+    function admin() {
+      return signedIn() && (owner() || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    function own(uid) { return signedIn() && request.auth.uid == uid; }
+    function validProfile(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'role', 'status']) &&
+        data.keys().hasOnly(['uid', 'name', 'email', 'role', 'churchId', 'status', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.email is string && data.name is string &&
+        data.role in ['member', 'pastor', 'leader'] && data.status in ['active', 'inactive'];
+    }
+    match /users/{uid} {
+      allow read: if own(uid) || owner();
+      allow create: if own(uid) && validProfile(request.resource.data) && request.resource.data.role == 'member';
+      allow update: if owner() || (own(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'updatedAt', 'status']));
+      allow delete: if false;
+    }
+    match /admins/{uid} {
+      allow read: if own(uid) || owner();
+      allow create, update, delete: if owner();
+    }
+    match /activity_logs/{logId} {
+      allow create: if signedIn() && request.resource.data.actorUid == request.auth.uid;
+      allow read: if owner();
+      allow update, delete: if false;
+    }
+    match /churches/{churchId} {
+      allow read, write: if admin();
+      match /members/{memberId} { allow read, write: if false; }
+      match /cells/{cellId} { allow read, write: if false; }
+      match /transactions/{transactionId} { allow read, write: if false; }
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
