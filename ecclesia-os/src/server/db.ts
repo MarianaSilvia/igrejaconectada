@@ -103,7 +103,19 @@ export class Database {
       await q(
         "CREATE TABLE IF NOT EXISTS schema_migrations(name text PRIMARY KEY, applied_at timestamptz DEFAULT now())",
       );
-      for (const name of (await readdir("migrations"))
+      const migrationDirectories = [
+        "migrations",
+        path.resolve(process.cwd(), "migrations"),
+        path.resolve(process.cwd(), "ecclesia-os/migrations"),
+        path.resolve(path.dirname(new URL(import.meta.url).pathname), "../migrations"),
+        path.resolve(path.dirname(new URL(import.meta.url).pathname), "../../migrations"),
+      ];
+      const migrationsDirectory = migrationDirectories.find((candidate) =>
+        existsSync(candidate),
+      );
+      if (!migrationsDirectory)
+        throw new Error("Diretório de migrações não encontrado.");
+      for (const name of (await readdir(migrationsDirectory))
         .filter((n) => n.endsWith(".sql"))
         .sort()) {
         if (
@@ -111,7 +123,7 @@ export class Database {
             .length
         )
           continue;
-        const sql = await readFile(path.join("migrations", name), "utf8");
+        const sql = await readFile(path.join(migrationsDirectory, name), "utf8");
         if (this.local) await this.local.exec(sql);
         else await (client as pg.PoolClient).query(sql);
         await q("INSERT INTO schema_migrations(name) VALUES($1)", [name]);
@@ -169,10 +181,12 @@ export async function openDatabase() {
   if (!url) {
     if (process.env.APP_MODE === "production")
       throw new Error("DATABASE_URL required");
-    await mkdir(".local", { recursive: true });
+    const localDirectory = process.env.VERCEL ? "/tmp/ecclesia-os" : ".local";
+    await mkdir(localDirectory, { recursive: true });
+    return new Database(path.join(localDirectory, "postgres"));
   }
   return new Database(
-    url ? undefined : ".local/postgres",
+    undefined,
     url,
     process.env.SERVICE_DATABASE_URL,
   );
