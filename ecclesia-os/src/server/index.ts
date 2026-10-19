@@ -28,8 +28,8 @@ if (mode === "homologation" && !(process.env.ECCLESIA_DATABASE_URL ?? process.en
   );
 if (
   mode === "homologation" &&
-  (!process.env.SERVICE_DATABASE_URL ||
-    process.env.SERVICE_DATABASE_URL === (process.env.ECCLESIA_DATABASE_URL ?? process.env.DATABASE_URL))
+  (!(process.env.ECCLESIA_SERVICE_DATABASE_URL ?? process.env.SERVICE_DATABASE_URL) ||
+    (process.env.ECCLESIA_SERVICE_DATABASE_URL ?? process.env.SERVICE_DATABASE_URL) === (process.env.ECCLESIA_DATABASE_URL ?? process.env.DATABASE_URL))
 )
   throw new Error(
     "Homologação exige credenciais distintas para DATABASE_URL (ecclesia_app) e SERVICE_DATABASE_URL (ecclesia_service).",
