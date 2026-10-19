@@ -13,7 +13,7 @@ async function bootstrap() {
   }
 
   const db = await openDatabase();
-  if (!process.env.DATABASE_URL) {
+  if (!(process.env.ECCLESIA_DATABASE_URL ?? process.env.DATABASE_URL)) {
     await db.migrate();
     if (mode === "demo") await seed(db);
   }
