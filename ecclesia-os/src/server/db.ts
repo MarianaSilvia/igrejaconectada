@@ -191,7 +191,7 @@ export class Database {
   }
 }
 export async function openDatabase() {
-  const url = process.env.DATABASE_URL;
+  const url = process.env.ECCLESIA_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!url) {
     if (process.env.APP_MODE === "production")
       throw new Error("DATABASE_URL required");
@@ -200,6 +200,6 @@ export async function openDatabase() {
   return new Database(
     url ? undefined : ".local/postgres",
     url,
-    process.env.SERVICE_DATABASE_URL,
+    process.env.ECCLESIA_SERVICE_DATABASE_URL ?? process.env.SERVICE_DATABASE_URL,
   );
 }
