@@ -39,7 +39,7 @@ async function bootstrap() {
 
   const db = await openDatabase();
   await db.verifyRuntimeSeparation();
-  const efi = await Efi.load();
+  const efi = new Efi([]);
   return createApp(db, {
     mode: "homologation",
     key,
