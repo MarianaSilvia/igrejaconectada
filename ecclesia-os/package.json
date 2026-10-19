@@ -22,7 +22,8 @@
     "pilot:preflight:homologation": "tsx scripts/pilot-preflight.ts --homologation",
     "pilot:verify": "npm run build && npm test && npm run pilot:preflight",
     "pilot:verify:browser": "npm run pilot:verify && npm run test:evolution-browser",
-    "pilot:verify:postgres": "npm run pilot:preflight && npm run test:postgres"
+    "pilot:verify:postgres": "npm run pilot:preflight && npm run test:postgres",
+    "build:deploy": "tsc --noEmit && vite build"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.14",
