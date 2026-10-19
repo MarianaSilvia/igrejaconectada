@@ -590,7 +590,6 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [showPassword, setShowPassword] = useState(false),
-    [role, setRole] = useState<"admin" | "member">("member"),
     [error, setError] = useState(""),
     [successNotice, setSuccessNotice] = useState(""),
     [busy, setBusy] = useState(false);
@@ -701,7 +700,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
         severity: "success",
         actorEmail: user.email || "",
         actorUid: user.uid,
-        actorRole: profile?.role || "admin",
+        actorRole: profile?.role || "member",
         status: "success",
         summary: `Login com Google OAuth realizado com sucesso para ${user.email}.`,
       });
@@ -709,7 +708,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
         user.uid,
         user.email || "",
         profile?.name || user.displayName || undefined,
-        profile?.role || "admin",
+        profile?.role || "member",
       );
     } catch (err: any) {
       const msg = translateFirebaseAuthError(err);
@@ -759,16 +758,16 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
           );
         }
 
-        const user = await registerWithEmail(email, password, name, role);
+        const user = await registerWithEmail(email, password, name, "member");
         void logFirebaseActivity({
           category: "auth",
           action: "auth.register_success",
           severity: "success",
           actorEmail: email,
           actorUid: user.uid,
-          actorRole: role,
+          actorRole: "member",
           status: "success",
-          summary: `Novo usuário criado no Firebase Auth e salvo no Firestore: ${email} (${role}).`,
+          summary: `Novo cadastro de membro criado no Firebase Auth: ${email}.`,
         });
         await handleFirebaseSync(user.uid, email, name, role);
         return;
@@ -846,7 +845,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
         </h2>
         <p>
           {mode === "register"
-            ? "Preencha seus dados para criar sua conta no Firebase e definir sua função."
+            ? "Preencha seus dados para criar sua conta de membro. Acesso administrativo exige convite."
             : mode === "recovery"
               ? "Digite seu e-mail cadastrado para receber um link de redefinição pelo Firebase."
               : "Acesse sua conta com seu e-mail e senha registrados no Firebase."}
@@ -899,14 +898,10 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
                 />
               </Field>
               <Field label="Perfil de acesso">
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as "admin" | "member")}
-                  style={{ width: "100%", padding: "10px", background: "var(--raised)", color: "var(--text)", border: "1px solid var(--line)", borderRadius: "8px" }}
-                >
-                  <option value="member">Membro (Portal do Membro, escalas, contribuições)</option>
-                  <option value="admin">Administrador (Secretaria, grupos e tesouraria)</option>
-                </select>
+                <p className="notice" role="status">
+                  Cadastro público cria um perfil de membro. Acesso administrativo é concedido
+                  somente por convite da liderança da rede.
+                </p>
               </Field>
             </>
           )}
