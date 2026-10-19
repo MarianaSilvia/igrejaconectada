@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import {
   createCipheriv,
   createDecipheriv,
@@ -14,6 +15,7 @@ export function passwordHash(password: string) {
   return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
 }
 export function passwordMatches(password: string, stored: string) {
+  if (stored.startsWith("$2")) return bcrypt.compareSync(password, stored);
   const [salt, key] = stored.split(":");
   if (!salt || !key) return false;
   const derived = scryptSync(password, salt, 64);
