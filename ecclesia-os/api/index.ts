@@ -40,7 +40,6 @@ async function bootstrap() {
   const db = await openDatabase();
   await db.verifyRuntimeSeparation();
   const efi = await Efi.load();
-  if (!efi.accounts.length) throw new Error("Configure EFI_CONFIG_PATH.");
   return createApp(db, {
     mode: "homologation",
     key,
