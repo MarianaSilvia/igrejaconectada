@@ -769,7 +769,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
           status: "success",
           summary: `Novo cadastro de membro criado no Firebase Auth: ${email}.`,
         });
-        await handleFirebaseSync(user.uid, email, name, role);
+        await handleFirebaseSync(user.uid, email, name, "member");
         return;
       }
 
