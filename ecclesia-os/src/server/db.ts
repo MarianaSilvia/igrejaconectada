@@ -5,6 +5,19 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 // PostgreSQL DATE values are calendar dates, never JavaScript UTC instants.
 pg.types.setTypeParser(1082, (value: string) => value);
+function poolConfig(connectionString: string) {
+  const ca = process.env.SUPABASE_CA_CERT;
+  if (!ca) return { connectionString };
+  const parsed = new URL(connectionString);
+  parsed.searchParams.delete("sslmode");
+  parsed.searchParams.delete("sslrootcert");
+  return {
+    connectionString: parsed.toString(),
+    ssl: { ca, rejectUnauthorized: true },
+    max: 5,
+  };
+}
+
 export type Row = Record<string, any>;
 export interface Query {
   (sql: string, params?: any[]): Promise<Row[]>;
@@ -20,9 +33,9 @@ export class Database {
     serviceUrl?: string,
   ) {
     if (url) {
-      this.pool = new pg.Pool({ connectionString: url });
+      this.pool = new pg.Pool(poolConfig(url));
       if (serviceUrl)
-        this.servicePool = new pg.Pool({ connectionString: serviceUrl });
+        this.servicePool = new pg.Pool(poolConfig(serviceUrl));
     } else {
       const snapshot = directory ? `${directory}.snapshot` : undefined;
       this.local = new PGlite({
