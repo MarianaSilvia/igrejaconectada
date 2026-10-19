@@ -42,7 +42,7 @@ async function bootstrap() {
   const efi = await Efi.load();
   if (!efi.accounts.length) throw new Error("Configure EFI_CONFIG_PATH.");
   return createApp(db, {
-    mode,
+    mode: "homologation",
     key,
     mfaKey,
     efi,
