@@ -1493,7 +1493,11 @@ export function createApp(
       });
     }),
   );
-  app.post("/api/webhooks/efi/:account/pix", (_r, s) =>\n    s.status(410).json({ error: "Webhooks bancários desativados." }),\n  );\n  /* Legacy provider implementation retained for historical compatibility. */\n    app.post(
+  app.post("/api/webhooks/efi/:account/pix", (_r, s) =>
+    s.status(410).json({ error: "Webhooks bancários desativados." }),
+  );
+  /* Legacy provider implementation retained for historical compatibility. */
+  app.post(
     "/api/webhooks/efi/:account/pix",
     asyncRoute(async (r: Request, s) => {
       requireThat(options.mode === "homologation", 404, "Rota indisponível.");
