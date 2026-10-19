@@ -2086,7 +2086,7 @@ export function Finance(props: PageProps & { mode: string }) {
   const balance = d.entries.reduce(
       (s: number, e: RecordData) => s + Number(e.cash_cents),
       0,
-    ),
+    );
 
   return (
     <>
