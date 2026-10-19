@@ -25,6 +25,7 @@ import {
 import { audit, DEMO_SECRET } from "./seed.js";
 import { cents, decimal, postEntry, newTxid, settle } from "./finance.js";
 import { Efi } from "./efi.js";
+import { buildPixPayload, validatePixKey, type PixKeyType } from "./pix-static.js";
 import { operations } from "./operations.js";
 import { todayInChurch } from "../shared/dates.js";
 import { processIntegrationJob, reconcileCharge } from "./integration-jobs.js";
@@ -1247,6 +1248,96 @@ export function createApp(
       );
     }),
   );
+  app.use("/api/pix", (r, s, n) => {
+    if (r.path.startsWith("/charges") || r.path.startsWith("/reconcile"))
+      return s.status(410).json({ error: "Cobranças Pix automáticas foram desativadas. Use a chave Pix e o QR Code estático." });
+    n();
+  });
+  app.post("/api/demo/settle/:id", (_r, s) =>
+    s.status(410).json({ error: "Liquidação automática desativada." }),
+  );
+
+  app.get(
+    "/api/pix/settings",
+    asyncRoute(async (r: AuthRequest, s) => {
+      const row = await scoped(r, async (q) => {
+        await permit(q, "finance");
+        const [settings] = await q("SELECT * FROM church_pix_settings WHERE church_id=$1", [r.church]);
+        return settings ?? null;
+      });
+      s.json(row);
+    }),
+  );
+  app.put(
+    "/api/pix/settings",
+    asyncRoute(async (r: AuthRequest, s) => {
+      const b = z.object({
+        pixKey: z.string().trim().min(1).max(120),
+        pixKeyType: z.enum(["cpf", "cnpj", "email", "phone", "random"]),
+        merchantName: z.string().trim().min(1).max(25),
+        merchantCity: z.string().trim().min(1).max(15),
+        instructions: z.string().trim().max(500).default(""),
+        publicEnabled: z.boolean().default(false),
+      }).parse(r.body);
+      requireThat(validatePixKey(b.pixKeyType as PixKeyType, b.pixKey), 400, "A chave Pix não é válida para o tipo informado.");
+      const row = await scoped(r, async (q) => {
+        await permit(q, "finance", true);
+        const [settings] = await q(
+          `INSERT INTO church_pix_settings(church_id,pix_key,pix_key_type,merchant_name,merchant_city,instructions,public_enabled,updated_by,updated_at)
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,now())
+           ON CONFLICT(church_id) DO UPDATE SET pix_key=EXCLUDED.pix_key,pix_key_type=EXCLUDED.pix_key_type,merchant_name=EXCLUDED.merchant_name,merchant_city=EXCLUDED.merchant_city,instructions=EXCLUDED.instructions,public_enabled=EXCLUDED.public_enabled,updated_by=EXCLUDED.updated_by,updated_at=now()
+           RETURNING *`,
+          [r.church, b.pixKey, b.pixKeyType, b.merchantName, b.merchantCity, b.instructions, b.publicEnabled, r.actor.id],
+        );
+        await audit(q, r.actor.id, r.church, "pix.settings.updated", settings.church_id);
+        return settings;
+      });
+      s.json(row);
+    }),
+  );
+  app.get(
+    "/api/pix/static-qr",
+    asyncRoute(async (r: AuthRequest, s) => {
+      const amount = r.query.amount ? cents(String(r.query.amount)) : undefined;
+      const [settings] = await scoped(r, (q) =>
+        q("SELECT * FROM church_pix_settings WHERE church_id=$1", [r.church]),
+      );
+      requireThat(settings, 404, "A igreja ainda não cadastrou uma chave Pix.");
+      const payload = buildPixPayload({
+        key: settings.pix_key,
+        keyType: settings.pix_key_type,
+        merchantName: settings.merchant_name,
+        merchantCity: settings.merchant_city,
+        amount: amount ? amount / 100 : undefined,
+        description: settings.instructions,
+      });
+      s.json({
+        pixKey: settings.pix_key,
+        payload,
+        qrDataUrl: await QRCode.toDataURL(payload, { width: 280, margin: 2 }),
+        amountCents: amount ?? null,
+      });
+    }),
+  );
+  app.get(
+    "/api/portal/pix",
+    asyncRoute(async (r: AuthRequest, s) => {
+      const [settings] = await scoped(r, (q) =>
+        q("SELECT pix_key,pix_key_type,merchant_name,merchant_city,instructions FROM church_pix_settings WHERE church_id=$1 AND public_enabled=true", [r.church]),
+      );
+      s.json(settings ? {
+        ...settings,
+        payload: buildPixPayload({
+          key: settings.pix_key,
+          keyType: settings.pix_key_type,
+          merchantName: settings.merchant_name,
+          merchantCity: settings.merchant_city,
+          description: settings.instructions,
+        }),
+      } : null);
+    }),
+  );
+
   app.post(
     "/api/pix/charges",
     asyncRoute(async (r: AuthRequest, s) => {
@@ -1402,7 +1493,7 @@ export function createApp(
       });
     }),
   );
-  app.post(
+  app.post("/api/webhooks/efi/:account/pix", (_r, s) =>\n    s.status(410).json({ error: "Webhooks bancários desativados." }),\n  );\n  /* Legacy provider implementation retained for historical compatibility. */\n    app.post(
     "/api/webhooks/efi/:account/pix",
     asyncRoute(async (r: Request, s) => {
       requireThat(options.mode === "homologation", 404, "Rota indisponível.");
