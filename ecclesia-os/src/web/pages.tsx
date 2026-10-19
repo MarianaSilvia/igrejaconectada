@@ -2045,7 +2045,7 @@ export function Cells(props: PageProps) {
 }
 export function Finance(props: PageProps & { mode: string }) {
   const { data: d, error } = useData("/finance", props);
-  const pixSettings = useData<RecordData | null>("/pix/settings", props);
+  const pixSettings = useData<RecordData>("/pix/settings", props);
   const [modal, setModal] = useState<"entry" | "pix" | "pix-settings" | "close" | null>(null),
     [busy, setBusy] = useState(false),
     [charge, setCharge] = useState<RecordData | null>(null);
@@ -2087,7 +2087,7 @@ export function Finance(props: PageProps & { mode: string }) {
       (s: number, e: RecordData) => s + Number(e.cash_cents),
       0,
     ),
-    settled = d.charges.filter((c: RecordData) => c.status === "settled");
+
   return (
     <>
       <div className="stats-grid finance-stats">
@@ -2115,7 +2115,7 @@ export function Finance(props: PageProps & { mode: string }) {
       <div className="toolbar">
         <div className="security-inline">
           <Icon name="shield" size={17} />
-          "Pix estático: a igreja informa a chave e confere o recebimento manualmente."
+          {"Pix estático: a igreja informa a chave e confere o recebimento manualmente."}
         </div>
         <button className="button secondary" onClick={() => setModal("close")}>
           Fechar período
@@ -2380,7 +2380,7 @@ export function Finance(props: PageProps & { mode: string }) {
                 ) : (
                   <>
                     <Field label="Valor opcional (R$)">
-                      <input name="amount" type="number" min="0" step="0.01" placeholder="150,00" required />
+                      <input name="amount" type="number" min="0" step="0.01" placeholder="150,00" />
                     </Field>
                     <p className="muted">O QR Code é estático. Nenhuma cobrança ou confirmação automática será criada.</p>
                   </>
@@ -2425,7 +2425,7 @@ function StaticPixModal({ charge, onClose }: { charge: RecordData; onClose: () =
         <p className="muted">Escaneie o QR Code ou copie a chave Pix abaixo. A confirmação deve ser feita manualmente pela tesouraria.</p>
         <div className="toolbar">
           <code style={{ overflowWrap: "anywhere" }}>{charge.pixKey}</code>
-          <button className="button secondary" onClick={() => navigator.clipboard?.writeText(charge.pixKey)}>
+          <button className="button secondary" onClick={async () => {\n            try { await navigator.clipboard?.writeText(charge.pixKey); } catch { /* clipboard unavailable */ }\n          }}>
             Copiar chave
           </button>
         </div>
