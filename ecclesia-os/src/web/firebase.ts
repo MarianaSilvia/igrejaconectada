@@ -346,14 +346,15 @@ export async function syncTransactionToFirestore(
 
 export async function syncSaaSToFirestore(
   context: any,
-  people?: any[],
+  _people?: any[],
 ): Promise<{ churchesCount: number; membersCount: number }> {
   let churchesCount = 0;
-  let membersCount = 0;
   if (!context || !context.churches || !auth.currentUser) {
-    return { churchesCount, membersCount };
+    return { churchesCount, membersCount: 0 };
   }
 
+  // PostgreSQL is the source of truth for members, groups and finance. Only
+  // non-sensitive church presentation metadata is mirrored to Firestore.
   for (const church of context.churches) {
     if (!church.id || !church.name) continue;
     try {
@@ -366,30 +367,11 @@ export async function syncSaaSToFirestore(
       });
       churchesCount++;
     } catch (e) {
-      console.warn("SaaS church sync to Firestore note:", e);
+      console.warn("SaaS church metadata sync skipped:", e);
     }
   }
 
-  if (Array.isArray(people)) {
-    for (const p of people) {
-      if (!p.id || !p.church_id || !p.name) continue;
-      try {
-        await syncMemberToFirestore(p.church_id, {
-          id: p.id,
-          name: p.name,
-          email: p.email,
-          phone: p.phone,
-          role: p.membership_type === "worker" ? "leader" : "member",
-          status: p.status === "inactive" ? "inactive" : p.status === "visitor" ? "visitor" : "active",
-        });
-        membersCount++;
-      } catch (e) {
-        console.warn("SaaS member sync to Firestore note:", e);
-      }
-    }
-  }
-
-  return { churchesCount, membersCount };
+  return { churchesCount, membersCount: 0 };
 }
 
 export async function logoutFirebase(): Promise<void> {
