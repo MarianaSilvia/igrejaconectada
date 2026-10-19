@@ -49,24 +49,15 @@ export enum OperationType {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  // Keep diagnostics useful without copying identity data into logs or UI errors.
   const errInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map((provider) => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || [],
-    },
+    message: error instanceof Error ? error.message : "unknown",
     operationType,
     path,
+    authenticated: Boolean(auth.currentUser),
   };
-  console.error("Firestore Error:", JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  console.error("Firestore operation failed", JSON.stringify(errInfo));
+  throw new Error("Não foi possível concluir a operação.");
 }
 
 export function translateFirebaseAuthError(err: any): string {
@@ -120,17 +111,18 @@ export async function registerWithEmail(
   email: string,
   pass: string,
   name: string,
-  role: "admin" | "member" = "member"
+  _requestedRole: "admin" | "member" = "member"
 ): Promise<User> {
   const cred = await createUserWithEmailAndPassword(auth, email.trim(), pass);
   const user = cred.user;
 
-  // Save profile in Firestore
+  // Public registration can create members only. Privileged roles are granted
+  // by the backend invitation flow, never by a client supplied field.
   const profile: UserProfile = {
     uid: user.uid,
     name: name.trim() || user.displayName || email.split("@")[0],
     email: user.email || email.trim(),
-    role,
+    role: "member",
     status: "active",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -138,13 +130,6 @@ export async function registerWithEmail(
 
   try {
     await setDoc(doc(db, "users", user.uid), profile, { merge: true });
-    if (role === "admin") {
-      await setDoc(doc(db, "admins", user.uid), {
-        userId: user.uid,
-        email: user.email,
-        createdAt: new Date().toISOString(),
-      });
-    }
   } catch (e) {
     handleFirestoreError(e, OperationType.WRITE, `users/${user.uid}`);
   }
@@ -203,12 +188,13 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export async function syncFirstAdminProfile(user: User): Promise<UserProfile> {
-  const isOwner = user.email === "marianabsilva1987@gmail.com";
+  const isOwner =
+    user.email === "marianabsilva1987@gmail.com" && user.emailVerified;
   const profile: UserProfile = {
     uid: user.uid,
-    name: user.displayName || user.email?.split("@")[0] || "Administrador da Rede",
+    name: user.displayName || user.email?.split("@")[0] || "Usuário",
     email: user.email || "",
-    role: "admin",
+    role: isOwner ? "admin" : "member",
     status: "active",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
