@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import { todayInChurch } from "../shared/dates";
 import { api, money, shortDate, downloadReceipt, type RecordData } from "./api";
@@ -2426,7 +2425,9 @@ function StaticPixModal({ charge, onClose }: { charge: RecordData; onClose: () =
         <p className="muted">Escaneie o QR Code ou copie a chave Pix abaixo. A confirmação deve ser feita manualmente pela tesouraria.</p>
         <div className="toolbar">
           <code style={{ overflowWrap: "anywhere" }}>{charge.pixKey}</code>
-          <button className="button secondary" onClick={async () => {\n            try { await navigator.clipboard?.writeText(charge.pixKey); } catch { /* clipboard unavailable */ }\n          }}>
+          <button className="button secondary" onClick={async () => {
+            try { await navigator.clipboard?.writeText(charge.pixKey); } catch { /* clipboard unavailable */ }
+          }}>
             Copiar chave
           </button>
         </div>
