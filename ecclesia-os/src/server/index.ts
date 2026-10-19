@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
-import https from "node:https";
 import { openDatabase } from "./db.js";
 import { seed } from "./seed.js";
 import { createApp } from "./app.js";
@@ -90,12 +89,6 @@ if (existsSync("dist/index.html")) {
   });
   app.use(vite.middlewares);
 }
-const tlsReady =
-  process.env.EFI_TLS_CERT_PATH &&
-  process.env.EFI_TLS_KEY_PATH &&
-  process.env.EFI_WEBHOOK_CA_PATH;
-if (mode === "homologation" && !tlsReady)
-  throw new Error("Homologação exige TLS e CA Efí para validar webhooks.");
 const communicationTransport = (process.env.COMMUNICATION_TRANSPORT ??
   "disabled") as CommunicationTransport;
 if (!["disabled", "demo", "webhook"].includes(communicationTransport))
@@ -123,22 +116,9 @@ if (mode === "homologation" && communicationTransport === "webhook") {
   if (webhookUrls.some((url) => !url || !url.startsWith("https://")))
     throw new Error("Homologação exige webhooks HTTPS para e-mail e SMS.");
 }
-const server = tlsReady
-  ? https.createServer(
-      {
-        cert: readFileSync(process.env.EFI_TLS_CERT_PATH!),
-        key: readFileSync(process.env.EFI_TLS_KEY_PATH!),
-        ca: readFileSync(process.env.EFI_WEBHOOK_CA_PATH!),
-        requestCert: true,
-        rejectUnauthorized: false,
-      },
-      app,
-    )
-  : app.listen(port, "0.0.0.0", () =>
-      console.log(`EcclesiaOS · ${mode} · ${origin}`),
-    );
-if (tlsReady)
-  server.listen(port, () => console.log(`EcclesiaOS · ${mode} · ${origin}`));
+const server = app.listen(port, "0.0.0.0", () =>
+  console.log(`EcclesiaOS · ${mode} · ${origin}`),
+);
 let stopping = false;
 const stopWorker =
   process.env.RUN_INTEGRATION_WORKER === "false"
