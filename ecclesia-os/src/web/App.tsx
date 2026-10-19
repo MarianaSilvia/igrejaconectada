@@ -474,32 +474,50 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
   const [demo, setDemo] = useState<RecordData | null>(null),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
+    [newPassword, setNewPassword] = useState(""),
     [code, setCode] = useState(""),
     [challenge, setChallenge] = useState(""),
+    [enrollmentSecret, setEnrollmentSecret] = useState(""),
+    [passwordChange, setPasswordChange] = useState(false),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   useEffect(() => {
-    api("/demo-info")
-      .then(setDemo)
-      .catch(() => {});
+    api("/demo-info").then(setDemo).catch(() => {});
   }, []);
+  const finish = async (result: RecordData) => {
+    if (result.passwordChangeRequired) setPasswordChange(true);
+    else await onLogin();
+  };
   const login = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError("");
     try {
-      if (challenge) {
-        await api("/auth/mfa", "POST", { challenge, code });
+      if (passwordChange) {
+        await api("/auth/change-password", "POST", {
+          currentPassword: password,
+          newPassword,
+        });
         await onLogin();
+      } else if (challenge) {
+        const result = await api(
+          enrollmentSecret ? "/auth/mfa/enroll" : "/auth/mfa",
+          "POST",
+          { challenge, code },
+        );
+        await finish(result);
       } else {
-        const r = await api("/auth/login", "POST", { email, password });
-        if (r.mfaRequired) {
-          setChallenge(r.challenge);
+        const result = await api("/auth/login", "POST", { email, password });
+        if (result.mfaEnrollmentRequired) {
+          setChallenge(result.challenge);
+          setEnrollmentSecret(result.setupSecret);
+        } else if (result.mfaRequired) {
+          setChallenge(result.challenge);
           if (demo) {
             const d = await api("/demo-info");
             setCode(d.code);
           }
-        } else await onLogin();
+        } else await finish(result);
       }
     } catch (e) {
       setError((e as Error).message);
@@ -507,131 +525,85 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
       setBusy(false);
     }
   };
+  const challengeTitle = enrollmentSecret
+    ? "Configure seu autenticador"
+    : "Confirme sua identidade";
   return (
     <div className="login-layout">
       <section className="login-story">
         <div className="brand">
-          <span className="brand-mark">
-            <Icon name="home" size={30} />
-          </span>
+          <span className="brand-mark"><Icon name="home" size={30} /></span>
           ecclesiaOS
         </div>
         <Badge tone="purple">UMA REDE. MUITAS COMUNIDADES.</Badge>
-        <h1>
-          Gestão que organiza.
-          <br />
-          <span>Cuidado que aproxima.</span>
-        </h1>
-        <p>
-          Conecte igrejas, fortaleça vínculos e acompanhe sua rede com clareza,
-          respeito e propósito.
-        </p>
+        <h1>Gestão que organiza.<br /><span>Cuidado que aproxima.</span></h1>
+        <p>Conecte igrejas, fortaleça vínculos e acompanhe sua rede com clareza, respeito e propósito.</p>
         <div className="login-orbit">
-          <span>
-            <Icon name="people" size={32} />
-          </span>
-          <span>
-            <Icon name="home" size={48} />
-          </span>
-          <span>
-            <Icon name="heart" size={32} />
-          </span>
+          <span><Icon name="people" size={32} /></span>
+          <span><Icon name="home" size={48} /></span>
+          <span><Icon name="heart" size={32} /></span>
         </div>
-        <small>
-          Autonomia local · Supervisão responsável · Privacidade pastoral
-        </small>
+        <small>Autonomia local · Supervisão responsável · Privacidade pastoral</small>
       </section>
       <section className="login-card">
         <div className="eyebrow">BEM-VINDO À SUA COMUNIDADE</div>
-        <h2>{challenge ? "Confirme sua identidade" : "Entre no EcclesiaOS"}</h2>
+        <h2>{passwordChange ? "Crie sua nova senha" : challenge ? challengeTitle : "Entre no EcclesiaOS"}</h2>
         <p>
-          {challenge
-            ? "Informe o código do seu autenticador."
-            : "Um espaço seguro para servir melhor."}
+          {passwordChange
+            ? "A senha provisória deve ser substituída antes de continuar."
+            : enrollmentSecret
+              ? "Adicione esta chave ao seu autenticador e confirme o código gerado."
+              : challenge
+                ? "Informe o código de seis dígitos do autenticador."
+                : "Um espaço seguro para servir melhor."}
         </p>
+        {enrollmentSecret && (
+          <p className="notice" role="status"><strong>Chave de configuração:</strong> {enrollmentSecret}</p>
+        )}
         <form onSubmit={login}>
-          {challenge ? (
+          {passwordChange ? (
+            <>
+              <Field label="Senha provisória">
+                <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              </Field>
+              <Field label="Nova senha">
+                <input type="password" autoComplete="new-password" minLength={14} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+              </Field>
+            </>
+          ) : challenge ? (
             <Field label="Código de autenticação">
-              <input
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                required
-                pattern="[0-9]{6}"
-              />
+              <input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} required pattern="[0-9]{6}" />
             </Field>
           ) : (
             <>
               <Field label="E-mail">
-                <input
-                  type="email"
-                  autoComplete="username"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </Field>
               <Field label="Senha">
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </Field>
             </>
           )}
-          {error && (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          )}
-          <Submit
-            busy={busy}
-            label={challenge ? "Confirmar e entrar" : "Entrar na comunidade"}
-          />
+          {error && <p className="error" role="alert">{error}</p>}
+          <Submit busy={busy} label={passwordChange ? "Salvar nova senha" : challenge ? "Confirmar e continuar" : "Entrar na comunidade"} />
         </form>
-        <p>
-          <a href="/recuperar-autenticador">
-            Recuperar acesso com código de segurança
-          </a>
-        </p>
-        {demo && (
+        {!passwordChange && !challenge && (
+          <p><a href="/recuperar-autenticador">Recuperar acesso com código de segurança</a></p>
+        )}
+        {demo && !passwordChange && !challenge && (
           <div className="demo-accounts">
             <span className="eyebrow">EXPLORE COM DADOS FICTÍCIOS</span>
-            <p>
-              Escolha um perfil. Senha e MFA demonstrativos serão preenchidos.
-            </p>
+            <p>Escolha um perfil. Senha e MFA demonstrativos serão preenchidos.</p>
             {demo.accounts.map((a: RecordData) => (
-              <button
-                key={a.email}
-                className="demo-account"
-                onClick={() => {
-                  setEmail(a.email);
-                  setPassword(demo.password);
-                  setChallenge("");
-                }}
-              >
-                <span>
-                  {a.label}
-                  <small>{a.email}</small>
-                </span>
+              <button key={a.email} className="demo-account" onClick={() => { setEmail(a.email); setPassword(demo.password); setChallenge(""); }}>
+                <span>{a.label}<small>{a.email}</small></span>
                 <Icon name="arrow" size={17} />
               </button>
             ))}
           </div>
         )}
-        <small className="login-privacy">
-          <Icon name="shield" size={14} /> Informações protegidas, acessos com
-          responsabilidade.
-        </small>
+        <small className="login-privacy"><Icon name="shield" size={14} /> Informações protegidas, acessos com responsabilidade.</small>
       </section>
     </div>
   );
 }
-
-
-
-
