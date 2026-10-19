@@ -4348,7 +4348,7 @@ export function Portal(props: PageProps & { mode: string }) {
                   <>
                     <p>{portalPix.data.instructions || "Use a chave Pix ou o QR Code para contribuir."}</p>
                     <code style={{ overflowWrap: "anywhere" }}>{portalPix.data.pix_key}</code>
-                    <button type="button" className="button secondary" onClick={() => navigator.clipboard?.writeText(portalPix.data.pix_key)}>Copiar chave</button>
+                    <button type="button" className="button secondary" onClick={() => { const key = portalPix.data?.pix_key; if (key) void navigator.clipboard?.writeText(key); }}>Copiar chave</button>
                   </>
                 ) : (
                   <p className="muted">A igreja ainda não publicou uma chave Pix para o portal.</p>
