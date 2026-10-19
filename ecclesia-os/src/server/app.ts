@@ -4,7 +4,7 @@ import express, {
   type NextFunction,
 } from "express";
 import helmet from "helmet";
-import { randomUUID } from "node:crypto";
+import { randomUUID, randomBytes } from "node:crypto";
 import { parse } from "csv-parse/sync";
 import QRCode from "qrcode";
 import { z } from "zod";
@@ -57,6 +57,11 @@ import {
 } from "./member-registration.js";
 type AuthRequest = Request & { actor: Row; church: string };
 const uuid = z.uuid();
+const newMfaSecret = () => {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  return Array.from(randomBytes(20), (n) => alphabet[n & 31]).join("");
+};
+const strongPassword = z.string().min(14).max(200).refine((v) => /[A-Z]/.test(v) && /[a-z]/.test(v) && /\\d/.test(v), "A senha deve ter 14 caracteres, maiúscula, minúscula e número.");
 const text = z.string().trim().min(1).max(200);
 const date = z.iso.date();
 const personSchema = z.object({
@@ -302,6 +307,23 @@ export function createApp(
         401,
         "E-mail ou senha inválidos.",
       );
+      const privileged = await db.transaction((q) =>
+        q(
+          "SELECT 1 FROM memberships WHERE user_id=$1 AND role<>'member' UNION ALL SELECT 1 FROM network_members WHERE user_id=$1 AND revoked_at IS NULL",
+          [u.id],
+        ),
+      );
+      if (!u.totp_secret && privileged.length && u.mfa_enrollment_required) {
+        const challenge = token();
+        const secret = newMfaSecret();
+        await db.transaction((q) =>
+          q(
+            "INSERT INTO mfa_enrollment_challenges(token_hash,user_id,encrypted_secret,expires_at) VALUES($1,$2,$3,now()+interval '10 minutes')",
+            [hash(challenge), u.id, encrypt(secret, options.mfaKey ?? options.key)],
+          ),
+        );
+        return s.json({ mfaEnrollmentRequired: true, challenge, setupSecret: secret });
+      }
       if (u.totp_secret) {
         const t = token();
         await db.transaction((q) =>
@@ -312,19 +334,13 @@ export function createApp(
         );
         return s.json({ mfaRequired: true, challenge: t });
       }
-      const privileged = await db.transaction((q) =>
-        q(
-          "SELECT 1 FROM memberships WHERE user_id=$1 AND role<>'member' UNION ALL SELECT 1 FROM network_members WHERE user_id=$1",
-          [u.id],
-        ),
-      );
       requireThat(
         !privileged.length,
         403,
-        "MFA precisa ser provisionado para este perfil.",
+        "MFA precisa ser configurado para este perfil.",
       );
       await issue(s, u.id, false);
-      s.json({ ok: true });
+      s.json({ ok: true, passwordChangeRequired: Boolean(u.password_must_change) });
     }),
   );
   app.post(
@@ -369,7 +385,52 @@ export function createApp(
         return c;
       });
       requireThat(u, 401, "Código inválido.");
+      const [account] = await db.transaction((q) =>
+        q("SELECT password_must_change FROM users WHERE id=$1", [u.user_id]),
+      );
       await issue(s, u.user_id, true);
+      s.json({ ok: true, passwordChangeRequired: Boolean(account?.password_must_change) });
+    }),
+  );
+  app.post(
+    "/api/auth/mfa/enroll",
+    asyncRoute(async (r, s) => {
+      const b = z.object({ challenge: z.string().min(30).max(100), code: z.string().regex(/^\d{6}$/) }).parse(r.body);
+      const result = await db.transaction(async (q) => {
+        const [c] = await q(
+          "SELECT c.*,u.password_must_change FROM mfa_enrollment_challenges c JOIN users u ON u.id=c.user_id WHERE c.token_hash=$1 AND c.expires_at>now() AND u.disabled_at IS NULL FOR UPDATE",
+          [hash(b.challenge)],
+        );
+        requireThat(c && c.attempts < 5, 401, "Configuração de MFA expirada.");
+        await q("UPDATE mfa_enrollment_challenges SET attempts=attempts+1 WHERE token_hash=$1", [hash(b.challenge)]);
+        const [user] = await q("SELECT totp_secret FROM users WHERE id=$1", [c.user_id]);
+        const secret = decrypt(c.encrypted_secret, options.mfaKey ?? options.key);
+        const step = totpStep(secret, b.code);
+        requireThat(step !== null, 401, "Código inválido.");
+        await q("UPDATE users SET totp_secret=$2,mfa_enrollment_required=false,last_totp_step=$3 WHERE id=$1", [c.user_id, "enc:v1:" + encrypt(secret, options.mfaKey ?? options.key), step]);
+        await q("DELETE FROM mfa_enrollment_challenges WHERE token_hash=$1", [hash(b.challenge)]);
+        return { userId: c.user_id, passwordChangeRequired: Boolean(c.password_must_change) };
+      });
+      await issue(s, result.userId, true);
+      s.json({ ok: true, passwordChangeRequired: result.passwordChangeRequired });
+    }),
+  );
+  app.post(
+    "/api/auth/change-password",
+    asyncRoute(async (r, s) => {
+      const b = z.object({ currentPassword: z.string().min(1).max(200), newPassword: strongPassword }).parse(r.body);
+      const raw = sessionToken(r);
+      requireThat(raw, 401, "Entre para continuar.");
+      const [account] = await db.transaction((q) =>
+        q("SELECT s.user_id,u.password_hash FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.disabled_at IS NULL", [hash(raw)]),
+      );
+      requireThat(account && passwordMatches(b.currentPassword, account.password_hash), 401, "Senha atual inválida.");
+      await db.transaction(async (q) => {
+        await q("UPDATE users SET password_hash=$2,password_must_change=false,password_changed_at=now() WHERE id=$1", [account.user_id, passwordHash(b.newPassword)]);
+        await q("DELETE FROM sessions WHERE user_id=$1", [account.user_id]);
+        await q("INSERT INTO auth_security_events(user_id,action,metadata) VALUES($1,'password-changed',$2)", [account.user_id, JSON.stringify({ source: "first-access" })]);
+      });
+      cookie(s, "", 0);
       s.json({ ok: true });
     }),
   );
