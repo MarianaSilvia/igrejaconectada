@@ -57,11 +57,9 @@ if (key.length !== 32)
   throw new Error("DATA_KEY_HEX deve conter 64 caracteres hexadecimais.");
 const port = Number(process.env.PORT ?? 3100),
   origin = process.env.PUBLIC_ORIGIN ?? `http://localhost:${port}`;
-const efi = await Efi.load();
+const efi = new Efi([]);
 if (mode === "homologation" && !origin.startsWith("https://"))
   throw new Error("PUBLIC_ORIGIN deve usar HTTPS na homologação.");
-if (mode === "homologation" && !efi.accounts.length)
-  throw new Error("Configure EFI_CONFIG_PATH.");
 if (mode === "homologation") await db.verifyRuntimeSeparation();
 const mfaKey = process.env.MFA_KEY_HEX
   ? Buffer.from(process.env.MFA_KEY_HEX, "hex")
