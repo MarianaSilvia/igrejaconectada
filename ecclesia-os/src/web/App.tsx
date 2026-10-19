@@ -786,7 +786,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
         severity: "success",
         actorEmail: email,
         actorUid: user.uid,
-        actorRole: profile?.role || "admin",
+        actorRole: profile?.role || "member",
         status: "success",
         summary: `Autenticação por e-mail e senha efetuada com sucesso: ${email}.`,
       });
@@ -794,7 +794,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
         user.uid,
         user.email || email,
         profile?.name || user.displayName || undefined,
-        profile?.role || "admin",
+        profile?.role || "member",
       );
     } catch (err: any) {
       const msg = translateFirebaseAuthError(err);
