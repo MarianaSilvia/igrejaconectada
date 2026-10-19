@@ -5,8 +5,8 @@ export type PixKeyType = "cpf" | "cnpj" | "email" | "phone" | "random";
 const cleanText = (value: string, max: number) =>
   value
     .normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "")
-    .replace(/[^\\x20-\\x7E]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, "")
     .toUpperCase()
     .slice(0, max);
 
@@ -26,10 +26,10 @@ const crc16 = (value: string) => {
 export function validatePixKey(type: PixKeyType, value: string) {
   const key = value.trim();
   if (!key) return false;
-  if (type === "cpf") return /^\\d{11}$/.test(key.replace(/\\D/g, ""));
-  if (type === "cnpj") return /^\\d{14}$/.test(key.replace(/\\D/g, ""));
-  if (type === "email") return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(key);
-  if (type === "phone") return /^\\+?\\d{10,15}$/.test(key.replace(/[\\s()-]/g, ""));
+  if (type === "cpf") return /^\d{11}$/.test(key.replace(/\D/g, ""));
+  if (type === "cnpj") return /^\d{14}$/.test(key.replace(/\D/g, ""));
+  if (type === "email") return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key);
+  if (type === "phone") return /^\+?\d{10,15}$/.test(key.replace(/[\s()-]/g, ""));
   return key.length <= 77;
 }
 
