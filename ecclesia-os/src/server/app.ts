@@ -234,7 +234,7 @@ export function createApp(
   app.get(
     "/api/health/ready",
     asyncRoute(async (_r, s) => {
-      const checks: Record<string, boolean> = {
+      const checks: Record<string, boolean | string> = {
         database: false,
         serviceDatabase:
           options.mode === "demo" || Boolean(process.env.ECCLESIA_SERVICE_DATABASE_URL ?? process.env.SERVICE_DATABASE_URL),
@@ -244,13 +244,8 @@ export function createApp(
         dataKey: options.key.length === 32,
         origin:
           options.mode === "demo" || options.origin.startsWith("https://"),
-        efiTls:
-          options.mode === "demo" ||
-          Boolean(
-            process.env.EFI_TLS_CERT_PATH &&
-            process.env.EFI_TLS_KEY_PATH &&
-            process.env.EFI_WEBHOOK_CA_PATH,
-          ),
+        pix: "static",
+        automaticPayments: false,
         communication:
           options.mode === "demo" ||
           process.env.COMMUNICATION_TRANSPORT !== "webhook" ||
@@ -270,7 +265,7 @@ export function createApp(
         checks.database = false;
       }
       checks.mfaKey = (options.mfaKey ?? options.key).length === 32;
-      checks.efi = options.mode === "demo" || options.efi.accounts.length > 0;
+
       const ready = Object.values(checks).every(Boolean);
       s.status(ready ? 200 : 503).json({
         ok: ready,
