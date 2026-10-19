@@ -22,9 +22,13 @@ if (!["demo", "homologation"].includes(mode))
     "Esta versão habilita demo e homologação. Produção exige concluir o checklist de lançamento em docs/OPERACAO.md.",
   );
 const db = await openDatabase();
-if (mode === "homologation" && !(process.env.ECCLESIA_DATABASE_URL ?? process.env.DATABASE_URL))
+if (
+  mode === "homologation" &&
+  (!(process.env.ECCLESIA_DATABASE_URL ?? process.env.DATABASE_URL) ||
+    !process.env.MIGRATION_DATABASE_URL)
+)
   throw new Error(
-    "Homologação exige PostgreSQL externo configurado em DATABASE_URL.",
+    "Homologação exige ECCLESIA_DATABASE_URL e MIGRATION_DATABASE_URL.",
   );
 if (
   mode === "homologation" &&
