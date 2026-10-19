@@ -11,21 +11,33 @@ export async function api<T = any>(
   const res = await fetch("/api" + path, {
     method,
     credentials: "same-origin",
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       ...(selectedChurch ? { "x-church-id": selectedChurch } : {}),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const data = await res.json();
+  const raw = await res.text();
+  let data: RecordData = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = {};
+  }
   if (!res.ok)
     throw new Error(
       [
-        data.error ?? "Operação indisponível.",
-        ...(data.details ?? []).map((issue: RecordData) => issue.message),
+        data.error ??
+          (res.status >= 500
+            ? "O servidor não conseguiu concluir a operação. Tente novamente."
+            : `Operação recusada (HTTP ${res.status}).`),
+        ...(Array.isArray(data.details)
+          ? data.details.map((issue: RecordData) => issue.message)
+          : []),
       ].join(" "),
     );
-  return data;
+  return data as T;
 }
 export const money = (n: unknown) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
