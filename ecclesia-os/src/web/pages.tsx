@@ -2070,7 +2070,7 @@ export function Finance(props: PageProps & { mode: string }) {
           instructions: b.instructions ?? "",
           publicEnabled: b.publicEnabled === "on",
         });
-        await pixSettings.refresh();
+        props.refresh();
       }
       if (modal === "close") await api("/finance/close", "POST", b);
       setModal(null);
@@ -2128,7 +2128,6 @@ export function Finance(props: PageProps & { mode: string }) {
           Configurar chave Pix
         </button>
         <button className="button primary" onClick={() => setModal("pix")}>
-          <Icon name="qr" size={16} />
           Ver QR Code Pix
         </button>
       </div>
