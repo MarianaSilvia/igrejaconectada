@@ -88,6 +88,7 @@ export function createApp(
   },
 ) {
   const app = express();
+  const commercialFeaturesEnabled = process.env.COMMERCIAL_FEATURES_ENABLED === "true";
   app.disable("x-powered-by");
   app.use(
     helmet({
@@ -459,7 +460,7 @@ export function createApp(
           [r.actor.id],
         );
         const [platform] = await q("SELECT role FROM platform_memberships WHERE user_id=$1", [r.actor.id]);
-        return { churches, networks, platformRole: platform?.role ?? null };
+        return { churches, networks, platformRole: commercialFeaturesEnabled ? platform?.role ?? null : null };
       });
       const churches = await Promise.all(
         data.churches.map(async (c) => ({
@@ -496,14 +497,10 @@ export function createApp(
   );
   app.get(
     "/api/network/subscriptions",
-    asyncRoute(async (r: AuthRequest, s) => {
-      const rows = await db.transaction((q) =>
-        q(
-          `SELECT c.id,c.name,co.plan,co.status,co.monthly_cents,co.renews_on,COALESCE(inv.total,0)::int AS invoice_count,COALESCE(inv.overdue,0)::int AS overdue_invoices FROM churches c LEFT JOIN LATERAL (SELECT plan,status,monthly_cents,renews_on FROM saas_contracts WHERE church_id=c.id ORDER BY updated_at DESC LIMIT 1) co ON true LEFT JOIN LATERAL (SELECT count(*) AS total,count(*) FILTER(WHERE status='overdue' OR (status='issued' AND due_on<CURRENT_DATE)) AS overdue FROM saas_invoices WHERE church_id=c.id) inv ON true WHERE EXISTS(SELECT 1 FROM network_members nm WHERE nm.network_id=c.network_id AND nm.user_id=$1) ORDER BY c.name`,
-          [r.actor.id],
-        ),
-      );
-      s.json(rows);
+    asyncRoute(async (_r: AuthRequest, s) => {
+      if (!commercialFeaturesEnabled)
+        return s.status(404).json({ error: "Operação comercial desativada no ambiente atual." });
+      s.status(410).json({ error: "Operação comercial indisponível." });
     }),
   );
   app.get(
@@ -2066,6 +2063,7 @@ export function createApp(
   );
   const platformQuery = <T>(r: AuthRequest, fn: (q: Query) => Promise<T>) => db.transaction(fn, { actor: r.actor.id, church: r.church });
   const requirePlatform = async (r: AuthRequest, billing = false) => {
+    requireThat(commercialFeaturesEnabled, 404, "Operação comercial desativada no ambiente atual.");
     const [role] = await platformQuery(r, (q) => q("SELECT role FROM platform_memberships WHERE user_id=$1", [r.actor.id]));
     requireThat(role?.role === "platform_admin" || (billing && role?.role === "platform_billing"), 403, "Acesso exclusivo da operação da plataforma.");
     return role.role as string;
