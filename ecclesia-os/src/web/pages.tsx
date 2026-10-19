@@ -2044,9 +2044,9 @@ export function Cells(props: PageProps) {
   );
 }
 export function Finance(props: PageProps & { mode: string }) {
-  const pixAttempt = useRef<{ key: string; fingerprint: string } | null>(null);
   const { data: d, error } = useData("/finance", props);
-  const [modal, setModal] = useState<"entry" | "pix" | "close" | null>(null),
+  const pixSettings = useData<RecordData | null>("/pix/settings", props);
+  const [modal, setModal] = useState<"entry" | "pix" | "pix-settings" | "close" | null>(null),
     [busy, setBusy] = useState(false),
     [charge, setCharge] = useState<RecordData | null>(null);
   const submit = async (e: FormEvent<HTMLFormElement>) => {
@@ -2059,17 +2059,18 @@ export function Finance(props: PageProps & { mode: string }) {
           fundId: b.fundId || undefined,
           costCenterId: b.costCenterId || undefined,
         });
-      if (modal === "pix") {
-        const fingerprint = JSON.stringify([b.amount, b.fundId]);
-        if (pixAttempt.current?.fingerprint !== fingerprint)
-          pixAttempt.current = { key: crypto.randomUUID(), fingerprint };
-        setCharge(
-          await api("/pix/charges", "POST", {
-            ...b,
-            requestKey: pixAttempt.current!.key,
-          }),
-        );
-        pixAttempt.current = null;
+      if (modal === "pix")
+        setCharge(await api(`/pix/static-qr?amount=${encodeURIComponent(b.amount)}`));
+      if (modal === "pix-settings") {
+        await api("/pix/settings", "PUT", {
+          pixKey: b.pixKey,
+          pixKeyType: b.pixKeyType,
+          merchantName: b.merchantName,
+          merchantCity: b.merchantCity,
+          instructions: b.instructions ?? "",
+          publicEnabled: b.publicEnabled === "on",
+        });
+        await pixSettings.refresh();
       }
       if (modal === "close") await api("/finance/close", "POST", b);
       setModal(null);
@@ -2098,25 +2099,15 @@ export function Finance(props: PageProps & { mode: string }) {
           tone="green"
         />
         <Stat
-          label="Pix conciliado"
-          value={money(
-            settled.reduce(
-              (s: number, c: RecordData) => s + Number(c.amount_cents),
-              0,
-            ),
-          )}
-          sub={`${settled.length} recebimentos confirmados`}
+          label="Histórico Pix"
+          value={money(0)}
+          sub={`${d.charges.length} registros antigos`}
           icon="check"
         />
         <Stat
-          label="Tarifas registradas"
-          value={money(
-            settled.reduce(
-              (s: number, c: RecordData) => s + Number(c.fee_cents),
-              0,
-            ),
-          )}
-          sub="Separadas do valor bruto"
+          label="Recebimento automático"
+          value="Desativado"
+          sub="Pix estático, sem webhook"
           icon="shield"
           tone="blue"
         />
@@ -2124,9 +2115,7 @@ export function Finance(props: PageProps & { mode: string }) {
       <div className="toolbar">
         <div className="security-inline">
           <Icon name="shield" size={17} />
-          {props.mode === "demo"
-            ? "Cobranças fictícias, sem movimentação financeira."
-            : "Efí em homologação. Confirmação exclusiva pelo provedor."}
+          "Pix estático: a igreja informa a chave e confere o recebimento manualmente."
         </div>
         <button className="button secondary" onClick={() => setModal("close")}>
           Fechar período
@@ -2135,9 +2124,12 @@ export function Finance(props: PageProps & { mode: string }) {
           <Icon name="plus" size={16} />
           Lançamento
         </button>
+        <button className="button secondary" onClick={() => setModal("pix-settings")}>
+          Configurar chave Pix
+        </button>
         <button className="button primary" onClick={() => setModal("pix")}>
-          <Icon name="plus" size={16} />
-          Cobrança Pix
+          <Icon name="qr" size={16} />
+          Ver QR Code Pix
         </button>
       </div>
       <section className="panel">
@@ -2215,8 +2207,8 @@ export function Finance(props: PageProps & { mode: string }) {
       </section>
       <section className="panel">
         <SectionHead
-          title="Cobranças e conciliação Pix"
-          subtitle="Criar uma cobrança não confirma o recebimento."
+          title="Histórico legado de cobranças"
+          subtitle="Registros antigos preservados apenas para consulta. Nenhuma cobrança nova é criada."
         />
         <div className="table-scroll">
           <table>
@@ -2254,15 +2246,13 @@ export function Finance(props: PageProps & { mode: string }) {
                     </Badge>
                   </td>
                   <td>
-                    {(c.status === "active" || c.status === "expired") && (
+                    {false && (
                       <button
                         className="text-button"
                         onClick={async () => {
                           try {
                             await api(
-                              props.mode === "demo"
-                                ? `/demo/settle/${c.id}`
-                                : `/pix/reconcile/${c.id}`,
+                              `/disabled/${c.id}`,
                               "POST",
                             );
                             props.refresh();
@@ -2276,9 +2266,7 @@ export function Finance(props: PageProps & { mode: string }) {
                           }
                         }}
                       >
-                        {props.mode === "demo"
-                          ? "Simular evento"
-                          : "Consultar provedor"}
+                        "Automático desativado"
                       </button>
                     )}
                     {["settled", "refunded"].includes(c.status) && (
@@ -2300,7 +2288,7 @@ export function Finance(props: PageProps & { mode: string }) {
           </table>
           {!d.charges.length && (
             <Empty>
-              Nenhuma cobrança criada. Comece escolhendo um fundo e um valor.
+              Nenhum registro legado de cobrança.
             </Empty>
           )}
         </div>
@@ -2317,8 +2305,10 @@ export function Finance(props: PageProps & { mode: string }) {
             modal === "entry"
               ? "Novo lançamento"
               : modal === "pix"
-                ? "Nova contribuição Pix"
-                : "Fechar período financeiro"
+                ? "QR Code Pix estático"
+                : modal === "pix-settings"
+                  ? "Configurar chave Pix"
+                  : "Fechar período financeiro"
           }
           onClose={() => setModal(null)}
         >
@@ -2363,26 +2353,39 @@ export function Finance(props: PageProps & { mode: string }) {
                     </Field>
                   </>
                 )}
-                <Field label="Valor (R$)">
-                  <input
-                    name="amount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    placeholder="150,00"
-                    required
-                  />
-                </Field>
-                <Field label="Fundo">
-                  <select name="fundId" required={modal === "pix"}>
-                    {modal === "entry" && <option value="">Sem fundo</option>}
-                    {d.funds.map((f: RecordData) => (
-                      <option key={f.id} value={f.id}>
-                        {f.name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+                {modal === "pix-settings" ? (
+                  <>
+                    <Field label="Chave Pix">
+                      <input name="pixKey" defaultValue={pixSettings.data?.pix_key ?? ""} required />
+                    </Field>
+                    <Field label="Tipo da chave">
+                      <select name="pixKeyType" defaultValue={pixSettings.data?.pix_key_type ?? "random"}>
+                        <option value="random">Aleatória</option>
+                        <option value="email">E-mail</option>
+                        <option value="phone">Telefone</option>
+                        <option value="cpf">CPF</option>
+                        <option value="cnpj">CNPJ</option>
+                      </select>
+                    </Field>
+                    <Field label="Nome no QR Code">
+                      <input name="merchantName" maxLength={25} defaultValue={pixSettings.data?.merchant_name ?? ""} required />
+                    </Field>
+                    <Field label="Cidade">
+                      <input name="merchantCity" maxLength={15} defaultValue={pixSettings.data?.merchant_city ?? ""} required />
+                    </Field>
+                    <Field label="Instruções">
+                      <textarea name="instructions" defaultValue={pixSettings.data?.instructions ?? ""} />
+                    </Field>
+                    <label className="check-row"><input type="checkbox" name="publicEnabled" defaultChecked={Boolean(pixSettings.data?.public_enabled)} /> Exibir no portal do membro</label>
+                  </>
+                ) : (
+                  <>
+                    <Field label="Valor opcional (R$)">
+                      <input name="amount" type="number" min="0" step="0.01" placeholder="150,00" required />
+                    </Field>
+                    <p className="muted">O QR Code é estático. Nenhuma cobrança ou confirmação automática será criada.</p>
+                  </>
+                )}
                 {modal === "entry" && (
                   <Field label="Centro de custo">
                     <select name="costCenterId">
@@ -2399,17 +2402,15 @@ export function Finance(props: PageProps & { mode: string }) {
             )}
             <Submit
               busy={busy}
-              label={modal === "pix" ? "Gerar cobrança" : "Registrar"}
+              label={modal === "pix" ? "Gerar QR Code" : modal === "pix-settings" ? "Salvar chave Pix" : "Registrar"}
             />
           </form>
         </Modal>
       )}
       {charge && (
-        <ChargeModal
+        <StaticPixModal
           charge={charge}
-          mode={props.mode}
           onClose={() => setCharge(null)}
-          notify={props.notify}
         />
       )}
     </>
