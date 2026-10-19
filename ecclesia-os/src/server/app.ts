@@ -236,7 +236,7 @@ export function createApp(
       const checks: Record<string, boolean> = {
         database: false,
         serviceDatabase:
-          options.mode === "demo" || Boolean(process.env.SERVICE_DATABASE_URL),
+          options.mode === "demo" || Boolean(process.env.ECCLESIA_SERVICE_DATABASE_URL ?? process.env.SERVICE_DATABASE_URL),
         migrationDatabase:
           options.mode === "demo" ||
           Boolean(process.env.MIGRATION_DATABASE_URL),
