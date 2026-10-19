@@ -771,7 +771,6 @@ function OperationalSearch(props: {
 }
 export function Network(props: PageProps & { onNavigate: (p: any) => void }) {
   const { data, error } = useData<RecordData[]>("/network", props);
-  const subscriptions = useData<RecordData[]>("/network/subscriptions", props);
   if (!data) return <Status data={data} error={error} />;
   return (
     <>
@@ -841,40 +840,7 @@ export function Network(props: PageProps & { onNavigate: (p: any) => void }) {
           compõem este relatório.
         </p>
       </section>
-      {subscriptions.data && (
-        <section className="panel" style={{ marginTop: 18 }}>
-          <SectionHead
-            title="Operação comercial da rede"
-            subtitle="Planos e faturas agregados, sem dados de pessoas ou doações identificáveis."
-          />
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Igreja</th>
-                  <th>Plano</th>
-                  <th>Situação</th>
-                  <th>Mensalidade</th>
-                  <th>Faturas vencidas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {subscriptions.data.map((c: RecordData) => (
-                  <tr key={c.id}>
-                    <td>{c.name}</td>
-                    <td>{c.plan ?? "Sem contrato"}</td>
-                    <td>{c.status ?? "—"}</td>
-                    <td>
-                      {c.monthly_cents == null ? "—" : money(c.monthly_cents)}
-                    </td>
-                    <td>{c.overdue_invoices}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+
     </>
   );
 }
