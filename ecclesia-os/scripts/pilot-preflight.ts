@@ -8,7 +8,7 @@ const validationMode = process.argv.includes("--homologation")
   ? "homologation"
   : requestedMode;
 const mode = validationMode;
-const dataKey = process.env.DATA_KEY_HEX ?? "";
+const databaseUrl = process.env.ECCLESIA_DATABASE_URL ?? process.env.DATABASE_URL ?? "";\nconst serviceDatabaseUrl = process.env.ECCLESIA_SERVICE_DATABASE_URL ?? process.env.SERVICE_DATABASE_URL ?? "";\nconst migrationDatabaseUrl = process.env.MIGRATION_DATABASE_URL ?? "";\nconst dataKey = process.env.DATA_KEY_HEX ?? "";
 const mfaKey = process.env.MFA_KEY_HEX ?? "";
 const communication = process.env.COMMUNICATION_TRANSPORT ?? "disabled";
 const projectRoot = path.resolve(
@@ -48,10 +48,10 @@ if (mode === "homologation") {
 }
 const checks = {
   mode: ["demo", "homologation"].includes(mode),
-  database: mode === "demo" || Boolean(process.env.DATABASE_URL),
-  serviceDatabase: mode === "demo" || Boolean(process.env.SERVICE_DATABASE_URL),
+  database: mode === "demo" || Boolean(databaseUrl),
+  serviceDatabase: mode === "demo" || Boolean(serviceDatabaseUrl),
   migrationDatabase:
-    mode === "demo" || Boolean(process.env.MIGRATION_DATABASE_URL),
+    mode === "demo" || Boolean(migrationDatabaseUrl),
   distinctDatabaseRoles:
     mode === "demo" ||
     Boolean(
