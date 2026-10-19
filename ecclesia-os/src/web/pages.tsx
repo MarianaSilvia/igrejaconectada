@@ -3250,7 +3250,6 @@ function PortalMediaCard({ item, church, notify }: { item: RecordData; church: s
   </article>;
 }
 export function Portal(props: PageProps & { mode: string }) {
-  const pixAttempt = useRef<{ key: string; fingerprint: string } | null>(null);
   const [taskPage, setTaskPage] = useState(1);
   const { data: d, error } = useData(
     `/portal?taskPage=${taskPage}&taskPageSize=25`,
@@ -3281,6 +3280,7 @@ export function Portal(props: PageProps & { mode: string }) {
     props,
   );
   const portalMedia = useData<RecordData[]>("/portal/media", props);
+  const portalPix = useData<RecordData | null>("/portal/pix", props);
   const [portalCertificatePage, setPortalCertificatePage] = useState(1);
   const portalCertificates = useData<RecordData>(
     `/portal/education/certificates?page=${portalCertificatePage}&pageSize=25`,
@@ -3320,18 +3320,8 @@ export function Portal(props: PageProps & { mode: string }) {
     const b = formValues(e);
     setBusy(true);
     try {
-      if (modal === "pix") {
-        const fingerprint = JSON.stringify([b.amount, b.fundId]);
-        if (pixAttempt.current?.fingerprint !== fingerprint)
-          pixAttempt.current = { key: crypto.randomUUID(), fingerprint };
-        setCharge(
-          await api("/pix/charges", "POST", {
-            ...b,
-            requestKey: pixAttempt.current!.key,
-          }),
-        );
-        pixAttempt.current = null;
-      }
+      if (modal === "pix")
+        setCharge(await api(`/pix/static-qr?amount=${encodeURIComponent(b.amount)}`));
       if (modal === "prayer")
         await api("/prayers", "POST", { text: b.text, confidential: true });
       if (modal === "privacy") await api("/privacy", "POST", b);
@@ -3355,7 +3345,7 @@ export function Portal(props: PageProps & { mode: string }) {
               : "Seu lugar na comunidade."}
           </h2>
           <p>
-            Encontre suas escalas, contribua e mantenha seus vínculos por perto.
+            Encontre suas escalas, veja o Pix da igreja e mantenha seus vínculos por perto.
           </p>
         </div>
         <Icon name="heart" size={100} />
@@ -4126,8 +4116,8 @@ export function Portal(props: PageProps & { mode: string }) {
           <span className="stat-icon green">
             <Icon name="wallet" />
           </span>
-          <strong>Contribuir</strong>
-          <small>Escolha um fundo e um valor</small>
+          <strong>Pix da igreja</strong>
+          <small>Chave e QR Code estático</small>
           <Icon name="arrow" />
         </button>
         <button
@@ -4352,27 +4342,19 @@ export function Portal(props: PageProps & { mode: string }) {
           <form onSubmit={submit}>
             {modal === "pix" ? (
               <>
-                <Field label="Valor (R$)">
-                  <input
-                    name="amount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    required
-                  />
+                {portalPix.data ? (
+                  <>
+                    <p>{portalPix.data.instructions || "Use a chave Pix ou o QR Code para contribuir."}</p>
+                    <code style={{ overflowWrap: "anywhere" }}>{portalPix.data.pix_key}</code>
+                    <button type="button" className="button secondary" onClick={() => navigator.clipboard?.writeText(portalPix.data.pix_key)}>Copiar chave</button>
+                  </>
+                ) : (
+                  <p className="muted">A igreja ainda não publicou uma chave Pix para o portal.</p>
+                )}
+                <Field label="Valor opcional (R$)">
+                  <input name="amount" type="number" min="0" step="0.01" placeholder="150,00" required />
                 </Field>
-                <Field label="Fundo">
-                  <select name="fundId" required>
-                    {d.funds.map((f: RecordData) => (
-                      <option key={f.id} value={f.id}>
-                        {f.name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <p className="muted">
-                  Sem tarifa adicional fixa. A confirmação depende do provedor.
-                </p>
+                <p className="muted">O QR Code é estático. Nenhuma cobrança ou confirmação automática será criada.</p>
               </>
             ) : modal === "prayer" ? (
               <>
@@ -4413,19 +4395,12 @@ export function Portal(props: PageProps & { mode: string }) {
             )}
             <Submit
               busy={busy}
-              label={modal === "pix" ? "Gerar cobrança" : "Enviar solicitação"}
+              label={modal === "pix" ? "Gerar QR Code" : "Enviar solicitação"}
             />
           </form>
         </Modal>
       )}
-      {charge && (
-        <ChargeModal
-          charge={charge}
-          mode={props.mode}
-          onClose={() => setCharge(null)}
-          notify={props.notify}
-        />
-      )}
+      {charge && <StaticPixModal charge={charge} onClose={() => setCharge(null)} />}
       {credential && (
         <Modal title="Sua credencial" onClose={() => setCredential(null)}>
           <div className="credential">
