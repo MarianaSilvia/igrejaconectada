@@ -10,6 +10,16 @@ const required = (name: string) => {
   return value;
 };
 
+const routedPath = (req: any): string =>
+  String(req?.query?.path ?? req?.url?.split("?")[0] ?? "")
+    .replace(/^\/+/, "")
+    .replace(/\/+$/, "");
+
+const isHexKeyReady = (name: string) => {
+  const value = process.env[name];
+  return Boolean(value && /^[0-9a-fA-F]{64}$/.test(value));
+};
+
 async function bootstrap() {
   const mode = process.env.APP_MODE ?? "demo";
   if (mode !== "homologation") {
@@ -51,7 +61,67 @@ async function bootstrap() {
 }
 
 export default async function handler(req: any, res: any) {
-  appPromise ??= bootstrap();
-  const app = await appPromise;
-  return app(req, res);
+  const path = routedPath(req);
+
+  // Liveness must never require database credentials. It is intentionally
+  // separated from readiness so the platform can distinguish a running
+  // function from a configured application.
+  if (req.method === "GET" && path === "health") {
+    return res.status(200).json({
+      ok: true,
+      service: "ecclesiaOS",
+      mode: process.env.APP_MODE ?? "unknown",
+    });
+  }
+
+  if (req.method === "GET" && path === "health/ready") {
+    try {
+      appPromise ??= bootstrap();
+      await appPromise;
+      return res.status(200).json({
+        ok: true,
+        checks: {
+          database: true,
+          serviceDatabase: true,
+          migrationDatabase: true,
+          dataKey: isHexKeyReady("DATA_KEY_HEX"),
+          mfaKey: isHexKeyReady("MFA_KEY_HEX"),
+          origin: Boolean(process.env.PUBLIC_ORIGIN?.startsWith("https://")),
+          pix: "static",
+          automaticPayments: false,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "ecclesia_readiness_failed",
+        error instanceof Error ? error.message : "unknown",
+      );
+      return res.status(503).json({
+        ok: false,
+        checks: {
+          database: false,
+          serviceDatabase: false,
+          migrationDatabase: false,
+          dataKey: isHexKeyReady("DATA_KEY_HEX"),
+          mfaKey: isHexKeyReady("MFA_KEY_HEX"),
+          origin: Boolean(process.env.PUBLIC_ORIGIN?.startsWith("https://")),
+          pix: "static",
+          automaticPayments: false,
+        },
+        error: "Serviço ainda não está pronto para uso.",
+      });
+    }
+  }
+
+  try {
+    appPromise ??= bootstrap();
+    const app = await appPromise;
+    return app(req, res);
+  } catch (error) {
+    console.error(
+      "ecclesia_request_bootstrap_failed",
+      error instanceof Error ? error.message : "unknown",
+    );
+    return res.status(503).json({ ok: false, error: "Serviço temporariamente indisponível." });
+  }
 }
