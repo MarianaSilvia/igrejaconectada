@@ -497,10 +497,18 @@ export function createApp(
   );
   app.get(
     "/api/network/subscriptions",
-    asyncRoute(async (_r: AuthRequest, s) => {
+    asyncRoute(async (r: AuthRequest, s) => {
       if (!commercialFeaturesEnabled)
-        return s.status(404).json({ error: "Operação comercial desativada no ambiente atual." });
-      s.status(410).json({ error: "Operação comercial indisponível." });
+        return s
+          .status(404)
+          .json({ error: "Operação comercial desativada no ambiente atual." });
+      const rows = await db.transaction((q) =>
+        q(
+          `SELECT c.id,c.name,co.plan,co.status,co.monthly_cents,co.renews_on,COALESCE(inv.total,0)::int AS invoice_count,COALESCE(inv.overdue,0)::int AS overdue_invoices FROM churches c LEFT JOIN LATERAL (SELECT plan,status,monthly_cents,renews_on FROM saas_contracts WHERE church_id=c.id ORDER BY updated_at DESC LIMIT 1) co ON true LEFT JOIN LATERAL (SELECT count(*) AS total,count(*) FILTER(WHERE status='overdue' OR (status='issued' AND due_on<CURRENT_DATE)) AS overdue FROM saas_invoices WHERE church_id=c.id) inv ON true WHERE EXISTS(SELECT 1 FROM network_members nm WHERE nm.network_id=c.network_id AND nm.user_id=$1) ORDER BY c.name`,
+          [r.actor.id],
+        ),
+      );
+      s.json(rows);
     }),
   );
   app.get(
