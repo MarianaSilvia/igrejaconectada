@@ -24,7 +24,6 @@ import AssetsPage from "./AssetsPage";
 import LibraryPage from "./LibraryPage";
 import AssistancePage from "./AssistancePage";
 import MediaPage from "./MediaPage";
-import PlatformBillingPage from "./PlatformBillingPage";
 type Page =
   | "dashboard"
   | "network"
@@ -47,7 +46,6 @@ type Page =
   | "assistance"
   | "media"
   | "portal"
-  | "platform";
 type Area =
   | "dashboard" | "secretariat" | "groups" | "treasury" | "operations"
   | "participation" | "communication" | "governance" | "portal";
@@ -64,7 +62,7 @@ const areaTabs: Record<Area, AreaTab[]> = {
     { page: "governance", label: "Rede e permissões" }, { page: "network", label: "Minha rede" },
     { page: "institutional", label: "Institucional" }, { page: "assemblies", label: "Assembleias" },
     { page: "assets", label: "Patrimônio" }, { page: "library", label: "Biblioteca" },
-    { page: "assistance", label: "Assistência social" }, { page: "platform", label: "Operação comercial" },
+    { page: "assistance", label: "Assistência social" },
   ],
   portal: [{ page: "portal", label: "Portal do membro" }],
 };
@@ -388,8 +386,6 @@ export default function App() {
                       "Pedidos protegidos, encaminhamentos e resultados com acesso restrito.",
                     media:
                       "Avisos, vídeos e galerias publicados com segurança.",
-                    platform:
-                      "Contratos, uso e receita da operação comercial.",
                   }[page]
                 }
               </p>
@@ -442,7 +438,6 @@ export default function App() {
           {page === "library" && <LibraryPage key={church} {...props} />}
           {page === "assistance" && <AssistancePage key={church} {...props} />}
           {page === "media" && <MediaPage key={church} {...props} />}
-          {page === "platform" && <PlatformBillingPage key={church} {...props} />}
           {page === "governance" && (
             <Governance
               {...props}
