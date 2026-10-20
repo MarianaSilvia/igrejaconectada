@@ -51,6 +51,7 @@ import { assetRoutes } from "./assets.js";
 import { libraryRoutes } from "./library.js";
 import { assistanceRoutes } from "./assistance.js";
 import { mediaRoutes } from "./media.js";
+import { verifyFirebaseIdToken } from "./firebase-auth.js";
 import {
   registrationPublicRoutes,
   registrationAdminRoutes,
@@ -142,7 +143,6 @@ export function createApp(
   app.use("/api", (r, s, n) => {
     if (
       r.path.startsWith("/auth/") ||
-      r.path.startsWith("/admin/firebase-activity-logs") ||
       r.path.startsWith("/public/") ||
       r.path === "/demo-info" ||
       r.path.startsWith("/webhooks/") ||
@@ -518,8 +518,20 @@ export function createApp(
         throw err;
       }
 
-      const email = b.email.toLowerCase().trim();
-      const userName = b.name?.trim() || email.split("@")[0];
+      const authorization = r.headers.authorization ?? "";
+      requireThat(authorization.startsWith("Bearer "), 401, "Token Firebase ausente.");
+      let verified: Awaited<ReturnType<typeof verifyFirebaseIdToken>>;
+      try {
+        verified = await verifyFirebaseIdToken(authorization.slice(7).trim());
+      } catch {
+        throw new HttpError(401, "Sessão Firebase inválida ou expirada.");
+      }
+      const verifiedEmail = verified.email?.toLowerCase().trim();
+      requireThat(verifiedEmail && verified.email_verified !== false, 401, "Confirme seu e-mail no Firebase antes de entrar.");
+      requireThat(verifiedEmail === b.email.toLowerCase().trim(), 401, "A identidade Firebase não corresponde ao e-mail informado.");
+      requireThat(verified.uid === b.uid, 401, "A identidade Firebase não corresponde ao usuário informado.");
+      const email = verifiedEmail;
+      const userName = (verified.name || b.name)?.trim() || email.split("@")[0];
       const isOwner = email === "marianabsilva1987@gmail.com";
 
       try {
