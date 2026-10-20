@@ -51,7 +51,7 @@ import { assetRoutes } from "./assets.js";
 import { libraryRoutes } from "./library.js";
 import { assistanceRoutes } from "./assistance.js";
 import { mediaRoutes } from "./media.js";
-import { verifyFirebaseIdToken } from "./firebase-auth.js";
+import { verifyFirebaseIdToken, firebaseAdminConfigured } from "./firebase-auth.js";
 import {
   registrationPublicRoutes,
   registrationAdminRoutes,
@@ -256,6 +256,7 @@ export function createApp(
           options.mode === "demo" ||
           Boolean(process.env.MIGRATION_DATABASE_URL),
         dataKey: options.key.length === 32,
+        firebase: options.mode === "demo" || firebaseAdminConfigured(),
         origin:
           options.mode === "demo" || options.origin.startsWith("https://"),
         pix: "static",
