@@ -1,6 +1,7 @@
 import { openDatabase } from "../src/server/db.js";
 import { createApp } from "../src/server/app.js";
 import { Efi } from "../src/server/efi.js";
+import { firebaseAdminConfigured } from "../src/server/firebase-auth.js";
 
 let appPromise: Promise<any> | undefined;
 
@@ -60,12 +61,20 @@ async function bootstrap() {
   });
 }
 
+function readinessChecks() {
+  return {
+    dataKey: isHexKeyReady("DATA_KEY_HEX"),
+    mfaKey: isHexKeyReady("MFA_KEY_HEX"),
+    origin: Boolean(process.env.PUBLIC_ORIGIN?.startsWith("https://")),
+    firebase: firebaseAdminConfigured(),
+    pix: "static",
+    automaticPayments: false,
+  };
+}
+
 export default async function handler(req: any, res: any) {
   const path = routedPath(req);
 
-  // Liveness must never require database credentials. It is intentionally
-  // separated from readiness so the platform can distinguish a running
-  // function from a configured application.
   if (req.method === "GET" && path === "health") {
     return res.status(200).json({
       ok: true,
@@ -84,11 +93,7 @@ export default async function handler(req: any, res: any) {
           database: true,
           serviceDatabase: true,
           migrationDatabase: true,
-          dataKey: isHexKeyReady("DATA_KEY_HEX"),
-          mfaKey: isHexKeyReady("MFA_KEY_HEX"),
-          origin: Boolean(process.env.PUBLIC_ORIGIN?.startsWith("https://")),
-          pix: "static",
-          automaticPayments: false,
+          ...readinessChecks(),
         },
       });
     } catch (error) {
@@ -102,11 +107,7 @@ export default async function handler(req: any, res: any) {
           database: false,
           serviceDatabase: false,
           migrationDatabase: false,
-          dataKey: isHexKeyReady("DATA_KEY_HEX"),
-          mfaKey: isHexKeyReady("MFA_KEY_HEX"),
-          origin: Boolean(process.env.PUBLIC_ORIGIN?.startsWith("https://")),
-          pix: "static",
-          automaticPayments: false,
+          ...readinessChecks(),
         },
         error: "Serviço ainda não está pronto para uso.",
       });
