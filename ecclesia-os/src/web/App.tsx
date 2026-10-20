@@ -38,6 +38,7 @@ import AssetsPage from "./AssetsPage";
 import LibraryPage from "./LibraryPage";
 import AssistancePage from "./AssistancePage";
 import MediaPage from "./MediaPage";
+import HistoryPage from "./HistoryPage";
 import FirebaseActivityLogs from "./FirebaseActivityLogs";
 import { logFirebaseActivity } from "./activityLogs";
 type Page =
@@ -61,6 +62,7 @@ type Page =
   | "library"
   | "assistance"
   | "media"
+  | "history"
   | "portal"
   | "firebase-logs";
 type Area =
@@ -69,7 +71,7 @@ type Area =
 type AreaTab = { page: Page; label: string };
 const areaTabs: Record<Area, AreaTab[]> = {
   dashboard: [{ page: "dashboard", label: "Visão geral" }],
-  secretariat: [{ page: "people", label: "Pessoas e famílias" }, { page: "operations", label: "Cadastros e documentos" }],
+  secretariat: [{ page: "people", label: "Pessoas e famílias" }, { page: "operations", label: "Cadastros e documentos" }, { page: "history", label: "Histórico e relatórios" }],
   groups: [{ page: "cells", label: "Grupos e cuidado" }],
   treasury: [{ page: "finance", label: "Visão financeira" }, { page: "treasury", label: "Contas e aprovações" }],
   operations: [{ page: "agenda", label: "Agenda e recursos" }, { page: "worship", label: "Cultos e equipes" }],
@@ -532,6 +534,8 @@ export default function App() {
                       "Pedidos protegidos, encaminhamentos e resultados com acesso restrito.",
                     media:
                       "Avisos, vídeos e galerias publicados com segurança.",
+                    history:
+                      "Linha do tempo de pessoas e congregações, com indicadores e relatórios autorizados.",
                     "firebase-logs":
                       "Auditoria e monitoramento de autenticação Firebase, sincronização com Firestore e integridade de segurança.",
                   }[page]
@@ -586,6 +590,7 @@ export default function App() {
           {page === "library" && <LibraryPage key={church} {...props} />}
           {page === "assistance" && <AssistancePage key={church} {...props} />}
           {page === "media" && <MediaPage key={church} {...props} />}
+          {page === "history" && <HistoryPage key={church} {...props} />}
           {page === "governance" && (
             <Governance
               {...props}
