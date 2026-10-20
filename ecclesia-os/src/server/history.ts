@@ -1,0 +1,126 @@
+import type { Express, Request, Response, NextFunction } from "express";
+import { z } from "zod";
+import type { Database, Row, Query } from "./db.js";
+import { audit } from "./seed.js";
+import { requireThat } from "./security.js";
+
+type R = Request & { actor: Row; church: string };
+const route = (fn: (r: R, s: Response) => Promise<unknown>) =>
+  (req: Request, res: Response, next: NextFunction) =>
+    Promise.resolve(fn(req as R, res)).catch(next);
+const id = z.uuid();
+const eventSchema = z.object({
+  subjectType: z.enum(["person", "church", "network"]),
+  subjectId: id,
+  eventDate: z.iso.date(),
+  eventType: z.enum(["foundation", "leadership", "membership", "discipleship", "education", "family", "ministry", "department", "campaign", "festival", "visit", "transfer", "other"]).default("other"),
+  title: z.string().trim().min(2).max(180),
+  description: z.string().trim().max(4000).default(""),
+  visibility: z.enum(["administrative", "leadership", "private"]).default("administrative"),
+  sourceType: z.string().trim().max(60).nullable().optional(),
+  sourceId: id.nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+});
+export function historyRoutes(app: Express, db: Database) {
+  const scoped = <T>(r: R, fn: (q: Query) => Promise<T>) => {
+    requireThat(r.church, 400, "Selecione uma igreja.");
+    return db.transaction(fn, { actor: r.actor.id, church: r.church });
+  };
+  const manage = async (r: R) => {
+    requireThat(r.actor?.mfa, 403, "Confirme MFA.");
+    const [p] = await scoped(r, (q) => q("SELECT can_access('people',true) AS allowed"));
+    requireThat(p?.allowed, 403, "Secretaria ou administração obrigatória.");
+  };
+  const subjectCheck = async (q: Query, r: R, type: string, subjectId: string) => {
+    if (type === "person") requireThat((await q("SELECT 1 FROM people WHERE id=$1 AND church_id=$2", [subjectId, r.church])).length > 0, 404, "Pessoa não encontrada.");
+    else if (type === "church") requireThat(subjectId === r.church, 403, "Unidade fora do escopo.");
+  };
+
+  app.get("/api/history", route(async (r, s) => {
+    const query = z.object({
+      subjectType: z.enum(["person", "church", "network"]).default("church"),
+      subjectId: id.optional(),
+      from: z.iso.date().optional(),
+      to: z.iso.date().optional(),
+      eventType: z.string().optional(),
+      page: z.coerce.number().int().min(1).default(1),
+      pageSize: z.coerce.number().int().min(1).max(100).default(50),
+    }).parse(r.query);
+    const subjectId = query.subjectId ?? r.church;
+    s.json(await scoped(r, async (q) => {
+      await subjectCheck(q, r, query.subjectType, subjectId);
+      const where = ["church_id=$1", "subject_type=$2", "subject_id=$3"];
+      const params: unknown[] = [r.church, query.subjectType, subjectId];
+      if (query.from) { params.push(query.from); where.push("event_date >= $" + params.length); }
+      if (query.to) { params.push(query.to); where.push("event_date <= $" + params.length); }
+      if (query.eventType) { params.push(query.eventType); where.push("event_type = $" + params.length); }
+      const offset = (query.page - 1) * query.pageSize;
+      params.push(query.pageSize, offset);
+      const [items, count] = await Promise.all([
+        q("SELECT id,subject_type,subject_id,event_date,event_type,title,description,visibility,source_type,source_id,metadata,created_by,created_at,updated_at FROM historical_events WHERE " + where.join(" AND ") + " ORDER BY event_date DESC,created_at DESC LIMIT $" + (params.length - 1) + " OFFSET $" + params.length, params),
+        q("SELECT count(*)::int AS total FROM historical_events WHERE " + where.join(" AND "), params.slice(0, -2)),
+      ]);
+      const total = Number(count[0]?.total ?? 0);
+      return { items, total, page: query.page, pageSize: query.pageSize, pages: Math.max(1, Math.ceil(total / query.pageSize)) };
+    }));
+  }));
+
+  app.get("/api/history/report", route(async (r, s) => {
+    const query = z.object({ subjectType: z.enum(["person", "church"]).default("church"), subjectId: id.optional(), from: z.iso.date().optional(), to: z.iso.date().optional() }).parse(r.query);
+    const subjectId = query.subjectId ?? r.church;
+    s.json(await scoped(r, async (q) => {
+      await subjectCheck(q, r, query.subjectType, subjectId);
+      const filter = query.subjectType === "person" ? " AND he.subject_id=$2" : "";
+      const params: unknown[] = query.subjectType === "person" ? [r.church, subjectId] : [r.church];
+      const dateParts: string[] = [];
+      if (query.from) { params.push(query.from); dateParts.push("he.event_date >= $" + params.length); }
+      if (query.to) { params.push(query.to); dateParts.push("he.event_date <= $" + params.length); }
+      const dateFilter = dateParts.length ? " AND " + dateParts.join(" AND ") : "";
+      const events = await q("SELECT he.id,he.event_date,he.event_type,he.title,he.description,he.visibility,he.source_type,he.source_id FROM historical_events he WHERE he.church_id=$1" + (query.subjectType === "person" ? " AND he.subject_type='person' AND he.subject_id=$2" : " AND he.subject_type='church' AND he.subject_id=$1") + dateFilter + " ORDER BY he.event_date ASC,he.created_at ASC", params);
+      if (query.subjectType === "person") {
+        const [person] = await q("SELECT id,name,status,created_at FROM people WHERE id=$1 AND church_id=$2", [subjectId, r.church]);
+        const [education] = await q("SELECT count(*)::int AS total, count(*) FILTER (WHERE ee.status='completed')::int AS completed FROM education_enrollments ee WHERE ee.church_id=$1 AND ee.person_id=$2", [r.church, subjectId]);
+        return { subject: person, events, metrics: { educationEnrollments: Number(education?.total ?? 0), educationCompleted: Number(education?.completed ?? 0) } };
+      }
+      const [church] = await q("SELECT id,name,affiliated_on FROM churches WHERE id=$1", [r.church]);
+      const [people] = await q("SELECT count(*)::int AS total, count(*) FILTER (WHERE status='member')::int AS members, count(*) FILTER (WHERE status='visitor')::int AS visitors, count(*) FILTER (WHERE status='worker')::int AS workers FROM people WHERE church_id=$1", [r.church]);
+      const [meetings] = await q("SELECT COALESCE(sum(visitors),0)::int AS visitors, count(*)::int AS meetings FROM meetings WHERE church_id=$1", [r.church]);
+      const [classes] = await q("SELECT count(*)::int AS classes FROM education_classes WHERE church_id=$1", [r.church]);
+      return { subject: church, events, metrics: { people: Number(people?.total ?? 0), members: Number(people?.members ?? 0), visitors: Number(people?.visitors ?? 0), workers: Number(people?.workers ?? 0), meetingVisitors: Number(meetings?.visitors ?? 0), meetings: Number(meetings?.meetings ?? 0), classes: Number(classes?.classes ?? 0) } };
+    }));
+  }));
+
+  app.post("/api/history", route(async (r, s) => {
+    await manage(r);
+    const body = eventSchema.parse(r.body);
+    s.status(201).json(await scoped(r, async (q) => {
+      await subjectCheck(q, r, body.subjectType, body.subjectId);
+      const [event] = await q("INSERT INTO historical_events(church_id,subject_type,subject_id,event_date,event_type,title,description,visibility,source_type,source_id,metadata,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *", [r.church, body.subjectType, body.subjectId, body.eventDate, body.eventType, body.title, body.description, body.visibility, body.sourceType ?? null, body.sourceId ?? null, JSON.stringify(body.metadata), r.actor.id]);
+      await audit(q, r.actor.id, r.church, "history.created", event.id);
+      return event;
+    }));
+  }));
+
+  app.patch("/api/history/:id", route(async (r, s) => {
+    await manage(r);
+    const eventId = id.parse(r.params.id);
+    const body = eventSchema.partial().parse(r.body);
+    s.json(await scoped(r, async (q) => {
+      const [event] = await q("UPDATE historical_events SET event_date=COALESCE($2,event_date),event_type=COALESCE($3,event_type),title=COALESCE($4,title),description=COALESCE($5,description),visibility=COALESCE($6,visibility),metadata=COALESCE($7,metadata),updated_at=now() WHERE id=$1 AND church_id=$8 RETURNING *", [eventId, body.eventDate ?? null, body.eventType ?? null, body.title ?? null, body.description ?? null, body.visibility ?? null, body.metadata ? JSON.stringify(body.metadata) : null, r.church]);
+      requireThat(event, 404, "Registro histórico não encontrado.");
+      await audit(q, r.actor.id, r.church, "history.updated", eventId);
+      return event;
+    }));
+  }));
+
+  app.delete("/api/history/:id", route(async (r, s) => {
+    await manage(r);
+    const eventId = id.parse(r.params.id);
+    await scoped(r, async (q) => {
+      const [event] = await q("DELETE FROM historical_events WHERE id=$1 AND church_id=$2 RETURNING id", [eventId, r.church]);
+      requireThat(event, 404, "Registro histórico não encontrado.");
+      await audit(q, r.actor.id, r.church, "history.deleted", eventId);
+    });
+    s.json({ ok: true });
+  }));
+}
