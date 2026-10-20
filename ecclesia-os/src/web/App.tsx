@@ -632,7 +632,7 @@ export default function App() {
   );
 }
 function Login({ onLogin }: { onLogin: () => Promise<void> }) {
-  const [mode, setMode] = useState<"login" | "register" | "recovery">("login"),
+  const [mode, setMode] = useState<"login" | "member" | "register" | "recovery">("login"),
     [name, setName] = useState(""),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
@@ -800,6 +800,13 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
         return;
       }
 
+      if (mode === "member") {
+        if (!email.trim() || !password) throw new Error("Informe o código e o PIN.");
+        await api("/auth/login", "POST", { identifier: email.trim(), password });
+        await onLogin();
+        return;
+      }
+
       if (mode === "register") {
         if (!name.trim()) throw new Error("Por favor, informe seu nome completo.");
         if (!isStrongPassword) {
@@ -909,6 +916,14 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
             onClick={() => { setMode("login"); setError(""); setSuccessNotice(""); }}
           >
             Entrar
+          </button>
+          <button
+            type="button"
+            className={mode === "member" ? "" : "secondary"}
+            style={{ flex: 1, height: "38px" }}
+            onClick={() => { setMode("member"); setError(""); setSuccessNotice(""); }}
+          >
+            Código do membro
           </button>
           <button
             type="button"
