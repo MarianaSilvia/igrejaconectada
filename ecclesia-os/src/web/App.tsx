@@ -179,12 +179,13 @@ export default function App() {
         c = await api("/context");
       } catch (err) {
         if (auth.currentUser) {
+          const idToken = await auth.currentUser.getIdToken(true);
           await api("/auth/firebase-sync", "POST", {
             uid: auth.currentUser.uid,
             email: auth.currentUser.email || "",
             name: auth.currentUser.displayName || undefined,
             role: "member",
-          });
+          }, { Authorization: `Bearer ${idToken}` });
           c = await api("/context");
         } else {
           throw err;
