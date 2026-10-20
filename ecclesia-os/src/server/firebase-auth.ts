@@ -35,6 +35,15 @@ function firebaseAdminAuth() {
   return authClient;
 }
 
+export function firebaseAdminConfigured() {
+  return Boolean(
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
+      (process.env.FIREBASE_PROJECT_ID &&
+        process.env.FIREBASE_CLIENT_EMAIL &&
+        process.env.FIREBASE_PRIVATE_KEY),
+  );
+}
+
 export async function verifyFirebaseIdToken(token: string): Promise<DecodedIdToken> {
   if (!token || token.length > 8192) throw new Error("Token Firebase ausente ou inválido.");
   return firebaseAdminAuth().verifyIdToken(token, true);
