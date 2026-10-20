@@ -569,15 +569,8 @@ export function createApp(
             : b.role === "leader"
               ? "leader"
               : "member";
-          if (!existingMemberships.length && !existingNetworkMemberships.length) {
-            const churches = await q("SELECT id FROM churches ORDER BY affiliated_on ASC");
-            for (const ch of churches) {
-              await q(
-                "INSERT INTO memberships(user_id, church_id, role) VALUES($1, $2, $3) ON CONFLICT(user_id, church_id) DO NOTHING",
-                [existing.id, ch.id, membershipRole],
-              );
-            }
-          }
+          // Local and network access is granted only by an administrator invitation.
+          // A Firebase login can never create memberships or choose its own scope.
 
           if (isOwner && !existingNetworkMemberships.length) {
             const networks = await q("SELECT id FROM networks");
