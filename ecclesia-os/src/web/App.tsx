@@ -971,11 +971,11 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
             </>
           )}
 
-          <Field label="E-mail ou código de acesso">
+          <Field label={mode === "member" ? "Código de acesso" : "E-mail"}>
             <input
-              type="email"
+              type={mode === "member" ? "text" : "email"}
               autoComplete="username"
-              placeholder="seuemail@exemplo.com"
+              placeholder={mode === "member" ? "EC-XXXXXXXXXX" : "seuemail@exemplo.com"}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -983,7 +983,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
           </Field>
 
           {mode !== "recovery" && (
-            <Field label="Senha">
+            <Field label={mode === "member" ? "PIN provisório" : "Senha"}>
               <div style={{ position: "relative" }}>
                 <input
                   type={showPassword ? "text" : "password"}
