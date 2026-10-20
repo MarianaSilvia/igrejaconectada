@@ -19,18 +19,20 @@ function firebaseAdminAuth() {
       privateKey: process.env.FIREBASE_PRIVATE_KEY,
     };
   }
-  if (!service.projectId || !service.clientEmail || !service.privateKey) {
-    throw new Error("Firebase Admin não está configurado no servidor.");
+  if (!service.projectId) {
+    throw new Error("FIREBASE_PROJECT_ID não está configurado no servidor.");
   }
   const app = getApps().length
     ? getApps()[0]
-    : initializeApp({
-        credential: cert({
-          projectId: service.projectId,
-          clientEmail: service.clientEmail,
-          privateKey: service.privateKey.replace(/\\n/g, "\n"),
-        }),
-      });
+    : service.clientEmail && service.privateKey
+      ? initializeApp({
+          credential: cert({
+            projectId: service.projectId,
+            clientEmail: service.clientEmail,
+            privateKey: service.privateKey.replace(/\\n/g, "\n"),
+          }),
+        })
+      : initializeApp({ projectId: service.projectId });
   authClient = getAuth(app);
   return authClient;
 }
@@ -38,7 +40,7 @@ function firebaseAdminAuth() {
 export function firebaseAdminConfigured() {
   return Boolean(
     process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
-      (process.env.FIREBASE_PROJECT_ID &&
+      process.env.FIREBASE_PROJECT_ID &&
         process.env.FIREBASE_CLIENT_EMAIL &&
         process.env.FIREBASE_PRIVATE_KEY),
   );
