@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import sharp from "sharp";
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import type { Database, Query, Row } from "./db.js";
 import {
@@ -128,6 +129,7 @@ async function saveProfile(
   const profile = b.profile,
     administration = b.administration;
   let personId = id;
+  let issuedAccess: { code: string; pin: string } | null = null;
   const changedFields = new Set<string>();
   if (id) {
     const [person] = await q("SELECT id FROM people WHERE id=$1 FOR UPDATE", [
@@ -183,6 +185,21 @@ async function saveProfile(
       ],
     );
     personId = p.id;
+    const code = "EC-" + randomBytes(5).toString("hex").toUpperCase();
+    const pin = String(100000 + (randomBytes(4).readUInt32BE(0) % 900000));
+    const pinHash = passwordHash(pin);
+    const syntheticEmail = `${code.toLowerCase().replace(/[^a-z0-9]/g, "")}@member.ecclesia.local`;
+    const [u] = await q(
+      "INSERT INTO users(email,name,password_hash,member_access_code,member_pin_hash,member_pin_must_change) VALUES($1,$2,$3,$4,$5,true) RETURNING id",
+      [syntheticEmail, [profile.firstName, profile.lastName].filter(Boolean).join(" "), pinHash, code, pinHash],
+    );
+    await q("INSERT INTO memberships(user_id,church_id,role) VALUES($1,$2,'member')", [u.id, church]);
+    await q("UPDATE people SET user_id=$1 WHERE id=$2", [u.id, personId]);
+    await q(
+      "INSERT INTO member_access_credentials(church_id,person_id,user_id,access_code,pin_hash) VALUES($1,$2,$3,$4,$5)",
+      [church, personId, u.id, code, pinHash],
+    );
+    issuedAccess = { code, pin };
   }
   await q(
     "INSERT INTO member_profiles(church_id,person_id,encrypted_profile) VALUES($1,$2,$3) ON CONFLICT(person_id) DO UPDATE SET encrypted_profile=excluded.encrypted_profile,version=member_profiles.version+1,updated_at=now()",
@@ -227,7 +244,8 @@ async function saveProfile(
     id ? "member-profile.updated" : "member-profile.created",
     personId,
   );
-  return loadProfile(q, personId!, key);
+  const result = await loadProfile(q, personId!, key);
+  return issuedAccess ? { ...result, issuedAccess } : result;
 }
 export async function syncLegacyMemberProfile(q: Query, p: Row, key: Buffer) {
   const [stored] = await q(
