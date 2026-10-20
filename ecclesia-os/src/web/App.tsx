@@ -171,7 +171,8 @@ export default function App() {
     [senior, setSenior] = useState(
       () => localStorage.getItem("ecclesia-senior") === "true",
     ),
-    [search, setSearch] = useState(""),\n    [accountMenuOpen, setAccountMenuOpen] = useState(false);
+    [search, setSearch] = useState(""),
+    [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const load = useCallback(async () => {
     try {
       let c;
