@@ -146,7 +146,7 @@ export default function OperationsPage(
             onSubmit={(e) => {
               const b = formValues(e);
               void run(async () => {
-                await api("/account/password", "POST", b);
+                await api("/auth/change-password", "POST", { currentPassword: b.current, newPassword: b.password });
                 window.location.assign("/");
               });
             }}
@@ -175,20 +175,16 @@ export default function OperationsPage(
           {!setup ? (
             <form
               onSubmit={(e) => {
-                const b = formValues(e);
+                e.preventDefault();
                 void run(async () =>
-                  setSetup(await api("/account/mfa/setup", "POST", b)),
+                  setSetup(await api("/account/mfa/setup", "POST")),
                 );
               }}
             >
-              <Field label="Confirme sua senha para configurar o autenticador">
-                <input
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                />
-              </Field>
+              <p>
+                A sessão autenticada será usada para preparar o autenticador.
+                Escaneie a chave exibida e confirme o código do seu aplicativo.
+              </p>
               <Submit busy={busy} label="Preparar novo autenticador" />
             </form>
           ) : (
@@ -196,11 +192,11 @@ export default function OperationsPage(
               onSubmit={(e) => {
                 const b = formValues(e);
                 void run(async () => {
-                  const v = await api("/auth/mfa-confirm", "POST", {
+                  const v = await api("/auth/mfa/enroll", "POST", {
                     challenge: setup.challenge,
                     code: b.code,
                   });
-                  setBackup(v.backupCodes);
+                  setBackup(v.backupCodes ?? []);
                   setSetup(null);
                 });
               }}
