@@ -11,6 +11,7 @@ import {
   token,
   requireThat,
   HttpError,
+  passwordHash,
 } from "./security.js";
 import { audit } from "./seed.js";
 import {
