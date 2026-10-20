@@ -4,7 +4,7 @@ import express, {
   type NextFunction,
 } from "express";
 import helmet from "helmet";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { parse } from "csv-parse/sync";
 import QRCode from "qrcode";
 import { z } from "zod";
@@ -291,15 +291,17 @@ export function createApp(
     "/api/auth/login",
     asyncRoute(async (r, s) => {
       const b = z
-        .object({ email: z.email(), password: z.string().min(1).max(200) })
+        .object({ identifier: z.string().trim().max(254).default(""), password: z.string().min(1).max(200), email: z.email().optional() })
+        .refine((v) => Boolean(v.identifier || v.email), "Informe o código ou e-mail.")
         .parse(r.body);
       await securityLimit(db, `login-ip:${r.ip}`, 60);
-      await securityLimit(db, `login:${r.ip}:${b.email.toLowerCase()}`, 8);
+      const identifier = (b.identifier || b.email || "").toLowerCase();
+      await securityLimit(db, `login:${r.ip}:${identifier}`, 8);
       const [u] = await db.transaction((q) =>
-        q("SELECT * FROM users WHERE email=$1", [b.email.toLowerCase()]),
+        q("SELECT u.*,u.member_pin_hash,u.member_pin_must_change,u.member_access_code AS access_code FROM users u WHERE lower(u.email)=$1 OR u.member_access_code=$2 LIMIT 1", [identifier, b.identifier.trim().toUpperCase()]),
       );
       requireThat(
-        u && !u.disabled_at && passwordMatches(b.password, u.password_hash),
+        u && !u.disabled_at && (u.access_code ? passwordMatches(b.password, u.member_pin_hash) : passwordMatches(b.password, u.password_hash)),
         401,
         "E-mail ou senha inválidos.",
       );
@@ -311,7 +313,7 @@ export function createApp(
             [hash(t), u.id],
           ),
         );
-        return s.json({ mfaRequired: true, challenge: t });
+        return s.json({ mfaRequired: true, challenge: t, pinMustChange: Boolean(u.member_pin_must_change) });
       }
       const privileged = await db.transaction((q) =>
         q(
@@ -325,7 +327,7 @@ export function createApp(
         "MFA precisa ser provisionado para este perfil.",
       );
       await issue(s, u.id, false);
-      s.json({ ok: true });
+      s.json({ ok: true, pinMustChange: Boolean(u.member_pin_must_change) });
     }),
   );
   app.post(
