@@ -4,7 +4,7 @@ import express, {
   type NextFunction,
 } from "express";
 import helmet from "helmet";
-import { randomUUID, randomBytes } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { parse } from "csv-parse/sync";
 import QRCode from "qrcode";
 import { z } from "zod";
@@ -25,7 +25,6 @@ import {
 import { audit, DEMO_SECRET } from "./seed.js";
 import { cents, decimal, postEntry, newTxid, settle } from "./finance.js";
 import { Efi } from "./efi.js";
-import { buildPixPayload, validatePixKey, type PixKeyType } from "./pix-static.js";
 import { operations } from "./operations.js";
 import { todayInChurch } from "../shared/dates.js";
 import { processIntegrationJob, reconcileCharge } from "./integration-jobs.js";
@@ -51,7 +50,6 @@ import { assetRoutes } from "./assets.js";
 import { libraryRoutes } from "./library.js";
 import { assistanceRoutes } from "./assistance.js";
 import { mediaRoutes } from "./media.js";
-import { verifyFirebaseIdToken, firebaseAdminConfigured } from "./firebase-auth.js";
 import {
   registrationPublicRoutes,
   registrationAdminRoutes,
@@ -59,11 +57,6 @@ import {
 } from "./member-registration.js";
 type AuthRequest = Request & { actor: Row; church: string };
 const uuid = z.uuid();
-const newMfaSecret = () => {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  return Array.from(randomBytes(20), (n) => alphabet[n & 31]).join("");
-};
-const strongPassword = z.string().min(14).max(200).refine((v) => /[A-Z]/.test(v) && /[a-z]/.test(v) && /\\d/.test(v), "A senha deve ter 14 caracteres, maiúscula, minúscula e número.");
 const text = z.string().trim().min(1).max(200);
 const date = z.iso.date();
 const personSchema = z.object({
@@ -90,13 +83,11 @@ export function createApp(
   },
 ) {
   const app = express();
-  const commercialFeaturesEnabled = process.env.COMMERCIAL_FEATURES_ENABLED === "true";
   app.disable("x-powered-by");
   app.use(
     helmet({
       contentSecurityPolicy:
         process.env.NODE_ENV === "production" ? undefined : false,
-      frameguard: false,
     }),
   );
   app.use(express.json({ limit: "5mb" }));
@@ -105,30 +96,19 @@ export function createApp(
     n();
   });
   app.use("/api", (r, s, n) => {
-    const origin = r.headers.origin;
-    if (!["GET", "HEAD", "OPTIONS"].includes(r.method) && origin) {
-      const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
-        .split(",")
-        .map((o) => o.trim())
-        .filter(Boolean);
-      const isAllowed =
-        origin === options.origin ||
-        allowedOrigins.includes(origin) ||
-        options.mode === "demo" ||
-        origin.endsWith(".run.app") ||
-        origin.includes("localhost");
-      if (!isAllowed) {
-        return s.status(403).json({ error: "Origem não autorizada." });
-      }
-    }
+    if (
+      !["GET", "HEAD", "OPTIONS"].includes(r.method) &&
+      r.headers.origin &&
+      r.headers.origin !== options.origin
+    )
+      return s.status(403).json({ error: "Origem não autorizada." });
     n();
   });
-  const isSecure = options.origin.startsWith("https:") || Boolean(process.env.PUBLIC_ORIGIN?.startsWith("https:"));
   const cookie = (s: Response, value: string, maxAge: number) =>
     s.cookie("ecclesia_session", value, {
       httpOnly: true,
-      sameSite: isSecure ? "none" : "lax",
-      secure: isSecure,
+      sameSite: "strict",
+      secure: options.origin.startsWith("https:"),
       maxAge,
       path: "/",
     });
@@ -207,7 +187,8 @@ export function createApp(
     db.transaction((q) =>
       q("SELECT modules FROM churches WHERE id=$1", [church]),
     ).then((rows) => {
-      if (!rows[0]?.modules.includes(scope))
+      const aliases: Record<string, string[]> = { people: ["people", "secretariat"], cells: ["cells", "groups"], finance: ["finance", "treasury"], assets: ["assets"], library: ["library"], assistance: ["assistance"] };
+      if (!(aliases[scope] ?? [scope]).some((module) => rows[0]?.modules?.includes(module)))
         return s
           .status(403)
           .json({ error: "Este módulo está desabilitado para a igreja." });
@@ -248,19 +229,23 @@ export function createApp(
   app.get(
     "/api/health/ready",
     asyncRoute(async (_r, s) => {
-      const checks: Record<string, boolean | string> = {
+      const checks: Record<string, boolean> = {
         database: false,
         serviceDatabase:
-          options.mode === "demo" || Boolean(process.env.ECCLESIA_SERVICE_DATABASE_URL ?? process.env.SERVICE_DATABASE_URL),
+          options.mode === "demo" || Boolean(process.env.SERVICE_DATABASE_URL),
         migrationDatabase:
           options.mode === "demo" ||
           Boolean(process.env.MIGRATION_DATABASE_URL),
         dataKey: options.key.length === 32,
-        firebase: options.mode === "demo" || firebaseAdminConfigured(),
         origin:
           options.mode === "demo" || options.origin.startsWith("https://"),
-        pix: "static",
-        automaticPayments: false,
+        efiTls:
+          options.mode === "demo" ||
+          Boolean(
+            process.env.EFI_TLS_CERT_PATH &&
+            process.env.EFI_TLS_KEY_PATH &&
+            process.env.EFI_WEBHOOK_CA_PATH,
+          ),
         communication:
           options.mode === "demo" ||
           process.env.COMMUNICATION_TRANSPORT !== "webhook" ||
@@ -280,7 +265,7 @@ export function createApp(
         checks.database = false;
       }
       checks.mfaKey = (options.mfaKey ?? options.key).length === 32;
-
+      checks.efi = options.mode === "demo" || options.efi.accounts.length > 0;
       const ready = Object.values(checks).every(Boolean);
       s.status(ready ? 200 : 503).json({
         ok: ready,
@@ -318,23 +303,6 @@ export function createApp(
         401,
         "E-mail ou senha inválidos.",
       );
-      const privileged = await db.transaction((q) =>
-        q(
-          "SELECT 1 FROM memberships WHERE user_id=$1 AND role<>'member' UNION ALL SELECT 1 FROM network_members WHERE user_id=$1 AND revoked_at IS NULL",
-          [u.id],
-        ),
-      );
-      if (!u.totp_secret && privileged.length && u.mfa_enrollment_required) {
-        const challenge = token();
-        const secret = newMfaSecret();
-        await db.transaction((q) =>
-          q(
-            "INSERT INTO mfa_enrollment_challenges(token_hash,user_id,encrypted_secret,expires_at) VALUES($1,$2,$3,now()+interval '10 minutes')",
-            [hash(challenge), u.id, encrypt(secret, options.mfaKey ?? options.key)],
-          ),
-        );
-        return s.json({ mfaEnrollmentRequired: true, challenge, setupSecret: secret });
-      }
       if (u.totp_secret) {
         const t = token();
         await db.transaction((q) =>
@@ -345,13 +313,19 @@ export function createApp(
         );
         return s.json({ mfaRequired: true, challenge: t });
       }
+      const privileged = await db.transaction((q) =>
+        q(
+          "SELECT 1 FROM memberships WHERE user_id=$1 AND role<>'member' UNION ALL SELECT 1 FROM network_members WHERE user_id=$1",
+          [u.id],
+        ),
+      );
       requireThat(
         !privileged.length,
         403,
-        "MFA precisa ser configurado para este perfil.",
+        "MFA precisa ser provisionado para este perfil.",
       );
       await issue(s, u.id, false);
-      s.json({ ok: true, passwordChangeRequired: Boolean(u.password_must_change) });
+      s.json({ ok: true });
     }),
   );
   app.post(
@@ -396,84 +370,7 @@ export function createApp(
         return c;
       });
       requireThat(u, 401, "Código inválido.");
-      const [account] = await db.transaction((q) =>
-        q("SELECT password_must_change FROM users WHERE id=$1", [u.user_id]),
-      );
       await issue(s, u.user_id, true);
-      s.json({ ok: true, passwordChangeRequired: Boolean(account?.password_must_change) });
-    }),
-  );
-  app.post(
-    "/api/account/mfa/setup",
-    asyncRoute(async (r, s) => {
-      const raw = sessionToken(r);
-      requireThat(raw, 401, "Entre para continuar.");
-      const [account] = await db.transaction((q) =>
-        q(
-          "SELECT s.user_id,u.totp_secret,u.mfa_enrollment_required FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.disabled_at IS NULL",
-          [hash(raw)],
-        ),
-      );
-      requireThat(account, 401, "Sessão expirada. Entre novamente.");
-      const privileged = await db.transaction((q) =>
-        q(
-          "SELECT 1 FROM memberships WHERE user_id=$1 AND role<>'member' UNION ALL SELECT 1 FROM network_members WHERE user_id=$1 AND revoked_at IS NULL",
-          [account.user_id],
-        ),
-      );
-      requireThat(privileged.length > 0, 403, "MFA não é necessário para este perfil.");
-      requireThat(!account.totp_secret, 409, "O autenticador já está configurado.");
-      const challenge = token();
-      const secret = newMfaSecret();
-      await db.transaction(async (q) => {
-        await q("DELETE FROM mfa_enrollment_challenges WHERE user_id=$1", [account.user_id]);
-        await q(
-          "INSERT INTO mfa_enrollment_challenges(token_hash,user_id,encrypted_secret,expires_at) VALUES($1,$2,$3,now()+interval '10 minutes')",
-          [hash(challenge), account.user_id, encrypt(secret, options.mfaKey ?? options.key)],
-        );
-      });
-      s.json({ challenge, secret });
-    }),
-  );
-  app.post(
-    "/api/auth/mfa/enroll",
-    asyncRoute(async (r, s) => {
-      const b = z.object({ challenge: z.string().min(30).max(100), code: z.string().regex(/^\d{6}$/) }).parse(r.body);
-      const result = await db.transaction(async (q) => {
-        const [c] = await q(
-          "SELECT c.*,u.password_must_change FROM mfa_enrollment_challenges c JOIN users u ON u.id=c.user_id WHERE c.token_hash=$1 AND c.expires_at>now() AND u.disabled_at IS NULL FOR UPDATE",
-          [hash(b.challenge)],
-        );
-        requireThat(c && c.attempts < 5, 401, "Configuração de MFA expirada.");
-        await q("UPDATE mfa_enrollment_challenges SET attempts=attempts+1 WHERE token_hash=$1", [hash(b.challenge)]);
-        const [user] = await q("SELECT totp_secret FROM users WHERE id=$1", [c.user_id]);
-        const secret = decrypt(c.encrypted_secret, options.mfaKey ?? options.key);
-        const step = totpStep(secret, b.code);
-        requireThat(step !== null, 401, "Código inválido.");
-        await q("UPDATE users SET totp_secret=$2,mfa_enrollment_required=false,last_totp_step=$3 WHERE id=$1", [c.user_id, "enc:v1:" + encrypt(secret, options.mfaKey ?? options.key), step]);
-        await q("DELETE FROM mfa_enrollment_challenges WHERE token_hash=$1", [hash(b.challenge)]);
-        return { userId: c.user_id, passwordChangeRequired: Boolean(c.password_must_change) };
-      });
-      await issue(s, result.userId, true);
-      s.json({ ok: true, passwordChangeRequired: result.passwordChangeRequired });
-    }),
-  );
-  app.post(
-    "/api/auth/change-password",
-    asyncRoute(async (r, s) => {
-      const b = z.object({ currentPassword: z.string().min(1).max(200), newPassword: strongPassword }).parse(r.body);
-      const raw = sessionToken(r);
-      requireThat(raw, 401, "Entre para continuar.");
-      const [account] = await db.transaction((q) =>
-        q("SELECT s.user_id,u.password_hash FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.disabled_at IS NULL", [hash(raw)]),
-      );
-      requireThat(account && passwordMatches(b.currentPassword, account.password_hash), 401, "Senha atual inválida.");
-      await db.transaction(async (q) => {
-        await q("UPDATE users SET password_hash=$2,password_must_change=false,password_changed_at=now() WHERE id=$1", [account.user_id, passwordHash(b.newPassword)]);
-        await q("DELETE FROM sessions WHERE user_id=$1", [account.user_id]);
-        await q("INSERT INTO auth_security_events(user_id,action,metadata) VALUES($1,'password-changed',$2)", [account.user_id, JSON.stringify({ source: "first-access" })]);
-      });
-      cookie(s, "", 0);
       s.json({ ok: true });
     }),
   );
@@ -489,264 +386,6 @@ export function createApp(
       s.json({ ok: true });
     }),
   );
-  interface ServerActivityLog {
-    id: string;
-    timestamp: string;
-    category: "auth" | "database" | "security" | "sync";
-    action: string;
-    severity: "info" | "success" | "warning" | "error";
-    actorEmail?: string;
-    actorUid?: string;
-    actorRole?: string;
-    target?: string;
-    status: "success" | "failure" | "pending";
-    summary: string;
-    details?: any;
-  }
-
-  const serverActivityLogs: ServerActivityLog[] = [
-    {
-      id: "srv-log-boot",
-      timestamp: new Date().toISOString(),
-      category: "auth",
-      action: "auth.system_boot",
-      severity: "info",
-      actorEmail: "sistema@ecclesiaos.com",
-      status: "success",
-      summary: "Serviço de autenticação Firebase e sincronização de dados operacional.",
-      details: { environment: "cloud_run", mode: "production" },
-    },
-  ];
-
-  app.post(
-    "/api/auth/firebase-sync",
-    asyncRoute(async (r, s) => {
-      let b: {
-        uid: string;
-        email: string;
-        name?: string;
-        role: "admin" | "member" | "pastor" | "leader";
-      };
-      try {
-        b = z
-          .object({
-            uid: z.string().min(1).max(128),
-            email: z.string().email(),
-            name: z.string().min(1).max(120).optional(),
-            role: z.enum(["admin", "member", "pastor", "leader"]).optional().default("member"),
-          })
-          .parse(r.body);
-      } catch (err: any) {
-        serverActivityLogs.unshift({
-          id: randomUUID(),
-          timestamp: new Date().toISOString(),
-          category: "security",
-          action: "auth.sync_validation_failed",
-          severity: "warning",
-          target: "/api/auth/firebase-sync",
-          status: "failure",
-          summary: `Payload de sincronização inválido: ${err?.message || err}`,
-          details: { error: String(err) },
-        });
-        throw err;
-      }
-
-      const authorization = r.headers.authorization ?? "";
-      requireThat(authorization.startsWith("Bearer "), 401, "Token Firebase ausente.");
-      let verified: Awaited<ReturnType<typeof verifyFirebaseIdToken>>;
-      try {
-        verified = await verifyFirebaseIdToken(authorization.slice(7).trim());
-      } catch {
-        throw new HttpError(401, "Sessão Firebase inválida ou expirada.");
-      }
-      const verifiedEmail = verified.email?.toLowerCase().trim();
-      requireThat(verifiedEmail && (process.env.REQUIRE_FIREBASE_EMAIL_VERIFICATION !== "true" || verified.email_verified !== false), 401, "Confirme seu e-mail no Firebase antes de entrar.");
-      requireThat(verifiedEmail === b.email.toLowerCase().trim(), 401, "A identidade Firebase não corresponde ao e-mail informado.");
-      requireThat(verified.uid === b.uid, 401, "A identidade Firebase não corresponde ao usuário informado.");
-      const email = verifiedEmail;
-      const userName = (verified.name || b.name)?.trim() || email.split("@")[0];
-      const isOwner = email === "marianabsilva1987@gmail.com";
-
-      try {
-        const user = await db.transaction(async (q) => {
-          let [existing] = await q("SELECT * FROM users WHERE email=$1", [email]);
-          const existingMemberships = await q(
-            "SELECT role FROM memberships WHERE user_id=$1",
-            [existing?.id ?? "00000000-0000-0000-0000-000000000000"],
-          );
-          const existingNetworkMemberships = await q(
-            "SELECT network_id FROM network_members WHERE user_id=$1 AND revoked_at IS NULL",
-            [existing?.id ?? "00000000-0000-0000-0000-000000000000"],
-          );
-          const isOwner = email === "marianabsilva1987@gmail.com";
-
-          if (!existing) {
-            const newId = randomUUID();
-            const dummyPassword = passwordHash(randomBytes(16).toString("hex"));
-            [existing] = await q(
-              "INSERT INTO users(id, email, name, password_hash, password_must_change) VALUES($1, $2, $3, $4, false) RETURNING *",
-              [newId, email, userName, dummyPassword],
-            );
-          } else if (b.name) {
-            await q("UPDATE users SET name=$1 WHERE id=$2", [userName, existing.id]);
-            existing.name = userName;
-          }
-
-          // Never grant privileged or network access based on a client supplied role.
-          // Preserve memberships that were provisioned by the administrator. A user
-          // with an existing network link must not receive local memberships.
-          const privilegedMembership = existingMemberships.some((m) => m.role !== "member");
-          const membershipRole = isOwner || privilegedMembership
-            ? "admin"
-            : b.role === "leader"
-              ? "leader"
-              : "member";
-          // Local and network access is granted only by an administrator invitation.
-          // A Firebase login can never create memberships or choose its own scope.
-
-          if (isOwner && !existingNetworkMemberships.length) {
-            const networks = await q("SELECT id FROM networks");
-            for (const net of networks) {
-              try {
-                await q(
-                  "INSERT INTO network_members(user_id, network_id, role) VALUES($1, $2, 'network_admin') ON CONFLICT(user_id, network_id) DO UPDATE SET role='network_admin', revoked_at=NULL",
-                  [existing.id, net.id],
-                );
-              } catch {
-                await q(
-                  "INSERT INTO network_members(user_id, network_id) VALUES($1, $2) ON CONFLICT(user_id, network_id) DO NOTHING",
-                  [existing.id, net.id],
-                );
-              }
-            }
-            try {
-              await q(
-                "INSERT INTO platform_memberships(user_id, role) VALUES($1, 'platform_admin') ON CONFLICT(user_id) DO UPDATE SET role='platform_admin'",
-                [existing.id],
-              );
-            } catch {
-              // platform_memberships might not be enabled in all environments
-            }
-          }
-
-          return existing;
-        });
-
-        serverActivityLogs.unshift({
-          id: randomUUID(),
-          timestamp: new Date().toISOString(),
-          category: "sync",
-          action: "db.firebase_sync_success",
-          severity: "success",
-          actorEmail: email,
-          actorUid: b.uid,
-          actorRole: b.role,
-          target: "/api/auth/firebase-sync",
-          status: "success",
-          summary: `Sessão Firebase sincronizada para ${email} com sucesso.`,
-          details: { isOwner, userId: user.id },
-        });
-
-        await issue(s, user.id, true);
-        s.json({ ok: true, user: { id: user.id, email: user.email, name: user.name } });
-      } catch (syncErr: any) {
-        serverActivityLogs.unshift({
-          id: randomUUID(),
-          timestamp: new Date().toISOString(),
-          category: "sync",
-          action: "db.firebase_sync_failure",
-          severity: "error",
-          actorEmail: email,
-          actorUid: b.uid,
-          target: "/api/auth/firebase-sync",
-          status: "failure",
-          summary: `Falha na sincronização Firebase com o banco: ${syncErr?.message || syncErr}`,
-          details: { error: String(syncErr), stack: syncErr?.stack },
-        });
-        throw syncErr;
-      }
-    }),
-  );
-
-  app.get(
-    "/api/admin/firebase-activity-logs",
-    asyncRoute(async (_r, s) => {
-      let dbEvents: any[] = [];
-      try {
-        dbEvents = await db.transaction(async (q) => {
-          return q(
-            "SELECT id, user_id, email, action, metadata, created_at FROM auth_security_events ORDER BY created_at DESC LIMIT 50",
-          );
-        });
-      } catch {
-        dbEvents = [];
-      }
-
-      const formattedDbEvents: ServerActivityLog[] = dbEvents.map((e) => ({
-        id: e.id,
-        timestamp: new Date(e.created_at).toISOString(),
-        category: (e.action.startsWith("auth") ? "auth" : "security") as any,
-        action: e.action,
-        severity: (e.action.includes("fail") || e.action.includes("warn") ? "warning" : "info") as any,
-        actorEmail: e.email || undefined,
-        actorUid: e.user_id || undefined,
-        status: "success",
-        summary: `Evento de segurança registrado: ${e.action}`,
-        details: e.metadata,
-      }));
-
-      const seen = new Set<string>();
-      const combined: ServerActivityLog[] = [];
-      for (const item of [...serverActivityLogs, ...formattedDbEvents]) {
-        if (!seen.has(item.id)) {
-          seen.add(item.id);
-          combined.push(item);
-        }
-      }
-      combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-      s.json({ logs: combined.slice(0, 100) });
-    }),
-  );
-
-  app.post(
-    "/api/admin/firebase-activity-logs",
-    asyncRoute(async (r, s) => {
-      const b = r.body;
-      if (!b || !b.action) {
-        return s.status(400).json({ error: "Invalid log payload" });
-      }
-      const entry: ServerActivityLog = {
-        id: b.id || randomUUID(),
-        timestamp: b.timestamp || new Date().toISOString(),
-        category: b.category || "security",
-        action: b.action,
-        severity: b.severity || "info",
-        actorEmail: b.actorEmail,
-        actorUid: b.actorUid,
-        actorRole: b.actorRole,
-        target: b.target,
-        status: b.status || "success",
-        summary: b.summary || b.action,
-        details: b.details,
-      };
-      serverActivityLogs.unshift(entry);
-      if (serverActivityLogs.length > 200) serverActivityLogs.length = 200;
-
-      try {
-        await db.transaction(async (q) => {
-          await q(
-            "INSERT INTO auth_security_events(id, email, action, metadata, created_at) VALUES($1, $2, $3, $4, $5)",
-            [entry.id, entry.actorEmail || null, entry.action, JSON.stringify(entry), entry.timestamp],
-          );
-        });
-      } catch {
-        // Ignored if table structure differs
-      }
-
-      s.json({ ok: true, log: entry });
-    }),
-  );
   app.get(
     "/api/context",
     asyncRoute(async (r: AuthRequest, s) => {
@@ -760,7 +399,7 @@ export function createApp(
           [r.actor.id],
         );
         const [platform] = await q("SELECT role FROM platform_memberships WHERE user_id=$1", [r.actor.id]);
-        return { churches, networks, platformRole: commercialFeaturesEnabled ? platform?.role ?? null : null };
+        return { churches, networks, platformRole: platform?.role ?? null };
       });
       const churches = await Promise.all(
         data.churches.map(async (c) => ({
@@ -798,10 +437,6 @@ export function createApp(
   app.get(
     "/api/network/subscriptions",
     asyncRoute(async (r: AuthRequest, s) => {
-      if (!commercialFeaturesEnabled)
-        return s
-          .status(404)
-          .json({ error: "Operação comercial desativada no ambiente atual." });
       const rows = await db.transaction((q) =>
         q(
           `SELECT c.id,c.name,co.plan,co.status,co.monthly_cents,co.renews_on,COALESCE(inv.total,0)::int AS invoice_count,COALESCE(inv.overdue,0)::int AS overdue_invoices FROM churches c LEFT JOIN LATERAL (SELECT plan,status,monthly_cents,renews_on FROM saas_contracts WHERE church_id=c.id ORDER BY updated_at DESC LIMIT 1) co ON true LEFT JOIN LATERAL (SELECT count(*) AS total,count(*) FILTER(WHERE status='overdue' OR (status='issued' AND due_on<CURRENT_DATE)) AS overdue FROM saas_invoices WHERE church_id=c.id) inv ON true WHERE EXISTS(SELECT 1 FROM network_members nm WHERE nm.network_id=c.network_id AND nm.user_id=$1) ORDER BY c.name`,
@@ -1552,96 +1187,6 @@ export function createApp(
       );
     }),
   );
-  app.use("/api/pix", (r, s, n) => {
-    if (r.path.startsWith("/charges") || r.path.startsWith("/reconcile"))
-      return s.status(410).json({ error: "Cobranças Pix automáticas foram desativadas. Use a chave Pix e o QR Code estático." });
-    n();
-  });
-  app.post("/api/demo/settle/:id", (_r, s) =>
-    s.status(410).json({ error: "Liquidação automática desativada." }),
-  );
-
-  app.get(
-    "/api/pix/settings",
-    asyncRoute(async (r: AuthRequest, s) => {
-      const row = await scoped(r, async (q) => {
-        await permit(q, "finance");
-        const [settings] = await q("SELECT * FROM church_pix_settings WHERE church_id=$1", [r.church]);
-        return settings ?? null;
-      });
-      s.json(row);
-    }),
-  );
-  app.put(
-    "/api/pix/settings",
-    asyncRoute(async (r: AuthRequest, s) => {
-      const b = z.object({
-        pixKey: z.string().trim().min(1).max(120),
-        pixKeyType: z.enum(["cpf", "cnpj", "email", "phone", "random"]),
-        merchantName: z.string().trim().min(1).max(25),
-        merchantCity: z.string().trim().min(1).max(15),
-        instructions: z.string().trim().max(500).default(""),
-        publicEnabled: z.boolean().default(false),
-      }).parse(r.body);
-      requireThat(validatePixKey(b.pixKeyType as PixKeyType, b.pixKey), 400, "A chave Pix não é válida para o tipo informado.");
-      const row = await scoped(r, async (q) => {
-        await permit(q, "finance", true);
-        const [settings] = await q(
-          `INSERT INTO church_pix_settings(church_id,pix_key,pix_key_type,merchant_name,merchant_city,instructions,public_enabled,updated_by,updated_at)
-           VALUES($1,$2,$3,$4,$5,$6,$7,$8,now())
-           ON CONFLICT(church_id) DO UPDATE SET pix_key=EXCLUDED.pix_key,pix_key_type=EXCLUDED.pix_key_type,merchant_name=EXCLUDED.merchant_name,merchant_city=EXCLUDED.merchant_city,instructions=EXCLUDED.instructions,public_enabled=EXCLUDED.public_enabled,updated_by=EXCLUDED.updated_by,updated_at=now()
-           RETURNING *`,
-          [r.church, b.pixKey, b.pixKeyType, b.merchantName, b.merchantCity, b.instructions, b.publicEnabled, r.actor.id],
-        );
-        await audit(q, r.actor.id, r.church, "pix.settings.updated", settings.church_id);
-        return settings;
-      });
-      s.json(row);
-    }),
-  );
-  app.get(
-    "/api/pix/static-qr",
-    asyncRoute(async (r: AuthRequest, s) => {
-      const amount = r.query.amount ? cents(String(r.query.amount)) : undefined;
-      const [settings] = await scoped(r, (q) =>
-        q("SELECT * FROM church_pix_settings WHERE church_id=$1", [r.church]),
-      );
-      requireThat(settings, 404, "A igreja ainda não cadastrou uma chave Pix.");
-      const payload = buildPixPayload({
-        key: settings.pix_key,
-        keyType: settings.pix_key_type,
-        merchantName: settings.merchant_name,
-        merchantCity: settings.merchant_city,
-        amount: amount ? amount / 100 : undefined,
-        description: settings.instructions,
-      });
-      s.json({
-        pixKey: settings.pix_key,
-        payload,
-        qrDataUrl: await QRCode.toDataURL(payload, { width: 280, margin: 2 }),
-        amountCents: amount ?? null,
-      });
-    }),
-  );
-  app.get(
-    "/api/portal/pix",
-    asyncRoute(async (r: AuthRequest, s) => {
-      const [settings] = await scoped(r, (q) =>
-        q("SELECT pix_key,pix_key_type,merchant_name,merchant_city,instructions FROM church_pix_settings WHERE church_id=$1 AND public_enabled=true", [r.church]),
-      );
-      s.json(settings ? {
-        ...settings,
-        payload: buildPixPayload({
-          key: settings.pix_key,
-          keyType: settings.pix_key_type,
-          merchantName: settings.merchant_name,
-          merchantCity: settings.merchant_city,
-          description: settings.instructions,
-        }),
-      } : null);
-    }),
-  );
-
   app.post(
     "/api/pix/charges",
     asyncRoute(async (r: AuthRequest, s) => {
@@ -1797,10 +1342,6 @@ export function createApp(
       });
     }),
   );
-  app.post("/api/webhooks/efi/:account/pix", (_r, s) =>
-    s.status(410).json({ error: "Webhooks bancários desativados." }),
-  );
-  /* Legacy provider implementation retained for historical compatibility. */
   app.post(
     "/api/webhooks/efi/:account/pix",
     asyncRoute(async (r: Request, s) => {
@@ -2465,7 +2006,6 @@ export function createApp(
   );
   const platformQuery = <T>(r: AuthRequest, fn: (q: Query) => Promise<T>) => db.transaction(fn, { actor: r.actor.id, church: r.church });
   const requirePlatform = async (r: AuthRequest, billing = false) => {
-    requireThat(commercialFeaturesEnabled, 404, "Operação comercial desativada no ambiente atual.");
     const [role] = await platformQuery(r, (q) => q("SELECT role FROM platform_memberships WHERE user_id=$1", [r.actor.id]));
     requireThat(role?.role === "platform_admin" || (billing && role?.role === "platform_billing"), 403, "Acesso exclusivo da operação da plataforma.");
     return role.role as string;
@@ -2592,6 +2132,9 @@ export function createApp(
   });
   return app;
 }
+
+
+
 
 
 
