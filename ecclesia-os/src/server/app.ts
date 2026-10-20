@@ -50,6 +50,7 @@ import { assetRoutes } from "./assets.js";
 import { libraryRoutes } from "./library.js";
 import { assistanceRoutes } from "./assistance.js";
 import { mediaRoutes } from "./media.js";
+import { historyRoutes } from "./history.js";
 import {
   registrationPublicRoutes,
   registrationAdminRoutes,
@@ -2090,6 +2091,7 @@ export function createApp(
   libraryRoutes(app, db);
   assistanceRoutes(app, db, options.key);
   mediaRoutes(app, db, options.key);
+  historyRoutes(app, db);
   registrationAdminRoutes(app, db, options);
   app.use("/api", (_r, s) =>
     s.status(404).json({ error: "Rota não encontrada." }),
