@@ -528,7 +528,7 @@ export function createApp(
         throw new HttpError(401, "Sessão Firebase inválida ou expirada.");
       }
       const verifiedEmail = verified.email?.toLowerCase().trim();
-      requireThat(verifiedEmail && verified.email_verified !== false, 401, "Confirme seu e-mail no Firebase antes de entrar.");
+      requireThat(verifiedEmail && (process.env.REQUIRE_FIREBASE_EMAIL_VERIFICATION !== "true" || verified.email_verified !== false), 401, "Confirme seu e-mail no Firebase antes de entrar.");
       requireThat(verifiedEmail === b.email.toLowerCase().trim(), 401, "A identidade Firebase não corresponde ao e-mail informado.");
       requireThat(verified.uid === b.uid, 401, "A identidade Firebase não corresponde ao usuário informado.");
       const email = verifiedEmail;
