@@ -171,7 +171,7 @@ export default function App() {
     [senior, setSenior] = useState(
       () => localStorage.getItem("ecclesia-senior") === "true",
     ),
-    [search, setSearch] = useState("");
+    [search, setSearch] = useState(""),\n    [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const load = useCallback(async () => {
     try {
       let c;
@@ -406,7 +406,50 @@ export default function App() {
             >
               A+
             </button>
-            <span className="avatar mini">{context.user.name[0]}</span>
+            <div className="account-menu-wrap">
+              <button
+                className="account-trigger"
+                aria-label="Abrir menu da conta"
+                aria-expanded={accountMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setAccountMenuOpen((open) => !open)}
+              >
+                <span className="avatar mini">{context.user.name[0]}</span>
+                <span className="sr-only">Conta de {context.user.name}</span>
+              </button>
+              {accountMenuOpen && (
+                <div className="account-menu" role="menu" aria-label="Opções da conta">
+                  <div className="account-menu-heading">
+                    <strong>{context.user.name}</strong>
+                    <small>{context.user.email}</small>
+                  </div>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setPage("operations");
+                      setAccountMenuOpen(false);
+                    }}
+                  >
+                    Minha conta e segurança
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={async () => {
+                      void logoutFirebase();
+                      await api("/auth/logout", "POST");
+                      setChurch("");
+                      selectChurch("");
+                      setContext(null);
+                      setAccountMenuOpen(false);
+                    }}
+                  >
+                    Sair
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         {activeArea !== "dashboard" && areaTabs[activeArea].length > 1 && (
