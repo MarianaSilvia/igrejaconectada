@@ -855,7 +855,7 @@ export function People(
     ),
     [preview, setPreview] = useState<RecordData | null>(null),
     [busy, setBusy] = useState(false),
-    [credential, setCredential] = useState<RecordData | null>(null),
+    [credential, setCredential] = useState<RecordData | null>(null),\n    [issuedMemberAccess, setIssuedMemberAccess] = useState<RecordData | null>(null),
     [filter, setFilter] = useState("all"),
     [campusId, setCampusId] = useState(""),
     [selectedSavedView, setSelectedSavedView] = useState(""),
@@ -1478,7 +1478,7 @@ export function People(
             directory={directory.data}
             defaultCampusId={registrationConfig.data?.defaultCampusId}
             onSave={async (body) => {
-              await api(
+              const result = await api<RecordData>(
                 memberEditor.initial
                   ? `/people/${memberEditor.initial.id}/profile`
                   : "/people/profiles",
@@ -1488,6 +1488,11 @@ export function People(
               setMemberEditor(null);
               props.refresh();
               props.notify("Ficha do membro salva com sucesso.");
+              if (!memberEditor.initial && result.issuedAccess)
+                setIssuedMemberAccess({
+                  ...result.issuedAccess,
+                  name: [body.profile.firstName, body.profile.lastName].filter(Boolean).join(" "),
+                });
             }}
           />
           {memberEditor.initial && (
@@ -1751,6 +1756,20 @@ export function People(
               <Submit busy={busy} />
             </form>
           )}
+        </Modal>
+      )}
+      {issuedMemberAccess && (
+        <Modal title="Acesso do membro criado" onClose={() => setIssuedMemberAccess(null)}>
+          <section className="panel-footnote">
+            <p>Entregue estes dados ao membro. O PIN é exibido somente agora.</p>
+            <p><strong>Membro:</strong> {issuedMemberAccess.name}</p>
+            <p><strong>Código de acesso:</strong> {issuedMemberAccess.code}</p>
+            <p><strong>PIN provisório:</strong> {issuedMemberAccess.pin}</p>
+            <div className="toolbar">
+              <button className="button secondary" onClick={async () => { try { await navigator.clipboard.writeText(`Acesso EcclesiaOS\nCódigo: ${issuedMemberAccess.code}\nPIN provisório: ${issuedMemberAccess.pin}\nAcesse: ${window.location.origin}/login`); props.notify("Dados copiados."); } catch { props.notify("Não foi possível copiar os dados."); } }}>Copiar dados</button>
+              <button className="button primary" onClick={() => { const text = encodeURIComponent(`Olá! Seu acesso ao EcclesiaOS foi criado.\n\nCódigo: ${issuedMemberAccess.code}\nPIN provisório: ${issuedMemberAccess.pin}\nAcesse: ${window.location.origin}/login\n\nTroque o PIN após o primeiro acesso.`); window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer"); }}>Enviar pelo WhatsApp</button>
+            </div>
+          </section>
         </Modal>
       )}
       {credential && (
