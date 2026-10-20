@@ -404,6 +404,38 @@ export function createApp(
     }),
   );
   app.post(
+    "/api/account/mfa/setup",
+    asyncRoute(async (r, s) => {
+      const raw = sessionToken(r);
+      requireThat(raw, 401, "Entre para continuar.");
+      const [account] = await db.transaction((q) =>
+        q(
+          "SELECT s.user_id,u.totp_secret,u.mfa_enrollment_required FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.disabled_at IS NULL",
+          [hash(raw)],
+        ),
+      );
+      requireThat(account, 401, "Sessão expirada. Entre novamente.");
+      const privileged = await db.transaction((q) =>
+        q(
+          "SELECT 1 FROM memberships WHERE user_id=$1 AND role<>'member' UNION ALL SELECT 1 FROM network_members WHERE user_id=$1 AND revoked_at IS NULL",
+          [account.user_id],
+        ),
+      );
+      requireThat(privileged.length > 0, 403, "MFA não é necessário para este perfil.");
+      requireThat(!account.totp_secret, 409, "O autenticador já está configurado.");
+      const challenge = token();
+      const secret = newMfaSecret();
+      await db.transaction(async (q) => {
+        await q("DELETE FROM mfa_enrollment_challenges WHERE user_id=$1", [account.user_id]);
+        await q(
+          "INSERT INTO mfa_enrollment_challenges(token_hash,user_id,encrypted_secret,expires_at) VALUES($1,$2,$3,now()+interval '10 minutes')",
+          [hash(challenge), account.user_id, encrypt(secret, options.mfaKey ?? options.key)],
+        );
+      });
+      s.json({ challenge, secret });
+    }),
+  );
+  app.post(
     "/api/auth/mfa/enroll",
     asyncRoute(async (r, s) => {
       const b = z.object({ challenge: z.string().min(30).max(100), code: z.string().regex(/^\d{6}$/) }).parse(r.body);
