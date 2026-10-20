@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api, shortDate, type RecordData } from "./api";
 import { Field, Submit } from "./ui";
 import type { PageProps } from "./pages";
@@ -49,7 +49,7 @@ export default function HistoryPage(props: PageProps) {
     ? [["Matrículas", metrics.educationEnrollments ?? 0], ["Concluídos", metrics.educationCompleted ?? 0]]
     : [["Pessoas", metrics.people ?? 0], ["Membros", metrics.members ?? 0], ["Visitantes", metrics.visitors ?? 0], ["Reuniões", metrics.meetings ?? 0], ["Visitantes registrados", metrics.meetingVisitors ?? 0], ["Turmas", metrics.classes ?? 0]], [metrics, subjectType]);
 
-  async function addEvent(e: React.FormEvent<HTMLFormElement>) {
+  async function addEvent(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setBusy(true); setError("");
     const form = new FormData(e.currentTarget);
     try {
