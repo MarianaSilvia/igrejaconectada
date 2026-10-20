@@ -525,13 +525,15 @@ export function createApp(
       try {
         const user = await db.transaction(async (q) => {
           let [existing] = await q("SELECT * FROM users WHERE email=$1", [email]);
-          const nonDemoUsers = await q(
-            "SELECT count(*)::int as count FROM users WHERE email NOT LIKE '%.demo' AND email<>$1",
-            [email],
+          const existingMemberships = await q(
+            "SELECT role FROM memberships WHERE user_id=$1",
+            [existing?.id ?? "00000000-0000-0000-0000-000000000000"],
           );
-          const isFirstRealUser = (nonDemoUsers[0]?.count ?? 0) === 0;
-          const shouldBeAdmin = isOwner || isFirstRealUser || b.role === "admin";
-          const effectiveRole = shouldBeAdmin ? "admin" : b.role;
+          const existingNetworkMemberships = await q(
+            "SELECT network_id FROM network_members WHERE user_id=$1 AND revoked_at IS NULL",
+            [existing?.id ?? "00000000-0000-0000-0000-000000000000"],
+          );
+          const isOwner = email === "marianabsilva1987@gmail.com";
 
           if (!existing) {
             const newId = randomUUID();
@@ -545,21 +547,26 @@ export function createApp(
             existing.name = userName;
           }
 
-          const churches = await q("SELECT id FROM churches ORDER BY affiliated_on ASC");
-          const membershipRole =
-            effectiveRole === "admin"
-              ? "admin"
-              : effectiveRole === "leader"
-                ? "leader"
-                : "member";
-          for (const ch of churches) {
-            await q(
-              "INSERT INTO memberships(user_id, church_id, role) VALUES($1, $2, $3) ON CONFLICT(user_id, church_id) DO UPDATE SET role=$3",
-              [existing.id, ch.id, membershipRole],
-            );
+          // Never grant privileged or network access based on a client supplied role.
+          // Preserve memberships that were provisioned by the administrator. A user
+          // with an existing network link must not receive local memberships.
+          const privilegedMembership = existingMemberships.some((m) => m.role !== "member");
+          const membershipRole = isOwner || privilegedMembership
+            ? "admin"
+            : b.role === "leader"
+              ? "leader"
+              : "member";
+          if (!existingMemberships.length && !existingNetworkMemberships.length) {
+            const churches = await q("SELECT id FROM churches ORDER BY affiliated_on ASC");
+            for (const ch of churches) {
+              await q(
+                "INSERT INTO memberships(user_id, church_id, role) VALUES($1, $2, $3) ON CONFLICT(user_id, church_id) DO NOTHING",
+                [existing.id, ch.id, membershipRole],
+              );
+            }
           }
 
-          if (shouldBeAdmin) {
+          if (isOwner && !existingNetworkMemberships.length) {
             const networks = await q("SELECT id FROM networks");
             for (const net of networks) {
               try {
