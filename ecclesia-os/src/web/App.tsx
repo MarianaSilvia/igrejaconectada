@@ -649,12 +649,14 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
     userRole: "admin" | "member" | "leader" | "pastor" = "member",
   ) => {
     try {
+      const idToken = await auth.currentUser?.getIdToken(true);
+      if (!idToken) throw new Error("Não foi possível validar a sessão do Firebase.");
       await api("/auth/firebase-sync", "POST", {
         uid,
         email: userEmail,
         name: userName || userEmail.split("@")[0],
         role: userRole,
-      });
+      }, { Authorization: `Bearer ${idToken}` });
       void logFirebaseActivity({
         category: "sync",
         action: "auth.sync_session_success",
@@ -680,7 +682,8 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
         summary: `Falha na sincronização Firebase com o backend: ${err?.message || err}`,
         details: { error: String(err) },
       });
-      await onLogin();
+      await logoutFirebase();
+      throw err;
     }
   };
 
