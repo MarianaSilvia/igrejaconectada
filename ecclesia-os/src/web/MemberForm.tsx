@@ -20,7 +20,7 @@ export interface MemberFormProps {
   photoRequired?: boolean;
   directory?: RecordData | null;
   defaultCampusId?: string | null;
-  onSave: (body: RecordData) => Promise<void>;
+  onSave: (body: RecordData) => Promise<RecordData | void>;
   submitLabel?: string;
   privacyNotice?: string;
   extra?: ReactNode;
