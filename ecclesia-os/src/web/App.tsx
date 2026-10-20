@@ -954,7 +954,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
             </>
           )}
 
-          <Field label="E-mail">
+          <Field label="E-mail ou código de acesso">
             <input
               type="email"
               autoComplete="username"
