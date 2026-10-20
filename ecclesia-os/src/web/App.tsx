@@ -132,6 +132,7 @@ export function ProtectedRoute({
   onLogin,
 }: ProtectedRouteProps) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(() => auth.currentUser);
+  const [backendAuthenticated, setBackendAuthenticated] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
 
   useEffect(() => {
@@ -139,6 +140,7 @@ export function ProtectedRoute({
       setFirebaseUser(user);
       setAuthChecking(false);
     });
+    api("/context").then(() => setBackendAuthenticated(true)).catch(() => setBackendAuthenticated(false));
     return () => unsubscribe();
   }, []);
 
@@ -151,7 +153,7 @@ export function ProtectedRoute({
     );
   }
 
-  if (!firebaseUser) {
+  if (!firebaseUser && !backendAuthenticated) {
     return fallback ? <>{fallback}</> : <Login onLogin={onLogin || (async () => {})} />;
   }
 
