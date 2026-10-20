@@ -109,7 +109,7 @@ try {
         if (!predicates.length) continue;
         await q(`SAVEPOINT cleanup_${i}`);
         try {
-          const removed = await q(`DELETE FROM "${table.replace(/"/g, '""')}" WHERE ${predicates.join(" OR ")}`, params);
+          const removed = await q(`DELETE FROM "${table.replace(/"/g, '""')}" WHERE ${predicates.join(" OR ")} RETURNING 1`, params);
           if (removed.length) progress = true;
           await q(`RELEASE SAVEPOINT cleanup_${i}`);
         } catch {
