@@ -486,7 +486,7 @@ export default function App() {
         <main id="content" tabIndex={-1}>
           <div className="environment">
             <span className="status-dot" />
-            FIREBASE FIRESTORE ATIVO · DADOS EM NUVEM
+            AMBIENTE DE HOMOLOGAÇÃO · DADOS PROTEGIDOS
             <span className="environment-date">
               {new Date().toLocaleDateString("pt-BR", {
                 day: "numeric",
