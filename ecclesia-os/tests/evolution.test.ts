@@ -996,7 +996,7 @@ test("transporte webhook envia somente o endereço autorizado", async () => {
 });
 
 test("Pix automático permanece bloqueado na homologação", async () => {
-  const response = await fetch(url + "/api/pix/charges", {
+  const response = await fetch(base + "/api/pix/charges", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
