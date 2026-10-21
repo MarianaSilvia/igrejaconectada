@@ -191,10 +191,9 @@ async function saveProfile(
     const pinHash = passwordHash(pin);
     const syntheticEmail = `${code.toLowerCase().replace(/[^a-z0-9]/g, "")}@member.ecclesia.local`;
     const [u] = await q(
-      "SELECT public.create_member_identity($1,$2,$3,$4,$5) AS id",
-      [syntheticEmail, [profile.firstName, profile.lastName].filter(Boolean).join(" "), pinHash, code, pinHash],
+      "SELECT public.create_member_identity($1,$2,$3,$4,$5,$6) AS id",
+      [church, syntheticEmail, [profile.firstName, profile.lastName].filter(Boolean).join(" "), pinHash, code, pinHash],
     );
-    await q("INSERT INTO memberships(user_id,church_id,role) VALUES($1,$2,'member')", [u.id, church]);
     await q("UPDATE people SET user_id=$1 WHERE id=$2", [u.id, personId]);
     await q(
       "INSERT INTO member_access_credentials(church_id,person_id,user_id,access_code,pin_hash) VALUES($1,$2,$3,$4,$5)",
