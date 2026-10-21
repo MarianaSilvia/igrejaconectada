@@ -600,7 +600,7 @@ export default function App() {
           {page === "education" && <EducationPage key={church} {...props} />}
           {page === "worship" && <WorshipPage key={church} {...props} />}
           {page === "kids" && <KidsPage key={church} {...props} />}
-          {page === "institutional" && <InstitutionalPage key={church} {...props} />}
+          {page === "institutional" && <InstitutionalPage key={church} {...props} reloadContext={async () => setContext(await api("/context"))} />}
           {page === "assemblies" && <AssemblyPage key={church} {...props} />}
           {page === "assets" && <AssetsPage key={church} {...props} />}
           {page === "library" && <LibraryPage key={church} {...props} />}
