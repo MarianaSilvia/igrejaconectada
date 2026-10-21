@@ -417,7 +417,7 @@ export function createApp(
         if (existing.firebase_uid && existing.firebase_uid !== firebaseUid)
           throw new HttpError(409, "Este e-mail já está vinculado a outra conta Firebase.");
         const [updated] = await q(
-          "UPDATE users SET firebase_uid=$1,name=CASE WHEN users.name='' THEN $2 ELSE users.name END WHERE id=$3 RETURNING *",
+          "UPDATE users SET firebase_uid=$1,name=CASE WHEN users.name='' THEN $2 ELSE users.name END,password_must_change=false,password_changed_at=COALESCE(password_changed_at,now()) WHERE id=$3 RETURNING *",
           [firebaseUid, name, existing.id],
         );
         await q(
