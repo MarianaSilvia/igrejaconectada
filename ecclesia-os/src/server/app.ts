@@ -166,13 +166,34 @@ export function createApp(
     Promise.resolve(
       (async () => {
         const raw = sessionToken(r);
-        requireThat(raw, 401, "Entre para continuar.");
-        const [u] = await db.transaction((q) =>
-          q(
-            "SELECT u.id,u.name,u.email,u.password_must_change,s.mfa FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.disabled_at IS NULL",
-            [hash(raw)],
-          ),
-        );
+        const authorization = String(r.headers.authorization ?? "");
+        const bearer = authorization.match(/^Bearer\\s+(.+)$/i)?.[1];
+        let u;
+        if (bearer) {
+          let decoded;
+          try {
+            decoded = await verifyFirebaseIdToken(bearer);
+          } catch {
+            throw new HttpError(401, "Sessão Firebase inválida ou expirada.");
+          }
+          const email = String(decoded.email ?? "").trim().toLowerCase();
+          const firebaseUid = String(decoded.uid ?? decoded.sub ?? "").trim();
+          requireThat(firebaseUid && email, 401, "A conta Firebase não possui identidade válida.");
+          [u] = await db.transaction((q) =>
+            q(
+              "SELECT id,name,email,password_must_change,(totp_secret IS NOT NULL) AS mfa FROM users WHERE (firebase_uid=$1 OR lower(email)=$2) AND disabled_at IS NULL LIMIT 1",
+              [firebaseUid, email],
+            ),
+          );
+        } else {
+          requireThat(raw, 401, "Entre para continuar.");
+          [u] = await db.transaction((q) =>
+            q(
+              "SELECT u.id,u.name,u.email,u.password_must_change,s.mfa FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.disabled_at IS NULL",
+              [hash(raw)],
+            ),
+          );
+        }
         requireThat(u, 401, "Sessão expirada.");
         (r as AuthRequest).actor = u;
         if (
