@@ -243,7 +243,7 @@ export function createApp(
       const child = await scoped(r, async (q) => {
         const [created] = await q(
           "SELECT * FROM create_congregation($1,$2,$3)",
-          [body.name, body.regionId, body.administratorUserId],
+          [body.name, body.regionId, body.administratorUserId ?? r.actor.id],
         );
         requireThat(created, 400, "Não foi possível criar a congregação.");
         await audit(q, r.actor.id, r.church!, "church.congregation-created", created.id);
