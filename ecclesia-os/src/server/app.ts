@@ -656,14 +656,21 @@ app.get(
   );
   app.get(
     "/api/network",
-    asyncRoute(async (r: AuthRequest, s) => {
+    asyncRoute(async (r: AuthRequest, s: Response) => {
+      const [allowed] = await db.transaction((q) =>
+        q(
+          "SELECT 1 FROM network_members WHERE user_id=$1 AND role='network_admin'",
+          [r.actor.id],
+        ),
+      );
+      requireThat(allowed && r.actor.mfa, 403, "Supervisão da rede com MFA obrigatória.");
       const rows = await db.transaction((q) =>
         q(
           `SELECT c.id,c.name,r.name AS region,
  (SELECT count(*)::int FROM people p WHERE p.church_id=c.id AND status<>'inactive') AS people,
  (SELECT count(*)::int FROM cells x WHERE x.church_id=c.id) AS cells,
  (SELECT COALESCE(-sum(l.amount_cents),0)::text FROM journal_lines l JOIN accounts a ON a.id=l.account_id JOIN journal_entries e ON e.id=l.entry_id WHERE l.church_id=c.id AND a.kind='income' AND date_trunc('month',e.occurred_on)=date_trunc('month',CURRENT_DATE)) AS income_cents
- FROM churches c LEFT JOIN regions r ON r.id=c.region_id WHERE EXISTS(SELECT 1 FROM network_members nm WHERE nm.network_id=c.network_id AND nm.user_id=$1) ORDER BY c.name`,
+ FROM churches c LEFT JOIN regions r ON r.id=c.region_id WHERE EXISTS(SELECT 1 FROM network_members nm WHERE nm.network_id=c.network_id AND nm.user_id=$1 AND nm.role='network_admin') ORDER BY c.name`,
           [r.actor.id],
         ),
       );
@@ -672,10 +679,19 @@ app.get(
   );
   app.get(
     "/api/network/subscriptions",
-    asyncRoute(async (r: AuthRequest, s) => {
+    asyncRoute(async (r: AuthRequest, s: Response) => {
+      if (process.env.COMMERCIAL_FEATURES_ENABLED !== "true")
+        return s.status(404).json({ error: "Área comercial desativada." });
+      const [allowed] = await db.transaction((q) =>
+        q(
+          "SELECT 1 FROM network_members WHERE user_id=$1 AND role='network_admin'",
+          [r.actor.id],
+        ),
+      );
+      requireThat(allowed && r.actor.mfa, 403, "Supervisão da rede com MFA obrigatória.");
       const rows = await db.transaction((q) =>
         q(
-          `SELECT c.id,c.name,co.plan,co.status,co.monthly_cents,co.renews_on,COALESCE(inv.total,0)::int AS invoice_count,COALESCE(inv.overdue,0)::int AS overdue_invoices FROM churches c LEFT JOIN LATERAL (SELECT plan,status,monthly_cents,renews_on FROM saas_contracts WHERE church_id=c.id ORDER BY updated_at DESC LIMIT 1) co ON true LEFT JOIN LATERAL (SELECT count(*) AS total,count(*) FILTER(WHERE status='overdue' OR (status='issued' AND due_on<CURRENT_DATE)) AS overdue FROM saas_invoices WHERE church_id=c.id) inv ON true WHERE EXISTS(SELECT 1 FROM network_members nm WHERE nm.network_id=c.network_id AND nm.user_id=$1) ORDER BY c.name`,
+          `SELECT c.id,c.name,co.plan,co.status,co.monthly_cents,co.renews_on,COALESCE(inv.total,0)::int AS invoice_count,COALESCE(inv.overdue,0)::int AS overdue_invoices FROM churches c LEFT JOIN LATERAL (SELECT plan,status,monthly_cents,renews_on FROM saas_contracts WHERE church_id=c.id ORDER BY updated_at DESC LIMIT 1) co ON true LEFT JOIN LATERAL (SELECT count(*) AS total,count(*) FILTER(WHERE status='overdue' OR (status='issued' AND due_on<CURRENT_DATE)) AS overdue FROM saas_invoices WHERE church_id=c.id) inv ON true WHERE EXISTS(SELECT 1 FROM network_members nm WHERE nm.network_id=c.network_id AND nm.user_id=$1 AND nm.role='network_admin') ORDER BY c.name`,
           [r.actor.id],
         ),
       );
