@@ -63,9 +63,10 @@ export async function seed(db: Database) {
       "INSERT INTO memberships(user_id,church_id,role) VALUES($1,$2,'admin'),($3,$4,'admin'),($5,$2,'member')",
       [IDS.admin, IDS.churchA, IDS.adminB, IDS.churchB, IDS.member],
     );
-    await q("INSERT INTO network_members VALUES($1,$2)", [
+    await q("INSERT INTO network_members(user_id,network_id,role) VALUES($1,$2,$3)", [
       IDS.central,
       IDS.network,
+      "network_admin",
     ]);
     const names = [
       "Ana Martins",
