@@ -134,7 +134,7 @@ export default function TreasuryPage(props: PageProps) {
         <section className="panel">
           <h3>Pix estático da igreja</h3>
           <p className="muted">Exibe a chave e um QR Code informativo. Nenhuma cobrança ou confirmação bancária é criada.</p>
-          <form onSubmit={(e) => {
+          <form key={pix?.updated_at ?? "new"} onSubmit={(e) => {
             const b = formValues(e);
             void run(async () => {
               const saved = await api<RecordData>("/pix/settings", "PUT", {
