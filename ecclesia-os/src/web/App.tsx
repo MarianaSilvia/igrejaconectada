@@ -206,7 +206,7 @@ export default function App() {
         setChurch((old) => old || c.churches[0].id);
         selectChurch(c.churches[0].id);
       }
-      const passwordMustChange = Boolean(c.passwordMustChange ?? c.password_must_change);
+      const passwordMustChange = Boolean(c.passwordMustChange ?? c.password_must_change ?? c.user?.passwordMustChange ?? c.user?.password_must_change);
       setPage(
         passwordMustChange
           ? "security"
@@ -235,10 +235,10 @@ export default function App() {
     return () => unsub();
   }, []);
   useEffect(() => {
-    if (Boolean(context?.passwordMustChange ?? context?.password_must_change) && page !== "security") {
+    if (Boolean(context?.passwordMustChange ?? context?.password_must_change ?? context?.user?.passwordMustChange ?? context?.user?.password_must_change) && page !== "security") {
       setPage("security");
     }
-  }, [context?.passwordMustChange, context?.password_must_change, page]);
+  }, [context?.passwordMustChange, context?.password_must_change, context?.user?.passwordMustChange, context?.user?.password_must_change, page]);
   useEffect(() => {
     const canonical = legacyRedirects[window.location.pathname];
     if (canonical) window.history.replaceState({}, "", canonical);
