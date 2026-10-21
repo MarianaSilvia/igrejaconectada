@@ -9,8 +9,7 @@ Referências consultadas em 16 de outubro de 2026. Páginas de fornecedores desc
 | [Planning Center Check-Ins](https://www.planningcenter.com/check-ins) | Integra famílias, eventos e check-in | Kids deve nascer conectado ao cadastro e aos responsáveis |
 | [Permissões Planning Center](https://help.planningcenter.com/en/136858-permissions-in-check-ins.html) | Diferencia funções e acesso aos contatos | Preservar escopo e mínimo acesso por tarefa |
 | [API Pix BCB](https://github.com/bacen/pix-api) | Especificação do arranjo; notificações do PSP recebedor | Integrar PSP e validar estado no servidor |
-| [Efí cobranças](https://dev.efipay.com.br/docs/api-pix/cobrancas-imediatas/) | Criação, consulta e payload da cobrança | Usar payload do provedor e homologar casos distintos de valor |
-| [Efí webhooks](https://dev.efipay.com.br/docs/api-pix/webhooks/) | Autenticação e callback | Exigir certificado e consulta de confirmação |
+| Pix estático | Chave Pix, payload EMV, QR Code local e publicação opcional no portal | Não cria cobrança, webhook ou liquidação automática |
 | [Brother Raster](https://download.brother.com/welcome/docp100278/cv_ql800_eng_raster_101.pdf) | Protocolo e impressão bicolor específicos | Drivers Zebra e Brother separados |
 | [PostgreSQL RLS](https://www.postgresql.org/docs/current/ddl-rowsecurity.html) | Proprietários e BYPASSRLS podem ignorar políticas | Separar papel de requests do papel interno de serviço |
 | [WCAG 2.2](https://www.w3.org/TR/WCAG22/) | Requisitos verificáveis de acesso | Testar teclado, foco, contraste, toque e ampliação |
