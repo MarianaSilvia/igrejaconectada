@@ -84,10 +84,10 @@ export function historyRoutes(app: Express, db: Database) {
       if (query.subjectType === "person") {
         const [person] = await q("SELECT id,name,status,created_at FROM people WHERE id=$1 AND church_id=$2", [subjectId, r.church]);
         const [education] = await q("SELECT count(*)::int AS total, count(*) FILTER (WHERE ee.status='completed')::int AS completed FROM education_enrollments ee WHERE ee.church_id=$1 AND ee.person_id=$2", [r.church, subjectId]);
-        const educationRows = await q("SELECT ee.id,ee.enrolled_at,ee.completed_at,cl.name AS class_name,c.name AS course_name,c.track FROM education_enrollments ee JOIN education_classes cl ON cl.id=ee.class_id JOIN education_courses c ON c.id=cl.course_id WHERE ee.church_id=$1 AND ee.person_id=$2", [r.church, subjectId]);
+        const educationRows = await q("SELECT ee.id,ee.enrolled_at,ee.status,cl.name AS class_name,c.name AS course_name,c.track FROM education_enrollments ee JOIN education_classes cl ON cl.id=ee.class_id JOIN education_courses c ON c.id=cl.course_id WHERE ee.church_id=$1 AND ee.person_id=$2", [r.church, subjectId]);
         const derived = educationRows.flatMap((row) => {
           const values = [{ date: String(row.enrolled_at).slice(0, 10), suffix: "Matrícula" }];
-          if (row.completed_at) values.push({ date: String(row.completed_at).slice(0, 10), suffix: "Conclusão" });
+          if (row.status === "completed") values.push({ date: String(row.enrolled_at).slice(0, 10), suffix: "Conclusão" });
           return values.filter((value) => inPeriod(value.date)).map((value) => ({
             id: `education-${row.id}-${value.suffix}`,
             event_date: value.date,
@@ -99,13 +99,13 @@ export function historyRoutes(app: Express, db: Database) {
             source_id: row.id,
           }));
         });
-        const attendanceRows = await q("SELECT a.id,m.held_on,m.topic FROM attendance a JOIN meetings m ON m.id=a.meeting_id WHERE a.church_id=$1 AND a.person_id=$2 AND a.present=true", [r.church, subjectId]);
+        const attendanceRows = await q("SELECT a.id,m.held_on FROM attendance a JOIN meetings m ON m.id=a.meeting_id WHERE a.church_id=$1 AND a.person_id=$2 AND a.present=true", [r.church, subjectId]);
         const attendanceEvents = attendanceRows.filter((row) => inPeriod(row.held_on)).map((row) => ({
           id: `attendance-${row.id}`,
           event_date: String(row.held_on).slice(0, 10),
           event_type: "other",
           title: "Presença em reunião",
-          description: row.topic || "Presença confirmada em reunião da igreja.",
+          description: "Presença confirmada em reunião da igreja.",
           visibility: "administrative",
           source_type: "attendance",
           source_id: row.id,
@@ -118,7 +118,7 @@ export function historyRoutes(app: Express, db: Database) {
       const [meetings] = await q("SELECT COALESCE(sum(visitors),0)::int AS visitors, count(*)::int AS meetings FROM meetings WHERE church_id=$1", [r.church]);
       const [classes] = await q("SELECT count(*)::int AS classes FROM education_classes WHERE church_id=$1", [r.church]);
       const agendaRows = await q("SELECT id,starts_at,title,kind,status FROM church_events WHERE church_id=$1 ORDER BY starts_at", [r.church]);
-      const meetingRows = await q("SELECT id,held_on,topic FROM meetings WHERE church_id=$1 ORDER BY held_on", [r.church]);
+      const meetingRows = await q("SELECT id,held_on FROM meetings WHERE church_id=$1 ORDER BY held_on", [r.church]);
       const derivedChurchEvents = [
         ...agendaRows.filter((row) => inPeriod(row.starts_at)).map((row) => ({
           id: `agenda-${row.id}`,
@@ -135,7 +135,7 @@ export function historyRoutes(app: Express, db: Database) {
           event_date: String(row.held_on).slice(0, 10),
           event_type: "other",
           title: "Reunião de grupo",
-          description: row.topic || "Reunião registrada nos grupos.",
+          description: "Reunião registrada nos grupos.",
           visibility: "administrative",
           source_type: "meeting",
           source_id: row.id,
