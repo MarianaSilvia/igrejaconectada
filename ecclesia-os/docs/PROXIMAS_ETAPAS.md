@@ -10,7 +10,7 @@ Quando o Chrome e o Playwright estiverem disponíveis, executar `npm run pilot:v
 - Criar um PostgreSQL externo separado do snapshot local.
 - Seguir o modelo de papéis e variáveis em [HOMOLOGACAO_POSTGRES.md](HOMOLOGACAO_POSTGRES.md).
 - Configurar `DATABASE_URL`, `SERVICE_DATABASE_URL` e `MIGRATION_DATABASE_URL`, além de `DATA_KEY_HEX` e `MFA_KEY_HEX`, por segredo, com logins e chaves distintos.
-- Executar todas as migrações até a `086` e restaurar um backup em um banco de teste vazio. No projeto Supabase EcclesiaOS, essas 86 migrações já estão aplicadas; a próxima validação é o smoke test PostgreSQL externo com o pooler oficial.
+- Executar todas as migrações até a `093` e restaurar um backup em um banco de teste vazio. No projeto Supabase EcclesiaOS, essas 86 migrações já estão aplicadas; a próxima validação é o smoke test PostgreSQL externo com o pooler oficial.
 - Iniciar o web sem worker integrado (`RUN_INTEGRATION_WORKER=false`) e o worker em processo separado.
 - Registrar versão, migrações aplicadas, origem permitida, TLS e resultado do health check.
 
@@ -22,15 +22,17 @@ Com as três URLs configuradas, executar `npm run pilot:verify:postgres` para va
 
 **Liberação:** restauração reproduz as duas igrejas de demonstração, RLS continua isolando os dados e `/api/health/ready` retorna pronto sem expor segredos.
 
-## 2. Homologar Pix e eventos pagos
+## 2. Validar Pix estático e tesouraria manual
 
-- Criar uma conta Efí de homologação para cada igreja de teste.
-- Configurar webhook HTTPS com autenticação exigida pelo provedor.
-- Testar criação, repetição com a mesma chave, expiração, notificação duplicada, tarifa, pagamento parcial e devolução.
-- Conferir conta recebedora, valor bruto, tarifa, líquido e lançamentos balanceados.
-- Testar inscrição paga de evento e cancelamento com tarefa de devolução.
+- Cadastrar uma chave Pix por igreja, com tipo, instituição, cidade e instruções.
+- Gerar QR Code estático localmente com e sem valor informado.
+- Confirmar cópia da chave no celular e publicação opcional no portal.
+- Verificar que a exibição do QR Code não cria cobrança, webhook ou liquidação.
+- Testar lançamento manual da contribuição após conferência do extrato.
+- Confirmar que duplicações de lançamento continuam bloqueadas por referência e auditoria.
+- Manter bloqueadas as rotas antigas de cobrança, conciliação automática e webhook bancário.
 
-**Liberação:** cada cobrança tem uma única liquidação, eventos inválidos não liquidam nada e uma devolução verificada encerra a tarefa correspondente.
+**Liberação:** o QR Code é exibido apenas no escopo autorizado, nenhuma operação bancária automática é criada e a tesouraria consegue registrar o recebimento manual com histórico.
 
 ## 3. Homologar comunicação
 
