@@ -1661,7 +1661,7 @@ export function People(
           {modal === "import" ? (
             <>
               <p>
-                Use as colunas <code>name,email,phone,status</code>. Vínculos:
+                Use as colunas <code>name,email,phone,status,birthDate,gender</code>. birthDate e gender são opcionais. Vínculos:
                 member, visitor, worker ou inactive. Até 1.000 linhas.
               </p>
               <Field label="Arquivo CSV">
@@ -1699,7 +1699,7 @@ export function People(
                     ))}
                     {preview.valid.map((v: RecordData, i: number) => (
                       <p key={i}>
-                        <Icon name="check" size={15} /> {v.name} · {v.email}
+                        <Icon name="check" size={15} /> {v.name} · {v.email || "sem e-mail"} · {v.birthDate || "sem nascimento"}
                       </p>
                     ))}
                   </div>
