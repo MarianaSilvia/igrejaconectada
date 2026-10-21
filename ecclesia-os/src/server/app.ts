@@ -51,6 +51,7 @@ import { libraryRoutes } from "./library.js";
 import { assistanceRoutes } from "./assistance.js";
 import { mediaRoutes } from "./media.js";
 import { historyRoutes } from "./history.js";
+import { verifyFirebaseIdToken } from "./firebase-auth.js";
 import { peopleInsightsRoutes } from "./people-insights.js";
 import {
   registrationPublicRoutes,
@@ -229,7 +230,60 @@ export function createApp(
     );
     cookie(s, t, 8 * 3600000);
   };
-  app.get(
+    app.post(
+    "/api/auth/firebase-sync",
+    asyncRoute(async (r, s) => {
+      const authorization = String(r.headers.authorization ?? "");
+      const match = authorization.match(/^Bearer\s+(.+)$/i);
+      requireThat(match?.[1], 401, "Sessão Firebase ausente.");
+      let decoded;
+      try {
+        decoded = await verifyFirebaseIdToken(match![1]);
+      } catch {
+        throw new HttpError(401, "Sessão Firebase inválida ou expirada.");
+      }
+      const email = String(decoded.email ?? "").trim().toLowerCase();
+      const firebaseUid = String(decoded.uid ?? decoded.sub ?? "").trim();
+      requireThat(firebaseUid && email, 401, "A conta Firebase não possui identidade válida.");
+      const name = String(decoded.name ?? email.split("@")[0]).trim().slice(0, 120);
+      const user = await db.transaction(async (q) => {
+        const [existing] = await q(
+          "SELECT * FROM users WHERE firebase_uid=$1 OR lower(email)=$2 LIMIT 1 FOR UPDATE",
+          [firebaseUid, email],
+        );
+        requireThat(existing && !existing.disabled_at, 403, "Esta conta ainda não possui convite ou vínculo autorizado.");
+        if (existing.firebase_uid && existing.firebase_uid !== firebaseUid)
+          throw new HttpError(409, "Este e-mail já está vinculado a outra conta Firebase.");
+        const [updated] = await q(
+          "UPDATE users SET firebase_uid=$1,name=CASE WHEN users.name='' THEN $2 ELSE users.name END WHERE id=$3 RETURNING *",
+          [firebaseUid, name, existing.id],
+        );
+        await q(
+          "INSERT INTO auth_security_events(user_id,email,action,metadata) VALUES($1,$2,$3,$4)",
+          [updated.id, email, "firebase-session-synchronized", JSON.stringify({ provider: "firebase" })],
+        );
+        return updated;
+      });
+      const privileged = await db.transaction((q) =>
+        q(
+          "SELECT 1 FROM memberships WHERE user_id=$1 AND role<>'member' UNION ALL SELECT 1 FROM network_members WHERE user_id=$1",
+          [user.id],
+        ),
+      );
+      requireThat(
+        !privileged.length || Boolean(user.totp_secret),
+        403,
+        "Configure o MFA antes de acessar esta conta administrativa.",
+      );
+      await issue(s, user.id, Boolean(user.totp_secret));
+      s.json({
+        ok: true,
+        passwordMustChange: Boolean(user.password_must_change),
+        memberPinMustChange: Boolean(user.member_pin_must_change),
+      });
+    }),
+  );
+app.get(
     "/api/health",
     asyncRoute(async (_r, s) => {
       await db.transaction((q) => q("SELECT 1"));
