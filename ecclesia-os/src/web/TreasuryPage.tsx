@@ -28,7 +28,10 @@ export default function TreasuryPage(props: PageProps) {
     [integrationPage, setIntegrationPage] = useState(1),
     [report, setReport] = useState<RecordData | null>(null),
     [reportFrom, setReportFrom] = useState(`${todayInChurch().slice(0, 4)}-01-01`),
-    [reportTo, setReportTo] = useState(todayInChurch());
+    [reportTo, setReportTo] = useState(todayInChurch()),
+    [pix, setPix] = useState<RecordData | null>(null),
+    [pixQr, setPixQr] = useState(""),
+    [pixAmount, setPixAmount] = useState("");
   useEffect(() => {
     let active = true;
     setError("");
@@ -40,6 +43,9 @@ export default function TreasuryPage(props: PageProps) {
       .catch((e) => {
         if (active) setError(e.message);
       });
+    api<RecordData | null>("/pix/settings")
+      .then((v) => { if (active) setPix(v); })
+      .catch(() => { if (active) setPix(null); });
     return () => {
       active = false;
     };
@@ -107,6 +113,7 @@ export default function TreasuryPage(props: PageProps) {
           { id: "records", label: "Cadastros e orçamento" },
           { id: "integrations", label: "Integrações" },
           { id: "reports", label: "Relatórios" },
+          { id: "pix", label: "Pix estático" },
         ].map((t) => (
           <button
             key={t.id}
@@ -123,6 +130,55 @@ export default function TreasuryPage(props: PageProps) {
         </p>
       )}
       {!data && !error && <p>Carregando…</p>}
+      {tab === "pix" && (
+        <section className="panel">
+          <h3>Pix estático da igreja</h3>
+          <p className="muted">Exibe a chave e um QR Code informativo. Nenhuma cobrança ou confirmação bancária é criada.</p>
+          <form onSubmit={(e) => {
+            const b = formValues(e);
+            void run(async () => {
+              const saved = await api<RecordData>("/pix/settings", "PUT", {
+                pixKey: b.pixKey,
+                pixKeyType: b.pixKeyType,
+                institutionName: b.institutionName,
+                city: b.city,
+                instructions: b.instructions || "",
+                enabled: b.enabled === "on",
+                portalVisible: b.portalVisible === "on",
+              });
+              setPix(saved);
+            });
+          }}>
+            <div className="grid-2">
+              <Field label="Chave Pix"><input name="pixKey" required defaultValue={pix?.pix_key ?? ""} /></Field>
+              <Field label="Tipo da chave"><select name="pixKeyType" defaultValue={pix?.pix_key_type ?? "random"}><option value="random">Aleatória</option><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="phone">Telefone</option></select></Field>
+              <Field label="Nome da instituição"><input name="institutionName" required defaultValue={pix?.institution_name ?? ""} /></Field>
+              <Field label="Cidade"><input name="city" required defaultValue={pix?.city ?? ""} /></Field>
+            </div>
+            <Field label="Instruções ao contribuinte"><textarea name="instructions" rows={3} defaultValue={pix?.instructions ?? ""} /></Field>
+            <label><input type="checkbox" name="enabled" defaultChecked={pix?.enabled === true} /> Exibir Pix na tesouraria</label>
+            <label><input type="checkbox" name="portalVisible" defaultChecked={pix?.portal_visible === true} /> Publicar no portal do membro</label>
+            <Submit busy={busy} label="Salvar configuração Pix" />
+          </form>
+          {pix?.enabled && (
+            <div className="panel" style={{marginTop:16}}>
+              <div className="toolbar">
+                <Field label="Valor opcional (R$)"><input value={pixAmount} onChange={(e) => setPixAmount(e.target.value)} inputMode="decimal" placeholder="Ex.: 50,00" /></Field>
+                <button type="button" disabled={busy} onClick={async () => {
+                  try {
+                    const amount = pixAmount.trim().replace(",", ".");
+                    const endpoint = "/pix/static-qr" + (amount ? "?amount=" + encodeURIComponent(amount) : "");
+                    const value = await api<RecordData>(endpoint);
+                    setPixQr(value.qrDataUrl);
+                  } catch (e) { setError((e as Error).message); }
+                }}>Gerar QR Code</button>
+              </div>
+              {pixQr && <img src={pixQr} alt="QR Code Pix estático" width={280} height={280} />}
+              <p><strong>Chave:</strong> {pix.pix_key}</p>
+            </div>
+          )}
+        </section>
+      )}
       {data && tab === "bills" && (
         <>
           <div className="table-scroll">
