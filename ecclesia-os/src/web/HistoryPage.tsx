@@ -44,7 +44,7 @@ export default function HistoryPage(props: PageProps) {
   const title = subjectType === "person" ? subject?.name ?? "Histórico do membro" : subject?.name ?? "Histórico da congregação";
   const metricCards = useMemo(() => subjectType === "person"
     ? [["Matrículas", metrics.educationEnrollments ?? 0], ["Concluídos", metrics.educationCompleted ?? 0]]
-    : [["Pessoas", metrics.people ?? 0], ["Membros", metrics.members ?? 0], ["Visitantes", metrics.visitors ?? 0], ["Reuniões", metrics.meetings ?? 0], ["Visitantes registrados", metrics.meetingVisitors ?? 0], ["Turmas", metrics.classes ?? 0]], [metrics, subjectType]);
+    : [["Pessoas", metrics.people ?? 0], ["Membros", metrics.members ?? 0], ["Visitantes", metrics.visitors ?? 0], ["Reuniões", metrics.meetings ?? 0], ["Visitantes registrados", metrics.meetingVisitors ?? 0], ["Turmas", metrics.classes ?? 0], ["Atividades da agenda", metrics.agendaActivities ?? 0]], [metrics, subjectType]);
 
   async function exportCsv() {
     const query = new URLSearchParams({ subjectType, subjectId: selectedId });
