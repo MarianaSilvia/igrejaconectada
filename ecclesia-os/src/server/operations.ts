@@ -28,6 +28,12 @@ export function operations(
     );
     requireThat(a.allowed, 403, "Administração local obrigatória.");
   };
+  const commercial = () =>
+    requireThat(
+      process.env.COMMERCIAL_FEATURES_ENABLED === "true",
+      404,
+      "Área comercial desativada.",
+    );
   const networkAdmin = async (r: R, network: string) => {
     requireThat(r.actor.mfa, 403, "MFA obrigatório.");
     const rows = await db.transaction((q) =>
@@ -96,6 +102,7 @@ export function operations(
   app.get(
     "/api/subscription",
     route(async (r, s) => {
+      commercial();
       await admin(r);
       const params = z.object({
         invoicePage: z.coerce.number().int().min(1).default(1),
@@ -114,12 +121,14 @@ export function operations(
     }),
   );
   app.post("/api/subscription/contracts", route(async (r, s) => {
+    commercial();
     await admin(r);
     const b = z.object({ plan: z.enum(["piloto","essencial","rede","enterprise"]), status: z.enum(["draft","active","suspended","cancelled"]).default("draft"), monthlyCents: z.coerce.number().int().min(0).max(999999999).default(0), startsOn: z.iso.date(), renewsOn: z.iso.date().nullable().default(null), modules: z.array(z.string().trim().min(1).max(40)).min(1), notes: z.string().max(2000).default("") }).parse(r.body);
     const row = await scoped(r, async (q) => { const [v] = await q("INSERT INTO saas_contracts(church_id,plan,status,monthly_cents,starts_on,renews_on,modules,notes,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id,plan,status,monthly_cents,starts_on,renews_on,modules,notes,created_at,updated_at", [r.church,b.plan,b.status,b.monthlyCents,b.startsOn,b.renewsOn,b.modules,b.notes,r.actor.id]); await audit(q,r.actor.id,r.church,"saas-contract.created",v.id); return v; });
     s.status(201).json(row);
   }));
   app.patch("/api/subscription/contracts/:id", route(async (r, s) => {
+    commercial();
     await admin(r);
     const id = z.uuid().parse(r.params.id);
     const b = z.object({ plan: z.enum(["piloto","essencial","rede","enterprise"]), status: z.enum(["draft","active","suspended","cancelled"]), monthlyCents: z.coerce.number().int().min(0).max(999999999), startsOn: z.iso.date(), renewsOn: z.iso.date().nullable(), modules: z.array(z.string().trim().min(1).max(40)).min(1), notes: z.string().max(2000), reason: z.string().trim().max(500).default("") }).parse(r.body);
@@ -127,6 +136,7 @@ export function operations(
     s.json(row);
   }));
   app.post("/api/subscription/invoices", route(async (r, s) => {
+    commercial();
     await admin(r);
     const b = z.object({ contractId: z.uuid(), periodStart: z.iso.date(), periodEnd: z.iso.date(), dueOn: z.iso.date(), amountCents: z.coerce.number().int().min(0).max(999999999), notes: z.string().max(2000).default("") }).parse(r.body);
     requireThat(b.periodStart <= b.periodEnd, 400, "O período da fatura é inválido.");
@@ -134,6 +144,7 @@ export function operations(
     s.status(201).json(row);
   }));
   app.patch("/api/subscription/invoices/:id", route(async (r, s) => {
+    commercial();
     await admin(r);
     const id = z.uuid().parse(r.params.id);
     const b = z.object({ status: z.enum(["issued","paid","overdue","void"]), notes: z.string().max(2000).default("") }).parse(r.body);
@@ -141,6 +152,7 @@ export function operations(
     s.json(row);
   }));
   app.get("/api/subscription/invoices.csv", route(async (r, s) => {
+    commercial();
     await admin(r);
     const rows = await scoped(r, (q) => q("SELECT i.id,c.plan,i.period_start,i.period_end,i.due_on,i.amount_cents,i.status,i.paid_at,i.notes FROM saas_invoices i JOIN saas_contracts c ON c.id=i.contract_id ORDER BY i.due_on DESC,i.created_at DESC"));
     const escape = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
@@ -150,6 +162,7 @@ export function operations(
   app.patch(
     "/api/subscription",
     route(async (r, s) => {
+      commercial();
       await admin(r);
       const b = z
         .object({
@@ -800,6 +813,7 @@ export function operations(
     s.json(await db.transaction((q) => q("SELECT c.id,c.name,c.unit_type,c.parent_church_id,(SELECT count(*)::int FROM people p WHERE p.church_id=c.id AND p.status<>'inactive') AS people_count,(SELECT count(*)::int FROM education_classes e WHERE e.church_id=c.id AND e.status='open') AS open_classes FROM churches c WHERE c.network_id=$1 ORDER BY c.name", [networkId])));
   }));
   app.get("/api/network/billing", route(async (r, s) => {
+    commercial();
     const networkId = await networkForChurch(r);
     await networkAdmin(r, networkId);
     s.json(await db.transaction((q) => q("SELECT c.id,c.name,c.unit_type,b.name AS billing_account,co.plan,co.status,co.monthly_cents,co.renews_on,COALESCE(i.overdue,0)::int AS overdue_invoices FROM churches c LEFT JOIN billing_accounts b ON b.id=c.billing_account_id LEFT JOIN LATERAL (SELECT plan,status,monthly_cents,renews_on FROM saas_contracts WHERE billing_account_id=c.billing_account_id OR church_id=c.id ORDER BY updated_at DESC LIMIT 1) co ON true LEFT JOIN LATERAL (SELECT count(*) FILTER(WHERE status='overdue' OR (status='issued' AND due_on<CURRENT_DATE)) AS overdue FROM saas_invoices WHERE billing_account_id=c.billing_account_id OR church_id=c.id) i ON true WHERE c.network_id=$1 ORDER BY c.name", [networkId])));
@@ -849,6 +863,7 @@ export function operations(
     }),
   );
 }
+
 
 
 
