@@ -1003,7 +1003,7 @@ test("Pix automático permanece bloqueado na homologação", async () => {
       Cookie: cookies.get(IDS.admin)!,
       "x-church-id": IDS.churchA,
     },
-    body: JSON.stringify({ amount: "12.34", fundId: IDS.fund }),
+    body: JSON.stringify({ amount: "12.34", fundId: "00000000-0000-4000-8000-000000000001" }),
   });
   assert.equal(response.status, 404);
   const body = await response.json();
