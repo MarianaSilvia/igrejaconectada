@@ -31,11 +31,8 @@ export default function HistoryPage(props: PageProps) {
       const query = new URLSearchParams({ subjectType, subjectId: selectedId });
       if (from) query.set("from", from);
       if (to) query.set("to", to);
-      const [history, report] = await Promise.all([
-        api<{ items: TimelineEvent[] }>("/history?" + query.toString()),
-        api<{ subject: RecordData; events: TimelineEvent[]; metrics: RecordData }>("/history/report?" + query.toString()),
-      ]);
-      setEvents(history.items ?? report.events ?? []);
+      const report = await api<{ subject: RecordData; events: TimelineEvent[]; metrics: RecordData }>("/history/report?" + query.toString());
+      setEvents(report.events ?? []);
       setSubject(report.subject ?? null);
       setMetrics(report.metrics ?? {});
     } catch (e) { setError((e as Error).message); }
