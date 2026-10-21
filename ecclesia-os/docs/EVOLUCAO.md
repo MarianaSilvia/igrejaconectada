@@ -178,6 +178,11 @@ Menus novos: **Secretaria e operação**, **Contas e aprovações**, **Agenda e 
 - `/api/network/subscriptions` mostra à central apenas plano, situação, mensalidade, renovação e contadores de faturas por igreja da rede, sem pessoas, doações ou detalhes pastorais.
 
 
+## Performance aplicada em 21/10/2026
+
+- Índices cobrindo as referências de usuário em Pix estático, linha do tempo histórica e credenciais de acesso foram adicionados.
+- O linter de performance deixou de apontar essas seis chaves estrangeiras sem índice; alertas restantes pertencem ao backup histórico e às políticas legadas que ainda exigem revisão separada.
+
 ## Segurança aplicada em 21/10/2026
 
 - As funções de criação, listagem e atualização de congregações deixaram de ser executáveis por `anon` e `authenticated` via PostgREST.
