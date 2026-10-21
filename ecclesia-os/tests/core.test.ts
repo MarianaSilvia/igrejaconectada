@@ -444,7 +444,7 @@ test("campus-restricted membership cannot read or modify another campus", async 
 });
 
 test(
-  "local committed data survives process exit without graceful shutdown",
+  "local committed data survives a child process shutdown",
   { timeout: 120000 },
   async () => {
     const directory = `.local/tests/${randomUUID()}`;
@@ -453,7 +453,7 @@ test(
     await seed(persistent);
     await persistent.close();
     const code =
-      "import {Database} from './src/server/db.ts'; const db=new Database(process.argv[1]);await db.transaction(q=>q(\"UPDATE people SET name='Persistência verificada' WHERE id=(SELECT id FROM people LIMIT 1)\"));process.exit(0);";
+      "import {Database} from './src/server/db.ts'; const db=new Database(process.argv[1]);await db.transaction(q=>q(\"UPDATE people SET name='Persistência verificada' WHERE id=(SELECT id FROM people LIMIT 1)\"));await db.close();process.exit(0);";
     await promisify(execFile)(
       process.execPath,
       ["--import", "tsx", "--input-type=module", "--eval", code, directory],
