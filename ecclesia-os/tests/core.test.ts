@@ -195,56 +195,36 @@ test("CSV preview validates and detects duplicates before import", async () => {
     400,
   );
 });
-test("Pix only settles from verified service; duplicates do not duplicate journal", async () => {
+test("Pix estático não cria cobranças automáticas", async () => {
   const opts = { user: "admin", church: IDS.churchA };
-  const finance = await request("/api/finance", opts);
-  const created = await request("/api/pix/charges", {
+  const configured = await request("/api/pix/settings", {
+    ...opts,
+    method: "PUT",
+    body: {
+      pixKey: "123e4567-e89b-12d3-a456-426614174000",
+      pixKeyType: "random",
+      institutionName: "Igreja Esperança",
+      city: "Sao Paulo",
+      instructions: "Confira o nome antes de confirmar.",
+      enabled: true,
+      portalVisible: true,
+    },
+  });
+  assert.equal(configured.status, 200, JSON.stringify(configured.data));
+  const qr = await request("/api/pix/static-qr?amount=123.45", opts);
+  assert.equal(qr.status, 200, JSON.stringify(qr.data));
+  assert.equal(qr.data.automaticPayments, false);
+  assert.equal(qr.data.amount, "123.45");
+  assert.match(qr.data.payload, /^000201/);
+  assert.match(qr.data.qrDataUrl, /^data:image\/png;base64,/);
+  const oldChargeRoute = await request("/api/pix/charges", {
     ...opts,
     method: "POST",
-    body: { amount: "123.45", fundId: finance.data.funds[0].id },
+    body: { amount: "123.45", fundId: "00000000-0000-4000-8000-000000000001" },
   });
-  assert.equal(created.status, 201, JSON.stringify(created.data));
-  assert.equal(created.data.status, "active");
-  assert.equal(
-    (
-      await request("/api/pix/charges/" + created.data.id, {
-        ...opts,
-        method: "PATCH",
-        body: { status: "settled" },
-      })
-    ).status,
-    404,
-  );
-  const event = {
-    provider: "demo",
-    account: `demo:${IDS.churchA}`,
-    txid: created.data.txid,
-    endToEndId: "E000000000000000000000000000001",
-    amount: 12345,
-  };
-  await assert.rejects(() => settle(db, { ...event, account: "wrong" }));
-  await assert.rejects(() => settle(db, { ...event, amount: 1 }));
-  const first = await settle(db, event);
-  assert.equal(first.duplicate, false);
-  assert.equal((await settle(db, event)).duplicate, true);
-  const [sum] = await db.transaction((q) =>
-    q(
-      "SELECT sum(amount_cents)::text AS total,count(*)::int AS lines FROM journal_lines WHERE entry_id=$1",
-      [(first as any).entryId],
-    ),
-  );
-  assert.equal(sum.total, "0");
-  assert.equal(sum.lines, 2);
-  assert.equal(
-    (
-      await request("/api/pix/charges/" + created.data.id, {
-        user: "adminB",
-        church: IDS.churchB,
-      })
-    ).status,
-    404,
-  );
+  assert.equal(oldChargeRoute.status, 404);
 });
+
 test("member sees only own information and cannot access treasury", async () => {
   assert.equal(
     (await request("/api/finance", { user: "member", church: IDS.churchA }))
@@ -461,51 +441,6 @@ test("campus-restricted membership cannot read or modify another campus", async 
         ]),
       { actor: IDS.adminB, church: IDS.churchA },
     ),
-  );
-});
-
-test("expired charge remains recoverable by verified receipt and demo refund preserves audit", async () => {
-  const opts = { user: "admin", church: IDS.churchA },
-    f = await request("/api/finance", opts);
-  const charge = await request("/api/pix/charges", {
-    ...opts,
-    method: "POST",
-    body: { amount: "25.50", fundId: f.data.funds[0].id },
-  });
-  await db.transaction((q) =>
-    q(
-      "UPDATE pix_charges SET expires_at=now()-interval '1 hour',status='expired' WHERE id=$1",
-      [charge.data.id],
-    ),
-  );
-  assert.equal(
-    (await request("/api/pix/charges/" + charge.data.id, opts)).data.status,
-    "expired",
-  );
-  await settle(db, {
-    provider: "demo",
-    account: `demo:${IDS.churchA}`,
-    txid: charge.data.txid,
-    endToEndId: "E000000000000000000000000000002",
-    amount: 2550,
-  });
-  const refund = await request("/api/demo/refund/" + charge.data.id, {
-    ...opts,
-    method: "POST",
-  });
-  assert.equal(refund.status, 200, JSON.stringify(refund.data));
-  assert.equal(
-    (
-      await request("/api/demo/refund/" + charge.data.id, {
-        ...opts,
-        method: "POST",
-      })
-    ).status,
-    409,
-  );
-  assert.equal(
-    (await request("/api/pix/charges/" + charge.data.id, opts)).data.status,
-    "refunded",
   );
 });
 
