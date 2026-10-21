@@ -54,7 +54,7 @@ pnpm build
 Configure estas variaveis no ambiente de producao do provedor atual:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://lmeqbnptookdnjuzksyd.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_publica_do_supabase
 SUPABASE_SERVICE_ROLE_KEY=sua_chave_service_role_privada
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=sua_chave_publica_vapid
