@@ -51,7 +51,7 @@ import { libraryRoutes } from "./library.js";
 import { assistanceRoutes } from "./assistance.js";
 import { mediaRoutes } from "./media.js";
 import { historyRoutes } from "./history.js";
-import { verifyFirebaseIdToken } from "./firebase-auth.js";
+import { firebaseAdminConfigured, verifyFirebaseIdToken } from "./firebase-auth.js";
 import { peopleInsightsRoutes } from "./people-insights.js";
 import {
   registrationPublicRoutes,
@@ -436,7 +436,7 @@ app.get(
         mfaKey: (options.mfaKey ?? options.key).length === 32,
         origin:
           options.mode === "demo" || options.origin.startsWith("https://"),
-        firebase: Boolean(process.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_SERVICE_ACCOUNT_JSON),
+        firebase: firebaseAdminConfigured(),
         communication:
           options.mode === "demo" ||
           process.env.COMMUNICATION_TRANSPORT !== "webhook" ||
