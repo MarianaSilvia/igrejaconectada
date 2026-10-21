@@ -44,8 +44,6 @@ const checks = {
   distinctEncryptionKeys:
     mode === "demo" ||
     (dataKey.length > 0 && mfaKey.length > 0 && dataKey !== mfaKey),
-  pix: "static" as const,
-  automaticPayments: false,
   communicationCallback:
     communication !== "webhook" ||
     (process.env.COMMUNICATION_CALLBACK_TOKEN ?? "").length >= 16,
@@ -71,5 +69,6 @@ const checks = {
   migrations: latestMigration >= 63,
 };
 const ok = Object.values(checks).every(Boolean);
-console.log(JSON.stringify({ ok, mode, latestMigration, checks }, null, 2));
+const status = { pix: "static" as const, automaticPayments: false as const };
+console.log(JSON.stringify({ ok, mode, latestMigration, checks, status }, null, 2));
 if (!ok) process.exitCode = 1;
