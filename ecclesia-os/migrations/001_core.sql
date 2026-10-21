@@ -5,7 +5,7 @@ CREATE TABLE churches(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), network_id 
 CREATE TABLE campuses(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), church_id uuid NOT NULL REFERENCES churches, name text NOT NULL, UNIQUE(church_id,id));
 CREATE TABLE users(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), email text UNIQUE NOT NULL, name text NOT NULL, password_hash text NOT NULL, totp_secret text, person_id uuid);
 CREATE TABLE memberships(user_id uuid REFERENCES users, church_id uuid REFERENCES churches, role text NOT NULL CHECK(role IN ('admin','secretary','treasurer','leader','member')), campus_id uuid, PRIMARY KEY(user_id,church_id), FOREIGN KEY(church_id,campus_id) REFERENCES campuses(church_id,id));
-CREATE TABLE network_members(user_id uuid REFERENCES users, network_id uuid REFERENCES networks, PRIMARY KEY(user_id,network_id));
+CREATE TABLE network_members(user_id uuid REFERENCES users, network_id uuid REFERENCES networks, role text NOT NULL DEFAULT 'network_admin', granted_at timestamptz NOT NULL DEFAULT now(), revoked_at timestamptz, PRIMARY KEY(user_id,network_id));
 CREATE TABLE sessions(token_hash text PRIMARY KEY, user_id uuid NOT NULL REFERENCES users, expires_at timestamptz NOT NULL, mfa boolean NOT NULL DEFAULT false);
 CREATE TABLE login_challenges(token_hash text PRIMARY KEY, user_id uuid NOT NULL REFERENCES users, expires_at timestamptz NOT NULL, attempts int NOT NULL DEFAULT 0);
 CREATE TABLE access_grants(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), church_id uuid NOT NULL REFERENCES churches, user_id uuid NOT NULL REFERENCES users, scope text NOT NULL CHECK(scope IN ('people','finance','cells')), expires_at timestamptz NOT NULL, revoked_at timestamptz, granted_by uuid NOT NULL REFERENCES users);
