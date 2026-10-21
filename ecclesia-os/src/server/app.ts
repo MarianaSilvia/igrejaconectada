@@ -138,12 +138,20 @@ export function createApp(
         requireThat(raw, 401, "Entre para continuar.");
         const [u] = await db.transaction((q) =>
           q(
-            "SELECT u.id,u.name,u.email,s.mfa FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.disabled_at IS NULL",
+            "SELECT u.id,u.name,u.email,u.password_must_change,s.mfa FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.disabled_at IS NULL",
             [hash(raw)],
           ),
         );
         requireThat(u, 401, "Sessão expirada.");
         (r as AuthRequest).actor = u;
+        if (
+          u.password_must_change &&
+          !["/auth/change-password", "/auth/logout", "/context"].includes(r.path)
+        )
+          return s.status(428).json({
+            error: "A troca de senha é obrigatória antes de continuar.",
+            code: "PASSWORD_CHANGE_REQUIRED",
+          });
         if (r.headers["x-church-id"])
           (r as AuthRequest).church = uuid.parse(r.headers["x-church-id"]);
       })(),
@@ -315,7 +323,7 @@ export function createApp(
             [hash(t), u.id],
           ),
         );
-        return s.json({ mfaRequired: true, challenge: t, pinMustChange: Boolean(u.member_pin_must_change) });
+        return s.json({ mfaRequired: true, challenge: t, pinMustChange: Boolean(u.member_pin_must_change), passwordMustChange: Boolean(u.password_must_change) });
       }
       const privileged = await db.transaction((q) =>
         q(
@@ -329,7 +337,7 @@ export function createApp(
         "MFA precisa ser provisionado para este perfil.",
       );
       await issue(s, u.id, false);
-      s.json({ ok: true, pinMustChange: Boolean(u.member_pin_must_change) });
+      s.json({ ok: true, pinMustChange: Boolean(u.member_pin_must_change), passwordMustChange: Boolean(u.password_must_change) });
     }),
   );
   app.post(
@@ -343,7 +351,7 @@ export function createApp(
         .parse(r.body);
       const u = await db.transaction(async (q) => {
         const [c] = await q(
-          "SELECT c.*,u.totp_secret,u.last_totp_step FROM login_challenges c JOIN users u ON u.id=c.user_id WHERE c.token_hash=$1 AND c.expires_at>now() AND u.disabled_at IS NULL FOR UPDATE",
+          "SELECT c.*,u.totp_secret,u.last_totp_step,u.password_must_change FROM login_challenges c JOIN users u ON u.id=c.user_id WHERE c.token_hash=$1 AND c.expires_at>now() AND u.disabled_at IS NULL FOR UPDATE",
           [hash(b.challenge)],
         );
         requireThat(
@@ -390,7 +398,45 @@ export function createApp(
       s.json({ ok: true });
     }),
   );
-  app.get(
+    app.post(
+    "/api/auth/change-password",
+    asyncRoute(async (r, s) => {
+      const b = z
+        .object({
+          currentPassword: z.string().min(1).max(200),
+          newPassword: z
+            .string()
+            .min(10, "A nova senha deve ter pelo menos 10 caracteres.")
+            .max(200)
+            .regex(/[A-Za-z]/, "A nova senha deve conter letras.")
+            .regex(/\d/, "A nova senha deve conter números."),
+        })
+        .parse(r.body);
+      const raw = sessionToken(r);
+      requireThat(raw, 401, "Entre para continuar.");
+      const [u] = await db.transaction((q) =>
+        q(
+          "SELECT u.id,u.password_hash,u.password_must_change,s.mfa FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.disabled_at IS NULL",
+          [hash(raw)],
+        ),
+      );
+      requireThat(u, 401, "Sessão expirada.");
+      requireThat(passwordMatches(b.currentPassword, u.password_hash), 400, "A senha atual está incorreta.");
+      requireThat(b.currentPassword !== b.newPassword, 400, "A nova senha precisa ser diferente da atual.");
+      const nextHash = passwordHash(b.newPassword);
+      await db.transaction(async (q) => {
+        await q(
+          "UPDATE users SET password_hash=$1,password_must_change=false,password_changed_at=now() WHERE id=$2",
+          [nextHash, u.id],
+        );
+        await audit(q, u.id, null, "auth.password_changed");
+        await q("DELETE FROM sessions WHERE user_id=$1", [u.id]);
+      });
+      await issue(s, u.id, Boolean(u.mfa));
+      s.json({ ok: true });
+    }),
+  );
+app.get(
     "/api/context",
     asyncRoute(async (r: AuthRequest, s) => {
       const data = await db.transaction(async (q) => {
