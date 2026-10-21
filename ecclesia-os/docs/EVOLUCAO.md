@@ -4,7 +4,7 @@
 
 Esta entrega acrescenta a landing page pública em `/`, mantém a aplicação administrativa em `/app`, cria o módulo de mural e biblioteca inicial de mídia e transforma a busca operacional em um assistente explicável. Murais e mídias ficam isolados por igreja com RLS; vídeos externos aceitam somente HTTPS; o assistente registra a consulta, aplica as permissões existentes e apenas sugere ações.
 
-Próximas validações: testar migração 064 em PostgreSQL externo, criar mídia vinculada a evento, validar galerias privadas, executar os fluxos com duas igrejas e homologar armazenamento real, e-mail, Efí/TLS e acessibilidade em navegador.
+Próximas validações: testar migração 064 em PostgreSQL externo, criar mídia vinculada a evento, validar galerias privadas, executar os fluxos com duas igrejas e homologar armazenamento real, e-mail e acessibilidade em navegador.
 
 Esta entrega implementa correções da fundação, rotinas essenciais e a base operacional de agenda, equipes e tarefas. O plano completo de quatro etapas continua maior que esta entrega. A produção permanece bloqueada.
 
@@ -62,7 +62,7 @@ Menus novos: **Secretaria e operação**, **Contas e aprovações**, **Agenda e 
 - A repetição manual de uma entrega falha se o consentimento atual do canal estiver desativado; é necessário confirmar novo opt-in antes de reenviar.
 - O portal exige confirmação explícita para reativar e-mail ou SMS após bounce/descadastro e registra o evento `communication-preferences.reopted-in`.
 - Na homologação, o transporte webhook exige callback token separado, URLs HTTPS e segredo mínimo de 16 caracteres; a inicialização recusa configuração insegura.
-- `GET /api/health/ready` verifica banco, chaves, origem segura e configuração Efí sem expor segredos; retorna 503 quando o ambiente não está pronto para o modo configurado.
+- `GET /api/health/ready` verifica banco, chaves, origem segura e configuração do Pix estático sem expor segredos; retorna 503 quando o ambiente não está pronto para o modo configurado.
 - O procedimento local de backup/restauração foi verificado em destino novo e isolado; a restauração reconheceu as duas igrejas da demonstração. PostgreSQL externo continua exigindo `pg_dump`/`pg_restore` e teste separado.
 - `POST /api/communication/messages` aceita `filter: {status, campusId, cellId, teamId}`; `cellId` restringe os destinatários aos membros vinculados à célula e `teamId` aos usuários da equipe ministerial selecionada, sempre dentro da igreja e dos consentimentos do canal.
 - `POST /api/communication/preview` calcula a quantidade e retorna até dez nomes de destinatários antes do envio, aplicando os mesmos filtros, consentimentos e isolamento da criação da mensagem. A prévia não cria mensagem nem entrega.
@@ -209,7 +209,7 @@ Esta fase reforça a operação diária antes da entrada de dados reais:
 
 ## Operação e segredos
 
-Na Visão geral, o painel **Preparação técnica** aparece somente em homologação e mostra o estado booleano dos bancos separados, chaves, Efí/TLS e comunicação. No modo demonstração, requisitos externos não são apresentados como pendências.
+Na Visão geral, o painel **Preparação técnica** aparece somente em homologação e mostra o estado booleano dos bancos separados, chaves, Pix estático e comunicação. No modo demonstração, requisitos externos não são apresentados como pendências.
 
 Na secretaria, cada link de ficha pode ser copiado ou compartilhado pelo menu nativo do dispositivo; a aplicação não envia automaticamente a ficha para redes sociais.
 
@@ -219,14 +219,14 @@ Na homologação, `DATABASE_URL` deve pertencer a login sem superusuário, BYPAS
 
 `MFA_KEY_HEX` e `DATA_KEY_HEX` devem ter 32 bytes distintos, fornecidos por gerenciamento de segredos. Não trocar os valores diretamente: dados existentes precisam de migração de criptografia com as chaves antigas disponíveis. KMS, envelope com versões e procedimento completo de rotação continuam pendentes. A demonstração usa a chave local compartilhada para simplificar a operação fictícia.
 
-O worker roda junto à demonstração. Para isolar no PostgreSQL externo, configurar `RUN_INTEGRATION_WORKER=false` no web e executar `npm run worker` em outro processo com SERVICE_DATABASE_URL e configuração Efí de homologação. Não executar dois processos contra o mesmo snapshot PGlite.
+O worker roda junto à demonstração. Para isolar no PostgreSQL externo, configurar `RUN_INTEGRATION_WORKER=false` no web e executar `npm run worker` em outro processo com SERVICE_DATABASE_URL e configuração de comunicação. Não executar dois processos contra o mesmo snapshot PGlite.
 
 Um trabalho em falha permanece visível em **Contas e aprovações → Integrações**. Após doze falhas ele aguarda intervenção. Solicitar nova consulta preserva o identificador; não criar outra cobrança para resolver uma falha ambígua. Ausência de confirmação nunca é tratada como recebimento.
 
 ## Ainda não implementado ou não homologado
 
-- Efí real: credenciais/certificados, callback público mTLS, extrato/tarifas e devoluções reais. Pagamentos de eventos ainda usam o fluxo demo até a homologação do PSP. PostgreSQL externo, concorrência e recuperação operacional precisam de homologação.
-- O preflight de homologação valida a estrutura do arquivo Efí e os caminhos dos certificados antes de iniciar o servidor; ele não testa a rede nem substitui a cobrança de homologação.
+- Integração bancária automática: permanece desativada. O Pix estático e os lançamentos manuais são a configuração atual; qualquer PSP futuro exigirá um plano de homologação separado. PostgreSQL externo, concorrência e recuperação operacional precisam de homologação.
+- O preflight de homologação não exige arquivos ou certificados bancários; ele verifica as dependências atuais do ambiente e a configuração de comunicação.
 - O preflight também impede habilitar o transporte de comunicação webhook sem endpoints HTTPS dos dois canais e tokens separados para envio e callback.
 - Homologação física dos modelos Zebra/Brother, pagamentos de eventos e certificados personalizados.
 - Provedor real de e-mail e SMS; o worker e o transporte de demonstração já existem, mas a conexão de produção, credenciais, templates, limites e tratamento de bounces ainda precisam de homologação. WhatsApp permanece posterior.
