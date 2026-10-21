@@ -4,7 +4,7 @@ O roteiro executável do piloto está em [PILOTO.md](PILOTO.md). Use-o junto des
 
 ## Ambientes
 
-`APP_MODE=demo` usa exclusivamente dados fictícios e PostgreSQL embarcado em memória, persistido por snapshots atômicos após transações de escrita em `.local/postgres.snapshot`. Esse caminho evita depender da recuperação de diretório PGlite após interrupção abrupta no Windows. Só um processo deve operar a instalação local. `APP_MODE=homologation` requer banco configurado e credenciais Efí de homologação. `APP_MODE=production` é bloqueado até a conclusão dos requisitos de lançamento.
+`APP_MODE=demo` usa exclusivamente dados fictícios e PostgreSQL embarcado em memória, persistido por snapshots atômicos após transações de escrita em `.local/postgres.snapshot`. Esse caminho evita depender da recuperação de diretório PGlite após interrupção abrupta no Windows. Só um processo deve operar a instalação local. `APP_MODE=homologation` requer banco, HTTPS e chaves configurados. O piloto usa somente Pix estático; pagamentos automáticos permanecem desativados. `APP_MODE=production` é bloqueado até a conclusão dos requisitos de lançamento.
 
 Copie `.env.example` para `.env` somente dentro deste projeto. Não reutilize a `.env` do chatbot. Segredos nunca devem aparecer no frontend, repositório, screenshots ou logs.
 
@@ -20,33 +20,11 @@ O perfil privado de provisionamento contém `network`, `region`, `church`, `name
 
 Os papéis SQL possuem nomes fixos; use um cluster dedicado ou confira previamente conflito de nomes. A versão externa do PostgreSQL e a política de TLS do provedor devem ser homologadas; os testes atuais utilizam PGlite.
 
-## Efí em homologação
+## Pix estático e tesouraria manual
 
-`EFI_CONFIG_PATH` aponta para um arquivo privado, fora da pasta pública e do repositório, contendo um array:
+O piloto não usa banco, Efí, contas recebedoras, webhooks ou confirmação automática. Cada igreja cadastra sua chave Pix, tipo da chave, nome, cidade e instruções na Tesouraria. O sistema gera localmente o payload e o QR Code estático, com valor opcional, e oferece cópia da chave no portal.
 
-```json
-[
-  {
-    "churchId": "UUID da igreja",
-    "accountId": "identificador interno único da conta",
-    "clientId": "credencial de homologação",
-    "clientSecret": "segredo de homologação",
-    "pixKey": "chave associada à conta autenticada",
-    "certificatePath": "caminho absoluto do arquivo P12",
-    "certificatePassword": "senha do certificado, se aplicável"
-  }
-]
-```
-
-O adaptador usa exclusivamente `pix-h.api.efipay.com.br`. Não possui alternância silenciosa para produção. Confirme os escopos `cob.write`, `cob.read` e os necessários à configuração do webhook na conta.
-
-Configure `DATA_KEY_HEX` com 32 bytes aleatórios em hexadecimal, `PUBLIC_ORIGIN` HTTPS, `EFI_TLS_CERT_PATH`, `EFI_TLS_KEY_PATH` e `EFI_WEBHOOK_CA_PATH` com a CA de homologação fornecida pela Efí. O servidor permite clientes comuns sem certificado para o portal, mas a rota de webhook exige socket TLS autenticado contra essa CA. Não confia em cabeçalhos enviados por proxy. Se houver proxy terminando TLS, a solução de mTLS precisa ser reprojetada e testada antes do uso.
-
-Registre no PSP a URL base `https://host/api/webhooks/efi/identificador-da-conta`. A entrega Pix acontece em `/api/webhooks/efi/identificador-da-conta/pix`. O método `Efi.registerWebhook` implementa o registro; a aplicação não executa registro externo automaticamente. O operador deve registrar e testar o callback na conta Efí.
-
-A documentação Efí informa que cobranças de R$ 0,01 a R$ 10,00 são confirmadas no simulador, enquanto valores superiores permanecem ativos. Use esses casos para homologar sucesso e espera. Não envie dados pessoais reais ao simulador sem necessidade.
-
-Criar cobrança não confirma pagamento. A API valida o certificado recebido e consulta a cobrança pela credencial da igreja, verificando txid, identificador do recebimento e valor antes de lançar. Intenção e fila são persistidas antes da chamada ao provedor, com consulta automática e recuperação manual pelo painel. Homologar esse worker com credenciais e PostgreSQL reais. Devolução Efí real e identificação de tarifas pelo extrato continuam pendentes; somente devolução fictícia é executável nesta versão, com lançamento reverso.
+A exibição do QR Code não cria cobrança nem lançamento. Depois de conferir o extrato, o tesoureiro pode registrar manualmente a contribuição, mantendo referência, valor e auditoria. As rotas antigas de cobrança e webhook respondem como indisponíveis e o histórico legado permanece preservado.
 
 ## Backup
 
@@ -62,7 +40,7 @@ Para PostgreSQL externo, use `pg_dump`/`pg_restore`, snapshots e recuperação p
 
 Com `ECCLESIA_DATABASE_URL` apontando para o login restrito da aplicação e `ECCLESIA_SERVICE_DATABASE_URL` para o login de serviço, execute `npm run test:postgres`. O smoke test não deixa dados persistidos: verifica a separação dos papéis, encontra duas igrejas, confirma que uma sessão autorizada para a primeira não enxerga pessoas, documentos, pedidos de privacidade ou avisos de comunicação da segunda e bloqueia uma tentativa de gravação cruzada por RLS.
 
-Antes da homologação, execute `npm run pilot:preflight`. O comando imprime em JSON os requisitos de modo, bancos, HTTPS, chaves, Efí e comunicação, sem mostrar valores secretos, e retorna código diferente de zero quando falta alguma configuração.
+Antes da homologação, execute `npm run pilot:preflight`. O comando imprime em JSON os requisitos de modo, bancos, HTTPS, chaves, Pix estático e comunicação, sem mostrar valores secretos, e retorna código diferente de zero quando falta alguma configuração.
 
 Os testes de navegador usam Edge por padrão. Em ambientes onde ele não inicia, configure `PLAYWRIGHT_MODULE` para o pacote Playwright disponível e `PLAYWRIGHT_EXECUTABLE_PATH` para o executável Chromium/Chrome instalado antes de executar `npm run test:evolution-browser` ou os demais smoke tests.
 
@@ -72,9 +50,9 @@ Os testes de navegador usam Edge por padrão. Em ambientes onde ele não inicia,
 - Implantar KMS, rotação de chaves e proteção dos segredos de MFA e PSP. Realizar revisão independente das fronteiras do papel SQL de serviço.
 - Homologar convites, recuperação, códigos de segurança e revogação de sessões. O contador de tentativas usa banco compartilhado; a proteção na borda e detecção distribuída continuam necessárias.
 - Homologar atribuições explícitas de líderes/supervisores por célula e transições de função/campus. A migração não atribui automaticamente células pelo nome de liderança.
-- Concluir formulários das operações disponíveis somente por API, atendimento efetivo às solicitações LGPD e processamento de devoluções Efí. Os comprovantes atuais são arquivos de texto sem identificação nominal do contribuinte; personalização e PDF são evoluções.
-- Homologar isolamento e concorrência no PostgreSQL externo e concluir testes contratuais com a Efí.
-- Adicionar recuperação automática de eventos, conciliação de tarifas, alertas e monitoramento de divergências.
+- Concluir formulários das operações disponíveis somente por API, atendimento efetivo às solicitações LGPD e atendimento efetivo às solicitações LGPD. Os comprovantes atuais são arquivos de texto sem identificação nominal do contribuinte; personalização e PDF são evoluções.
+- Homologar isolamento e concorrência no PostgreSQL externo, com tesouraria manual e Pix estático.
+- Adicionar recuperação de integrações de comunicação, alertas e monitoramento de divergências.
 - Executar auditoria WCAG com leitor de tela, teclado, contraste e ampliação; as verificações atuais cobrem comportamento visual básico, não certificação.
 - Definir RPO/RTO com o contratante, retenção de cópias, observabilidade, resposta a incidentes e acesso de suporte auditado.
 - Validar uma rede e duas igrejas reais, com responsáveis nomeados e treinamento, antes de liberar produção.
