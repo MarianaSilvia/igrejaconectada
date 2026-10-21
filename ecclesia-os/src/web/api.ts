@@ -1,3 +1,5 @@
+import { auth } from "./firebase";
+
 export type RecordData = Record<string, any>;
 let selectedChurch = "";
 export function selectChurch(id: string) {
@@ -9,12 +11,18 @@ export async function api<T = any>(
   body?: unknown,
   extraHeaders?: Record<string, string>,
 ): Promise<T> {
+  const firebaseToken = auth.currentUser
+    ? await auth.currentUser.getIdToken()
+    : "";
   const res = await fetch("/api" + path, {
     method,
     credentials: "same-origin",
     cache: "no-store",
     headers: {
       "Content-Type": "application/json",
+      ...(firebaseToken && !extraHeaders?.Authorization
+        ? { Authorization: `Bearer ${firebaseToken}` }
+        : {}),
       ...(selectedChurch ? { "x-church-id": selectedChurch } : {}),
       ...(extraHeaders ?? {}),
     },
