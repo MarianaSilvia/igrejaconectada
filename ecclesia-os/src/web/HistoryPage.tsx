@@ -49,6 +49,26 @@ export default function HistoryPage(props: PageProps) {
     ? [["Matrículas", metrics.educationEnrollments ?? 0], ["Concluídos", metrics.educationCompleted ?? 0]]
     : [["Pessoas", metrics.people ?? 0], ["Membros", metrics.members ?? 0], ["Visitantes", metrics.visitors ?? 0], ["Reuniões", metrics.meetings ?? 0], ["Visitantes registrados", metrics.meetingVisitors ?? 0], ["Turmas", metrics.classes ?? 0]], [metrics, subjectType]);
 
+  async function exportCsv() {
+    const query = new URLSearchParams({ subjectType, subjectId: selectedId });
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    const response = await fetch("/api/history/export.csv?" + query.toString(), {
+      credentials: "same-origin",
+      headers: { "x-church-id": props.church },
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error ?? "Exportação indisponível.");
+    }
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "linha-do-tempo.csv";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   async function addEvent(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setBusy(true); setError("");
     const form = new FormData(e.currentTarget);
@@ -66,7 +86,10 @@ export default function HistoryPage(props: PageProps) {
   return <section className="panel history-page" style={{ padding: 24 }}>
     <div className="toolbar">
       <div><h2>Histórico e relatórios</h2><p className="muted">Registre e consulte a história da congregação e das pessoas, com indicadores conectados aos módulos existentes.</p></div>
-      <button className="button secondary" type="button" onClick={() => window.print()}>Imprimir / salvar PDF</button>
+      <div className="toolbar">
+        <button className="button secondary" type="button" onClick={() => window.print()}>Imprimir / salvar PDF</button>
+        <button className="button secondary" type="button" onClick={() => void exportCsv().catch((error) => setError((error as Error).message))}>Baixar CSV</button>
+      </div>
     </div>
     {error && <p className="error" role="alert">{error}</p>}
     <div className="grid-2">
