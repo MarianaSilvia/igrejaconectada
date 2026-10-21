@@ -1,5 +1,5 @@
 import "../src/server/env.js";
-import { access, readFile, readdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,32 +23,6 @@ const migrationNumbers = migrationFiles
   .map((file) => Number(file.match(/^(\d+)_/)?.[1] ?? 0))
   .filter(Number.isFinite);
 const latestMigration = Math.max(0, ...migrationNumbers);
-let efiConfigValid = mode === "demo";
-if (mode === "homologation") {
-  try {
-    const configPath = process.env.EFI_CONFIG_PATH ?? "";
-    const raw = JSON.parse(await readFile(configPath, "utf8")) as unknown;
-    if (!Array.isArray(raw) || raw.length === 0) throw new Error("empty");
-    for (const account of raw) {
-      if (!account || typeof account !== "object") throw new Error("account");
-      const value = account as Record<string, unknown>;
-      for (const key of [
-        "churchId",
-        "accountId",
-        "clientId",
-        "clientSecret",
-        "pixKey",
-        "certificatePath",
-      ]) {
-        if (typeof value[key] !== "string" || !value[key]) throw new Error(key);
-      }
-      await access(String(value.certificatePath));
-    }
-    efiConfigValid = true;
-  } catch {
-    efiConfigValid = false;
-  }
-}
 const checks = {
   mode: ["demo", "homologation"].includes(mode),
   database: mode === "demo" || Boolean(databaseUrl),
@@ -70,8 +44,8 @@ const checks = {
   distinctEncryptionKeys:
     mode === "demo" ||
     (dataKey.length > 0 && mfaKey.length > 0 && dataKey !== mfaKey),
-  efi: mode === "demo" || Boolean(process.env.EFI_CONFIG_PATH),
-  efiConfigValid,
+  pix: "static" as const,
+  automaticPayments: false,
   communicationCallback:
     communication !== "webhook" ||
     (process.env.COMMUNICATION_CALLBACK_TOKEN ?? "").length >= 16,
