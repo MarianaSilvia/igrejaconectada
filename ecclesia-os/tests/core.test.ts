@@ -236,10 +236,7 @@ test("member sees only own information and cannot access treasury", async () => 
   });
   assert.equal(portal.data.person.name, "Ana Martins");
   assert.ok(!("charges" in portal.data) || portal.data.charges.length === 0);
-  assert.equal(
-    (await request("/api/network", { user: "member" })).data.length,
-    0,
-  );
+  assert.equal((await request("/api/network", { user: "member" })).status, 403);
 });
 test("closed periods reject backdated entries and reversals preserve the original", async () => {
   const opts = { user: "admin", church: IDS.churchA, method: "POST" };
@@ -487,7 +484,17 @@ test("área comercial e cobranças automáticas permanecem desativadas", async (
     church: IDS.churchA,
   });
   assert.equal(subscriptions.status, 404);
+  const networkBilling = await request("/api/network/billing", {
+    user: "central",
+    church: IDS.churchA,
+  });
+  assert.equal(networkBilling.status, 404);
+  const localSubscription = await request("/api/subscription", opts);
+  assert.equal(localSubscription.status, 404);
+  const invoiceExport = await request("/api/subscription/invoices.csv", opts);
+  assert.equal(invoiceExport.status, 404);
 });
+
 test(
   "database backup restores data and RLS policies into a fresh PostgreSQL instance",
   { timeout: 120000 },
@@ -542,3 +549,4 @@ test("agenda collections stay scoped to the selected church", async () => {
     false,
   );
 });
+
