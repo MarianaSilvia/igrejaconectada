@@ -4,7 +4,7 @@ import { Badge, Field, Submit, formValues } from "./ui";
 import type { PageProps } from "./pages";
 
 export default function InstitutionalPage(props: PageProps) {
-  const [data, setData] = useState<RecordData | null>(null), [people, setPeople] = useState<RecordData[]>([]), [congregations, setCongregations] = useState<RecordData[]>([]), [error, setError] = useState(""), [busy, setBusy] = useState(false);
+  const [data, setData] = useState<RecordData | null>(null), [people, setPeople] = useState<RecordData[]>([]), [congregations, setCongregations] = useState<RecordData[]>([]), [error, setError] = useState(""), [busy, setBusy] = useState(false), [inviteLink, setInviteLink] = useState("");
   const load = async () => { try { const [v,p] = await Promise.all([api<RecordData>("/institutional"), api<RecordData[]>("/people")]); setData(v); setPeople(p); } catch(e) { setError((e as Error).message); } try { setCongregations(await api<RecordData[]>("/churches/children")); } catch { setCongregations([]); } };
   useEffect(()=>{setData(null);void load();},[props.church,props.revision]);
   async function run(fn:()=>Promise<unknown>){setBusy(true);setError("");try{await fn();props.notify("Governança institucional atualizada.");await load();}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
