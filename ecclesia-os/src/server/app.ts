@@ -220,6 +220,60 @@ export function createApp(
       "Apenas a administração local pode autorizar.",
     );
   };
+  // Administração da hierarquia: a sede cria e acompanha suas congregações.
+  app.get(
+    "/api/churches/children",
+    asyncRoute(async (r: AuthRequest, s: Response) => {
+      await admin(r);
+      const children = await scoped(r, (q) => q("SELECT * FROM list_congregations()"));
+      s.json(children);
+    }),
+  );
+  app.post(
+    "/api/churches/children",
+    asyncRoute(async (r: AuthRequest, s: Response) => {
+      await admin(r);
+      const body = z
+        .object({
+          name: z.string().trim().min(2).max(160),
+          regionId: z.uuid().nullable().optional().default(null),
+          administratorUserId: z.uuid().nullable().optional().default(null),
+        })
+        .parse(r.body);
+      const child = await scoped(r, async (q) => {
+        const [created] = await q(
+          "SELECT * FROM create_congregation($1,$2,$3)",
+          [body.name, body.regionId, body.administratorUserId],
+        );
+        requireThat(created, 400, "Não foi possível criar a congregação.");
+        await audit(q, r.actor.id, r.church!, "church.congregation-created", created.id);
+        return created;
+      });
+      s.status(201).json(child);
+    }),
+  );
+  app.patch(
+    "/api/churches/children/:id",
+    asyncRoute(async (r: AuthRequest, s: Response) => {
+      await admin(r);
+      const body = z
+        .object({
+          name: z.string().trim().min(2).max(160).optional(),
+          active: z.boolean().optional(),
+        })
+        .parse(r.body);
+      const child = await scoped(r, async (q) => {
+        const [updated] = await q(
+          "SELECT * FROM update_congregation($1,$2,$3)",
+          [uuid.parse(r.params.id), body.name ?? null, body.active ?? null],
+        );
+        requireThat(updated, 404, "Congregação não encontrada.");
+        await audit(q, r.actor.id, r.church!, "church.congregation-updated", updated.id);
+        return updated;
+      });
+      s.json(child);
+    }),
+  );
   const issue = async (s: Response, user: string, mfa: boolean) => {
     const t = token();
     await db.transaction((q) =>
