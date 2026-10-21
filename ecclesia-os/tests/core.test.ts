@@ -482,60 +482,12 @@ test("área comercial e cobranças automáticas permanecem desativadas", async (
     body: { amount: "10.00", fundId: "00000000-0000-4000-8000-000000000001" },
   });
   assert.equal(charge.status, 404);
-  assert.equal(
-    (
-      await request("/api/subscription", {
-        ...opts,
-        method: "PATCH",
-        body: { modules: ["people", "cells"] },
-      })
-    ).status,
-    200,
-  );
-  assert.equal((await request("/api/finance", opts)).status, 403);
-  const contract = await request("/api/subscription/contracts", {
-    ...opts,
-    method: "POST",
-    body: { plan: "essencial", status: "active", monthlyCents: 9900, startsOn: "2030-01-01", renewsOn: "2030-02-01", modules: ["people", "cells"], notes: "Implantação piloto" },
+  const subscriptions = await request("/api/network/subscriptions", {
+    user: "central",
+    church: IDS.churchA,
   });
-  assert.equal(contract.status, 201, JSON.stringify(contract.data));
-  const contractUpdated = await request(`/api/subscription/contracts/${contract.data.id}`, {
-    ...opts,
-    method: "PATCH",
-    body: { plan: "rede", status: "active", monthlyCents: 19900, startsOn: "2030-01-01", renewsOn: "2030-03-01", modules: ["people", "cells", "finance"], notes: "Rede piloto" },
-  });
-  assert.equal(contractUpdated.status, 200, JSON.stringify(contractUpdated.data));
-  assert.equal(contractUpdated.data.plan, "rede");
-  const invoice = await request("/api/subscription/invoices", { ...opts, method: "POST", body: { contractId: contract.data.id, periodStart: "2030-01-01", periodEnd: "2030-01-31", dueOn: "2030-02-10", amountCents: 19900, notes: "Janeiro" } });
-  assert.equal(invoice.status, 201, JSON.stringify(invoice.data));
-  const invoiceUpdated = await request(`/api/subscription/invoices/${invoice.data.id}`, { ...opts, method: "PATCH", body: { status: "paid", notes: "Pago manualmente" } });
-  assert.equal(invoiceUpdated.status, 200, JSON.stringify(invoiceUpdated.data));
-  assert.equal(invoiceUpdated.data.status, "paid");
-  const subscription = await request("/api/subscription", opts);
-  assert.equal(subscription.data.contract.id, contract.data.id);
-  assert.ok(subscription.data.invoices.some((row: any) => row.id === invoice.data.id));
-  const invoiceCsv = await fetch(url + "/api/subscription/invoices.csv", { headers: { Cookie: cookies.get("admin")!, "x-church-id": IDS.churchA } });
-  const invoiceCsvText = await invoiceCsv.text();
-  assert.equal(invoiceCsv.status, 200, invoiceCsvText);
-  assert.match(invoiceCsvText, /plan,period_start,period_end/);
-  assert.equal(
-    (
-      await request("/api/subscription", {
-        user: "member",
-        church: IDS.churchA,
-        method: "PATCH",
-        body: { modules: ["finance"] },
-      })
-    ).status,
-    403,
-  );
-  await request("/api/subscription", {
-    ...opts,
-    method: "PATCH",
-    body: { modules: ["people", "cells", "finance"] },
-  });
+  assert.equal(subscriptions.status, 404);
 });
-
 test(
   "database backup restores data and RLS policies into a fresh PostgreSQL instance",
   { timeout: 120000 },
