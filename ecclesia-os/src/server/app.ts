@@ -264,11 +264,18 @@ export function createApp(
         .parse(r.body);
       const child = await scoped(r, async (q) => {
         const [created] = network
-          ? await q("SELECT * FROM create_network_congregation($1,$2,$3)", [
-              r.church,
-              body.name,
-              body.regionId,
-            ])
+          ? await (async () => {
+              const [unit] = await q(
+                "SELECT COALESCE(parent_church_id,id) AS parent_id FROM churches WHERE id=$1 AND active=true",
+                [r.church],
+              );
+              requireThat(unit?.parent_id, 400, "Selecione uma sede ativa para cadastrar congregações.");
+              return q("SELECT * FROM create_network_congregation($1,$2,$3)", [
+                unit.parent_id,
+                body.name,
+                body.regionId,
+              ]);
+            })()
           : await q("SELECT * FROM create_congregation($1,$2,$3)", [
               body.name,
               body.regionId,
@@ -327,7 +334,7 @@ export function createApp(
       const result = await scoped(r, async (q) => {
         const [child] = await q(
           "SELECT child.id FROM churches child JOIN churches parent ON parent.id=child.parent_church_id WHERE child.id=$1 AND child.unit_type='congregacao' AND child.active=true AND EXISTS (SELECT 1 FROM network_members nm WHERE nm.network_id=parent.network_id AND nm.user_id=actor_id() AND (nm.role='network_admin' OR nm.user_id=$2))",
-          [childId],
+          [childId, r.actor.id],
         );
         requireThat(child, 404, "Congregação não encontrada ou inativa.");
         const [invite] = await q(
