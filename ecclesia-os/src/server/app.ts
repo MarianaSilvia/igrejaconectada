@@ -1504,7 +1504,7 @@ app.get(
       const [settings] = await scoped(r, (q) => q("SELECT pix_key,pix_key_type,institution_name,city,enabled FROM church_pix_settings WHERE church_id=$1", [r.church]));
       requireThat(settings?.enabled, 404, "Pix estático não habilitado para esta igreja.");
       const payload = staticPixPayload(settings.pix_key,settings.pix_key_type,settings.institution_name,settings.city,query.amount);
-      s.json({payload,qrDataUrl:await QRCode.toDataURL(payload,{width:280,margin:2}),amount:query.amount??null,automaticPayments:false});
+      s.json({payload,qrDataUrl:await QRCode.toDataURL(payload,{width:280,margin:2}),pixKey:settings.pix_key,institutionName:settings.institution_name,amount:query.amount??null,automaticPayments:false});
     }),
   );
   app.get(
