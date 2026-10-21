@@ -116,14 +116,16 @@ test("database DATE remains a calendar string in API serialization", async () =>
   assert.equal(row.civil, "2026-10-16");
   assert.equal(shortDate(row.civil), "16/10/2026");
 });
-test("health readiness reports safe demo dependencies without secrets", async () => {
+test("health readiness reports missing identity dependency without secrets", async () => {
   const ready = await call("/health/ready", undefined, IDS.admin);
-  assert.equal(ready.status, 200, JSON.stringify(ready.data));
-  assert.equal(ready.data.ok, true);
+  assert.equal(ready.status, 503, JSON.stringify(ready.data));
+  assert.equal(ready.data.ok, false);
   assert.equal(ready.data.checks.database, true);
   assert.equal(ready.data.checks.serviceDatabase, true);
   assert.equal(ready.data.checks.migrationDatabase, true);
-  assert.equal(ready.data.checks.efiTls, true);
+  assert.equal(ready.data.checks.firebase, false);
+  assert.equal(ready.data.checks.pix, "static");
+  assert.equal(ready.data.checks.automaticPayments, false);
   assert.equal(ready.data.checks.communication, true);
   assert.equal(ready.data.checks.dataKey, true);
   assert.equal(Object.prototype.hasOwnProperty.call(ready.data, "key"), false);
