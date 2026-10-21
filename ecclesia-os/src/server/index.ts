@@ -15,7 +15,7 @@ import {
 import { sealTotpSecrets } from "./access.js";
 import path from "node:path";
 if (existsSync(".env")) process.loadEnvFile(".env");
-const mode = process.env.APP_MODE ?? "demo";
+const mode = process.env.APP_MODE ?? (process.env.VERCEL ? "homologation" : "demo");
 if (!["demo", "homologation"].includes(mode))
   throw new Error(
     "Esta versão habilita demo e homologação. Produção exige concluir o checklist de lançamento em docs/OPERACAO.md.",
