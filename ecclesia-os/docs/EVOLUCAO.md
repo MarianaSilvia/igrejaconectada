@@ -177,6 +177,25 @@ Menus novos: **Secretaria e operação**, **Contas e aprovações**, **Agenda e 
 - `/api/subscription` retorna plano, módulos, contrato e até 100 faturas; `/api/subscription/contracts` e `/api/subscription/invoices` permitem o registro administrativo com MFA, auditoria e isolamento por igreja; `/api/subscription/invoices.csv` exporta o controle para o administrativo.
 - `/api/network/subscriptions` mostra à central apenas plano, situação, mensalidade, renovação e contadores de faturas por igreja da rede, sem pessoas, doações ou detalhes pastorais.
 
+
+## Entrega 21/10/2026 — segunda fase: isolamento operacional e Pix estático
+
+Esta fase reforça a operação diária antes da entrada de dados reais:
+
+- A consulta da Agenda agora aplica explicitamente `church_id` em eventos, recursos, reservas, equipes, vínculos, escalas e indisponibilidades. Isso complementa o RLS e evita que uma consulta sem política ativa misture unidades.
+- O Pix automático permanece bloqueado. A Tesouraria usa somente a configuração Pix estática da igreja, QR Code local e cópia da chave; nenhuma exibição cria cobrança ou liquida lançamento.
+- O painel continua em homologação e sem vendas, contratos ou cobrança comercial.
+- A próxima validação deve executar build, testes, preflight e smoke test no ambiente publicado. A verificação pública do deployment depende de reautorizar o conector Vercel quando ele retornar 403.
+
+### Liberação da fase
+
+1. Confirmar que duas igrejas recebem listas de agenda diferentes usando usuários distintos.
+2. Cadastrar uma chave Pix em uma igreja e confirmar que o portal de outra não a enxerga.
+3. Confirmar que as rotas de cobrança e webhook retornam indisponível.
+4. Executar `npm run build`, `npm test` e `npm run pilot:preflight:homologation`.
+5. Registrar o SHA do deployment e o resultado de cada teste antes de importar novos dados.
+
+
 ## Operação e segredos
 
 Na Visão geral, o painel **Preparação técnica** aparece somente em homologação e mostra o estado booleano dos bancos separados, chaves, Efí/TLS e comunicação. No modo demonstração, requisitos externos não são apresentados como pendências.
