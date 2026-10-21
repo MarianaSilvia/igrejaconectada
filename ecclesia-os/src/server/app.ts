@@ -676,7 +676,14 @@ app.get(
           ),
         })),
       );
-      s.json({ ...data, churches, user: r.actor, mode: options.mode });
+      s.json({
+        ...data,
+        churches,
+        user: r.actor,
+        mode: options.mode,
+        commercialFeaturesEnabled:
+          process.env.COMMERCIAL_FEATURES_ENABLED === "true",
+      });
     }),
   );
   app.get(
