@@ -37,11 +37,30 @@ function firebaseAdminAuth() {
   return authClient;
 }
 
+function hasServiceAccount() {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    try {
+      const service = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON) as {
+        projectId?: string;
+        clientEmail?: string;
+        privateKey?: string;
+      };
+      return Boolean(service.projectId && service.clientEmail && service.privateKey);
+    } catch {
+      return false;
+    }
+  }
+  return Boolean(
+    process.env.FIREBASE_PROJECT_ID &&
+      process.env.FIREBASE_CLIENT_EMAIL &&
+      process.env.FIREBASE_PRIVATE_KEY,
+  );
+}
+
 export function firebaseAdminConfigured() {
   return Boolean(
-    process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
-      process.env.FIREBASE_CLIENT_EMAIL ||
-      process.env.FIREBASE_PROJECT_ID,
+    process.env.FIREBASE_PROJECT_ID &&
+      (hasServiceAccount() || process.env.FIREBASE_WEB_API_KEY),
   );
 }
 
@@ -113,7 +132,7 @@ export async function verifyFirebaseIdToken(token: string): Promise<DecodedIdTok
   if (!token || token.length > 8192) throw new Error("Token Firebase ausente ou inválido.");
   const projectId = process.env.FIREBASE_PROJECT_ID;
   if (!projectId) throw new Error("FIREBASE_PROJECT_ID não está configurado no servidor.");
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON || (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY)) {
+  if (hasServiceAccount()) {
     return firebaseAdminAuth().verifyIdToken(token, true);
   }
   const apiKey = process.env.FIREBASE_WEB_API_KEY;
