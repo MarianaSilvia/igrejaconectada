@@ -61,7 +61,35 @@ import {
 type AuthRequest = Request & { actor: Row; church: string };
 const uuid = z.uuid();
 const text = z.string().trim().min(1).max(200);
+
 const date = z.iso.date();
+
+function pixCrc16(payload: string) {
+  let crc = 0xffff;
+  for (const byte of Buffer.from(payload, "utf8")) {
+    crc ^= byte << 8;
+    for (let bit = 0; bit < 8; bit++)
+      crc = ((crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1) & 0xffff;
+  }
+  return crc.toString(16).toUpperCase().padStart(4, "0");
+}
+function pixField(id: string, value: string) {
+  return id + String(Buffer.byteLength(value, "utf8")).padStart(2, "0") + value;
+}
+function staticPixPayload(key: string, _keyType: string, name: string, city: string, amount?: string) {
+  const merchant = pixField("00", "BR.GOV.BCB.PIX") + pixField("01", key);
+  const fields = [pixField("00", "01"), pixField("26", merchant), pixField("52", "0000"), pixField("53", "986")];
+  if (amount) fields.push(pixField("54", amount));
+  fields.push(
+    pixField("58", "BR"),
+    pixField("59", name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toUpperCase().slice(0, 25)),
+    pixField("60", city.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toUpperCase().slice(0, 15)),
+    pixField("62", pixField("05", "***")),
+  );
+  const body = fields.join("") + "6304";
+  return body + pixCrc16(body);
+}
+
 const personSchema = z.object({
   name: text,
   email: z.union([z.email(), z.literal("")]).optional(),
@@ -1436,9 +1464,65 @@ app.get(
       );
     }),
   );
+  app.get(
+    "/api/pix/settings",
+    asyncRoute(async (r: AuthRequest, s: Response) => {
+      const settings = await scoped(r, async (q) => {
+        const [permission] = await q("SELECT can_access('finance') AS allowed");
+        requireThat(permission.allowed, 403, "Consulta financeira não autorizada.");
+        return (await q("SELECT church_id,pix_key,pix_key_type,institution_name,city,instructions,enabled,portal_visible,created_at,updated_at FROM church_pix_settings WHERE church_id=$1", [r.church]))[0] ?? null;
+      });
+      s.json(settings);
+    }),
+  );
+  app.put(
+    "/api/pix/settings",
+    asyncRoute(async (r: AuthRequest, s: Response) => {
+      const body = z.object({
+        pixKey: z.string().trim().min(1).max(200),
+        pixKeyType: z.enum(["cpf","cnpj","email","phone","random"]),
+        institutionName: z.string().trim().min(2).max(160),
+        city: z.string().trim().min(2).max(80),
+        instructions: z.string().max(2000).default(""),
+        enabled: z.boolean().default(false),
+        portalVisible: z.boolean().default(false),
+      }).parse(r.body);
+      const result = await scoped(r, async (q) => {
+        const [permission] = await q("SELECT local_role() IN ('admin','treasurer') AND can_access('finance',true) AND finance_scope_allowed() AS allowed");
+        requireThat(permission.allowed && r.actor.mfa, 403, "Administrador ou tesoureiro com MFA obrigatórios.");
+        const [row] = await q("INSERT INTO church_pix_settings(church_id,pix_key,pix_key_type,institution_name,city,instructions,enabled,portal_visible,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$9) ON CONFLICT(church_id) DO UPDATE SET pix_key=excluded.pix_key,pix_key_type=excluded.pix_key_type,institution_name=excluded.institution_name,city=excluded.city,instructions=excluded.instructions,enabled=excluded.enabled,portal_visible=excluded.portal_visible,updated_by=excluded.updated_by,updated_at=now() RETURNING church_id,pix_key,pix_key_type,institution_name,city,instructions,enabled,portal_visible,created_at,updated_at", [r.church,body.pixKey,body.pixKeyType,body.institutionName,body.city,body.instructions,body.enabled,body.portalVisible,r.actor.id]);
+        await audit(q,r.actor.id,r.church,"pix.static-settings-updated",r.church);
+        return row;
+      });
+      s.json(result);
+    }),
+  );
+  app.get(
+    "/api/pix/static-qr",
+    asyncRoute(async (r: AuthRequest, s: Response) => {
+      const query = z.object({ amount: z.string().regex(/^\d{1,9}(\.\d{1,2})?$/).optional() }).parse(r.query);
+      const [settings] = await scoped(r, (q) => q("SELECT pix_key,pix_key_type,institution_name,city,enabled FROM church_pix_settings WHERE church_id=$1", [r.church]));
+      requireThat(settings?.enabled, 404, "Pix estático não habilitado para esta igreja.");
+      const payload = staticPixPayload(settings.pix_key,settings.pix_key_type,settings.institution_name,settings.city,query.amount);
+      s.json({payload,qrDataUrl:await QRCode.toDataURL(payload,{width:280,margin:2}),amount:query.amount??null,automaticPayments:false});
+    }),
+  );
+  app.get(
+    "/api/portal/pix",
+    asyncRoute(async (r: AuthRequest, s: Response) => {
+      return s.status(404).json({ error: "Cobranças automáticas e webhooks estão desativados. Use o Pix estático." });
+      
+      const [settings] = await scoped(r, (q) => q("SELECT pix_key,pix_key_type,institution_name,city,instructions,enabled FROM church_pix_settings WHERE church_id=$1 AND portal_visible=true", [r.church]));
+      requireThat(settings?.enabled,404,"Pix não publicado por esta igreja.");
+      const payload=staticPixPayload(settings.pix_key,settings.pix_key_type,settings.institution_name,settings.city);
+      s.json({...settings,payload,qrDataUrl:await QRCode.toDataURL(payload,{width:280,margin:2}),automaticPayments:false});
+    }),
+  );
   app.post(
     "/api/pix/charges",
     asyncRoute(async (r: AuthRequest, s) => {
+      return s.status(404).json({ error: "Cobranças automáticas e webhooks estão desativados. Use o Pix estático." });
+      
       const b = z
         .object({
           amount: z.string(),
@@ -1515,6 +1599,8 @@ app.get(
   app.get(
     "/api/pix/charges/:id",
     asyncRoute(async (r: AuthRequest, s) => {
+      return s.status(404).json({ error: "Cobranças automáticas e webhooks estão desativados. Use o Pix estático." });
+      
       const id = uuid.parse(r.params.id);
       const [c] = await scoped(r, (q) =>
         q("SELECT * FROM pix_charges WHERE id=$1", [id]),
@@ -1540,6 +1626,8 @@ app.get(
   app.post(
     "/api/demo/settle/:id",
     asyncRoute(async (r: AuthRequest, s) => {
+      return s.status(404).json({ error: "Cobranças automáticas e webhooks estão desativados. Use o Pix estático." });
+      
       requireThat(options.mode === "demo", 404, "Rota indisponível.");
       await admin(r);
       const id = uuid.parse(r.params.id);
@@ -1565,6 +1653,8 @@ app.get(
   app.post(
     "/api/pix/reconcile/:id",
     asyncRoute(async (r: AuthRequest, s) => {
+      return s.status(404).json({ error: "Cobranças automáticas e webhooks estão desativados. Use o Pix estático." });
+      
       const id = uuid.parse(r.params.id);
       await scoped(r, (q) => permit(q, "finance", true));
       const [c] = await scoped(r, (q) =>
