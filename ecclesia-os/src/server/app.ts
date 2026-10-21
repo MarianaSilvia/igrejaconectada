@@ -220,6 +220,26 @@ export function createApp(
       "Apenas a administração local pode autorizar.",
     );
   };
+  const networkAdmin = async (r: AuthRequest) => {
+    const [v] = await db.transaction((q) => q(
+      "SELECT 1 FROM network_members nm JOIN churches c ON c.network_id=nm.network_id WHERE nm.user_id=$1 AND nm.role='network_admin' AND c.id=$2",
+      [r.actor.id, r.church],
+    ));
+    requireThat(v && r.actor.mfa, 403, "Supervisão da rede com MFA obrigatória.");
+    return true;
+  };
+  const unitManager = async (r: AuthRequest) => {
+    const [local] = await db.transaction((q) => q(
+      "SELECT 1 FROM memberships WHERE user_id=$1 AND church_id=$2 AND role='admin'",
+      [r.actor.id, r.church],
+    ));
+    if (local) {
+      await admin(r);
+      return false;
+    }
+    await networkAdmin(r);
+    return true;
+  };
   // Administração da hierarquia: a sede cria e acompanha suas congregações.
   app.get(
     "/api/churches/children",
@@ -290,7 +310,7 @@ export function createApp(
       const secret = randomBytes(24).toString("base64url");
       const result = await scoped(r, async (q) => {
         const [child] = await q(
-          "SELECT id FROM churches WHERE id=$1 AND parent_church_id=tenant_id() AND unit_type='congregacao' AND active=true",
+          "SELECT child.id FROM churches child JOIN churches parent ON parent.id=child.parent_church_id WHERE child.id=$1 AND child.unit_type='congregacao' AND child.active=true AND EXISTS (SELECT 1 FROM network_members nm WHERE nm.network_id=parent.network_id AND nm.user_id=actor_id() AND (nm.role='network_admin' OR nm.user_id=$2))",
           [childId],
         );
         requireThat(child, 404, "Congregação não encontrada ou inativa.");
