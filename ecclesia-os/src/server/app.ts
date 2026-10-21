@@ -2355,6 +2355,11 @@ app.get(
   );
   const platformQuery = <T>(r: AuthRequest, fn: (q: Query) => Promise<T>) => db.transaction(fn, { actor: r.actor.id, church: r.church });
   const requirePlatform = async (r: AuthRequest, billing = false) => {
+    requireThat(
+      process.env.COMMERCIAL_FEATURES_ENABLED === "true",
+      404,
+      "Área comercial desativada.",
+    );
     const [role] = await platformQuery(r, (q) => q("SELECT role FROM platform_memberships WHERE user_id=$1", [r.actor.id]));
     requireThat(role?.role === "platform_admin" || (billing && role?.role === "platform_billing"), 403, "Acesso exclusivo da operação da plataforma.");
     return role.role as string;
@@ -2483,6 +2488,7 @@ app.get(
   });
   return app;
 }
+
 
 
 
