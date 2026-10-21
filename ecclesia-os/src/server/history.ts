@@ -90,6 +90,27 @@ export function historyRoutes(app: Express, db: Database) {
     }));
   }));
 
+  app.get("/api/history/export.csv", route(async (r, s) => {
+    const query = z.object({
+      subjectType: z.enum(["person", "church"]).default("church"),
+      subjectId: id.optional(),
+      from: z.iso.date().optional(),
+      to: z.iso.date().optional(),
+    }).parse(r.query);
+    const subjectId = query.subjectId ?? r.church;
+    const rows = await scoped(r, async (q) => {
+      await subjectCheck(q, r, query.subjectType, subjectId);
+      const where = ["church_id=$1", "subject_type=$2", "subject_id=$3"];
+      const params: unknown[] = [r.church, query.subjectType, subjectId];
+      if (query.from) { params.push(query.from); where.push("event_date >= $" + params.length); }
+      if (query.to) { params.push(query.to); where.push("event_date <= $" + params.length); }
+      return q("SELECT event_date,event_type,title,description,visibility FROM historical_events WHERE " + where.join(" AND ") + " ORDER BY event_date ASC,created_at ASC", params);
+    });
+    const escape = (value: unknown) => '"' + String(value ?? "").replaceAll('"', '""') + '"';
+    const csv = ["date,type,title,description,visibility", ...rows.map((row) => [row.event_date, row.event_type, row.title, row.description, row.visibility].map(escape).join(","))].join("\r\n") + "\r\n";
+    s.type("text/csv; charset=utf-8").attachment("linha-do-tempo.csv").send("\ufeff" + csv);
+  }));
+
   app.post("/api/history", route(async (r, s) => {
     await manage(r);
     const body = eventSchema.parse(r.body);
