@@ -64,6 +64,7 @@ type Page =
   | "assistance"
   | "media"
   | "history"
+  | "people-insights"
   | "portal"
   | "firebase-logs";
 type Area =
@@ -537,6 +538,8 @@ export default function App() {
                       "Avisos, vídeos e galerias publicados com segurança.",
                     history:
                       "Linha do tempo de pessoas e congregações, com indicadores e relatórios autorizados.",
+                    "people-insights":
+                      "Marcos de pessoas e revisão de possíveis duplicidades dentro da igreja.",
                     "firebase-logs":
                       "Auditoria e monitoramento de autenticação Firebase, sincronização com Firestore e integridade de segurança.",
                   }[page]
@@ -592,6 +595,7 @@ export default function App() {
           {page === "assistance" && <AssistancePage key={church} {...props} />}
           {page === "media" && <MediaPage key={church} {...props} />}
           {page === "history" && <HistoryPage key={church} {...props} />}
+          {page === "people-insights" && <PeopleInsightsPage key={church} {...props} />}
           {page === "governance" && (
             <Governance
               {...props}
