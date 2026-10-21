@@ -234,6 +234,11 @@ export default function App() {
     return () => unsub();
   }, []);
   useEffect(() => {
+    if (context?.passwordMustChange && page !== "security") {
+      setPage("security");
+    }
+  }, [context?.passwordMustChange, page]);
+  useEffect(() => {
     const canonical = legacyRedirects[window.location.pathname];
     if (canonical) window.history.replaceState({}, "", canonical);
   }, []);
