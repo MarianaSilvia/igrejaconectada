@@ -99,14 +99,50 @@ export function historyRoutes(app: Express, db: Database) {
             source_id: row.id,
           }));
         });
-        events = [...events, ...derived].sort((a, b) => String(a.event_date).localeCompare(String(b.event_date)));
-        return { subject: person, events, metrics: { educationEnrollments: Number(education?.total ?? 0), educationCompleted: Number(education?.completed ?? 0) } };
+        const attendanceRows = await q("SELECT a.id,m.held_on,m.topic FROM attendance a JOIN meetings m ON m.id=a.meeting_id WHERE a.church_id=$1 AND a.person_id=$2 AND a.present=true", [r.church, subjectId]);
+        const attendanceEvents = attendanceRows.filter((row) => inPeriod(row.held_on)).map((row) => ({
+          id: `attendance-${row.id}`,
+          event_date: String(row.held_on).slice(0, 10),
+          event_type: "other",
+          title: "Presença em reunião",
+          description: row.topic || "Presença confirmada em reunião da igreja.",
+          visibility: "administrative",
+          source_type: "attendance",
+          source_id: row.id,
+        }));
+        events = [...events, ...derived, ...attendanceEvents].sort((a, b) => String(a.event_date).localeCompare(String(b.event_date)));
+        return { subject: person, events, metrics: { educationEnrollments: Number(education?.total ?? 0), educationCompleted: Number(education?.completed ?? 0), confirmedMeetings: attendanceEvents.length } };
       }
       const [church] = await q("SELECT id,name,affiliated_on FROM churches WHERE id=$1", [r.church]);
       const [people] = await q("SELECT count(*)::int AS total, count(*) FILTER (WHERE status='member')::int AS members, count(*) FILTER (WHERE status='visitor')::int AS visitors, count(*) FILTER (WHERE status='worker')::int AS workers FROM people WHERE church_id=$1", [r.church]);
       const [meetings] = await q("SELECT COALESCE(sum(visitors),0)::int AS visitors, count(*)::int AS meetings FROM meetings WHERE church_id=$1", [r.church]);
       const [classes] = await q("SELECT count(*)::int AS classes FROM education_classes WHERE church_id=$1", [r.church]);
-      return { subject: church, events, metrics: { people: Number(people?.total ?? 0), members: Number(people?.members ?? 0), visitors: Number(people?.visitors ?? 0), workers: Number(people?.workers ?? 0), meetingVisitors: Number(meetings?.visitors ?? 0), meetings: Number(meetings?.meetings ?? 0), classes: Number(classes?.classes ?? 0) } };
+      const agendaRows = await q("SELECT id,starts_at,title,kind,status FROM church_events WHERE church_id=$1 ORDER BY starts_at", [r.church]);
+      const meetingRows = await q("SELECT id,held_on,topic FROM meetings WHERE church_id=$1 ORDER BY held_on", [r.church]);
+      const derivedChurchEvents = [
+        ...agendaRows.filter((row) => inPeriod(row.starts_at)).map((row) => ({
+          id: `agenda-${row.id}`,
+          event_date: String(row.starts_at).slice(0, 10),
+          event_type: row.kind === "class" ? "education" : "other",
+          title: row.title,
+          description: row.status === "cancelled" ? "Atividade cancelada." : "Atividade registrada na agenda.",
+          visibility: "administrative",
+          source_type: "church_event",
+          source_id: row.id,
+        })),
+        ...meetingRows.filter((row) => inPeriod(row.held_on)).map((row) => ({
+          id: `meeting-${row.id}`,
+          event_date: String(row.held_on).slice(0, 10),
+          event_type: "other",
+          title: "Reunião de grupo",
+          description: row.topic || "Reunião registrada nos grupos.",
+          visibility: "administrative",
+          source_type: "meeting",
+          source_id: row.id,
+        })),
+      ];
+      events = [...events, ...derivedChurchEvents].sort((a, b) => String(a.event_date).localeCompare(String(b.event_date)));
+      return { subject: church, events, metrics: { people: Number(people?.total ?? 0), members: Number(people?.members ?? 0), visitors: Number(people?.visitors ?? 0), workers: Number(people?.workers ?? 0), meetingVisitors: Number(meetings?.visitors ?? 0), meetings: Number(meetings?.meetings ?? 0), classes: Number(classes?.classes ?? 0), agendaActivities: agendaRows.length } };
     }));
   }));
 
