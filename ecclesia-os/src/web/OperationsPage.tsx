@@ -175,16 +175,18 @@ export default function OperationsPage(
           {!setup ? (
             <form
               onSubmit={(e) => {
-                e.preventDefault();
+                const b = formValues(e);
                 void run(async () =>
-                  setSetup(await api("/account/mfa/setup", "POST")),
+                  setSetup(await api("/account/mfa/setup", "POST", { password: b.password })),
                 );
               }}
             >
               <p>
-                A sessão autenticada será usada para preparar o autenticador.
-                Escaneie a chave exibida e confirme o código do seu aplicativo.
+                Digite sua senha atual para preparar o autenticador. Escaneie a chave exibida e confirme o código do seu aplicativo.
               </p>
+              <Field label="Senha para confirmar a configuração do MFA">
+                <input name="password" type="password" autoComplete="current-password" required />
+              </Field>
               <Submit busy={busy} label="Preparar novo autenticador" />
             </form>
           ) : (
@@ -192,7 +194,7 @@ export default function OperationsPage(
               onSubmit={(e) => {
                 const b = formValues(e);
                 void run(async () => {
-                  const v = await api("/auth/mfa/enroll", "POST", {
+                  const v = await api("/auth/mfa-confirm", "POST", {
                     challenge: setup.challenge,
                     code: b.code,
                   });
