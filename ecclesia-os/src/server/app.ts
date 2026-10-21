@@ -244,15 +244,17 @@ export function createApp(
   app.get(
     "/api/churches/children",
     asyncRoute(async (r: AuthRequest, s: Response) => {
-      await admin(r);
-      const children = await scoped(r, (q) => q("SELECT * FROM list_congregations()"));
+      const network = await unitManager(r);
+      const children = await scoped(r, (q) =>
+        q(network ? "SELECT * FROM list_network_congregations()" : "SELECT * FROM list_congregations()"),
+      );
       s.json(children);
     }),
   );
   app.post(
     "/api/churches/children",
     asyncRoute(async (r: AuthRequest, s: Response) => {
-      await admin(r);
+      const network = await unitManager(r);
       const body = z
         .object({
           name: z.string().trim().min(2).max(160),
@@ -261,10 +263,17 @@ export function createApp(
         })
         .parse(r.body);
       const child = await scoped(r, async (q) => {
-        const [created] = await q(
-          "SELECT * FROM create_congregation($1,$2,$3)",
-          [body.name, body.regionId, body.administratorUserId ?? r.actor.id],
-        );
+        const [created] = network
+          ? await q("SELECT * FROM create_network_congregation($1,$2,$3)", [
+              r.church,
+              body.name,
+              body.regionId,
+            ])
+          : await q("SELECT * FROM create_congregation($1,$2,$3)", [
+              body.name,
+              body.regionId,
+              body.administratorUserId ?? r.actor.id,
+            ]);
         requireThat(created, 400, "Não foi possível criar a congregação.");
         await audit(q, r.actor.id, r.church!, "church.congregation-created", created.id);
         return created;
@@ -275,7 +284,7 @@ export function createApp(
   app.patch(
     "/api/churches/children/:id",
     asyncRoute(async (r: AuthRequest, s: Response) => {
-      await admin(r);
+      const network = await unitManager(r);
       const body = z
         .object({
           name: z.string().trim().min(2).max(160).optional(),
@@ -283,10 +292,17 @@ export function createApp(
         })
         .parse(r.body);
       const child = await scoped(r, async (q) => {
-        const [updated] = await q(
-          "SELECT * FROM update_congregation($1,$2,$3)",
-          [uuid.parse(r.params.id), body.name ?? null, body.active ?? null],
-        );
+        const [updated] = network
+          ? await q("SELECT * FROM update_network_congregation($1,$2,$3)", [
+              uuid.parse(r.params.id),
+              body.name ?? null,
+              body.active ?? null,
+            ])
+          : await q("SELECT * FROM update_congregation($1,$2,$3)", [
+              uuid.parse(r.params.id),
+              body.name ?? null,
+              body.active ?? null,
+            ]);
         requireThat(updated, 404, "Congregação não encontrada.");
         await audit(q, r.actor.id, r.church!, "church.congregation-updated", updated.id);
         return updated;
@@ -297,7 +313,7 @@ export function createApp(
   app.post(
     "/api/churches/children/:id/invitations",
     asyncRoute(async (r: AuthRequest, s: Response) => {
-      await admin(r);
+      await unitManager(r);
       const body = z
         .object({
           name: z.string().trim().min(2).max(120),
