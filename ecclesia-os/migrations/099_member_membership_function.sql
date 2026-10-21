@@ -36,7 +36,19 @@ BEGIN
 END
 $$;
 
-REVOKE ALL ON FUNCTION public.create_member_identity(uuid,text,text,text,text,text)
-  FROM PUBLIC, anon, authenticated;
+DO $$
+DECLARE
+  target text;
+BEGIN
+  FOREACH target IN ARRAY ARRAY['public','anon','authenticated'] LOOP
+    IF target='public' OR EXISTS (SELECT 1 FROM pg_roles WHERE rolname=target) THEN
+      EXECUTE format(
+        'REVOKE ALL ON FUNCTION public.create_member_identity(uuid,text,text,text,text,text) FROM %I',
+        target
+      );
+    END IF;
+  END LOOP;
+END $$;
+
 GRANT EXECUTE ON FUNCTION public.create_member_identity(uuid,text,text,text,text,text)
   TO ecclesia_app, ecclesia_service;
