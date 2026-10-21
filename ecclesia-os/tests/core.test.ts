@@ -630,3 +630,28 @@ test(
     }
   },
 );
+
+
+test("agenda collections stay scoped to the selected church", async () => {
+  await db.transaction((q) =>
+    q(
+      "INSERT INTO church_events(church_id,title,kind,starts_at,ends_at,created_by) VALUES($1,$2,'event',$3,$4,$5)",
+      [
+        IDS.churchB,
+        "Evento exclusivo da Congregação B",
+        "2026-11-01T19:00:00Z",
+        "2026-11-01T21:00:00Z",
+        IDS.adminB,
+      ],
+    ),
+  );
+  const a = await request("/api/agenda?eventPage=1&eventPageSize=100", {
+    user: "admin",
+    church: IDS.churchA,
+  });
+  assert.equal(a.status, 200);
+  assert.equal(
+    a.data.events.some((event: any) => event.title === "Evento exclusivo da Congregação B"),
+    false,
+  );
+});
