@@ -13,6 +13,7 @@ export interface PageProps {
   notify: (s: string) => void;
   refresh: () => void;
   pastoralRead?: boolean;
+  reloadContext?: () => Promise<void>;
 }
 function useData<T = any>(path: string, { church, revision }: PageProps) {
   const [data, setData] = useState<T | null>(null),
