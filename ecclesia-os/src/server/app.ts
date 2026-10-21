@@ -333,8 +333,8 @@ export function createApp(
       const secret = randomBytes(24).toString("base64url");
       const result = await scoped(r, async (q) => {
         const [child] = await q(
-          "SELECT child.id FROM churches child JOIN churches parent ON parent.id=child.parent_church_id WHERE child.id=$1 AND child.unit_type='congregacao' AND child.active=true AND EXISTS (SELECT 1 FROM network_members nm WHERE nm.network_id=parent.network_id AND nm.user_id=actor_id() AND (nm.role='network_admin' OR nm.user_id=$2))",
-          [childId, r.actor.id],
+          "SELECT child.id FROM churches child JOIN churches parent ON parent.id=child.parent_church_id WHERE child.id=$1 AND child.unit_type='congregacao' AND child.active=true AND (EXISTS (SELECT 1 FROM network_members nm WHERE nm.network_id=parent.network_id AND nm.user_id=actor_id() AND nm.role='network_admin') OR EXISTS (SELECT 1 FROM memberships pm WHERE pm.church_id=parent.id AND pm.user_id=actor_id() AND pm.role='admin'))",
+          [childId],
         );
         requireThat(child, 404, "Congregação não encontrada ou inativa.");
         const [invite] = await q(
