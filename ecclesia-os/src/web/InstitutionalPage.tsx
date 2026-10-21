@@ -5,7 +5,23 @@ import type { PageProps } from "./pages";
 
 export default function InstitutionalPage(props: PageProps) {
   const [data, setData] = useState<RecordData | null>(null), [people, setPeople] = useState<RecordData[]>([]), [congregations, setCongregations] = useState<RecordData[]>([]), [error, setError] = useState(""), [busy, setBusy] = useState(false), [inviteLink, setInviteLink] = useState("");
-  const load = async () => { try { const [v,p] = await Promise.all([api<RecordData>("/institutional"), api<RecordData[]>("/people")]); setData(v); setPeople(p); } catch(e) { setError((e as Error).message); } try { setCongregations(await api<RecordData[]>("/churches/children")); } catch { setCongregations([]); } };
+  const load = async () => {
+    const [institutional, peopleResult, congregationsResult] = await Promise.allSettled([
+      api<RecordData>("/institutional"),
+      api<RecordData[]>("/people"),
+      api<RecordData[]>("/churches/children"),
+    ]);
+    if (institutional.status === "fulfilled") setData(institutional.value);
+    else setData(null);
+    if (peopleResult.status === "fulfilled") setPeople(peopleResult.value);
+    else setPeople([]);
+    if (congregationsResult.status === "fulfilled") {
+      setCongregations(congregationsResult.value);
+    } else {
+      setCongregations([]);
+      setError((congregationsResult.reason as Error)?.message ?? "Não foi possível carregar as congregações.");
+    }
+  };
   useEffect(()=>{setData(null);void load();},[props.church,props.revision]);
   async function run(fn:()=>Promise<unknown>){setBusy(true);setError("");try{await fn();props.notify("Governança institucional atualizada.");await load();}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
   const personSelect=(name:string,label:string,required=true)=><Field label={label}><select name={name} {...(required?{required:true}:{})}><option value="">Selecione</option>{people.map((p:RecordData)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>;
