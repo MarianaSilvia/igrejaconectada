@@ -140,17 +140,51 @@ export function ProtectedRoute({
   const [firebaseUser, setFirebaseUser] = useState<User | null>(() => auth.currentUser);
   const [backendAuthenticated, setBackendAuthenticated] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
+  const [backendChecking, setBackendChecking] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+    const syncBackendSession = async (user: User | null) => {
+      if (!user) {
+        if (!cancelled) {
+          setBackendAuthenticated(false);
+          setBackendChecking(false);
+        }
+        return;
+      }
+      setBackendChecking(true);
+      try {
+        await api("/context");
+        if (!cancelled) setBackendAuthenticated(true);
+      } catch {
+        try {
+          const idToken = await user.getIdToken(true);
+          await api(
+            "/auth/firebase-sync",
+            "POST",
+            { name: user.displayName || undefined },
+            { Authorization: `Bearer ${idToken}` },
+          );
+          if (!cancelled) setBackendAuthenticated(true);
+        } catch {
+          if (!cancelled) setBackendAuthenticated(false);
+        }
+      } finally {
+        if (!cancelled) setBackendChecking(false);
+      }
+    };
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user);
       setAuthChecking(false);
+      void syncBackendSession(user);
     });
-    api("/context").then(() => setBackendAuthenticated(true)).catch(() => setBackendAuthenticated(false));
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
-  if (authChecking) {
+  if (authChecking || backendChecking) {
     return (
       <div className="loading-screen" role="status">
         <Icon name="shield" size={40} />
@@ -159,7 +193,9 @@ export function ProtectedRoute({
     );
   }
 
-  if (!firebaseUser && !backendAuthenticated) {
+  // Firebase autenticado sem sessão EcclesiaOS não é um estado válido. Isso
+  // evita mostrar telas administrativas quando a sincronização falhou.
+  if (!firebaseUser || !backendAuthenticated) {
     return fallback ? <>{fallback}</> : <Login onLogin={onLogin || (async () => {})} />;
   }
 
@@ -1148,3 +1184,4 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
     </div>
   );
 }
+
