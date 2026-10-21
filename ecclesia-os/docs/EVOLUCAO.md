@@ -178,6 +178,12 @@ Menus novos: **Secretaria e operação**, **Contas e aprovações**, **Agenda e 
 - `/api/network/subscriptions` mostra à central apenas plano, situação, mensalidade, renovação e contadores de faturas por igreja da rede, sem pessoas, doações ou detalhes pastorais.
 
 
+## Segurança aplicada em 21/10/2026
+
+- As funções de criação, listagem e atualização de congregações deixaram de ser executáveis por `anon` e `authenticated` via PostgREST.
+- A execução ficou restrita aos papéis de aplicação `ecclesia_app` e `ecclesia_service`, preservando a validação de `network_admin` e do contexto do ator.
+- O linter de segurança do Supabase foi reexecutado e não apresentou alertas para essas funções.
+
 ## Entrega 21/10/2026 — segunda fase: isolamento operacional e Pix estático
 
 Esta fase reforça a operação diária antes da entrada de dados reais:
