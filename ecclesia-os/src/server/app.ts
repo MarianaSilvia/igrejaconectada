@@ -1704,7 +1704,7 @@ app.get(
       const account = options.efi.accounts.find(
         (a) => a.accountId === r.params.account,
       );
-      requireThat(account, 404, "Conta não encontrada.");
+      if (!account) throw new HttpError(404, "Conta não encontrada.");
       const b = z
         .object({
           pix: z
