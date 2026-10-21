@@ -1510,8 +1510,7 @@ app.get(
   app.get(
     "/api/portal/pix",
     asyncRoute(async (r: AuthRequest, s: Response) => {
-      return s.status(404).json({ error: "Cobranças automáticas e webhooks estão desativados. Use o Pix estático." });
-      
+
       const [settings] = await scoped(r, (q) => q("SELECT pix_key,pix_key_type,institution_name,city,instructions,enabled FROM church_pix_settings WHERE church_id=$1 AND portal_visible=true", [r.church]));
       requireThat(settings?.enabled,404,"Pix não publicado por esta igreja.");
       const payload=staticPixPayload(settings.pix_key,settings.pix_key_type,settings.institution_name,settings.city);
@@ -1523,6 +1522,8 @@ app.get(
     asyncRoute(async (r: AuthRequest, s) => {
       return s.status(404).json({ error: "Cobranças automáticas e webhooks estão desativados. Use o Pix estático." });
       
+      
+
       const b = z
         .object({
           amount: z.string(),
@@ -1601,6 +1602,8 @@ app.get(
     asyncRoute(async (r: AuthRequest, s) => {
       return s.status(404).json({ error: "Cobranças automáticas e webhooks estão desativados. Use o Pix estático." });
       
+      
+
       const id = uuid.parse(r.params.id);
       const [c] = await scoped(r, (q) =>
         q("SELECT * FROM pix_charges WHERE id=$1", [id]),
@@ -1628,6 +1631,8 @@ app.get(
     asyncRoute(async (r: AuthRequest, s) => {
       return s.status(404).json({ error: "Cobranças automáticas e webhooks estão desativados. Use o Pix estático." });
       
+      
+
       requireThat(options.mode === "demo", 404, "Rota indisponível.");
       await admin(r);
       const id = uuid.parse(r.params.id);
@@ -1655,6 +1660,8 @@ app.get(
     asyncRoute(async (r: AuthRequest, s) => {
       return s.status(404).json({ error: "Cobranças automáticas e webhooks estão desativados. Use o Pix estático." });
       
+      
+
       const id = uuid.parse(r.params.id);
       await scoped(r, (q) => permit(q, "finance", true));
       const [c] = await scoped(r, (q) =>
@@ -1684,6 +1691,9 @@ app.get(
   app.post(
     "/api/webhooks/efi/:account/pix",
     asyncRoute(async (r: Request, s) => {
+      return s.status(404).json({ error: "Cobranças automáticas e webhooks estão desativados. Use o Pix estático." });
+      
+      
       requireThat(options.mode === "homologation", 404, "Rota indisponível.");
       const socket = r.socket as import("node:tls").TLSSocket;
       requireThat(
