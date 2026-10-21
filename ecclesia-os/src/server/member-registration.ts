@@ -457,6 +457,44 @@ export function registrationAdminRoutes(
     }),
   );
   app.post(
+    "/api/people/:id/member-access",
+    route(async (r: AuthRequest, s) => {
+      const id = z.uuid().parse(r.params.id);
+      const issued = await scoped(r, async (q) => {
+        const [person] = await q(
+          "SELECT id,name,user_id FROM people WHERE id=$1 AND church_id=$2 FOR UPDATE",
+          [id, r.church],
+        );
+        requireThat(person, 404, "Membro não encontrado.");
+        const code = "EC-" + randomBytes(5).toString("hex").toUpperCase();
+        const pin = String(100000 + (randomBytes(4).readUInt32BE(0) % 900000));
+        const pinHash = passwordHash(pin);
+        const syntheticEmail = `${code.toLowerCase().replace(/[^a-z0-9]/g, "")}@member.ecclesia.local`;
+        let userId = person.user_id;
+        if (userId) {
+          await q(
+            "UPDATE users SET email=$1,password_hash=$2,member_access_code=$3,member_pin_hash=$4,member_pin_must_change=true WHERE id=$5",
+            [syntheticEmail, pinHash, code, pinHash, userId],
+          );
+        } else {
+          const [created] = await q(
+            "SELECT public.create_member_identity($1,$2,$3,$4,$5,$6) AS id",
+            [r.church, syntheticEmail, person.name, pinHash, code, pinHash],
+          );
+          userId = created.id;
+          await q("UPDATE people SET user_id=$1 WHERE id=$2", [userId, id]);
+        }
+        await q(
+          "INSERT INTO member_access_credentials(church_id,person_id,user_id,access_code,pin_hash,must_change,issued_at,last_used_at,revoked_at) VALUES($1,$2,$3,$4,$5,true,now(),NULL,NULL) ON CONFLICT(church_id,person_id) DO UPDATE SET user_id=excluded.user_id,access_code=excluded.access_code,pin_hash=excluded.pin_hash,must_change=true,issued_at=now(),last_used_at=NULL,revoked_at=NULL",
+          [r.church, id, userId, code, pinHash],
+        );
+        await audit(q, r.actor.id, r.church, "member-access.issued", id);
+        return { name: person.name, code, pin };
+      });
+      s.status(201).json(issued);
+    }),
+  );
+  app.post(
     "/api/people/profiles",
     route(async (r: AuthRequest, s) => {
       const b = profileWriteSchema.parse(r.body),
