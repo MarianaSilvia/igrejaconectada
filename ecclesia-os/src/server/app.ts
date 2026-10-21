@@ -1719,7 +1719,7 @@ app.get(
         })
         .parse(r.body);
       for (const p of b.pix) {
-        const canonical = await options.efi.query(account.churchId, p.txid);
+        const canonical = await options.efi.query(account!.churchId, p.txid);
         const match = canonical.pix?.find(
           (v: any) =>
             v.endToEndId === p.endToEndId &&
@@ -1729,7 +1729,7 @@ app.get(
         requireThat(match, 409, "Recebimento não confirmado pelo provedor.");
         await settle(db, {
           provider: "efi",
-          account: account.accountId,
+          account: account!.accountId,
           txid: p.txid,
           endToEndId: p.endToEndId,
           amount: cents(p.valor),
