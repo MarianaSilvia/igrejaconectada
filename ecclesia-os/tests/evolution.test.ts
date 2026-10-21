@@ -995,83 +995,21 @@ test("transporte webhook envia somente o endereço autorizado", async () => {
   }
 });
 
-test("Pix intent survives an ambiguous provider timeout and resumes the same txid", async () => {
-  let created: any,
-    creates = 0,
-    queries = 0;
-  const efi = new Efi([
-    {
-      churchId: IDS.churchA,
-      accountId: "efi-test",
-      clientId: "fake",
-      clientSecret: "fake",
-      pixKey: "fake",
-      certificatePath: "unused",
+test("Pix automático permanece bloqueado na homologação", async () => {
+  const response = await fetch(url + "/api/pix/charges", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: cookies.get(IDS.admin)!,
+      "x-church-id": IDS.churchA,
     },
-  ]);
-  efi.create = async (church, txid, amount) => {
-    creates++;
-    created = {
-      txid,
-      valor: { original: (amount / 100).toFixed(2) },
-      pixCopiaECola: "QR-HOMOLOGACAO",
-      calendario: { criacao: new Date().toISOString(), expiracao: 3600 },
-    };
-    throw new Error("timeout after provider committed");
-  };
-  efi.query = async () => {
-    queries++;
-    if (!created) throw new HttpError(404, "missing");
-    return created;
-  };
-  const app = createApp(db, {
-      mode: "homologation",
-      key,
-      efi,
-      origin: "http://localhost",
-    }),
-    other = app.listen(0, "127.0.0.1");
-  await new Promise<void>((r) => other.once("listening", r));
-  try {
-    const [fund] = await db.transaction((q) =>
-      q("SELECT id FROM funds WHERE church_id=$1", [IDS.churchA]),
-    );
-    const body = { amount: "12.34", fundId: fund.id, requestKey: randomUUID() },
-      url = `http://127.0.0.1:${(other.address() as any).port}/api/pix/charges`;
-    const send = async () => {
-      const r = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Cookie: cookies.get(IDS.admin)!,
-          "x-church-id": IDS.churchA,
-        },
-        body: JSON.stringify(body),
-      });
-      return { status: r.status, data: await r.json() };
-    };
-    const first = await send(),
-      repeat = await send();
-    assert.equal(first.status, 202);
-    assert.equal(repeat.data.id, first.data.id);
-    assert.equal(creates, 1);
-    await db.transaction((q) =>
-      q("UPDATE integration_jobs SET available_at=now() WHERE resource_id=$1", [
-        first.data.id,
-      ]),
-    );
-    await processIntegrationJob(db, efi, first.data.id);
-    const [row] = await db.transaction((q) =>
-      q("SELECT * FROM pix_charges WHERE id=$1", [first.data.id]),
-    );
-    assert.equal(row.status, "active");
-    assert.equal(row.txid, created.txid);
-    assert.equal(creates, 1);
-    assert.equal(queries, 1);
-  } finally {
-    await new Promise<void>((r) => other.close(() => r()));
-  }
+    body: JSON.stringify({ amount: "12.34", fundId: IDS.fund }),
+  });
+  assert.equal(response.status, 404);
+  const body = await response.json();
+  assert.equal(body.error, "Cobranças automáticas e webhooks estão desativados. Use o Pix estático.");
 });
+
 test("treasury requires independent approval, supports partial idempotent payments and reversals", async () => {
   const before = await call("/finance/treasury");
   assert.equal(before.status, 200);
