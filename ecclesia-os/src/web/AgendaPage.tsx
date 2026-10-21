@@ -1,7 +1,100 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, shortDate, type RecordData } from "./api";
 import { Field, Submit, formValues } from "./ui";
 import type { PageProps } from "./pages";
+
+function calendarDay(value: unknown) {
+  return value
+    ? new Date(String(value)).toLocaleDateString("sv-SE", {
+        timeZone: "America/Sao_Paulo",
+      })
+    : "";
+}
+
+function AgendaCalendar(props: {
+  events: RecordData[];
+  month: string;
+  onMonthChange: (month: string) => void;
+  kind: string;
+  onKindChange: (kind: string) => void;
+  status: string;
+  onStatusChange: (status: string) => void;
+}) {
+  const [year, month] = props.month.split("-").map(Number);
+  const first = new Date(year, month - 1, 1);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const leading = (first.getDay() + 6) % 7;
+  const cells = Array.from({ length: Math.ceil((leading + daysInMonth) / 7) * 7 }, (_, index) => index - leading + 1);
+  const filtered = props.events.filter((event) => {
+    const date = calendarDay(event.starts_at);
+    return (
+      date.startsWith(props.month) &&
+      (props.kind === "all" || event.kind === props.kind) &&
+      (props.status === "all" || event.status === props.status)
+    );
+  });
+  const byDay = new Map<string, RecordData[]>();
+  for (const event of filtered) {
+    const key = calendarDay(event.starts_at);
+    byDay.set(key, [...(byDay.get(key) ?? []), event]);
+  }
+  const shiftMonth = (delta: number) => {
+    const next = new Date(year, month - 1 + delta, 1);
+    props.onMonthChange(next.toISOString().slice(0, 7));
+  };
+  return (
+    <section className="panel" style={{ marginBottom: 24 }}>
+      <div className="section-head">
+        <div>
+          <h3>Calendário mensal</h3>
+          <p>Visualize cultos, eventos, aulas e reuniões no mês selecionado.</p>
+        </div>
+        <div className="toolbar">
+          <button type="button" className="button secondary" onClick={() => shiftMonth(-1)} aria-label="Mês anterior">‹</button>
+          <input aria-label="Mês da agenda" type="month" value={props.month} onChange={(event) => props.onMonthChange(event.target.value)} />
+          <button type="button" className="button secondary" onClick={() => shiftMonth(1)} aria-label="Próximo mês">›</button>
+        </div>
+      </div>
+      <div className="toolbar">
+        <label>Tipo
+          <select value={props.kind} onChange={(event) => props.onKindChange(event.target.value)}>
+            <option value="all">Todos</option>
+            <option value="meeting">Reuniões</option>
+            <option value="service">Cultos</option>
+            <option value="event">Eventos</option>
+            <option value="class">Aulas</option>
+          </select>
+        </label>
+        <label>Situação
+          <select value={props.status} onChange={(event) => props.onStatusChange(event.target.value)}>
+            <option value="all">Todas</option>
+            <option value="scheduled">Agendadas</option>
+            <option value="cancelled">Canceladas</option>
+          </select>
+        </label>
+        <span className="muted">{filtered.length} atividade(s) no período</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 6 }} role="grid" aria-label="Calendário mensal">
+        {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((label) => <strong key={label} style={{ padding: 8, textAlign: "center" }}>{label}</strong>)}
+        {cells.map((day) => {
+          const key = day > 0 && day <= daysInMonth ? `${props.month}-${String(day).padStart(2, "0")}` : "";
+          const items = key ? byDay.get(key) ?? [] : [];
+          return (
+            <div key={`${props.month}-${day}`} role="gridcell" style={{ minHeight: 88, padding: 8, border: "1px solid var(--line)", borderRadius: 8, opacity: key ? 1 : 0.35 }}>
+              {key && <strong>{day}</strong>}
+              {items.map((event) => (
+                <div key={event.id} title={event.title} style={{ marginTop: 5, padding: "4px 6px", borderRadius: 5, background: event.status === "cancelled" ? "var(--muted-bg)" : "var(--primary)", color: "white", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {event.title}
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function AgendaPage(props: PageProps & { current: RecordData }) {
   const [data, setData] = useState<RecordData | null>(null),
     [volunteers, setVolunteers] = useState<RecordData[]>([]),
@@ -17,7 +110,10 @@ export default function AgendaPage(props: PageProps & { current: RecordData }) {
     [taskScope, setTaskScope] = useState("all"),
     [taskAssignee, setTaskAssignee] = useState("all"),
     [taskDue, setTaskDue] = useState("all"),
-    [eventPage, setEventPage] = useState(1);
+    [eventPage, setEventPage] = useState(1),
+    [calendarMonth, setCalendarMonth] = useState(() => new Date().toISOString().slice(0, 7)),
+    [calendarKind, setCalendarKind] = useState("all"),
+    [calendarStatus, setCalendarStatus] = useState("all");
   useEffect(() => {
     let active = true;
     setData(null);
@@ -242,6 +338,15 @@ export default function AgendaPage(props: PageProps & { current: RecordData }) {
               </form>
             </>
           )}
+          <AgendaCalendar
+            events={data.events}
+            month={calendarMonth}
+            onMonthChange={setCalendarMonth}
+            kind={calendarKind}
+            onKindChange={setCalendarKind}
+            status={calendarStatus}
+            onStatusChange={setCalendarStatus}
+          />
           {data.events.map((v: RecordData) => (
             <article key={v.id} className="toolbar">
               <div>
