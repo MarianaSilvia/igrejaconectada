@@ -191,7 +191,7 @@ async function saveProfile(
     const pinHash = passwordHash(pin);
     const syntheticEmail = `${code.toLowerCase().replace(/[^a-z0-9]/g, "")}@member.ecclesia.local`;
     const [u] = await q(
-      "INSERT INTO users(email,name,password_hash,member_access_code,member_pin_hash,member_pin_must_change) VALUES($1,$2,$3,$4,$5,true) RETURNING id",
+      "SELECT public.create_member_identity($1,$2,$3,$4,$5) AS id",
       [syntheticEmail, [profile.firstName, profile.lastName].filter(Boolean).join(" "), pinHash, code, pinHash],
     );
     await q("INSERT INTO memberships(user_id,church_id,role) VALUES($1,$2,'member')", [u.id, church]);
