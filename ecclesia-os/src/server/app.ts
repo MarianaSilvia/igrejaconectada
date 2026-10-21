@@ -167,7 +167,7 @@ export function createApp(
       (async () => {
         const raw = sessionToken(r);
         const authorization = String(r.headers.authorization ?? "");
-        const bearer = authorization.match(/^Bearer\\s+(.+)$/i)?.[1];
+        const bearer = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
         let u;
         if (bearer) {
           let decoded;
