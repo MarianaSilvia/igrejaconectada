@@ -962,8 +962,8 @@ app.get(
             "Os dados mudaram. Gere uma nova prévia.",
           );
           await q(
-            "INSERT INTO people(church_id,name,email,phone,status) VALUES($1,$2,$3,$4,$5)",
-            [r.church, v.name, v.email || null, v.phone || null, v.status],
+            "INSERT INTO people(church_id,name,email,phone,status,custom_fields) VALUES($1,$2,$3,$4,$5,$6::jsonb)",
+            [r.church, v.name, v.email || null, v.phone || null, v.status, JSON.stringify({ birthDate: v.birthDate || null, gender: v.gender || null, source: "csv" })],
           );
         }
         await audit(
