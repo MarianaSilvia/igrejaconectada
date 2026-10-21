@@ -1,6 +1,6 @@
 # Homologação PostgreSQL
 
-O arquivo [homologation.env.example](homologation.env.example) contém um modelo completo, incluindo Efí, TLS e comunicação. Substitua todos os valores em um gerenciador de segredos; não coloque credenciais reais no repositório.
+O arquivo [homologation.env.example](homologation.env.example) contém um modelo de banco externo, chaves, Firebase e comunicação. O piloto usa Pix estático e não configura Efí ou webhooks bancários. Substitua todos os valores em um gerenciador de segredos; não coloque credenciais reais no repositório.
 
 Use três logins distintos no mesmo banco de homologação:
 
@@ -30,11 +30,8 @@ Para conferir a homologação mesmo antes de configurar o ambiente, use `npm run
 Se alguma variável estiver ausente, `npm run test:postgres` informa somente os nomes que faltam. Ele nunca imprime as URLs configuradas nem senhas.
 Se duas URLs forem iguais, o smoke test encerra antes da conexão com `duplicate_database_urls`.
 O smoke test também exige `APP_MODE=homologation` para não testar acidentalmente o snapshot de demonstração.
-O endpoint `/api/health/ready` informa apenas estados booleanos e inclui `serviceDatabase`, `migrationDatabase`, `efiTls` e `communication`; ele não devolve URLs, tokens, certificados ou chaves.
+O endpoint `/api/health/ready` informa apenas estados booleanos e inclui `serviceDatabase`, `migrationDatabase`, `dataKey`, `mfaKey`, `pix: "static"`, `automaticPayments: false` e `communication`; ele não devolve URLs, tokens, certificados ou chaves.
 
 Nunca comite esse arquivo preenchido nem coloque senhas reais no repositório. Chaves de dados e MFA devem ser distintas e guardadas em um gerenciador de segredos.
 
 
-## Formato mínimo do Efí
-
-Em homologação, `EFI_CONFIG_PATH` aponta para um JSON privado com uma lista de contas. Cada item precisa conter `churchId`, `accountId`, `clientId`, `clientSecret`, `pixKey` e `certificatePath`. O certificado deve existir no caminho local do ambiente e nunca deve ser incluído no Git. O preflight valida apenas a presença desses campos e do arquivo; a chamada real ao provedor ainda exige credenciais e certificado válidos.
