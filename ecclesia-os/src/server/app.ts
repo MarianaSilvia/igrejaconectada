@@ -94,6 +94,8 @@ const personSchema = z.object({
   name: text,
   email: z.union([z.email(), z.literal("")]).optional(),
   phone: z.string().max(30).optional(),
+  birthDate: z.union([date, z.literal("")]).optional(),
+  gender: z.enum(["male", "female", "other", ""]).optional(),
   status: z.enum(["visitor", "member", "worker", "inactive"]).default("member"),
   householdId: uuid.optional(),
   campusId: uuid.optional(),
