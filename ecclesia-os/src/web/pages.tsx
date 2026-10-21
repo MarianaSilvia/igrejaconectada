@@ -2947,7 +2947,7 @@ export function Governance(
                 <Badge tone="green">Ativo e Conectado</Badge>
               </div>
               <p className="muted" style={{ fontSize: "13px", marginBottom: "8px" }}>
-                Banco NoSQL para persistência dos dados de igrejas, membros, células e movimentações.
+                Banco NoSQL para persistência dos dados de igrejas, membros, grupos e movimentações.
               </p>
               <code style={{ fontSize: "11px", color: "var(--accent)" }}>
                 ai-studio-ecclesiaos-11d3b57f-be0f-4081-aa8a-8ed2c222a899
@@ -3015,7 +3015,7 @@ export function Governance(
                 </tr>
                 <tr>
                   <td><code>/churches/&#123;churchId&#125;/cells/&#123;cellId&#125;</code></td>
-                  <td>Células, grupos de crescimento, liderança e locais de reunião</td>
+                  <td>Grupos de crescimento, liderança e locais de reunião</td>
                   <td><Badge tone="green">Membros autenticados</Badge></td>
                 </tr>
                 <tr>
