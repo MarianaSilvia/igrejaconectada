@@ -140,9 +140,8 @@ test("central aggregate report has no person or donor details; revocation is imm
   assert.equal(network.data.length, 2);
   assert.equal(network.data[0].email, undefined);
   const subscriptions = await request("/api/network/subscriptions", opts);
-  assert.equal(subscriptions.status, 200, JSON.stringify(subscriptions.data));
-  assert.equal(subscriptions.data.length, 2);
-  assert.equal(subscriptions.data[0].email, undefined);
+  assert.equal(subscriptions.status, 404, JSON.stringify(subscriptions.data));
+  assert.equal(subscriptions.data.error, "Área comercial desativada.");
   assert.equal((await request("/api/people", opts)).status, 403);
   const grant = await request("/api/grants", {
     user: "admin",
@@ -236,7 +235,7 @@ test("member sees only own information and cannot access treasury", async () => 
     church: IDS.churchA,
   });
   assert.equal(portal.data.person.name, "Ana Martins");
-  assert.equal(portal.data.charges.length, 0);
+  assert.ok(!("charges" in portal.data) || portal.data.charges.length === 0);
   assert.equal(
     (await request("/api/network", { user: "member" })).data.length,
     0,
@@ -472,18 +471,17 @@ test(
   },
 );
 
-test("module entitlements are enforced and receipts expose no donor identity", async () => {
+test("área comercial e cobranças automáticas permanecem desativadas", async () => {
   const opts = { user: "admin", church: IDS.churchA };
   const f = await request("/api/finance", opts);
-  const charge = f.data.charges.find((c: any) => c.status === "settled");
-  assert.ok(charge);
-  const receipt = await fetch(url + `/api/pix/charges/${charge.id}/receipt`, {
-    headers: { Cookie: cookies.get("admin")!, "x-church-id": IDS.churchA },
+  assert.equal(f.status, 200, JSON.stringify(f.data));
+  assert.equal(f.data.charges.length, 0);
+  const charge = await request("/api/pix/charges", {
+    ...opts,
+    method: "POST",
+    body: { amount: "10.00", fundId: "00000000-0000-4000-8000-000000000001" },
   });
-  assert.equal(receipt.status, 200);
-  const text = await receipt.text();
-  assert.ok(text.includes("SEM VALOR FINANCEIRO"));
-  assert.ok(!text.includes("Mariana Costa"));
+  assert.equal(charge.status, 404);
   assert.equal(
     (
       await request("/api/subscription", {
@@ -580,7 +578,7 @@ test("agenda collections stay scoped to the selected church", async () => {
           IDS.adminB,
         ],
       ),
-    { actor: IDS.adminB, church: IDS.churchB },
+    undefined,
   );
   const a = await request("/api/agenda?eventPage=1&eventPageSize=100", {
     user: "admin",
