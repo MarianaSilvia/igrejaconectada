@@ -1388,6 +1388,21 @@ export function People(
                         >
                           Credencial
                         </button>
+                        <button
+                          className="text-button"
+                          disabled={!registrationConfig.data?.canManage}
+                          onClick={async () => {
+                            try {
+                              setIssuedMemberAccess(
+                                await api(`/people/${p.id}/member-access`, "POST"),
+                              );
+                            } catch (e) {
+                              props.notify((e as Error).message);
+                            }
+                          }}
+                        >
+                          Gerar acesso
+                        </button>
                       </div>
                     </td>
                   </tr>
