@@ -40,6 +40,7 @@ import AssistancePage from "./AssistancePage";
 import MediaPage from "./MediaPage";
 import HistoryPage from "./HistoryPage";
 import PeopleInsightsPage from "./PeopleInsightsPage";
+import SecurityPage from "./SecurityPage";
 import FirebaseActivityLogs from "./FirebaseActivityLogs";
 import { logFirebaseActivity } from "./activityLogs";
 type Page =
@@ -65,6 +66,7 @@ type Page =
   | "media"
   | "history"
   | "people-insights"
+  | "security"
   | "portal"
   | "firebase-logs";
 type Area =
@@ -73,7 +75,7 @@ type Area =
 type AreaTab = { page: Page; label: string };
 const areaTabs: Record<Area, AreaTab[]> = {
   dashboard: [{ page: "dashboard", label: "Visão geral" }],
-  secretariat: [{ page: "people", label: "Pessoas e famílias" }, { page: "operations", label: "Cadastros e documentos" }, { page: "history", label: "Histórico e relatórios" }, { page: "people-insights", label: "Comemorações e qualidade" }],
+  secretariat: [{ page: "people", label: "Pessoas e famílias" }, { page: "operations", label: "Cadastros e documentos" }, { page: "history", label: "Histórico e relatórios" }, { page: "people-insights", label: "Comemorações e qualidade" }, { page: "security", label: "Minha conta e segurança" }],
   groups: [{ page: "cells", label: "Grupos e cuidado" }],
   treasury: [{ page: "finance", label: "Visão financeira" }, { page: "treasury", label: "Contas e aprovações" }],
   operations: [{ page: "agenda", label: "Agenda e recursos" }, { page: "worship", label: "Cultos e equipes" }],
@@ -205,12 +207,14 @@ export default function App() {
         selectChurch(c.churches[0].id);
       }
       setPage(
-        initialPage ??
-          (c.networks.length
-            ? "network"
-            : c.churches[0]?.role === "member"
-              ? "portal"
-              : "dashboard"),
+        c.passwordMustChange
+          ? "security"
+          : initialPage ??
+            (c.networks.length
+              ? "network"
+              : c.churches[0]?.role === "member"
+                ? "portal"
+                : "dashboard"),
       );
     } catch {
       setContext(null);
@@ -434,7 +438,7 @@ export default function App() {
                     type="button"
                     role="menuitem"
                     onClick={() => {
-                      setPage("operations");
+                      setPage("security");
                       setAccountMenuOpen(false);
                     }}
                   >
@@ -595,7 +599,7 @@ export default function App() {
           {page === "assistance" && <AssistancePage key={church} {...props} />}
           {page === "media" && <MediaPage key={church} {...props} />}
           {page === "history" && <HistoryPage key={church} {...props} />}
-          {page === "people-insights" && <PeopleInsightsPage key={church} {...props} />}
+          {page === "people-insights" && <PeopleInsightsPage key={church} {...props} />}\n          {page === "security" && <SecurityPage key={church} {...props} />}
           {page === "governance" && (
             <Governance
               {...props}
