@@ -599,7 +599,8 @@ export default function App() {
           {page === "assistance" && <AssistancePage key={church} {...props} />}
           {page === "media" && <MediaPage key={church} {...props} />}
           {page === "history" && <HistoryPage key={church} {...props} />}
-          {page === "people-insights" && <PeopleInsightsPage key={church} {...props} />}\n          {page === "security" && <SecurityPage key={church} {...props} />}
+          {page === "people-insights" && <PeopleInsightsPage key={church} {...props} />}
+          {page === "security" && <SecurityPage key={church} {...props} />}
           {page === "governance" && (
             <Governance
               {...props}
