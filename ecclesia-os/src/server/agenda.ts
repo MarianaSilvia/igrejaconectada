@@ -111,13 +111,13 @@ export function agendaRoutes(app: Express, db: Database, key: Buffer) {
                 scope: t.scope,
               })),
           ].sort((a, b) => String(a.due_on ?? "9999-12-31").localeCompare(String(b.due_on ?? "9999-12-31")));
-          const [eventTotal] = await q("SELECT count(*)::int AS total FROM church_events");
+          const [eventTotal] = await q("SELECT count(*)::int AS total FROM church_events WHERE church_id=$1", [r.church]);
           const events = await q(
-            "SELECT * FROM church_events ORDER BY starts_at DESC,id DESC LIMIT $1 OFFSET $2",
-            [params.eventPageSize, (params.eventPage - 1) * params.eventPageSize],
+            "SELECT * FROM church_events WHERE church_id=$1 ORDER BY starts_at DESC,id DESC LIMIT $2 OFFSET $3",
+            [r.church, params.eventPageSize, (params.eventPage - 1) * params.eventPageSize],
           );
           return {
-            resources: await q("SELECT * FROM resources ORDER BY name"),
+            resources: await q("SELECT * FROM resources WHERE church_id=$1 ORDER BY name", [r.church]),
             events,
             eventPagination: {
               total: Number(eventTotal.total),
@@ -125,12 +125,12 @@ export function agendaRoutes(app: Express, db: Database, key: Buffer) {
               pageSize: params.eventPageSize,
               pages: Math.max(1, Math.ceil(Number(eventTotal.total) / params.eventPageSize)),
             },
-            bookings: await q("SELECT * FROM resource_bookings"),
-            teams: await q("SELECT * FROM ministry_teams ORDER BY name"),
-            members: await q("SELECT * FROM ministry_members"),
-            schedules: await q("SELECT * FROM schedules ORDER BY starts_at"),
+            bookings: await q("SELECT * FROM resource_bookings WHERE church_id=$1", [r.church]),
+            teams: await q("SELECT * FROM ministry_teams WHERE church_id=$1 ORDER BY name", [r.church]),
+            members: await q("SELECT * FROM ministry_members WHERE church_id=$1", [r.church]),
+            schedules: await q("SELECT * FROM schedules WHERE church_id=$1 ORDER BY starts_at", [r.church]),
             unavailability: await q(
-              "SELECT * FROM volunteer_unavailability ORDER BY starts_at",
+              "SELECT * FROM volunteer_unavailability WHERE church_id=$1 ORDER BY starts_at", [r.church],
             ),
             training: await q(
               "SELECT t.*,mt.name AS team_name FROM ministry_training t LEFT JOIN ministry_teams mt ON mt.id=t.team_id WHERE t.church_id=$1 ORDER BY t.expires_at NULLS LAST,t.completed_at DESC",
