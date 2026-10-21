@@ -274,6 +274,41 @@ export function createApp(
       s.json(child);
     }),
   );
+  app.post(
+    "/api/churches/children/:id/invitations",
+    asyncRoute(async (r: AuthRequest, s: Response) => {
+      await admin(r);
+      const body = z
+        .object({
+          name: z.string().trim().min(2).max(120),
+          email: z.email().transform((value) => value.toLowerCase()),
+          role: z.enum(["admin", "secretary", "treasurer", "leader", "member"]),
+        })
+        .parse(r.body);
+      const childId = uuid.parse(r.params.id);
+      const raw = token();
+      const secret = randomBytes(24).toString("base64url");
+      const result = await scoped(r, async (q) => {
+        const [child] = await q(
+          "SELECT id FROM churches WHERE id=$1 AND parent_church_id=tenant_id() AND unit_type='congregacao' AND active=true",
+          [childId],
+        );
+        requireThat(child, 404, "Congregação não encontrada ou inativa.");
+        const [invite] = await q(
+          "INSERT INTO account_invites(church_id,name,email,role,token_hash,encrypted_secret,expires_at,created_by) VALUES($1,$2,$3,$4,$5,$6,now()+interval '48 hours',$7) RETURNING id,expires_at",
+          [childId, body.name, body.email, body.role, hash(raw), encrypt(secret, options.key), r.actor.id],
+        );
+        await audit(q, r.actor.id, childId, "account.congregation-invite-created", invite.id);
+        return invite;
+      });
+      s.status(201).json({
+        id: result.id,
+        url: options.origin + "/convite/" + raw,
+        expiresAt: result.expires_at,
+        delivery: "manual-private",
+      });
+    }),
+  );
   const issue = async (s: Response, user: string, mfa: boolean) => {
     const t = token();
     await db.transaction((q) =>
