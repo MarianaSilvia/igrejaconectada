@@ -19,7 +19,8 @@ export default function EducationPage({ church, revision, notify }: Props) {
     [coursePage, setCoursePage] = useState(1),
     [classPage, setClassPage] = useState(1),
     [materialPage, setMaterialPage] = useState(1),
-    [assessmentPage, setAssessmentPage] = useState(1);
+    [assessmentPage, setAssessmentPage] = useState(1),
+    [trackFilter, setTrackFilter] = useState("all");
   const load = () =>
     Promise.all([
       api<RecordData>(
@@ -31,7 +32,7 @@ export default function EducationPage({ church, revision, notify }: Props) {
           materialPage +
           "&materialPageSize=25&assessmentPage=" +
           assessmentPage +
-          "&assessmentPageSize=25",
+          "&assessmentPageSize=25&track=" + encodeURIComponent(trackFilter),
       ),
       api<RecordData>(
         `/education/enrollments?page=${enrollmentPage}&pageSize=25`,
@@ -76,6 +77,7 @@ export default function EducationPage({ church, revision, notify }: Props) {
     classPage,
     materialPage,
     assessmentPage,
+    trackFilter,
   ]);
   useEffect(() => {
     if (!sessionClass) {
@@ -187,6 +189,20 @@ export default function EducationPage({ church, revision, notify }: Props) {
               Cursos, turmas, matrículas, frequência, materiais, avaliações e
               certificados ligados às pessoas.
             </p>
+          </div>
+          <div className="toolbar" style={{ marginTop: 16 }}>
+            <label>
+              Modalidade
+              <select value={trackFilter} onChange={(event) => { setTrackFilter(event.target.value); setCoursePage(1); setClassPage(1); }}>
+                <option value="all">Todas</option>
+                <option value="ebd">EBD</option>
+                <option value="discipulado">Discipulado</option>
+                <option value="curso">Cursos</option>
+                <option value="formacao">Formação</option>
+                <option value="treinamento">Treinamento</option>
+              </select>
+            </label>
+            <span className="muted">A mesma turma suporta matrículas, encontros, frequência, materiais e certificados.</span>
           </div>
           <button
             type="button"
@@ -686,7 +702,7 @@ export default function EducationPage({ church, revision, notify }: Props) {
             <div>
               <strong>{v.name}</strong>
               <p>
-                {v.course_name} · início {shortDate(v.starts_on)} · {v.enrolled}
+                {v.course_name} · modalidade {v.track ?? "curso"} · início {shortDate(v.starts_on)} · {v.enrolled}
                 {v.capacity ? `/${v.capacity}` : ""} matriculados
               </p>
             </div>
