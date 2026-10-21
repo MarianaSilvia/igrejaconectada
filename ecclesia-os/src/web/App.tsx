@@ -39,6 +39,7 @@ import LibraryPage from "./LibraryPage";
 import AssistancePage from "./AssistancePage";
 import MediaPage from "./MediaPage";
 import HistoryPage from "./HistoryPage";
+import PeopleInsightsPage from "./PeopleInsightsPage";
 import FirebaseActivityLogs from "./FirebaseActivityLogs";
 import { logFirebaseActivity } from "./activityLogs";
 type Page =
@@ -71,7 +72,7 @@ type Area =
 type AreaTab = { page: Page; label: string };
 const areaTabs: Record<Area, AreaTab[]> = {
   dashboard: [{ page: "dashboard", label: "Visão geral" }],
-  secretariat: [{ page: "people", label: "Pessoas e famílias" }, { page: "operations", label: "Cadastros e documentos" }, { page: "history", label: "Histórico e relatórios" }],
+  secretariat: [{ page: "people", label: "Pessoas e famílias" }, { page: "operations", label: "Cadastros e documentos" }, { page: "history", label: "Histórico e relatórios" }, { page: "people-insights", label: "Comemorações e qualidade" }],
   groups: [{ page: "cells", label: "Grupos e cuidado" }],
   treasury: [{ page: "finance", label: "Visão financeira" }, { page: "treasury", label: "Contas e aprovações" }],
   operations: [{ page: "agenda", label: "Agenda e recursos" }, { page: "worship", label: "Cultos e equipes" }],
@@ -490,7 +491,7 @@ export default function App() {
               <h1>
                 {page === "dashboard"
                   ? `Olá, ${context.user.name.split(" ")[0]}. Vamos cuidar?`
-                  : nav.find((n) => n.page === page)?.label}
+                  : pageLabel}
               </h1>
               <p>
                 {
