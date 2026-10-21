@@ -2815,10 +2815,10 @@ export function Governance(
             </form>
           </section>
           <section className="panel">
-            <Badge tone="purple">PLANO REDE · PILOTO</Badge>
+            <Badge tone="green">MÓDULOS DA COMUNIDADE</Badge>
             <h2>Uma base para crescer juntos.</h2>
             <p className="muted">
-              Gestão de pessoas, grupos, financeiro e supervisão responsável.
+              Gestão de pessoas, grupos, tesouraria e supervisão responsável.
             </p>
             <ul className="check-list">
               <li>Gestão por igreja vinculada</li>
@@ -2827,10 +2827,12 @@ export function Governance(
               <li>Kids e eventos na próxima fase</li>
             </ul>
             <p className="panel-footnote">
-              Preço comercial será definido após validação do piloto. Não há
-              cobrança automática nesta versão.
+              O ambiente atual é de homologação. A administração dos módulos
+              contratados permanece desativada durante o piloto.
             </p>
-            <ModuleSettings {...props} />
+            {props.context?.commercialFeaturesEnabled === true && (
+              <ModuleSettings {...props} />
+            )}
           </section>
         </div>
       )}
@@ -4593,3 +4595,4 @@ export function Portal(props: PageProps & { mode: string }) {
     </>
   );
 }
+
