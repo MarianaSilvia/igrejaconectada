@@ -305,6 +305,7 @@ export function educationRoutes(app: Express, db: Database, key?: Buffer) {
             .min(1)
             .max(100)
             .default(25),
+          track: z.enum(["all","ebd","discipulado","curso","formacao","treinamento"]).default("all"),
         })
         .parse(r.query);
       const result: any = await scoped(r, async (q) => {
@@ -319,37 +320,41 @@ export function educationRoutes(app: Express, db: Database, key?: Buffer) {
           assessmentCount,
         ] = await Promise.all([
           q(
-            "SELECT * FROM education_courses ORDER BY name LIMIT $1 OFFSET $2",
+            "SELECT * FROM education_courses WHERE ($1='all' OR track=$1) ORDER BY name LIMIT $2 OFFSET $3",
             [
+              params.track,
               params.coursePageSize,
               (params.coursePage - 1) * params.coursePageSize,
             ],
           ),
           q(
-            "SELECT cl.*,c.name AS course_name,count(e.id) FILTER(WHERE e.status='active')::int AS enrolled FROM education_classes cl JOIN education_courses c ON c.id=cl.course_id LEFT JOIN education_enrollments e ON e.class_id=cl.id GROUP BY cl.id,c.name ORDER BY cl.starts_on DESC LIMIT $1 OFFSET $2",
+            "SELECT cl.*,c.name AS course_name,c.track,count(e.id) FILTER(WHERE e.status='active')::int AS enrolled FROM education_classes cl JOIN education_courses c ON c.id=cl.course_id LEFT JOIN education_enrollments e ON e.class_id=cl.id WHERE ($1='all' OR c.track=$1) GROUP BY cl.id,c.name,c.track ORDER BY cl.starts_on DESC LIMIT $2 OFFSET $3",
             [
+              params.track,
               params.classPageSize,
               (params.classPage - 1) * params.classPageSize,
             ],
           ),
           q(
-            "SELECT m.*,c.name AS course_name,cl.name AS class_name FROM education_materials m LEFT JOIN education_courses c ON c.id=m.course_id LEFT JOIN education_classes cl ON cl.id=m.class_id ORDER BY m.position,m.title LIMIT $1 OFFSET $2",
+            "SELECT m.*,c.name AS course_name,cl.name AS class_name FROM education_materials m LEFT JOIN education_courses c ON c.id=m.course_id LEFT JOIN education_classes cl ON cl.id=m.class_id LEFT JOIN education_courses cc ON cc.id=cl.course_id WHERE ($1='all' OR c.track=$1 OR cc.track=$1) ORDER BY m.position,m.title LIMIT $2 OFFSET $3",
             [
+              params.track,
               params.materialPageSize,
               (params.materialPage - 1) * params.materialPageSize,
             ],
           ),
           q(
-            "SELECT a.*,cl.name AS class_name FROM education_assessments a JOIN education_classes cl ON cl.id=a.class_id ORDER BY a.created_at DESC LIMIT $1 OFFSET $2",
+            "SELECT a.*,cl.name AS class_name,c.track FROM education_assessments a JOIN education_classes cl ON cl.id=a.class_id JOIN education_courses c ON c.id=cl.course_id WHERE ($1='all' OR c.track=$1) ORDER BY a.created_at DESC LIMIT $2 OFFSET $3",
             [
+              params.track,
               params.assessmentPageSize,
               (params.assessmentPage - 1) * params.assessmentPageSize,
             ],
           ),
-          q("SELECT count(*)::int AS total FROM education_courses"),
-          q("SELECT count(*)::int AS total FROM education_classes"),
-          q("SELECT count(*)::int AS total FROM education_materials"),
-          q("SELECT count(*)::int AS total FROM education_assessments"),
+          q("SELECT count(*)::int AS total FROM education_courses WHERE ($1='all' OR track=$1)", [params.track]),
+          q("SELECT count(*)::int AS total FROM education_classes cl JOIN education_courses c ON c.id=cl.course_id WHERE ($1='all' OR c.track=$1)", [params.track]),
+          q("SELECT count(*)::int AS total FROM education_materials m LEFT JOIN education_courses c ON c.id=m.course_id LEFT JOIN education_classes cl ON cl.id=m.class_id LEFT JOIN education_courses cc ON cc.id=cl.course_id WHERE ($1='all' OR c.track=$1 OR cc.track=$1)", [params.track]),
+          q("SELECT count(*)::int AS total FROM education_assessments a JOIN education_classes cl ON cl.id=a.class_id JOIN education_courses c ON c.id=cl.course_id WHERE ($1='all' OR c.track=$1)", [params.track]),
         ]);
         return {
           courses,
