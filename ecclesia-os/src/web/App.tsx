@@ -141,6 +141,7 @@ export function ProtectedRoute({
   const [backendAuthenticated, setBackendAuthenticated] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
   const [backendChecking, setBackendChecking] = useState(true);
+  const [syncError, setSyncError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -149,6 +150,7 @@ export function ProtectedRoute({
         if (!cancelled) {
           setBackendAuthenticated(false);
           setBackendChecking(false);
+          setSyncError("");
         }
         return;
       }
@@ -177,8 +179,11 @@ export function ProtectedRoute({
             // permissões antes de renderizar a aplicação.
             if (onLogin) void onLogin().catch(() => undefined);
           }
-        } catch {
-          if (!cancelled) setBackendAuthenticated(false);
+        } catch (err) {
+          if (!cancelled) {
+            setBackendAuthenticated(false);
+            setSyncError(err instanceof Error ? err.message : "Não foi possível sincronizar sua conta com o sistema.");
+          }
         }
       } finally {
         if (!cancelled) setBackendChecking(false);
@@ -207,7 +212,12 @@ export function ProtectedRoute({
   // Firebase autenticado sem sessão EcclesiaOS não é um estado válido. Isso
   // evita mostrar telas administrativas quando a sincronização falhou.
   if (!firebaseUser || !backendAuthenticated) {
-    return fallback ? <>{fallback}</> : <Login onLogin={onLogin || (async () => {})} />;
+    return (
+      <>
+        {syncError ? <div className="toast error" role="alert" aria-live="assertive">{syncError}</div> : null}
+        {fallback ? <>{fallback}</> : <Login onLogin={onLogin || (async () => {})} />}
+      </>
+    );
   }
 
   return <>{children}</>;
