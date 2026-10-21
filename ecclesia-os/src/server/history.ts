@@ -76,10 +76,30 @@ export function historyRoutes(app: Express, db: Database) {
       if (query.from) { params.push(query.from); dateParts.push("he.event_date >= $" + params.length); }
       if (query.to) { params.push(query.to); dateParts.push("he.event_date <= $" + params.length); }
       const dateFilter = dateParts.length ? " AND " + dateParts.join(" AND ") : "";
-      const events = await q("SELECT he.id,he.event_date,he.event_type,he.title,he.description,he.visibility,he.source_type,he.source_id FROM historical_events he WHERE he.church_id=$1" + (query.subjectType === "person" ? " AND he.subject_type='person' AND he.subject_id=$2" : " AND he.subject_type='church' AND he.subject_id=$1") + dateFilter + " ORDER BY he.event_date ASC,he.created_at ASC", params);
+      let events = await q("SELECT he.id,he.event_date,he.event_type,he.title,he.description,he.visibility,he.source_type,he.source_id FROM historical_events he WHERE he.church_id=$1" + (query.subjectType === "person" ? " AND he.subject_type='person' AND he.subject_id=$2" : " AND he.subject_type='church' AND he.subject_id=$1") + dateFilter + " ORDER BY he.event_date ASC,he.created_at ASC", params);
+      const inPeriod = (value: unknown) => {
+        const date = String(value ?? "").slice(0, 10);
+        return (!query.from || date >= query.from) && (!query.to || date <= query.to);
+      };
       if (query.subjectType === "person") {
         const [person] = await q("SELECT id,name,status,created_at FROM people WHERE id=$1 AND church_id=$2", [subjectId, r.church]);
         const [education] = await q("SELECT count(*)::int AS total, count(*) FILTER (WHERE ee.status='completed')::int AS completed FROM education_enrollments ee WHERE ee.church_id=$1 AND ee.person_id=$2", [r.church, subjectId]);
+        const educationRows = await q("SELECT ee.id,ee.enrolled_at,ee.completed_at,cl.name AS class_name,c.name AS course_name,c.track FROM education_enrollments ee JOIN education_classes cl ON cl.id=ee.class_id JOIN education_courses c ON c.id=cl.course_id WHERE ee.church_id=$1 AND ee.person_id=$2", [r.church, subjectId]);
+        const derived = educationRows.flatMap((row) => {
+          const values = [{ date: String(row.enrolled_at).slice(0, 10), suffix: "Matrícula" }];
+          if (row.completed_at) values.push({ date: String(row.completed_at).slice(0, 10), suffix: "Conclusão" });
+          return values.filter((value) => inPeriod(value.date)).map((value) => ({
+            id: `education-${row.id}-${value.suffix}`,
+            event_date: value.date,
+            event_type: row.track === "discipulado" ? "discipleship" : "education",
+            title: `${value.suffix} · ${row.course_name} · ${row.class_name}`,
+            description: `Modalidade: ${row.track ?? "curso"}`,
+            visibility: "administrative",
+            source_type: "education_enrollment",
+            source_id: row.id,
+          }));
+        });
+        events = [...events, ...derived].sort((a, b) => String(a.event_date).localeCompare(String(b.event_date)));
         return { subject: person, events, metrics: { educationEnrollments: Number(education?.total ?? 0), educationCompleted: Number(education?.completed ?? 0) } };
       }
       const [church] = await q("SELECT id,name,affiliated_on FROM churches WHERE id=$1", [r.church]);
