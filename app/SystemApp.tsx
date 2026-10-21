@@ -2656,8 +2656,8 @@ export default function Home() {
     const result = (await response.json().catch(() => ({}))) as {
       created?: number;
       updated?: number;
-      errors?: Array<{ email: string; message: string }>;
       skipped?: number;
+      errors?: Array<{ email: string; message: string }>;
       error?: string;
     };
 

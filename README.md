@@ -54,7 +54,7 @@ pnpm build
 Configure estas variaveis no ambiente de producao do provedor atual:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://bssrgotlvvexvrutshqz.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_publica_do_supabase
 SUPABASE_SERVICE_ROLE_KEY=sua_chave_service_role_privada
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=sua_chave_publica_vapid
@@ -68,6 +68,8 @@ TURNSTILE_SECRET_KEY=sua_chave_privada_turnstile
 Sem Supabase, o sistema abre apenas a tela pública e bloqueia o login. Não existe acesso administrativo local em produção.
 Sem VAPID, o app continua funcionando, mas notificacoes em segundo plano ficam indisponiveis.
 Sem Turnstile, o cadastro público continua protegido por limite básico de requisições, mas a proteção completa exige as duas chaves.
+
+Para criar um projeto Supabase novo, siga `docs/supabase-new-project.md`. Nunca copie chaves do projeto antigo e nunca comite `.env.local`.
 
 ## Fale com a liderança
 

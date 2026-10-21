@@ -33,7 +33,7 @@ Nao desligue a Vercel enquanto as rotas em `app/api` e os dois agendamentos aind
 Para conectar ao Supabase em producao, configure no provedor atual:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://bssrgotlvvexvrutshqz.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_publica_do_supabase
 SUPABASE_SERVICE_ROLE_KEY=sua_chave_service_role_privada
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=sua_chave_publica_vapid
@@ -47,6 +47,8 @@ TURNSTILE_SECRET_KEY=sua_chave_privada_turnstile
 Essas variaveis podem ser cadastradas em `Project Settings > Environment Variables`. A `SUPABASE_SERVICE_ROLE_KEY` e secreta, fica somente no servidor e e necessaria para criar usuarios reais pelo modulo de acessos.
 `VAPID_PRIVATE_KEY` tambem e secreta e fica somente no servidor; ela permite enviar notificacoes Push Web para aparelhos inscritos.
 `TURNSTILE_SECRET_KEY` e `CRON_SECRET` tambem sao segredos exclusivos do backend.
+
+Para um projeto Supabase novo, use o roteiro `docs/supabase-new-project.md` antes de cadastrar estas variaveis.
 
 ## Supabase Auth
 
