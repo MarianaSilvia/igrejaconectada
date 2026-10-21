@@ -155,7 +155,13 @@ export function ProtectedRoute({
       setBackendChecking(true);
       try {
         await api("/context");
-        if (!cancelled) setBackendAuthenticated(true);
+        if (!cancelled) {
+          setBackendAuthenticated(true);
+          // Recarrega o contexto do aplicativo assim que a sessão Firebase
+          // estiver confirmada. Isso evita que o estado inicial vazio mantenha
+          // a tela de login após um login bem-sucedido.
+          if (onLogin) void onLogin().catch(() => undefined);
+        }
       } catch {
         try {
           const idToken = await user.getIdToken(true);
@@ -165,7 +171,12 @@ export function ProtectedRoute({
             { name: user.displayName || undefined },
             { Authorization: `Bearer ${idToken}` },
           );
-          if (!cancelled) setBackendAuthenticated(true);
+          if (!cancelled) {
+            setBackendAuthenticated(true);
+            // A sessão foi criada no backend; agora carregue igreja, papel e
+            // permissões antes de renderizar a aplicação.
+            if (onLogin) void onLogin().catch(() => undefined);
+          }
         } catch {
           if (!cancelled) setBackendAuthenticated(false);
         }
