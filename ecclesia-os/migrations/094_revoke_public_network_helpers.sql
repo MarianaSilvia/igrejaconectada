@@ -13,7 +13,7 @@ BEGIN
         target
       );
       EXECUTE format(
-        'REVOKE EXECUTE ON FUNCTION public.create_network_congregations(uuid, text, uuid) FROM %I',
+        'REVOKE EXECUTE ON FUNCTION public.create_network_congregation(uuid, text, uuid) FROM %I',
         target
       );
       EXECUTE format(
