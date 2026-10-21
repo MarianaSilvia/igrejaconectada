@@ -544,6 +544,8 @@ export default function App() {
                       "Linha do tempo de pessoas e congregações, com indicadores e relatórios autorizados.",
                     "people-insights":
                       "Marcos de pessoas e revisão de possíveis duplicidades dentro da igreja.",
+                    security:
+                      "Senha, MFA e sessões protegidas da sua conta.",
                     "firebase-logs":
                       "Auditoria e monitoramento de autenticação Firebase, sincronização com Firestore e integridade de segurança.",
                   }[page]
