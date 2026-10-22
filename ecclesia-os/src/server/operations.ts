@@ -800,7 +800,9 @@ export function operations(
     const id = z.uuid().parse(r.params.id);
     const b = z.object({ name: z.string().trim().min(2).max(180).optional(), active: z.boolean().optional() }).refine((v) => v.name !== undefined || v.active !== undefined).parse(r.body);
     const result = await scoped(r, async (q) => {
-      const [v] = await q("SELECT * FROM update_congregation($1,$2,$3)", [id,b.name ?? null,b.active ?? null]);
+      const [v] = b.active === false
+        ? await q("SELECT * FROM deactivate_congregation($1)", [id])
+        : await q("SELECT * FROM update_congregation($1,$2,$3)", [id,b.name ?? null,b.active ?? null]);
       requireThat(v, 404, "Congregação não encontrada.");
       await audit(q, r.actor.id, r.church, "church.congregation-updated", id);
       return v;
