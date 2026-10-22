@@ -855,6 +855,8 @@ export function People(
       null,
     ),
     [preview, setPreview] = useState<RecordData | null>(null),
+    [selectedImportFile, setSelectedImportFile] = useState<File | null>(null),
+    [importError, setImportError] = useState(""),
     [busy, setBusy] = useState(false),
     [credential, setCredential] = useState<RecordData | null>(null),
     [issuedMemberAccess, setIssuedMemberAccess] = useState<RecordData | null>(null),
@@ -1053,6 +1055,8 @@ export function People(
           className="button secondary"
           onClick={() => {
             setPreview(null);
+            setSelectedImportFile(null);
+            setImportError("");
             setModal("import");
           }}
         >
@@ -1683,24 +1687,75 @@ export function People(
                 <input
                   type="file"
                   accept=".csv,text/csv"
-                  onChange={async (e) => {
+                  onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    try {
-                      setPreview(
-                        await api("/import/preview", "POST", {
-                          csv: await file.text(),
-                        }),
-                      );
-                    } catch (e) {
-                      props.notify((e as Error).message);
-                    }
+                    setSelectedImportFile(file);
+                    setPreview(null);
+                    setImportError("");
                   }}
                 />
               </Field>
+              <div className="panel" style={{ marginTop: 12, padding: 12 }}>
+                <div className="toolbar" style={{ justifyContent: "space-between" }}>
+                  <span className="muted" aria-live="polite">
+                    {selectedImportFile ? (
+                      <>Arquivo selecionado: <strong>{selectedImportFile.name}</strong> ({Math.ceil(selectedImportFile.size / 1024)} KB)</>
+                    ) : (
+                      "Nenhum arquivo selecionado. Escolha um CSV para começar."
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    disabled={busy || !selectedImportFile}
+                    onClick={async () => {
+                      if (!selectedImportFile) return;
+                      setBusy(true);
+                      setImportError("");
+                      try {
+                        setPreview(
+                          await api("/import/preview", "POST", {
+                            csv: await selectedImportFile.text(),
+                          }),
+                        );
+                      } catch (e) {
+                        const message = (e as Error).message;
+                        setImportError(message);
+                        props.notify(message);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    {busy ? "Analisando CSV…" : "Analisar arquivo"}
+                  </button>
+                  {selectedImportFile && (
+                    <button
+                      type="button"
+                      className="button ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        setSelectedImportFile(null);
+                        setPreview(null);
+                        setImportError("");
+                      }}
+                    >
+                      Escolher outro arquivo
+                    </button>
+                  )}
+                </div>
+                {importError && (
+                  <p className="form-error" role="alert" style={{ marginBottom: 0 }}>
+                    Não foi possível analisar o arquivo: {importError}
+                  </p>
+                )}
+              </div>
               {preview && (
                 <>
                   <p>
+                    <strong>Prévia da importação</strong><br />
+                    Revise as linhas abaixo. A base só será alterada depois de clicar em “Confirmar linhas válidas”.<br />
                     <Badge>{preview.valid.length} linhas válidas</Badge>{" "}
                     <Badge tone="amber">
                       {preview.issues.length} linhas para revisão
@@ -1719,6 +1774,7 @@ export function People(
                     ))}
                   </div>
                   <button
+                    type="button"
                     className="button primary"
                     disabled={busy || !preview.valid.length}
                     onClick={async () => {
