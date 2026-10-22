@@ -129,10 +129,17 @@ export function createApp(
     n();
   });
   app.use("/api", (r, s, n) => {
+    // Vercel preview/staging deployments have a deployment-specific origin.
+    // Keep PUBLIC_ORIGIN as the canonical public URL, while allowing the
+    // platform-provided VERCEL_URL for same-deployment API calls.
+    const vercelOrigin = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "";
+    const allowedOrigins = new Set([options.origin, vercelOrigin].filter(Boolean));
     if (
       !["GET", "HEAD", "OPTIONS"].includes(r.method) &&
       r.headers.origin &&
-      r.headers.origin !== options.origin
+      !allowedOrigins.has(r.headers.origin)
     )
       return s.status(403).json({ error: "Origem não autorizada." });
     n();
@@ -170,6 +177,7 @@ export function createApp(
         const bearer = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
         let u;
         if (bearer) {
+          requireThat(raw, 401, "Sessão EcclesiaOS ausente. Confirme o MFA para continuar.");
           let decoded;
           try {
             decoded = await verifyFirebaseIdToken(bearer);
@@ -181,7 +189,7 @@ export function createApp(
           requireThat(firebaseUid && email, 401, "A conta Firebase não possui identidade válida.");
           [u] = await db.transaction((q) =>
             q(
-              "SELECT id,name,email,password_must_change,(totp_secret IS NOT NULL) AS mfa FROM users WHERE (firebase_uid=$1 OR lower(email)=$2) AND disabled_at IS NULL LIMIT 1",
+              "SELECT id,name,email,password_must_change FROM users WHERE (firebase_uid=$1 OR lower(email)=$2) AND disabled_at IS NULL LIMIT 1",
               [firebaseUid, email],
             ),
           );
@@ -195,6 +203,15 @@ export function createApp(
           );
         }
         requireThat(u, 401, "Sessão expirada.");
+        if (bearer) {
+          const [session] = await db.transaction((q) =>
+            q(
+              "SELECT s.mfa FROM sessions s WHERE s.token_hash=$1 AND s.user_id=$2 AND s.expires_at>now()",
+              [hash(raw ?? ""), u.id],
+            ),
+          );
+          u.mfa = Boolean(session?.mfa);
+        }
         (r as AuthRequest).actor = u;
         if (
           u.password_must_change &&
@@ -390,6 +407,12 @@ export function createApp(
           [childId],
         );
         requireThat(child, 404, "Congregação não encontrada ou inativa.");
+        // Um novo convite invalida o anterior para o mesmo endereço nesta
+        // unidade, permitindo reenviar o acesso sem conflito de estado.
+        await q(
+          "UPDATE account_invites SET revoked_at=now() WHERE church_id=$1 AND lower(email)=lower($2) AND accepted_at IS NULL AND revoked_at IS NULL",
+          [childId, body.email],
+        );
         const [invite] = await q(
           "INSERT INTO account_invites(church_id,name,email,role,token_hash,encrypted_secret,expires_at,created_by) VALUES($1,$2,$3,$4,$5,$6,now()+interval '48 hours',$7) RETURNING id,expires_at",
           [childId, body.name, body.email, body.role, hash(raw), encrypt(secret, options.key), r.actor.id],
@@ -418,6 +441,12 @@ export function createApp(
     app.post(
     "/api/auth/firebase-sync",
     asyncRoute(async (r, s) => {
+      const body = z
+        .object({
+          code: z.string().regex(/^\d{6}$/).optional(),
+          challenge: z.string().min(30).max(100).optional(),
+        })
+        .parse(r.body ?? {});
       const authorization = String(r.headers.authorization ?? "");
       const match = authorization.match(/^Bearer\s+(.+)$/i);
       requireThat(match?.[1], 401, "Sessão Firebase ausente.");
@@ -437,6 +466,10 @@ export function createApp(
           [firebaseUid, email],
         );
         requireThat(existing && !existing.disabled_at, 403, "Esta conta ainda não possui convite ou vínculo autorizado.");
+        // Firebase is the source of truth for the user's password. Once the
+        // verified Firebase identity is synchronized, a legacy local
+        // temporary-password flag must not force the user back into the
+        // local-password flow (which otherwise causes an authentication loop).
         const [updated] = await q(
           "UPDATE users SET firebase_uid=$1,name=CASE WHEN users.name='' THEN $2 ELSE users.name END,password_must_change=false,password_changed_at=COALESCE(password_changed_at,now()) WHERE id=$3 RETURNING *",
           [firebaseUid, name, existing.id],
@@ -453,12 +486,54 @@ export function createApp(
           [user.id],
         ),
       );
+      // Firebase includes this claim only after the user has completed a
+      // provider-managed second factor during sign-in. A configured MFA
+      // method in the Firebase console alone is not proof of a completed
+      // challenge, so the claim is the only Firebase signal accepted here.
+      const firebaseClaims = (decoded.firebase ?? {}) as {
+        sign_in_second_factor?: string;
+        second_factor_identifier?: string;
+      };
+      const firebaseMfaVerified = Boolean(
+        firebaseClaims.sign_in_second_factor || firebaseClaims.second_factor_identifier,
+      );
       requireThat(
-        !privileged.length || Boolean(user.totp_secret),
+        !privileged.length || Boolean(user.totp_secret) || firebaseMfaVerified,
         403,
         "Configure o MFA antes de acessar esta conta administrativa.",
       );
-      await issue(s, user.id, Boolean(user.totp_secret));
+      if (user.totp_secret && !firebaseMfaVerified) {
+        if (!body.code || !body.challenge) {
+          const challenge = token();
+          await db.transaction((q) =>
+            q(
+              "INSERT INTO login_challenges(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '5 minutes')",
+              [hash(challenge), user.id],
+            ),
+          );
+          return s.json({
+            ok: false,
+            mfaRequired: true,
+            challenge,
+            passwordMustChange: Boolean(user.password_must_change),
+          });
+        }
+        const verified = await db.transaction(async (q) => {
+          const [challenge] = await q(
+            "SELECT c.*,u.totp_secret,u.last_totp_step FROM login_challenges c JOIN users u ON u.id=c.user_id WHERE c.token_hash=$1 AND c.user_id=$2 AND c.expires_at>now() AND c.attempts<5 FOR UPDATE",
+            [hash(body.challenge!), user.id],
+          );
+          requireThat(challenge, 401, "Desafio MFA expirado. Entre novamente.");
+          await q("UPDATE login_challenges SET attempts=attempts+1 WHERE token_hash=$1", [hash(body.challenge!)]);
+          const step = totpStep(openTotp(challenge.totp_secret, options.mfaKey ?? options.key), body.code!);
+          requireThat(step !== null && (challenge.last_totp_step === null || step > Number(challenge.last_totp_step)), 401, "Código MFA inválido.");
+          await q("UPDATE users SET last_totp_step=$1 WHERE id=$2", [step, user.id]);
+          await q("DELETE FROM login_challenges WHERE token_hash=$1", [hash(body.challenge!)]);
+          return true;
+        });
+        requireThat(verified, 401, "Código MFA inválido.");
+      }
+      await issue(s, user.id, Boolean(user.totp_secret) || firebaseMfaVerified);
       s.json({
         ok: true,
         passwordMustChange: Boolean(user.password_must_change),
@@ -509,7 +584,13 @@ app.get(
         checks.database = false;
       }
       const ready = Object.entries(checks)
-        .filter(([key]) => key !== "pix" && key !== "automaticPayments")
+        .filter(([key]) =>
+          key !== "pix" &&
+          key !== "automaticPayments" &&
+          // Local demo mode intentionally does not require a Firebase
+          // service account; hosted homologation does.
+          !(key === "firebase" && options.mode === "demo"),
+        )
         .every(([, value]) => value === true);
       s.status(ready ? 200 : 503).json({
         ok: ready,
@@ -675,7 +756,7 @@ app.get(
     asyncRoute(async (r: AuthRequest, s) => {
       const data = await db.transaction(async (q) => {
         const churches = await q(
-          "SELECT c.*,m.role FROM churches c LEFT JOIN memberships m ON m.church_id=c.id AND m.user_id=$1 WHERE m.user_id IS NOT NULL OR EXISTS(SELECT 1 FROM network_members n WHERE n.network_id=c.network_id AND n.user_id=$1) ORDER BY c.name",
+          "SELECT c.*,m.role FROM churches c LEFT JOIN memberships m ON m.church_id=c.id AND m.user_id=$1 WHERE c.active=true AND (m.user_id IS NOT NULL OR EXISTS(SELECT 1 FROM network_members n WHERE n.network_id=c.network_id AND n.user_id=$1)) ORDER BY c.name",
           [r.actor.id],
         );
         const networks = await q(
@@ -2478,7 +2559,7 @@ app.get(
   app.use("/api", (_r, s) =>
     s.status(404).json({ error: "Rota não encontrada." }),
   );
-  app.use((e: any, _r: Request, s: Response, _n: NextFunction) => {
+  app.use((e: any, req: Request, s: Response, _n: NextFunction) => {
     if (e.type === "entity.too.large")
       return s.status(413).json({
         error: "O arquivo é muito grande. Envie uma foto de até 3 MB.",
@@ -2513,7 +2594,12 @@ app.get(
         error:
           "Recurso já reservado nesse horário. Escolha outro recurso ou período.",
       });
-    console.error("Request failed:", e.code ?? e.name);
+    console.error("Request failed:", {
+      code: e.code ?? e.name,
+      constraint: e.constraint ?? null,
+      table: e.table ?? null,
+      path: req.path,
+    });
     s.status(500).json({ error: "Não foi possível concluir a operação." });
   });
   return app;
