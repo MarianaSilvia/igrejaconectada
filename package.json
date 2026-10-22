@@ -11,7 +11,8 @@
     "build": "npm run build --workspace=ecclesia-os",
     "start": "npm run start --workspace=ecclesia-os",
     "lint": "npm run build --workspace=ecclesia-os",
-    "test": "npm run test --workspace=ecclesia-os"
+    "test": "npm run test --workspace=ecclesia-os",
+    "build:deploy": "npm run build --workspace=ecclesia-os"
   },
   "engines": {
     "node": ">=22"
