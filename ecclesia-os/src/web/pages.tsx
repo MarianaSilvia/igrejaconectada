@@ -1053,6 +1053,8 @@ export function People(
         </button>
         <button
           className="button secondary"
+          disabled={registrationConfig.data !== null && !registrationConfig.data.canManage}
+          title={registrationConfig.data?.canManage === false ? "A importação deve ser feita pelo administrador local ou pela secretaria da igreja ativa." : undefined}
           onClick={() => {
             setPreview(null);
             setSelectedImportFile(null);
