@@ -121,6 +121,20 @@ export default function PublicAccess({
                           Adicione a chave abaixo ao seu aplicativo
                           autenticador. Guarde-a em particular.
                         </p>
+                        {(setup?.qrDataUrl || info?.qrDataUrl) && (
+                          <div style={{ margin: "0 0 16px", textAlign: "center" }}>
+                            <img
+                              src={setup?.qrDataUrl ?? info?.qrDataUrl}
+                              width={240}
+                              height={240}
+                              alt="QR Code para configurar o Google Authenticator"
+                              style={{ background: "#fff", padding: 8, borderRadius: 8 }}
+                            />
+                            <p className="muted" style={{ marginTop: 8 }}>
+                              Abra o Google Authenticator, toque em “+” e leia este QR Code.
+                            </p>
+                          </div>
+                        )}
                         <code
                           style={{
                             overflowWrap: "anywhere",

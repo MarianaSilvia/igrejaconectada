@@ -330,12 +330,19 @@ export function accessRoutes(
         await db.transaction(async (q) => {
           const i = await invite(q, String(r.params.token)),
             [u] = await q("SELECT id FROM users WHERE email=$1", [i.email]);
+          const secret = u ? null : decrypt(i.encrypted_secret, options.key),
+            otpauthUrl = secret
+              ? `otpauth://totp/${encodeURIComponent(`EcclesiaOS:${i.email}`)}?secret=${secret}&issuer=${encodeURIComponent("EcclesiaOS")}&algorithm=SHA1&digits=6&period=30`
+              : null;
           return {
             name: i.name,
             email: i.email,
             existing: !!u,
             role: i.role,
-            secret: u ? null : decrypt(i.encrypted_secret, options.key),
+            secret,
+            qrDataUrl: otpauthUrl
+              ? await QRCode.toDataURL(otpauthUrl, { width: 240, margin: 2 })
+              : null,
           };
         }),
       );
