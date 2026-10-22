@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, type RecordData } from "./api";
 import { Field, Submit, formValues } from "./ui";
+import { createFirebaseIdentity, auth } from "./firebase";
 export default function PublicAccess({
   kind,
   token,
@@ -41,7 +42,24 @@ export default function PublicAccess({
         setCodes(r.backupCodes);
         setDone(true);
       } else if (kind === "invite") {
+        if (!info?.existing) {
+          try {
+            await createFirebaseIdentity(info!.email, b.password, info!.name);
+          } catch (firebaseError) {
+            const code = String((firebaseError as { code?: string }).code ?? "");
+            if (code !== "auth/email-already-in-use") throw firebaseError;
+            throw new Error(
+              "Este e-mail já possui uma conta no Firebase. Entre com essa conta em outra aba ou peça um novo convite para concluir o vínculo.",
+            );
+          }
+        }
         await api(`/auth/invites/${token}`, "POST", info?.existing ? {} : b);
+        if (!info?.existing && auth.currentUser) {
+          // Link the newly created Firebase UID to the PostgreSQL profile. The
+          // server may return an MFA challenge here; the invitation itself is
+          // already accepted and the user can complete MFA at the next login.
+          await api("/auth/firebase-sync", "POST", {}).catch(() => undefined);
+        }
         setDone(true);
       } else if (kind === "recovery") {
         await api(`/auth/recovery/${token}`, "POST", b);

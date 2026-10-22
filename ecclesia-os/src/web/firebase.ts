@@ -5,6 +5,7 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  updateProfile,
   sendPasswordResetEmail,
   signOut,
   onAuthStateChanged,
@@ -135,6 +136,18 @@ export async function registerWithEmail(
   }
 
   return user;
+}
+
+/** Creates only the Firebase identity for an invitation. Application roles
+ * and church membership are granted by the server after the invite is accepted. */
+export async function createFirebaseIdentity(
+  email: string,
+  pass: string,
+  name?: string,
+): Promise<User> {
+  const cred = await createUserWithEmailAndPassword(auth, email.trim(), pass);
+  if (name?.trim()) await updateProfile(cred.user, { displayName: name.trim() });
+  return cred.user;
 }
 
 export async function resetPassword(email: string): Promise<void> {
