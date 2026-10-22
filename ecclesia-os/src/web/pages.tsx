@@ -3529,6 +3529,7 @@ export function Portal(props: PageProps & { mode: string }) {
     props,
   );
   const portalMedia = useData<RecordData[]>("/portal/media", props);
+  const portalMurals = useData<RecordData[]>("/portal/murals", props);
   const portalPix = useData<RecordData | null>("/portal/pix", props);
   const [portalCertificatePage, setPortalCertificatePage] = useState(1);
   const portalCertificates = useData<RecordData>(
@@ -3599,6 +3600,36 @@ export function Portal(props: PageProps & { mode: string }) {
         </div>
         <Icon name="heart" size={100} />
       </section>
+      {!!portalMurals.data?.length && (
+        <section className="panel" style={{ padding: 24 }}>
+          <SectionHead
+            title="Mural de avisos"
+            subtitle="Informações, folders e chamadas publicadas pela sua igreja."
+          />
+          <div className="portal-media-grid">
+            {portalMurals.data.map((mural: RecordData) => (
+              <article className="portal-media-card" key={mural.id}>
+                {mural.image_url && (
+                  <img
+                    src={mural.image_url}
+                    alt={mural.image_alt || mural.title}
+                    loading="lazy"
+                  />
+                )}
+                <div className="portal-media-card-body">
+                  <h3>{mural.title}</h3>
+                  {mural.body && <p>{mural.body}</p>}
+                  {mural.cta_url && (
+                    <a className="button secondary" href={mural.cta_url} target="_blank" rel="noopener noreferrer">
+                      {mural.cta_label || "Abrir conteúdo"}
+                    </a>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
       {!!portalMedia.data?.length && (
         <section className="panel" style={{ padding: 24 }}>
           <SectionHead
