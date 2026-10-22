@@ -1081,6 +1081,13 @@ export function People(
         directory={directory.data}
         onChange={props.refresh}
       />
+      {registrationConfig.data?.canManage === false && (
+        <p className="panel-footnote" role="status">
+          Esta conta pode consultar a lista, mas não pode alterar fichas. Para
+          completar os cadastros, selecione a igreja com um administrador local
+          ou uma secretária autorizada.
+        </p>
+      )}
       <section className="panel">
         <SectionHead
           title="Listas inteligentes"
@@ -1375,6 +1382,7 @@ export function People(
                             }
                           }}
                           disabled={!registrationConfig.data?.canManage}
+                          title={registrationConfig.data?.canManage === false ? "Use o administrador local ou a secretaria para editar esta ficha." : undefined}
                         >
                           Editar
                         </button>
