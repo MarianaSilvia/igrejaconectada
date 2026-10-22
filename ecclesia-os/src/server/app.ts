@@ -351,11 +351,13 @@ export function createApp(
         .parse(r.body);
       const child = await scoped(r, async (q) => {
         const [updated] = network
-          ? await q("SELECT * FROM update_network_congregation($1,$2,$3)", [
-              uuid.parse(r.params.id),
-              body.name ?? null,
-              body.active ?? null,
-            ])
+          ? body.active === false
+            ? await q("SELECT * FROM deactivate_congregation($1)", [uuid.parse(r.params.id)])
+            : await q("SELECT * FROM update_network_congregation($1,$2,$3)", [
+                uuid.parse(r.params.id),
+                body.name ?? null,
+                body.active ?? null,
+              ])
           : await q("SELECT * FROM update_congregation($1,$2,$3)", [
               uuid.parse(r.params.id),
               body.name ?? null,
