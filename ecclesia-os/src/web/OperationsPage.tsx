@@ -207,6 +207,17 @@ export default function OperationsPage(
                 Cadastre esta chave no autenticador e confirme o código. A
                 confirmação encerrará suas sessões.
               </p>
+              {setup.qrDataUrl && (
+                <div className="mfa-qr" style={{ display: "grid", gap: 8, justifyItems: "start" }}>
+                  <img
+                    src={setup.qrDataUrl}
+                    alt="QR Code para configurar o autenticador do EcclesiaOS"
+                    width={240}
+                    height={240}
+                  />
+                  <small className="muted">Abra o Google Authenticator, escolha adicionar conta e escaneie este QR Code.</small>
+                </div>
+              )}
               <code style={{ overflowWrap: "anywhere" }}>{setup.secret}</code>
               <Field label="Código do novo autenticador">
                 <input

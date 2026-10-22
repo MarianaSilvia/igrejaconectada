@@ -1,5 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { randomBytes } from "node:crypto";
+import QRCode from "qrcode";
 import { z } from "zod";
 import type { Database, Row, Query } from "./db.js";
 import {
@@ -598,12 +599,15 @@ export function accessRoutes(
   const setupMfa = async (q: Query, user: string) => {
     const raw = token(),
       secret = newSecret();
+    const [account] = await q("SELECT email FROM users WHERE id=$1", [user]);
+    const otpauthUrl = `otpauth://totp/${encodeURIComponent(`EcclesiaOS:${account?.email ?? user}`)}?secret=${secret}&issuer=${encodeURIComponent("EcclesiaOS")}&algorithm=SHA1&digits=6&period=30`;
+    const qrDataUrl = await QRCode.toDataURL(otpauthUrl, { width: 240, margin: 2 });
     await q("DELETE FROM mfa_changes WHERE user_id=$1", [user]);
     await q(
       "INSERT INTO mfa_changes(token_hash,user_id,encrypted_secret,expires_at) VALUES($1,$2,$3,now()+interval '10 minutes')",
       [hash(raw), user, encrypt(secret, options.key)],
     );
-    return { challenge: raw, secret };
+    return { challenge: raw, secret, qrDataUrl };
   };
   app.post(
     "/api/account/mfa/setup",
