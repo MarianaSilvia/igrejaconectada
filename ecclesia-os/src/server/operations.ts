@@ -850,7 +850,7 @@ export function operations(
   app.get("/api/network/indicators", route(async (r, s) => {
     const networkId = await networkForChurch(r);
     await networkAdmin(r, networkId);
-    s.json(await db.transaction((q) => q("SELECT c.id,c.name,c.unit_type,c.parent_church_id,(SELECT count(*)::int FROM people p WHERE p.church_id=c.id AND p.status<>'inactive') AS people_count,(SELECT count(*)::int FROM education_classes e WHERE e.church_id=c.id AND e.status='open') AS open_classes FROM churches c WHERE c.network_id=$1 ORDER BY c.name", [networkId])));
+    s.json(await db.transaction((q) => q("SELECT c.id,c.name,c.unit_type,c.parent_church_id,(SELECT count(*)::int FROM people p WHERE p.church_id=c.id AND p.status<>'inactive') AS people_count,(SELECT count(*)::int FROM education_classes e WHERE e.church_id=c.id AND e.status='open') AS open_classes FROM churches c WHERE c.network_id=$1 AND c.active=true ORDER BY c.name", [networkId])));
   }));
   app.get("/api/network/billing", route(async (r, s) => {
     commercial();
