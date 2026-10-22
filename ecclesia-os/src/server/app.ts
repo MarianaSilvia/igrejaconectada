@@ -806,7 +806,7 @@ app.get(
  (SELECT count(*)::int FROM people p WHERE p.church_id=c.id AND status<>'inactive') AS people,
  (SELECT count(*)::int FROM cells x WHERE x.church_id=c.id) AS cells,
  (SELECT COALESCE(-sum(l.amount_cents),0)::text FROM journal_lines l JOIN accounts a ON a.id=l.account_id JOIN journal_entries e ON e.id=l.entry_id WHERE l.church_id=c.id AND a.kind='income' AND date_trunc('month',e.occurred_on)=date_trunc('month',CURRENT_DATE)) AS income_cents
- FROM churches c LEFT JOIN regions r ON r.id=c.region_id WHERE EXISTS(SELECT 1 FROM network_members nm WHERE nm.network_id=c.network_id AND nm.user_id=$1 AND nm.role='network_admin') ORDER BY c.name`,
+ FROM churches c LEFT JOIN regions r ON r.id=c.region_id WHERE c.active=true AND EXISTS(SELECT 1 FROM network_members nm WHERE nm.network_id=c.network_id AND nm.user_id=$1 AND nm.role='network_admin') ORDER BY c.name`,
           [r.actor.id],
         ),
       );
