@@ -780,6 +780,44 @@ export function operations(
     requireThat(r.actor.mfa && v?.unit_type === "sede" && allowed.allowed, 403, "Apenas a administração da igreja sede pode gerenciar congregações.");
     return v;
   };
+  const unitProfileFields = `id,name,unit_type,parent_church_id,primary_color,address_line,address_number,address_neighborhood,city,state,postal_code,phone,institutional_email,leader_name,founded_on,timezone,logo_url,active`;
+  const canEditUnitProfile = async (r: R, targetId: string) => {
+    requireThat(r.actor.mfa, 403, "MFA obrigatório.");
+    const [target] = await db.transaction((q) => q("SELECT id,network_id FROM churches WHERE id=$1", [targetId]));
+    requireThat(target, 404, "Unidade não encontrada.");
+    const [network] = await db.transaction((q) => q("SELECT 1 FROM network_members WHERE user_id=$1 AND network_id=$2 AND role='network_admin'", [r.actor.id, target.network_id]));
+    if (network) return target;
+    requireThat(targetId === r.church, 403, "Você só pode editar a unidade ativa.");
+    const [local] = await scoped(r, (q) => q("SELECT local_role()='admin' AS allowed"));
+    requireThat(local?.allowed, 403, "Administração autorizada da unidade obrigatória.");
+    return target;
+  };
+  app.get("/api/church/profile", route(async (r, s) => {
+    await canEditUnitProfile(r, r.church);
+    const [profile] = await db.transaction((q) => q(`SELECT ${unitProfileFields} FROM churches WHERE id=$1`, [r.church]));
+    s.json(profile);
+  }));
+  app.put("/api/church/profile", route(async (r, s) => {
+    const b = z.object({
+      name: z.string().trim().min(2).max(180),
+      addressLine: z.string().trim().max(180).default(""), addressNumber: z.string().trim().max(30).default(""),
+      addressNeighborhood: z.string().trim().max(120).default(""), city: z.string().trim().max(120).default(""),
+      state: z.string().trim().max(2).default(""), postalCode: z.string().trim().max(20).default(""),
+      phone: z.string().trim().max(40).default(""), institutionalEmail: z.email().or(z.literal("")).default(""),
+      leaderName: z.string().trim().max(180).default(""), foundedOn: z.iso.date().nullable().default(null),
+      timezone: z.string().trim().max(80).default("America/Sao_Paulo"),
+      logoUrl: z.string().refine((value) => value === "" || value.startsWith("https://") || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value), "A logo deve ser HTTPS ou uma imagem enviada.").max(7_000_000).default(""),
+      primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#7062db"),
+    }).parse(r.body);
+    await canEditUnitProfile(r, r.church);
+    const profile = await db.transaction(async (q) => {
+      const [v] = await q(`UPDATE churches SET name=$2,address_line=$3,address_number=$4,address_neighborhood=$5,city=$6,state=$7,postal_code=$8,phone=$9,institutional_email=$10,leader_name=$11,founded_on=$12,timezone=$13,logo_url=$14,primary_color=$15 WHERE id=$1 RETURNING ${unitProfileFields}`, [r.church,b.name,b.addressLine,b.addressNumber,b.addressNeighborhood,b.city,b.state,b.postalCode,b.phone,b.institutionalEmail,b.leaderName,b.foundedOn,b.timezone,b.logoUrl,b.primaryColor]);
+      requireThat(v, 404, "Unidade não encontrada.");
+      await audit(q, r.actor.id, r.church, "church.profile-updated", r.church);
+      return v;
+    });
+    s.json(profile);
+  }));
   app.get("/api/churches/children", route(async (r, s) => {
     await seatAdmin(r);
     s.json(await scoped(r, (q) => q("SELECT * FROM list_congregations()")));
