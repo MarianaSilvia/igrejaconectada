@@ -43,6 +43,9 @@ import PeopleInsightsPage from "./PeopleInsightsPage";
 import SecurityPage from "./SecurityPage";
 import FirebaseActivityLogs from "./FirebaseActivityLogs";
 import { logFirebaseActivity } from "./activityLogs";
+import { getMultiFactorResolver, TotpMultiFactorGenerator, type MultiFactorResolver } from "firebase/auth";
+
+let pendingFirebaseMfaResolver: MultiFactorResolver | null = null;
 type Page =
   | "dashboard"
   | "network"
@@ -142,6 +145,12 @@ export function ProtectedRoute({
   const [authChecking, setAuthChecking] = useState(true);
   const [backendChecking, setBackendChecking] = useState(true);
   const [syncError, setSyncError] = useState("");
+  const completeLogin = useCallback(async () => {
+    await onLogin?.();
+    setBackendAuthenticated(true);
+    setBackendChecking(false);
+    setSyncError("");
+  }, [onLogin]);
 
   useEffect(() => {
     let cancelled = false;
@@ -157,28 +166,17 @@ export function ProtectedRoute({
       setBackendChecking(true);
       try {
         await api("/context");
-        if (!cancelled) {
-          setBackendAuthenticated(true);
-          // Recarrega o contexto do aplicativo assim que a sessão Firebase
-          // estiver confirmada. Isso evita que o estado inicial vazio mantenha
-          // a tela de login após um login bem-sucedido.
-          if (onLogin) void onLogin().catch(() => undefined);
-        }
+        if (!cancelled) setBackendAuthenticated(true);
       } catch {
         try {
           const idToken = await user.getIdToken(true);
-          await api(
+          const synced = await api<{ mfaRequired?: boolean }>(
             "/auth/firebase-sync",
             "POST",
             { name: user.displayName || undefined },
             { Authorization: `Bearer ${idToken}` },
           );
-          if (!cancelled) {
-            setBackendAuthenticated(true);
-            // A sessão foi criada no backend; agora carregue igreja, papel e
-            // permissões antes de renderizar a aplicação.
-            if (onLogin) void onLogin().catch(() => undefined);
-          }
+          if (!cancelled) setBackendAuthenticated(!synced.mfaRequired);
         } catch (err) {
           if (!cancelled) {
             setBackendAuthenticated(false);
@@ -200,7 +198,7 @@ export function ProtectedRoute({
     };
   }, []);
 
-  if (authChecking || backendChecking) {
+  if (authChecking || (backendChecking && !firebaseUser)) {
     return (
       <div className="loading-screen" role="status">
         <Icon name="shield" size={40} />
@@ -214,8 +212,12 @@ export function ProtectedRoute({
   if (!firebaseUser || !backendAuthenticated) {
     return (
       <>
-        {syncError ? <div className="toast error" role="alert" aria-live="assertive">{syncError}</div> : null}
-        {fallback ? <>{fallback}</> : <Login onLogin={onLogin || (async () => {})} />}
+        {syncError ? (
+          <div className="toast error" role="alert" aria-live="assertive">
+            {syncError}
+          </div>
+        ) : null}
+        {fallback ? <>{fallback}</> : <Login onLogin={completeLogin} />}
       </>
     );
   }
@@ -331,7 +333,7 @@ export default function App() {
   }, [current?.primary_color, theme]);
   const props = { church, revision, notify, refresh, pastoralRead: Boolean(current?.permissions?.pastoralRead) };
   return (
-    <ProtectedRoute onLogin={load} fallback={<Login onLogin={load} />}>
+    <ProtectedRoute onLogin={load}>
       {checking ? (
         <div className="loading-screen">
           <Icon name="home" size={40} />
@@ -719,7 +721,11 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
     [showPassword, setShowPassword] = useState(false),
     [error, setError] = useState(""),
     [successNotice, setSuccessNotice] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [mfaCode, setMfaCode] = useState(""),
+    [mfaPending, setMfaPending] = useState<{ challenge: string; uid: string; email: string; name?: string; role: "admin" | "member" | "leader" | "pastor" } | null>(null),
+    [firebaseMfaPending, setFirebaseMfaPending] = useState(false);
+  const mfaChallengePending = Boolean(mfaPending || firebaseMfaPending);
 
   const passwordRequirements = [
     {
@@ -776,14 +782,23 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
     userRole: "admin" | "member" | "leader" | "pastor" = "member",
   ) => {
     try {
+      // A troca de conta no mesmo navegador não pode reaproveitar a igreja
+      // selecionada pela sessão anterior. O contexto será escolhido novamente
+      // depois que o backend validar o novo usuário.
+      selectChurch("");
       const idToken = await auth.currentUser?.getIdToken(true);
       if (!idToken) throw new Error("Não foi possível validar a sessão do Firebase.");
-      await api("/auth/firebase-sync", "POST", {
+      const result = await api<{ mfaRequired?: boolean; challenge?: string }>("/auth/firebase-sync", "POST", {
         uid,
         email: userEmail,
         name: userName || userEmail.split("@")[0],
         role: userRole,
       }, { Authorization: `Bearer ${idToken}` });
+      if (result.mfaRequired && result.challenge) {
+        setMfaPending({ challenge: result.challenge, uid, email: userEmail, name: userName, role: userRole });
+        setMfaCode("");
+        return;
+      }
       void logFirebaseActivity({
         category: "sync",
         action: "auth.sync_session_success",
@@ -814,6 +829,51 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
     }
   };
 
+  const confirmFirebaseMfa = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!/^\d{6}$/.test(mfaCode)) {
+      setError("Informe o código de seis dígitos do autenticador.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      if (firebaseMfaPending && pendingFirebaseMfaResolver) {
+        const resolver = pendingFirebaseMfaResolver;
+        const factor = resolver.hints.find((hint) => hint.factorId === TotpMultiFactorGenerator.FACTOR_ID);
+        if (!factor) {
+          throw new Error("Esta conta exige um fator MFA que esta tela ainda não suporta. Use o método cadastrado no Firebase.");
+        }
+        const assertion = TotpMultiFactorGenerator.assertionForSignIn(factor.uid, mfaCode);
+        const credential = await resolver.resolveSignIn(assertion);
+        pendingFirebaseMfaResolver = null;
+        setFirebaseMfaPending(false);
+        await handleFirebaseSync(
+          credential.user.uid,
+          credential.user.email || email,
+          credential.user.displayName || undefined,
+          "member",
+        );
+        return;
+      }
+      if (!mfaPending) throw new Error("Desafio MFA ausente. Entre novamente.");
+      const idToken = await auth.currentUser?.getIdToken(true);
+      if (!idToken) throw new Error("Sessão Firebase ausente. Entre novamente.");
+      await api("/auth/firebase-sync", "POST", { challenge: mfaPending.challenge, code: mfaCode }, { Authorization: `Bearer ${idToken}` });
+      setMfaPending(null);
+      setMfaCode("");
+      await onLogin();
+    } catch (err) {
+      if ((err as any)?.code === "auth/invalid-verification-code") {
+        setError("Código MFA inválido. Confira o código atual no Google Authenticator.");
+      } else {
+        setError(err instanceof Error ? err.message : "Código MFA inválido.");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleGoogleLogin = async () => {
     setBusy(true);
     setError("");
@@ -841,6 +901,14 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
         profile?.role || "member",
       );
     } catch (err: any) {
+      if (err?.code === "auth/multi-factor-auth-required") {
+        pendingFirebaseMfaResolver = getMultiFactorResolver(auth, err);
+        setFirebaseMfaPending(true);
+        setMfaPending(null);
+        setMfaCode("");
+        setError("");
+        return;
+      }
       const msg = translateFirebaseAuthError(err);
       setError(msg);
       void logFirebaseActivity({
@@ -934,6 +1002,14 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
         profile?.role || "member",
       );
     } catch (err: any) {
+      if (err?.code === "auth/multi-factor-auth-required") {
+        pendingFirebaseMfaResolver = getMultiFactorResolver(auth, err);
+        setFirebaseMfaPending(true);
+        setMfaPending(null);
+        setMfaCode("");
+        setError("");
+        return;
+      }
       const msg = translateFirebaseAuthError(err);
       setError(msg);
       void logFirebaseActivity({
@@ -974,21 +1050,25 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
       <section className="login-card">
         <div className="eyebrow">ACESSO SEGURO VIA FIREBASE</div>
         <h2>
-          {mode === "register"
+          {mfaChallengePending
+            ? "Confirme seu autenticador"
+            : mode === "register"
             ? "Criar conta no EcclesiaOS"
             : mode === "recovery"
               ? "Recuperar senha"
               : "Entre no EcclesiaOS"}
         </h2>
         <p>
-          {mode === "register"
-            ? "Preencha seus dados para criar sua conta de membro. Acesso administrativo exige convite."
-            : mode === "recovery"
-              ? "Digite seu e-mail cadastrado para receber um link de redefinição pelo Firebase."
-              : "Acesse sua conta com seu e-mail e senha registrados no Firebase."}
+          {mfaChallengePending
+            ? "Digite o código de seis dígitos exibido no Google Authenticator para concluir o acesso."
+            : mode === "register"
+              ? "Preencha seus dados para criar sua conta de membro. Acesso administrativo exige convite."
+              : mode === "recovery"
+                ? "Digite seu e-mail cadastrado para receber um link de redefinição pelo Firebase."
+                : "Acesse sua conta com seu e-mail e senha registrados no Firebase."}
         </p>
 
-        <div style={{ display: "flex", gap: "8px", margin: "16px 0" }}>
+        {!mfaChallengePending && <div style={{ display: "flex", gap: "8px", margin: "16px 0" }}>
           <button
             type="button"
             className={mode === "login" ? "" : "secondary"}
@@ -1021,7 +1101,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
           >
             Recuperar senha
           </button>
-        </div>
+        </div>}
 
         {successNotice && (
           <p className="notice" role="status" style={{ background: "rgba(131, 214, 181, 0.15)", border: "1px solid var(--green)", color: "var(--green)", padding: "12px", borderRadius: "8px", marginBottom: "16px" }}>
@@ -1029,7 +1109,14 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
           </p>
         )}
 
-        <form onSubmit={handleSubmit}>
+        {mfaChallengePending ? <form onSubmit={confirmFirebaseMfa}>
+          <Field label="Código do autenticador">
+            <input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={mfaCode} onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))} required />
+          </Field>
+          {error && <p className="error" role="alert">{error}</p>}
+          <Submit busy={busy} label="Confirmar MFA e entrar" />
+          <button type="button" className="secondary" disabled={busy} onClick={() => { pendingFirebaseMfaResolver = null; void logoutFirebase(); setFirebaseMfaPending(false); setMfaPending(null); setMfaCode(""); setError(""); }}>Cancelar e sair</button>
+        </form> : <form onSubmit={handleSubmit}>
           {mode === "register" && (
             <>
               <Field label="Nome completo">
@@ -1157,9 +1244,9 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
                   : "Entrar com Firebase"
             }
           />
-        </form>
+        </form>}
 
-        {mode !== "recovery" && (
+        {!mfaChallengePending && mode !== "recovery" && (
           <div style={{ marginTop: "14px" }}>
             <button
               type="button"
