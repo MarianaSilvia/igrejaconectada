@@ -2066,7 +2066,9 @@ app.get(
         const values: unknown[] = [r.church, week];
         if (params.kind !== "all") values.push(params.kind);
         const events = await q(
-          `SELECT id,title,kind,starts_at,ends_at,status,location,description
+          `SELECT id,title,kind,starts_at,ends_at,status,
+                  NULL::text AS location,
+                  NULL::text AS description
              FROM church_events
             WHERE church_id=$1
               AND status='scheduled'
