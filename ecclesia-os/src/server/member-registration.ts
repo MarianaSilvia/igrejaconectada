@@ -617,7 +617,9 @@ export function registrationAdminRoutes(
       requireThat(photo, 404, "Foto não encontrada.");
       s.type("image/webp")
         .set("Content-Disposition", "inline")
-        .set("Cache-Control", "private, max-age=300, stale-while-revalidate=60")
+        // Fotos de membros são dados pessoais protegidos. Não permitir que
+        // navegador, proxy ou CDN mantenha uma cópia após a revogação.
+        .set("Cache-Control", "no-store")
         .send(
           Buffer.from(decrypt(photo.encrypted_data, options.key), "base64"),
         );

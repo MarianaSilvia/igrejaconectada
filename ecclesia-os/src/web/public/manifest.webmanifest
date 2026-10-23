@@ -1,8 +1,11 @@
 {
   "name": "EcclesiaOS",
   "short_name": "EcclesiaOS",
-  "start_url": "/",
+  "id": "/app",
+  "start_url": "/app",
+  "scope": "/",
   "display": "standalone",
+  "description": "Gestão integrada para igrejas, congregações e redes.",
   "background_color": "#101726",
   "theme_color": "#101726",
   "icons": [
@@ -11,6 +14,14 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Abrir o sistema",
+      "short_name": "Sistema",
+      "url": "/app",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
     }
   ]
 }

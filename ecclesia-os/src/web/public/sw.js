@@ -1,4 +1,4 @@
-const CACHE = "ecclesia-shell-v1";
+const CACHE = "ecclesia-shell-v2";
 self.addEventListener("install", (e) =>
   e.waitUntil(
     caches

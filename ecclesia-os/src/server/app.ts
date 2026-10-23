@@ -563,6 +563,14 @@ app.get(
         origin:
           options.mode === "demo" || options.origin.startsWith("https://"),
         firebase: firebaseAdminConfigured(),
+        // Mantido como diagnóstico de compatibilidade: pagamentos automáticos
+        // foram removidos do piloto, portanto este indicador permanece falso
+        // quando os certificados Efí não estão configurados.
+        efiTls: Boolean(
+          process.env.EFI_TLS_CERT_PATH &&
+          process.env.EFI_TLS_KEY_PATH &&
+          process.env.EFI_WEBHOOK_CA_PATH,
+        ),
         communication:
           options.mode === "demo" ||
           process.env.COMMUNICATION_TRANSPORT !== "webhook" ||
@@ -587,9 +595,9 @@ app.get(
         .filter(([key]) =>
           key !== "pix" &&
           key !== "automaticPayments" &&
-          // Local demo mode intentionally does not require a Firebase
-          // service account; hosted homologation does.
-          !(key === "firebase" && options.mode === "demo"),
+          // Firebase is the identity provider in every hosted/test mode.
+          // A missing identity dependency must make readiness fail.
+          key !== "efiTls",
         )
         .every(([, value]) => value === true);
       s.status(ready ? 200 : 503).json({
