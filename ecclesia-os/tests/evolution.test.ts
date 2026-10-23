@@ -4149,21 +4149,19 @@ test("igreja sede cria congregação com conta comercial compartilhada e mantém
 });
 
 
-test("operador da plataforma acessa apenas o painel comercial agregado", async () => {
+test("área comercial permanece bloqueada no piloto", async () => {
   await db.transaction((q) => q("INSERT INTO platform_memberships(user_id,role) VALUES($1,'platform_admin') ON CONFLICT(user_id) DO UPDATE SET role=excluded.role", [IDS.admin]));
   try {
     const accounts = await call("/platform/billing/accounts", undefined, IDS.admin, "GET", IDS.churchA);
-    assert.equal(accounts.status, 200, JSON.stringify(accounts.data));
-    assert.ok(Array.isArray(accounts.data));
+    assert.equal(accounts.status, 404, JSON.stringify(accounts.data));
     const usage = await call("/platform/usage", undefined, IDS.admin, "GET", IDS.churchA);
-    assert.equal(usage.status, 200, JSON.stringify(usage.data));
+    assert.equal(usage.status, 404, JSON.stringify(usage.data));
     const history = await call("/platform/billing/history", undefined, IDS.admin, "GET", IDS.churchA);
-    assert.equal(history.status, 200, JSON.stringify(history.data));
+    assert.equal(history.status, 404, JSON.stringify(history.data));
     const csv = await fetch(`${base}/api/platform/billing/export.csv?status=all`, { headers: { Cookie: cookies.get(IDS.admin) ?? "", "x-church-id": IDS.churchA } });
-    assert.equal(csv.status, 200, await csv.clone().text());
-    assert.match(csv.headers.get("content-type") ?? "", /text\/csv/);
+    assert.equal(csv.status, 404, await csv.clone().text());
     const denied = await call("/platform/billing/accounts", undefined, IDS.adminB, "GET", IDS.churchB);
-    assert.equal(denied.status, 403);
+    assert.equal(denied.status, 404);
   } finally {
     await db.transaction((q) => q("DELETE FROM platform_memberships WHERE user_id=$1", [IDS.admin]));
   }
