@@ -44,6 +44,27 @@ function Status({ error, data }: { error: string; data: unknown }) {
     </div>
   ) : null;
 }
+const portalAgendaKinds: Record<string, { label: string; color: string }> = {
+  service: { label: "Culto", color: "#2563eb" },
+  class: { label: "Ensino", color: "#15803d" },
+  event: { label: "Evento", color: "#c2410c" },
+  meeting: { label: "Reunião", color: "#7c3aed" },
+};
+function portalAgendaDay(value: string) {
+  return new Date(value).toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
+}
+function portalAgendaTime(value: string) {
+  return new Date(value).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
+}
 function Stat({
   label,
   value,
@@ -3543,6 +3564,18 @@ export function Portal(props: PageProps & { mode: string }) {
   const portalMedia = useData<RecordData[]>("/portal/media", props);
   const portalMurals = useData<RecordData[]>("/portal/murals", props);
   const portalPix = useData<RecordData | null>("/portal/pix", props);
+  const [agendaWeek, setAgendaWeek] = useState(() => {
+    const today = new Date();
+    const day = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+    return monday.toISOString().slice(0, 10);
+  });
+  const [agendaKind, setAgendaKind] = useState("all");
+  const portalAgenda = useData<RecordData>(
+    `/portal/agenda?week=${agendaWeek}&kind=${agendaKind}`,
+    props,
+  );
   const [portalCertificatePage, setPortalCertificatePage] = useState(1);
   const portalCertificates = useData<RecordData>(
     `/portal/education/certificates?page=${portalCertificatePage}&pageSize=25`,
@@ -3611,6 +3644,81 @@ export function Portal(props: PageProps & { mode: string }) {
           </p>
         </div>
         <Icon name="heart" size={100} />
+      </section>
+      <section className="panel" style={{ padding: 24 }} aria-labelledby="portal-agenda-title">
+        <SectionHead
+          title="Agenda da semana"
+          subtitle="Veja os cultos, ensinos, reuniões e eventos da sua congregação nesta semana."
+        />
+        <div className="toolbar" style={{ alignItems: "end" }}>
+          <Field label="Semana iniciando em">
+            <input
+              type="date"
+              value={agendaWeek}
+              aria-label="Semana da agenda"
+              onChange={(event) => setAgendaWeek(event.target.value)}
+            />
+          </Field>
+          <Field label="Categoria">
+            <select value={agendaKind} onChange={(event) => setAgendaKind(event.target.value)}>
+              <option value="all">Todas</option>
+              <option value="service">Cultos</option>
+              <option value="class">Ensino</option>
+              <option value="event">Eventos</option>
+              <option value="meeting">Reuniões</option>
+            </select>
+          </Field>
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => {
+              const date = new Date(`${agendaWeek}T12:00:00`);
+              date.setDate(date.getDate() - 7);
+              setAgendaWeek(date.toISOString().slice(0, 10));
+            }}
+          >
+            Semana anterior
+          </button>
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => {
+              const date = new Date(`${agendaWeek}T12:00:00`);
+              date.setDate(date.getDate() + 7);
+              setAgendaWeek(date.toISOString().slice(0, 10));
+            }}
+          >
+            Próxima semana
+          </button>
+        </div>
+        {portalAgenda.error && <p role="alert" className="error">{portalAgenda.error}</p>}
+        {!portalAgenda.data && !portalAgenda.error && <p className="muted">Carregando agenda…</p>}
+        {portalAgenda.data?.events?.length ? (
+          <div style={{ display: "grid", gap: 10 }}>
+            {portalAgenda.data.events.map((event: RecordData) => {
+              const category = portalAgendaKinds[event.kind] ?? { label: "Atividade", color: "#475569" };
+              return (
+                <article
+                  key={event.id}
+                  style={{ display: "grid", gridTemplateColumns: "8px 1fr auto", gap: 12, alignItems: "start", padding: 14, border: "1px solid var(--line)", borderRadius: 10 }}
+                >
+                  <span aria-hidden="true" style={{ width: 8, minHeight: 54, borderRadius: 8, background: category.color }} />
+                  <div>
+                    <strong>{event.title}</strong>
+                    <p style={{ margin: "4px 0" }}>
+                      {portalAgendaDay(event.starts_at)} · {portalAgendaTime(event.starts_at)}–{portalAgendaTime(event.ends_at)}
+                    </p>
+                    {event.location && <small className="muted">{event.location}</small>}
+                    {event.description && <p className="muted" style={{ margin: "6px 0 0" }}>{event.description}</p>}
+                  </div>
+                  <span className="badge" style={{ borderColor: category.color, color: category.color }}>{category.label}</span>
+                </article>
+              );
+            })}
+          </div>
+        ) : portalAgenda.data ? (
+          <Empty>Nenhuma atividade publicada para esta semana.</Empty>
+        ) : null}
       </section>
       {!!portalMurals.data?.length && (
         <section className="panel" style={{ padding: 24 }}>

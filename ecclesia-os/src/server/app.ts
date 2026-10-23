@@ -2051,6 +2051,35 @@ app.get(
       );
     }),
   );
+  app.get(
+    "/api/portal/agenda",
+    asyncRoute(async (r: AuthRequest, s) => {
+      const params = z
+        .object({
+          week: z.iso.date().optional(),
+          kind: z.enum(["all", "meeting", "service", "event", "class"]).default("all"),
+        })
+        .parse(r.query);
+      const week = params.week ?? new Date().toISOString().slice(0, 10);
+      const result = await scoped(r, async (q) => {
+        const kindFilter = params.kind === "all" ? "" : " AND kind=$3";
+        const values: unknown[] = [r.church, week];
+        if (params.kind !== "all") values.push(params.kind);
+        const events = await q(
+          `SELECT id,title,kind,starts_at,ends_at,status,location,description
+             FROM church_events
+            WHERE church_id=$1
+              AND status='scheduled'
+              AND starts_at >= $2::date
+              AND starts_at < ($2::date + interval '7 days')${kindFilter}
+            ORDER BY starts_at ASC,id ASC`,
+          values,
+        );
+        return { week, events };
+      });
+      s.json(result);
+    }),
+  );
   app.patch(
     "/api/portal/tasks/:id",
     asyncRoute(async (r: AuthRequest, s) => {
