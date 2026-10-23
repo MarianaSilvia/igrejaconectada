@@ -877,7 +877,7 @@ app.get(
         await scoped(r, async (q) => {
           await permit(q, "people");
           return q(
-            "SELECT p.*,h.name AS household,EXISTS(SELECT 1 FROM member_photos photo WHERE photo.person_id=p.id) AS has_photo FROM people p LEFT JOIN households h ON h.id=p.household_id ORDER BY p.name",
+            "SELECT p.*,h.name AS household,photo.updated_at AS photo_updated_at,photo.person_id IS NOT NULL AS has_photo FROM people p LEFT JOIN households h ON h.id=p.household_id LEFT JOIN LATERAL (SELECT person_id,updated_at FROM member_photos WHERE person_id=p.id LIMIT 1) photo ON true ORDER BY p.name",
           );
         }),
       ),
@@ -926,7 +926,7 @@ app.get(
           );
           const offset = (page - 1) * pageSize;
           const rows = await q(
-            `SELECT p.*,h.name AS household,EXISTS(SELECT 1 FROM member_photos photo WHERE photo.person_id=p.id) AS has_photo FROM people p LEFT JOIN households h ON h.id=p.household_id WHERE ${where.join(" AND ")} ORDER BY p.name LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+            `SELECT p.*,h.name AS household,photo.updated_at AS photo_updated_at,photo.person_id IS NOT NULL AS has_photo FROM people p LEFT JOIN households h ON h.id=p.household_id LEFT JOIN LATERAL (SELECT person_id,updated_at FROM member_photos WHERE person_id=p.id LIMIT 1) photo ON true WHERE ${where.join(" AND ")} ORDER BY p.name LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
             [...params, pageSize, offset],
           );
           return {

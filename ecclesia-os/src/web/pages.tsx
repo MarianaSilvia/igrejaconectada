@@ -1309,8 +1309,12 @@ export function People(
                         {p.has_photo ? (
                           <img
                             className="avatar mini"
-                            src={`/api/people/${p.id}/photo?church=${props.church}&v=${props.revision}`}
+                            src={`/api/people/${p.id}/photo?church=${props.church}${p.photo_updated_at ? `&v=${encodeURIComponent(String(p.photo_updated_at))}` : ""}`}
                             alt={`Foto de ${p.name}`}
+                            loading="lazy"
+                            decoding="async"
+                            width={40}
+                            height={40}
                           />
                         ) : (
                           <span className="avatar mini">{p.name[0]}</span>

@@ -93,12 +93,27 @@ export default function MemberForm({
     }
     setReading(true);
     try {
-      const value = await new Promise<string>((resolve, reject) => {
+      const original = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result));
         reader.onerror = () =>
           reject(new Error("Não foi possível ler a foto."));
         reader.readAsDataURL(file);
+      });
+      const value = await new Promise<string>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => {
+          const scale = Math.min(1, 640 / Math.max(image.naturalWidth, image.naturalHeight));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+          const context = canvas.getContext("2d");
+          if (!context) return reject(new Error("Não foi possível preparar a foto."));
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/webp", 0.82));
+        };
+        image.onerror = () => reject(new Error("Não foi possível preparar a foto."));
+        image.src = original;
       });
       if (sequence === photoSequence.current) setPhoto(value);
     } catch (e) {
