@@ -414,20 +414,30 @@ export function accessRoutes(
               ],
             );
           }
-          requireThat(
-            !(
-              await q(
-                "SELECT 1 FROM memberships WHERE user_id=$1 AND church_id=$2",
-                [u.id, i.church_id],
-              )
-            ).length,
-            409,
-            "Já existe vínculo. Altere as permissões pela administração.",
+          const [membership] = await q(
+            "SELECT role FROM memberships WHERE user_id=$1 AND church_id=$2 FOR UPDATE",
+            [u.id, i.church_id],
           );
-          await q(
-            "INSERT INTO memberships(user_id,church_id,role) VALUES($1,$2,$3)",
-            [u.id, i.church_id, i.role],
-          );
+          if (membership) {
+            // A pessoa pode ter criado um perfil de membro antes de receber
+            // o convite. Nesse caso, o convite autorizado promove apenas o
+            // vínculo de membro da mesma igreja, sem permitir escalada de um
+            // papel administrativo já existente.
+            requireThat(
+              membership.role === "member" && i.role !== "member",
+              409,
+              "Já existe um vínculo administrativo. Altere a função pela administração.",
+            );
+            await q(
+              "UPDATE memberships SET role=$3 WHERE user_id=$1 AND church_id=$2",
+              [u.id, i.church_id, i.role],
+            );
+          } else {
+            await q(
+              "INSERT INTO memberships(user_id,church_id,role) VALUES($1,$2,$3)",
+              [u.id, i.church_id, i.role],
+            );
+          }
           await q("UPDATE account_invites SET accepted_at=now() WHERE id=$1", [
             i.id,
           ]);

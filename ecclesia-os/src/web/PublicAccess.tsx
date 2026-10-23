@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, type RecordData } from "./api";
 import { Field, Submit, formValues } from "./ui";
-import { createFirebaseIdentity, auth } from "./firebase";
+import { createFirebaseIdentity, loginWithEmail, auth } from "./firebase";
 export default function PublicAccess({
   kind,
   token,
@@ -48,9 +48,10 @@ export default function PublicAccess({
           } catch (firebaseError) {
             const code = String((firebaseError as { code?: string }).code ?? "");
             if (code !== "auth/email-already-in-use") throw firebaseError;
-            throw new Error(
-              "Este e-mail já possui uma conta no Firebase. Entre com essa conta em outra aba ou peça um novo convite para concluir o vínculo.",
-            );
+            // Reuse an existing Firebase identity when the person first
+            // registered as a member. The server still decides whether the
+            // invitation can promote the church membership.
+            await loginWithEmail(info!.email, b.password);
           }
         }
         await api(`/auth/invites/${token}`, "POST", info?.existing ? {} : b);
