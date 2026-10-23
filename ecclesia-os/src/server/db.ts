@@ -13,7 +13,14 @@ function poolConfig(connectionString: string) {
   return {
     connectionString: parsed.toString(),
     ssl: { ca, rejectUnauthorized: true },
-    max: 5,
+    // Vercel cria várias instâncias da função. Um pool grande em cada
+    // instância esgota rapidamente o limite de conexões do Supabase.
+    // Uma conexão por pool é suficiente porque cada operação já usa uma
+    // transação curta e evita EMAXCONNSESSION em picos de acesso.
+    max: 1,
+    idleTimeoutMillis: 1000,
+    connectionTimeoutMillis: 5000,
+    allowExitOnIdle: true,
   };
 }
 
