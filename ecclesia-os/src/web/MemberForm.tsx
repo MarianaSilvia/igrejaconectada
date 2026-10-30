@@ -393,7 +393,24 @@ export default function MemberForm({
           <Field label="Nome do cônjuge"><input value={profile.spouseName} maxLength={150} onChange={(e) => change("spouseName", e.target.value)} /></Field>
           <Field label="Data do casamento"><input type="date" max={todayInBrazil()} value={profile.marriageDate} onChange={(e) => change("marriageDate", e.target.value)} /></Field>
           <Field label="ID/registro do casamento"><input value={profile.marriageId} maxLength={60} onChange={(e) => change("marriageId", e.target.value)} /></Field>
+          <Field label="Possui filhos?">
+            <select
+              value={Number(profile.childrenCount || 0) > 0 || Boolean(String(profile.childrenNames ?? "").trim()) ? "yes" : "no"}
+              onChange={(e) => {
+                if (e.target.value === "no") {
+                  change("childrenCount", "0");
+                  change("childrenNames", "");
+                } else if (!Number(profile.childrenCount || 0)) {
+                  change("childrenCount", "1");
+                }
+              }}
+            >
+              <option value="no">Não</option>
+              <option value="yes">Sim</option>
+            </select>
+          </Field>
           <Field label="Quantidade de filhos"><input type="number" min="0" max="50" value={profile.childrenCount} onChange={(e) => change("childrenCount", e.target.value)} /></Field>
+          <Field label="Nomes dos filhos"><textarea rows={3} placeholder="Um nome por linha" value={profile.childrenNames ?? ""} onChange={(e) => change("childrenNames", e.target.value)} /></Field>
         </div>
       </section>
       <section className="member-section">

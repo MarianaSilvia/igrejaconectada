@@ -128,7 +128,7 @@ export async function buildPdf(data: Awaited<ReturnType<typeof loadPerson>>, gen
     doc.fillColor(colors.ink);
   };
 
-  drawHeader("Ficha cadastral de membro", isMinor ? "Cadastro de menor de idade - dados do responsável legal na segunda página" : "Cadastro e acompanhamento administrativo da membresia");
+  drawHeader("Ficha cadastral de membro", isMinor ? "Cadastro de menor de idade - responsável legal identificado na ficha" : "Cadastro e acompanhamento administrativo da membresia");
   const photoX = 455, photoY = 92, photoW = 112, photoH = 132;
   doc.roundedRect(photoX, photoY, photoW, photoH, 4).lineWidth(1).stroke(colors.blue);
   if (photo) { try { doc.image(photo, photoX + 5, photoY + 5, { fit: [photoW - 10, photoH - 10], align: "center", valign: "center" }); } catch { /* foto inválida não interrompe a ficha */ } }
@@ -161,6 +161,11 @@ export async function buildPdf(data: Awaited<ReturnType<typeof loadPerson>>, gen
   field("Estado civil", p.maritalStatus, 231, 658, 207);
   field("Data de cadastro", date(data.person.created_at), 28, 696, 195);
   field("Autorização de imagem", p.imageAuthorization ? "Autorizada" : "Não informada", 231, 696, 207);
+  if (isMinor) {
+    field("Responsável legal", p.guardianName, 28, 738, 195, { height: 30 });
+    field("Parentesco", p.guardianRelationship, 231, 738, 100, { height: 30 });
+    field("Contato do responsável", p.guardianContact, 339, 738, 99, { height: 30 });
+  }
   footer(1);
 
   doc.addPage();
@@ -172,30 +177,26 @@ export async function buildPdf(data: Awaited<ReturnType<typeof loadPerson>>, gen
   field("Data do casamento", date(p.marriageDate), 308, 198, 126);
   field("Registro do casamento", p.marriageId, 28, 236, 270);
   field("Quantidade de filhos", p.childrenCount, 308, 236, 126);
-  section("BATISMO, CONVERSÃO E RECEBIMENTO", 284);
-  field("Origem / procedência", p.origin, 28, 314, 539);
-  field("Data da conversão", date(p.conversionDate), 28, 352, 170);
-  field("Local de batismo", p.baptismLocation, 208, 352, 226);
-  field("Data de batismo", date(p.baptismDate), 28, 390, 170);
-  field("Batismo no Espírito Santo", p.holySpiritBaptism === "yes" ? "Sim" : p.holySpiritBaptism === "no" ? "Não" : "Não informado", 208, 390, 226);
-  field("Data do batismo no Espírito Santo", date(p.holySpiritBaptismDate), 28, 428, 170);
-  field("Tipo de recebimento", p.receptionType, 208, 428, 226);
-  field("Data de recebimento", date(p.receptionDate), 28, 466, 170);
-  field("Tipo de admissão", p.admissionType, 208, 466, 226);
-  section("GRUPOS, ENSINO E FUNÇÕES", 514);
-  field("Grupos", data.groups.map((g: Row) => g.name).join(", "), 28, 544, 539);
-  field("Vínculo", relationship, 28, 582, 170);
-  field("Funções ministeriais", adm.roles || adm.ministries, 208, 582, 359);
+  paragraph("Nomes dos filhos", String(p.childrenNames ?? "").replace(/\n/g, ", "), 28, 274, 539, 46);
+  section("BATISMO, CONVERSÃO E RECEBIMENTO", 332);
+  field("Origem / procedência", p.origin, 28, 362, 539);
+  field("Data da conversão", date(p.conversionDate), 28, 400, 170);
+  field("Local de batismo", p.baptismLocation, 208, 400, 226);
+  field("Data de batismo", date(p.baptismDate), 28, 438, 170);
+  field("Batismo no Espírito Santo", p.holySpiritBaptism === "yes" ? "Sim" : p.holySpiritBaptism === "no" ? "Não" : "Não informado", 208, 438, 226);
+  field("Data do batismo no Espírito Santo", date(p.holySpiritBaptismDate), 28, 476, 170);
+  field("Tipo de recebimento", p.receptionType, 208, 476, 226);
+  field("Data de recebimento", date(p.receptionDate), 28, 514, 170);
+  field("Tipo de admissão", p.admissionType, 208, 514, 226);
+  section("GRUPOS, ENSINO E FUNÇÕES", 562);
+  field("Grupos", data.groups.map((g: Row) => g.name).join(", "), 28, 592, 539);
+  field("Vínculo", relationship, 28, 630, 170);
+  field("Funções ministeriais", adm.roles || adm.ministries, 208, 630, 359);
   const courseSummary = data.courses.map((course: Row) => [course.course_name, course.track, course.status].filter(Boolean).join(" - ")).join("; ");
-  paragraph("EBD, discipulado e cursos", courseSummary, 28, 620, 539, 48);
-  section("HISTÓRICO ADMINISTRATIVO", 682);
+  paragraph("EBD, discipulado e cursos", courseSummary, 28, 668, 539, 48);
+  section("HISTÓRICO ADMINISTRATIVO", 726);
   const historySummary = data.history.map((event: Row) => `${date(event.event_date)} - ${event.title || event.event_type}${event.description ? `: ${event.description}` : ""}`).join("\n");
-  paragraph("Linha do tempo", historySummary, 28, 712, 539, 58);
-  if (isMinor) {
-    field("Responsável legal", p.guardianName, 28, 778, 220, { height: 30 });
-    field("Parentesco", p.guardianRelationship, 258, 778, 130, { height: 30 });
-    field("Contato do responsável", p.guardianContact, 398, 778, 169, { height: 30 });
-  }
+  paragraph("Linha do tempo", historySummary, 28, 756, 539, 38);
   footer(2);
   doc.end();
   return done;

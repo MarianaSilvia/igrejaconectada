@@ -126,13 +126,16 @@ function normalizedName(value: unknown) {
     .toLowerCase();
 }
 async function connectFamilyLinks(q: Query, church: string, personId: string, profile: MemberProfile, key: Buffer) {
-  const names = [profile.spouseName, profile.fatherName, profile.motherName]
-    .map((name) => String(name ?? "").trim())
-    .filter(Boolean);
+  const requested = [
+    { name: String(profile.spouseName ?? "").trim(), kind: "spouse" },
+    { name: String(profile.fatherName ?? "").trim(), kind: "parent" },
+    { name: String(profile.motherName ?? "").trim(), kind: "parent" },
+    ...String(profile.childrenNames ?? "").split(/[\n,;]/).map((name) => ({ name: name.trim(), kind: "child" })),
+  ].filter((item) => item.name);
   const related: Row[] = [];
-  for (const name of names) {
-    const matches = await q("SELECT id,name,household_id FROM people WHERE church_id=$1 AND id<>$2 AND lower(trim(name))=lower(trim($3)) LIMIT 2", [church, personId, name]);
-    if (matches.length === 1 && !related.some((item) => item.id === matches[0].id)) related.push(matches[0]);
+  for (const item of requested) {
+    const matches = await q("SELECT id,name,household_id FROM people WHERE church_id=$1 AND id<>$2 AND lower(trim(name))=lower(trim($3)) LIMIT 2", [church, personId, item.name]);
+    if (matches.length === 1 && !related.some((value) => value.id === matches[0].id)) related.push({ ...matches[0], relationKind: item.kind });
   }
   if (!related.length) return;
   const allIds = [personId, ...related.map((item) => item.id)];
@@ -154,15 +157,28 @@ async function connectFamilyLinks(q: Query, church: string, personId: string, pr
     if (!relationProfile.length) continue;
     const payload = JSON.parse(decrypt(relationProfile[0].encrypted_profile, key));
     const relationData = payload.profile ?? {};
-    if (normalizedName(profile.spouseName) === normalizedName(relation.name) && !relationData.spouseName) relationData.spouseName = currentPerson.name;
+    if (relation.relationKind === "spouse" && !relationData.spouseName) relationData.spouseName = currentPerson.name;
+    if (relation.relationKind === "child" && !relationData.fatherName && !relationData.motherName) {
+      if (profile.sex === "Masculino") relationData.fatherName = currentPerson.name;
+      if (profile.sex === "Feminino") relationData.motherName = currentPerson.name;
+    }
     const children = await q("SELECT p.id,p.name,mp.encrypted_profile FROM people p JOIN member_profiles mp ON mp.person_id=p.id AND mp.church_id=p.church_id WHERE p.church_id=$1 AND p.household_id=$2 AND p.id<>$3", [church, householdId, relation.id]);
     const childrenCount = children.filter((child) => {
       const childProfile = JSON.parse(decrypt(child.encrypted_profile, key)).profile ?? {};
       return normalizedName(childProfile.fatherName) === normalizedName(relation.name) || normalizedName(childProfile.motherName) === normalizedName(relation.name);
     }).length;
-    relationData.childrenCount = String(childrenCount);
+    if (relation.relationKind !== "child") relationData.childrenCount = String(Math.max(childrenCount, String(profile.childrenNames ?? "").split(/[\n,;]/).map((name) => name.trim()).filter(Boolean).length));
     payload.profile = relationData;
     await q("UPDATE member_profiles SET encrypted_profile=$1,version=version+1,updated_at=now() WHERE person_id=$2 AND church_id=$3", [encrypt(JSON.stringify(payload), key), relation.id, church]);
+  }
+  const listedChildren = String(profile.childrenNames ?? "").split(/[\n,;]/).map((name) => name.trim()).filter(Boolean);
+  if (listedChildren.length) {
+    const [stored] = await q("SELECT encrypted_profile FROM member_profiles WHERE person_id=$1 AND church_id=$2", [personId, church]);
+    if (stored) {
+      const payload = JSON.parse(decrypt(stored.encrypted_profile, key));
+      payload.profile = { ...(payload.profile ?? {}), childrenCount: String(listedChildren.length) };
+      await q("UPDATE member_profiles SET encrypted_profile=$1,version=version+1,updated_at=now() WHERE person_id=$2 AND church_id=$3", [encrypt(JSON.stringify(payload), key), personId, church]);
+    }
   }
 }
 async function saveProfile(
