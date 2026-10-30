@@ -137,7 +137,18 @@ async function connectFamilyLinks(q: Query, church: string, personId: string, pr
     const matches = await q("SELECT id,name,household_id FROM people WHERE church_id=$1 AND id<>$2 AND lower(trim(name))=lower(trim($3)) LIMIT 2", [church, personId, item.name]);
     if (matches.length === 1 && !related.some((value) => value.id === matches[0].id)) related.push({ ...matches[0], relationKind: item.kind });
   }
-  if (!related.length) return;
+  const listedChildren = String(profile.childrenNames ?? "").split(/[\n,;]/).map((name) => name.trim()).filter(Boolean);
+  if (!related.length) {
+    if (listedChildren.length) {
+      const [stored] = await q("SELECT encrypted_profile FROM member_profiles WHERE person_id=$1 AND church_id=$2", [personId, church]);
+      if (stored) {
+        const payload = JSON.parse(decrypt(stored.encrypted_profile, key));
+        payload.profile = { ...(payload.profile ?? {}), childrenCount: String(listedChildren.length) };
+        await q("UPDATE member_profiles SET encrypted_profile=$1,version=version+1,updated_at=now() WHERE person_id=$2 AND church_id=$3", [encrypt(JSON.stringify(payload), key), personId, church]);
+      }
+    }
+    return;
+  }
   const allIds = [personId, ...related.map((item) => item.id)];
   const members = await q("SELECT id,household_id FROM people WHERE church_id=$1 AND id=ANY($2::uuid[])", [church, allIds]);
   const householdIds = [...new Set(members.map((item) => item.household_id).filter(Boolean))];
@@ -171,7 +182,6 @@ async function connectFamilyLinks(q: Query, church: string, personId: string, pr
     payload.profile = relationData;
     await q("UPDATE member_profiles SET encrypted_profile=$1,version=version+1,updated_at=now() WHERE person_id=$2 AND church_id=$3", [encrypt(JSON.stringify(payload), key), relation.id, church]);
   }
-  const listedChildren = String(profile.childrenNames ?? "").split(/[\n,;]/).map((name) => name.trim()).filter(Boolean);
   if (listedChildren.length) {
     const [stored] = await q("SELECT encrypted_profile FROM member_profiles WHERE person_id=$1 AND church_id=$2", [personId, church]);
     if (stored) {
