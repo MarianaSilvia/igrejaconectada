@@ -544,6 +544,58 @@ test("review updates an existing member without duplicates, stale writes or lost
   );
 });
 
+test("secretary exports an authorized member profile as a private PDF", async () => {
+  const people = await call("/people", { user: "secretary" });
+  const member = people.data.find((p: any) => p.name === "Maria Exemplo");
+  assert.ok(member);
+  const response = await fetch(`${base}/api/people/${member.id}/profile.pdf`, {
+    headers: { "x-church-id": IDS.churchA, Cookie: cookies.get("secretary")! },
+  });
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.match(response.headers.get("content-type") ?? "", /application\/pdf/);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const bytes = Buffer.from(await response.arrayBuffer());
+  assert.equal(bytes.subarray(0, 5).toString(), "%PDF-");
+  assert.ok(bytes.includes(Buffer.from("Maria Exemplo")));
+
+  const otherChurch = await fetch(`${base}/api/people/${member.id}/profile.pdf`, {
+    headers: { "x-church-id": IDS.churchB, Cookie: cookies.get("adminB")! },
+  });
+  assert.ok([403, 404].includes(otherChurch.status));
+
+  const denied = await fetch(`${base}/api/people/${member.id}/profile.pdf`, {
+    headers: { "x-church-id": IDS.churchA, Cookie: cookies.get("member")! },
+  });
+  assert.equal(denied.status, 403);
+});
+
+test("batch member profile export returns a ZIP and enforces the limit", async () => {
+  const people = await call("/people", { user: "secretary" });
+  const member = people.data.find((p: any) => p.name === "Maria Exemplo");
+  assert.ok(member);
+  const response = await fetch(`${base}/api/people/export.pdf`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-church-id": IDS.churchA,
+      Cookie: cookies.get("secretary")!,
+    },
+    body: JSON.stringify({ personIds: [member.id] }),
+  });
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.match(response.headers.get("content-type") ?? "", /application\/zip/);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const zip = Buffer.from(await response.arrayBuffer());
+  assert.equal(zip.subarray(0, 2).toString(), "PK");
+
+  const tooMany = await call("/people/export.pdf", {
+    user: "secretary",
+    method: "POST",
+    body: { personIds: Array.from({ length: 101 }, () => member.id) },
+  });
+  assert.equal(tooMany.status, 400);
+});
+
 test("online form requires privacy acknowledgement, responsible adult for a minor and signed challenge", async () => {
   const body = {
     profile: example("Menor"),

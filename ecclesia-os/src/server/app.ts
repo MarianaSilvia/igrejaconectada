@@ -53,6 +53,7 @@ import { mediaRoutes } from "./media.js";
 import { historyRoutes } from "./history.js";
 import { firebaseAdminConfigured, verifyFirebaseIdToken } from "./firebase-auth.js";
 import { peopleInsightsRoutes } from "./people-insights.js";
+import { profilePdfRoutes } from "./profile-pdf.js";
 import {
   registrationPublicRoutes,
   registrationAdminRoutes,
@@ -2593,6 +2594,7 @@ app.get(
   assistanceRoutes(app, db, options.key);
   mediaRoutes(app, db, options.key);
   historyRoutes(app, db);
+  profilePdfRoutes(app, db, { key: options.key });
   peopleInsightsRoutes(app, db);
   registrationAdminRoutes(app, db, options);
   app.use("/api", (_r, s) =>

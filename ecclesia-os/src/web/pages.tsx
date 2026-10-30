@@ -887,7 +887,9 @@ export function People(
     [contactAssignee, setContactAssignee] = useState(""),
     [historyPage, setHistoryPage] = useState(1),
     [visitorPage, setVisitorPage] = useState(1),
-    [profileOverview, setProfileOverview] = useState<RecordData | null>(null);
+    [profileOverview, setProfileOverview] = useState<RecordData | null>(null),
+    [selectedPeople, setSelectedPeople] = useState<string[]>([]),
+    [pdfBusy, setPdfBusy] = useState(false);
   const pageSize = 50;
   const peoplePath = `/people/paged?page=${page}&pageSize=${pageSize}&q=${encodeURIComponent(props.search)}&status=${encodeURIComponent(filter)}${campusId ? `&campusId=${encodeURIComponent(campusId)}` : ""}`;
   const { data, error } = useData<RecordData>(peoplePath, props);
@@ -924,6 +926,28 @@ export function People(
     }
   };
   const rows: RecordData[] = (data?.items as RecordData[] | undefined) ?? [];
+  const downloadPeoplePdf = async (personIds: string[]) => {
+    if (!personIds.length || pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      const response = personIds.length === 1
+        ? await fetch(`/api/people/${encodeURIComponent(personIds[0])}/profile.pdf`, { headers: { "x-church-id": props.church } })
+        : await fetch("/api/people/export.pdf", { method: "POST", headers: { "Content-Type": "application/json", "x-church-id": props.church }, body: JSON.stringify({ personIds }) });
+      if (!response.ok) throw new Error("Exportação PDF não autorizada.");
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = personIds.length === 1 ? "ficha-membro.pdf" : "fichas-membros.zip";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      props.notify(personIds.length === 1 ? "Ficha PDF gerada." : `${personIds.length} fichas exportadas em ZIP.`);
+      setSelectedPeople([]);
+    } catch (e) {
+      props.notify((e as Error).message);
+    } finally {
+      setPdfBusy(false);
+    }
+  };
   async function saveView() {
     const name = window.prompt("Nome desta lista salva:");
     if (!name?.trim()) return;
@@ -1289,6 +1313,14 @@ export function People(
         >
           <button
             className="text-button"
+            disabled={pdfBusy || !selectedPeople.length}
+            onClick={() => void downloadPeoplePdf(selectedPeople)}
+            title="Exporta as fichas selecionadas em um arquivo ZIP"
+          >
+            {pdfBusy ? "Gerando PDF…" : "Exportar fichas PDF"} <Icon name="download" size={15} />
+          </button>
+          <button
+            className="text-button"
             onClick={async () => {
               try {
                 const res = await fetch("/api/people/export", {
@@ -1315,6 +1347,14 @@ export function People(
             <table>
               <thead>
                 <tr>
+                  <th aria-label="Selecionar membros">
+                    <input
+                      type="checkbox"
+                      aria-label="Selecionar todos os membros desta página"
+                      checked={rows.length > 0 && rows.every((p) => selectedPeople.includes(p.id))}
+                      onChange={(event) => setSelectedPeople((current) => event.target.checked ? Array.from(new Set([...current, ...rows.map((p) => p.id)])) : current.filter((id) => !rows.some((p) => p.id === id)))}
+                    />
+                  </th>
                   <th>Nome</th>
                   <th>Contato</th>
                   <th>Família</th>
@@ -1325,6 +1365,14 @@ export function People(
               <tbody>
                 {rows.map((p) => (
                   <tr key={p.id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        aria-label={`Selecionar ${p.name}`}
+                        checked={selectedPeople.includes(p.id)}
+                        onChange={(event) => setSelectedPeople((current) => event.target.checked ? [...new Set([...current, p.id])] : current.filter((id) => id !== p.id))}
+                      />
+                    </td>
                     <td>
                       <span className="person-name">
                         {p.has_photo ? (
@@ -1442,6 +1490,13 @@ export function People(
                         >
                           Gerar acesso
                         </button>
+                        <button
+                          className="text-button"
+                          disabled={pdfBusy}
+                          onClick={() => void downloadPeoplePdf([p.id])}
+                        >
+                          Ficha PDF
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1551,6 +1606,18 @@ export function People(
                 });
             }}
           />
+          {memberEditor.initial && (
+            <div className="toolbar">
+              <button
+                className="button secondary"
+                type="button"
+                disabled={pdfBusy}
+                onClick={() => void downloadPeoplePdf([memberEditor.initial!.id])}
+              >
+                {pdfBusy ? "Gerando ficha…" : "Baixar ficha completa em PDF"}
+              </button>
+            </div>
+          )}
           {memberEditor.initial && (
             <section className="panel-footnote">
               <h3>Histórico de alterações</h3>
