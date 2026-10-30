@@ -1044,7 +1044,7 @@ app.get(
         await q("DELETE FROM event_registrations WHERE church_id=$1 AND person_id=$2", args);
         await q("DELETE FROM cell_members WHERE church_id=$1 AND person_id=$2", args);
         await q("DELETE FROM attendance WHERE church_id=$1 AND person_id=$2", args);
-        await q("DELETE FROM kids_checkins WHERE church_id=$1 AND (child_id IN (SELECT id FROM kids_children WHERE church_id=$1 AND person_id=$2) OR guardian_id IN (SELECT id FROM kids_guardians WHERE church_id=$1 AND guardian_person_id=$2))", args);
+        await q("DELETE FROM kids_checkins WHERE church_id=$1 AND (child_id IN (SELECT id FROM kids_children WHERE church_id=$1 AND person_id=$2) OR guardian_id IN (SELECT id FROM kids_guardians WHERE church_id=$1 AND guardian_person_id=$2) OR pickup_guardian_id IN (SELECT id FROM kids_guardians WHERE church_id=$1 AND guardian_person_id=$2))", args);
         await q("DELETE FROM kids_exceptions WHERE church_id=$1 AND child_id IN (SELECT id FROM kids_children WHERE church_id=$1 AND person_id=$2)", args);
         await q("DELETE FROM kids_guardians WHERE church_id=$1 AND (child_id IN (SELECT id FROM kids_children WHERE church_id=$1 AND person_id=$2) OR guardian_person_id=$2)", args);
         await q("DELETE FROM kids_children WHERE church_id=$1 AND person_id=$2", args);
