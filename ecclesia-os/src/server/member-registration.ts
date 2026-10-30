@@ -117,6 +117,54 @@ async function loadProfile(q: Query, id: string, key: Buffer) {
     ageGroup: ageGroup(payload.profile.birthDate),
   };
 }
+function normalizedName(value: unknown) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+async function connectFamilyLinks(q: Query, church: string, personId: string, profile: MemberProfile, key: Buffer) {
+  const names = [profile.spouseName, profile.fatherName, profile.motherName]
+    .map((name) => String(name ?? "").trim())
+    .filter(Boolean);
+  const related: Row[] = [];
+  for (const name of names) {
+    const matches = await q("SELECT id,name,household_id FROM people WHERE church_id=$1 AND id<>$2 AND lower(trim(name))=lower(trim($3)) LIMIT 2", [church, personId, name]);
+    if (matches.length === 1 && !related.some((item) => item.id === matches[0].id)) related.push(matches[0]);
+  }
+  if (!related.length) return;
+  const allIds = [personId, ...related.map((item) => item.id)];
+  const members = await q("SELECT id,household_id FROM people WHERE church_id=$1 AND id=ANY($2::uuid[])", [church, allIds]);
+  const householdIds = [...new Set(members.map((item) => item.household_id).filter(Boolean))];
+  let householdId = householdIds[0] as string | undefined;
+  if (!householdId) {
+    const [household] = await q("INSERT INTO households(church_id,name) VALUES($1,$2) RETURNING id", [church, `Família de ${String(profile.firstName ?? "Membro").trim()}`]);
+    householdId = household.id;
+  }
+  await q("UPDATE people SET household_id=$1 WHERE church_id=$2 AND id=ANY($3::uuid[])", [householdId, church, allIds]);
+  for (const oldHousehold of householdIds.filter((value) => value !== householdId)) {
+    await q("UPDATE people SET household_id=$1 WHERE church_id=$2 AND household_id=$3", [householdId, church, oldHousehold]);
+    await q("DELETE FROM households WHERE id=$1 AND church_id=$2", [oldHousehold, church]);
+  }
+  const [currentPerson] = await q("SELECT name FROM people WHERE id=$1 AND church_id=$2", [personId, church]);
+  for (const relation of related) {
+    const relationProfile = await q("SELECT encrypted_profile FROM member_profiles WHERE person_id=$1 AND church_id=$2", [relation.id, church]);
+    if (!relationProfile.length) continue;
+    const payload = JSON.parse(decrypt(relationProfile[0].encrypted_profile, key));
+    const relationData = payload.profile ?? {};
+    if (normalizedName(profile.spouseName) === normalizedName(relation.name) && !relationData.spouseName) relationData.spouseName = currentPerson.name;
+    const children = await q("SELECT p.id,p.name,mp.encrypted_profile FROM people p JOIN member_profiles mp ON mp.person_id=p.id AND mp.church_id=p.church_id WHERE p.church_id=$1 AND p.household_id=$2 AND p.id<>$3", [church, householdId, relation.id]);
+    const childrenCount = children.filter((child) => {
+      const childProfile = JSON.parse(decrypt(child.encrypted_profile, key)).profile ?? {};
+      return normalizedName(childProfile.fatherName) === normalizedName(relation.name) || normalizedName(childProfile.motherName) === normalizedName(relation.name);
+    }).length;
+    relationData.childrenCount = String(childrenCount);
+    payload.profile = relationData;
+    await q("UPDATE member_profiles SET encrypted_profile=$1,version=version+1,updated_at=now() WHERE person_id=$2 AND church_id=$3", [encrypt(JSON.stringify(payload), key), relation.id, church]);
+  }
+}
 async function saveProfile(
   q: Query,
   actor: string,
@@ -223,6 +271,7 @@ async function saveProfile(
       "INSERT INTO member_photos(church_id,person_id,encrypted_data) VALUES($1,$2,$3) ON CONFLICT(person_id) DO UPDATE SET encrypted_data=excluded.encrypted_data,updated_at=now()",
       [church, personId, encrypt(photo, key)],
     );
+  await connectFamilyLinks(q, church, personId!, profile, key);
   if (
     administration.status === "visitor" &&
     !(await q("SELECT 1 FROM workflow_cards WHERE person_id=$1", [personId]))

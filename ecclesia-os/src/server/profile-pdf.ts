@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import * as archiver from "archiver";
+import sharp from "sharp";
 import type { Express, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import type { Database, Query, Row } from "./db.js";
@@ -76,8 +77,9 @@ async function loadPerson(q: Query, church: string, personId: string, key: Buffe
   return { person, profile: profilePayload.profile ?? {}, administration: profilePayload.administration ?? {}, photo: photo ? Buffer.from(decrypt(photo.encrypted_data, key), "base64") : null, groups, courses, history };
 }
 
-export function buildPdf(data: Awaited<ReturnType<typeof loadPerson>>, generatedBy: string) {
+export async function buildPdf(data: Awaited<ReturnType<typeof loadPerson>>, generatedBy: string) {
   const isMinor = (ageOn(String(data.profile.birthDate ?? "")) ?? 18) < 18;
+  const photo = data.photo ? await sharp(data.photo).png().toBuffer() : null;
   const doc = new PDFDocument({ size: "A4", margin: 0, info: { Title: `Ficha de ${data.person.name}`, Author: "EcclesiaOS" } });
   const chunks: Buffer[] = [];
   doc.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -87,6 +89,8 @@ export function buildPdf(data: Awaited<ReturnType<typeof loadPerson>>, generated
   const p = data.profile as any;
   const a = p.address ?? {};
   const adm = data.administration as any;
+  const situation = adm.communion === "disciplined" ? "Disciplinado" : data.person.status === "inactive" ? "Não ativo" : "Ativo";
+  const relationship = ({ visitor: "Visitante", congregado: "Congregado", member: "Membro", worker: "Obreiro", inactive: "Inativo" } as Record<string, string>)[String(data.person.status)] ?? "Não informado";
   const churchName = text(data.person.church_name, "Igreja");
   const dateLabel = new Intl.DateTimeFormat("pt-BR").format(new Date());
   const drawHeader = (title: string, subtitle: string) => {
@@ -127,13 +131,13 @@ export function buildPdf(data: Awaited<ReturnType<typeof loadPerson>>, generated
   drawHeader("Ficha cadastral de membro", isMinor ? "Cadastro de menor de idade - dados do responsável legal na segunda página" : "Cadastro e acompanhamento administrativo da membresia");
   const photoX = 455, photoY = 92, photoW = 112, photoH = 132;
   doc.roundedRect(photoX, photoY, photoW, photoH, 4).lineWidth(1).stroke(colors.blue);
-  if (data.photo) { try { doc.image(data.photo, photoX + 5, photoY + 5, { fit: [photoW - 10, photoH - 10], align: "center", valign: "center" }); } catch { /* foto inválida não interrompe a ficha */ } }
+  if (photo) { try { doc.image(photo, photoX + 5, photoY + 5, { fit: [photoW - 10, photoH - 10], align: "center", valign: "center" }); } catch { /* foto inválida não interrompe a ficha */ } }
   else doc.fillColor(colors.muted).font("Helvetica").fontSize(8).text("FOTO", photoX, photoY + 61, { width: photoW, align: "center" });
   doc.fillColor(colors.ink);
   section("IDENTIFICAÇÃO", 92);
   field("Nome completo", data.person.name, 28, 122, 410, { size: 10 });
   field("Código do membro", data.person.id.slice(0, 12), 28, 160, 190);
-  field("Situação", data.person.status, 226, 160, 212);
+  field("Situação", situation, 226, 160, 212);
   field("Igreja / congregação", p.congregation || churchName, 28, 198, 410);
   field("Campus / setor", [p.campus, p.sector].filter(Boolean).join(" / "), 28, 236, 410);
   section("CONTATO E ENDEREÇO", 284);
@@ -180,7 +184,8 @@ export function buildPdf(data: Awaited<ReturnType<typeof loadPerson>>, generated
   field("Tipo de admissão", p.admissionType, 208, 466, 226);
   section("GRUPOS, ENSINO E FUNÇÕES", 514);
   field("Grupos", data.groups.map((g: Row) => g.name).join(", "), 28, 544, 539);
-  field("Funções ministeriais", adm.roles || adm.ministries, 28, 582, 539);
+  field("Vínculo", relationship, 28, 582, 170);
+  field("Funções ministeriais", adm.roles || adm.ministries, 208, 582, 359);
   const courseSummary = data.courses.map((course: Row) => [course.course_name, course.track, course.status].filter(Boolean).join(" - ")).join("; ");
   paragraph("EBD, discipulado e cursos", courseSummary, 28, 620, 539, 48);
   section("HISTÓRICO ADMINISTRATIVO", 682);
