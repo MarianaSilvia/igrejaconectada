@@ -1,6 +1,5 @@
 import PDFDocument from "pdfkit";
 import * as archiver from "archiver";
-import { readFileSync } from "node:fs";
 import type { Express, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import type { Database, Query, Row } from "./db.js";
@@ -79,49 +78,120 @@ async function loadPerson(q: Query, church: string, personId: string, key: Buffe
 
 export function buildPdf(data: Awaited<ReturnType<typeof loadPerson>>, generatedBy: string) {
   const isMinor = (ageOn(String(data.profile.birthDate ?? "")) ?? 18) < 18;
-  const template = readFileSync(new URL(`./templates/member-${isMinor ? "minor" : "adult"}.png`, import.meta.url));
   const doc = new PDFDocument({ size: "A4", margin: 0, info: { Title: `Ficha de ${data.person.name}`, Author: "EcclesiaOS" } });
   const chunks: Buffer[] = [];
   doc.on("data", (chunk: Buffer) => chunks.push(chunk));
   const done = new Promise<Buffer>((resolve, reject) => { doc.on("end", () => resolve(Buffer.concat(chunks))); doc.on("error", reject); });
-  doc.image(template, 0, 0, { width: 595.5, height: 842.25 });
-  const value = (x: number, y: number, width: number, raw: unknown, size = 7.2) => {
-    const v = text(raw, "");
-    if (!v) return;
-    doc.fillColor("#111111").font("Helvetica").fontSize(size).text(v.slice(0, 90), x, y, { width, height: 16, ellipsis: true, lineBreak: false });
-  };
-  const check = (x: number, y: number, yes: boolean) => { if (yes) value(x, y, 12, "X", 9); };
+  const pageWidth = 595.28;
+  const colors = { navy: "#17324d", blue: "#2e6f9e", pale: "#eef4f8", line: "#c9d4dc", ink: "#1f2933", muted: "#5f6b75" };
   const p = data.profile as any;
   const a = p.address ?? {};
   const adm = data.administration as any;
-  if (data.photo) { try { doc.image(data.photo, 487, 23, { fit: [70, 82], align: "center", valign: "center" }); } catch { /* foto inválida não interrompe a ficha */ } }
-  value(70, 159, 105, data.person.id.slice(0, 12));
-  value(195, 159, 180, p.congregation || data.person.church_name);
-  value(420, 159, 125, p.sector);
-  value(40, 188, 545, data.person.name, 8.2);
-  value(40, 218, 545, [a.street, a.number].filter(Boolean).join(", "));
-  value(40, 248, 340, a.neighborhood); value(420, 248, 125, a.state);
-  value(40, 278, 340, a.city); value(420, 278, 125, a.postalCode);
-  value(40, 308, 340, p.phone || data.person.phone); value(420, 308, 125, p.phone2);
-  value(40, 338, 165, p.cpf); value(220, 338, 155, p.rg); value(420, 338, 125, p.voterTitle);
-  value(72, 374, 480, p.fatherName); value(72, 392, 480, p.motherName);
-  value(40, 425, 230, p.nationality); value(390, 425, 150, p.profession);
-  value(40, 455, 190, p.education); value(260, 455, 100, p.sex); value(390, 455, 150, date(p.birthDate));
-  value(40, 485, 220, p.birthPlace); value(260, 485, 285, p.email || data.person.email);
-  value(40, 515, 120, p.maritalStatus); value(185, 515, 120, date(p.marriageDate)); value(320, 515, 100, p.marriageId); value(470, 515, 70, p.childrenCount);
-  value(40, 545, 545, p.spouseName);
-  value(40, 575, 180, p.profession); value(260, 575, 180, p.education); value(460, 575, 80, date(p.birthDate));
-  value(40, 605, 220, date(p.conversionDate)); value(300, 605, 245, p.holySpiritBaptism === "yes" ? "Sim" : p.holySpiritBaptism === "no" ? "Não" : "");
-  value(40, 615, 510, p.origin);
-  value(145, 664, 165, p.baptismLocation); value(420, 664, 120, date(p.baptismDate));
-  value(145, 675, 165, p.holySpiritBaptism === "yes" ? "Sim" : p.holySpiritBaptism === "no" ? "Não" : ""); value(420, 675, 120, date(p.holySpiritBaptismDate));
-  value(145, 686, 165, p.receptionType); value(420, 686, 120, date(p.receptionDate));
+  const churchName = text(data.person.church_name, "Igreja");
+  const dateLabel = new Intl.DateTimeFormat("pt-BR").format(new Date());
+  const drawHeader = (title: string, subtitle: string) => {
+    doc.rect(0, 0, pageWidth, 76).fill(colors.navy);
+    const logo = imageBuffer((data.person as any).logo_url);
+    if (logo) { try { doc.image(logo, 28, 12, { fit: [50, 50], align: "center", valign: "center" }); } catch { /* logo inválido não interrompe a ficha */ } }
+    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(18).text(title, 92, 18, { width: 470, lineBreak: false });
+    doc.font("Helvetica").fontSize(9).text(subtitle, 92, 45, { width: 470, lineBreak: false });
+    doc.fillColor(colors.ink);
+  };
+  const section = (label: string, y: number) => {
+    doc.roundedRect(28, y, pageWidth - 56, 22, 4).fill(colors.pale);
+    doc.fillColor(colors.navy).font("Helvetica-Bold").fontSize(10).text(label, 38, y + 6, { lineBreak: false });
+    doc.fillColor(colors.ink);
+  };
+  const field = (label: string, raw: unknown, x: number, y: number, width: number, opts: { height?: number; size?: number } = {}) => {
+    const height = opts.height ?? 34;
+    doc.roundedRect(x, y, width, height, 3).lineWidth(0.7).stroke(colors.line);
+    doc.fillColor(colors.muted).font("Helvetica-Bold").fontSize(7.5).text(label.toUpperCase(), x + 8, y + 5, { width: width - 16, lineBreak: false });
+    const v = text(raw, "");
+    if (v) doc.fillColor(colors.ink).font("Helvetica").fontSize(opts.size ?? 9).text(v.slice(0, 160), x + 8, y + 17, { width: width - 16, height: height - 19, ellipsis: true, lineBreak: false });
+    doc.fillColor(colors.ink);
+  };
+  const paragraph = (label: string, raw: unknown, x: number, y: number, width: number, height: number) => {
+    doc.roundedRect(x, y, width, height, 3).lineWidth(0.7).stroke(colors.line);
+    doc.fillColor(colors.muted).font("Helvetica-Bold").fontSize(7.5).text(label.toUpperCase(), x + 8, y + 5, { width: width - 16, lineBreak: false });
+    const v = text(raw, "");
+    if (v) doc.fillColor(colors.ink).font("Helvetica").fontSize(9).text(v.slice(0, 600), x + 8, y + 18, { width: width - 16, height: height - 22, ellipsis: true });
+    doc.fillColor(colors.ink);
+  };
+  const footer = (page: number) => {
+    doc.moveTo(28, 808).lineTo(pageWidth - 28, 808).lineWidth(0.5).stroke(colors.line);
+    doc.fillColor(colors.muted).font("Helvetica").fontSize(7.5).text(`${churchName} - Ficha cadastral ${isMinor ? "de menor de idade" : "de membro"} - Gerado por ${generatedBy}`, 28, 817, { width: 390, lineBreak: false });
+    doc.text(`Página ${page} · ${dateLabel}`, 420, 817, { width: 147, align: "right", lineBreak: false });
+    doc.fillColor(colors.ink);
+  };
+
+  drawHeader("Ficha cadastral de membro", isMinor ? "Cadastro de menor de idade - dados do responsável legal na segunda página" : "Cadastro e acompanhamento administrativo da membresia");
+  const photoX = 455, photoY = 92, photoW = 112, photoH = 132;
+  doc.roundedRect(photoX, photoY, photoW, photoH, 4).lineWidth(1).stroke(colors.blue);
+  if (data.photo) { try { doc.image(data.photo, photoX + 5, photoY + 5, { fit: [photoW - 10, photoH - 10], align: "center", valign: "center" }); } catch { /* foto inválida não interrompe a ficha */ } }
+  else doc.fillColor(colors.muted).font("Helvetica").fontSize(8).text("FOTO", photoX, photoY + 61, { width: photoW, align: "center" });
+  doc.fillColor(colors.ink);
+  section("IDENTIFICAÇÃO", 92);
+  field("Nome completo", data.person.name, 28, 122, 410, { size: 10 });
+  field("Código do membro", data.person.id.slice(0, 12), 28, 160, 190);
+  field("Situação", data.person.status, 226, 160, 212);
+  field("Igreja / congregação", p.congregation || churchName, 28, 198, 410);
+  field("Campus / setor", [p.campus, p.sector].filter(Boolean).join(" / "), 28, 236, 410);
+  section("CONTATO E ENDEREÇO", 284);
+  field("Endereço", [a.street, a.number].filter(Boolean).join(", "), 28, 314, 410);
+  field("Bairro", a.neighborhood, 28, 352, 195);
+  field("Cidade / UF", [a.city, a.state].filter(Boolean).join(" / "), 231, 352, 207);
+  field("CEP", a.postalCode, 28, 390, 195);
+  field("Telefone", p.phone || data.person.phone, 231, 390, 207);
+  field("Celular / WhatsApp", p.phone2, 28, 428, 195);
+  field("E-mail", p.email || data.person.email, 231, 428, 207);
+  section("DOCUMENTOS E DADOS PESSOAIS", 476);
+  field("CPF", p.cpf, 28, 506, 195);
+  field("RG", p.rg, 231, 506, 207);
+  field("Título de eleitor", p.voterTitle, 28, 544, 195);
+  field("Data de nascimento", date(p.birthDate), 231, 544, 207);
+  field("Naturalidade", p.birthPlace, 28, 582, 195);
+  field("Nacionalidade", p.nationality, 231, 582, 207);
+  field("Profissão", p.profession, 28, 620, 195);
+  field("Escolaridade", p.education, 231, 620, 207);
+  field("Sexo", p.sex, 28, 658, 195);
+  field("Estado civil", p.maritalStatus, 231, 658, 207);
+  field("Data de cadastro", date(data.person.created_at), 28, 696, 195);
+  field("Autorização de imagem", p.imageAuthorization ? "Autorizada" : "Não informada", 231, 696, 207);
+  footer(1);
+
+  doc.addPage();
+  drawHeader("Ficha cadastral de membro", "Informações familiares, ministeriais e histórico administrativo");
+  section("FILIAÇÃO E FAMÍLIA", 92);
+  field("Nome do pai", p.fatherName, 28, 122, 539);
+  field("Nome da mãe", p.motherName, 28, 160, 539);
+  field("Cônjuge", p.spouseName, 28, 198, 270);
+  field("Data do casamento", date(p.marriageDate), 308, 198, 126);
+  field("Registro do casamento", p.marriageId, 28, 236, 270);
+  field("Quantidade de filhos", p.childrenCount, 308, 236, 126);
+  section("BATISMO, CONVERSÃO E RECEBIMENTO", 284);
+  field("Origem / procedência", p.origin, 28, 314, 539);
+  field("Data da conversão", date(p.conversionDate), 28, 352, 170);
+  field("Local de batismo", p.baptismLocation, 208, 352, 226);
+  field("Data de batismo", date(p.baptismDate), 28, 390, 170);
+  field("Batismo no Espírito Santo", p.holySpiritBaptism === "yes" ? "Sim" : p.holySpiritBaptism === "no" ? "Não" : "Não informado", 208, 390, 226);
+  field("Data do batismo no Espírito Santo", date(p.holySpiritBaptismDate), 28, 428, 170);
+  field("Tipo de recebimento", p.receptionType, 208, 428, 226);
+  field("Data de recebimento", date(p.receptionDate), 28, 466, 170);
+  field("Tipo de admissão", p.admissionType, 208, 466, 226);
+  section("GRUPOS, ENSINO E FUNÇÕES", 514);
+  field("Grupos", data.groups.map((g: Row) => g.name).join(", "), 28, 544, 539);
+  field("Funções ministeriais", adm.roles || adm.ministries, 28, 582, 539);
+  const courseSummary = data.courses.map((course: Row) => [course.course_name, course.track, course.status].filter(Boolean).join(" - ")).join("; ");
+  paragraph("EBD, discipulado e cursos", courseSummary, 28, 620, 539, 48);
+  section("HISTÓRICO ADMINISTRATIVO", 682);
+  const historySummary = data.history.map((event: Row) => `${date(event.event_date)} - ${event.title || event.event_type}${event.description ? `: ${event.description}` : ""}`).join("\n");
+  paragraph("Linha do tempo", historySummary, 28, 712, 539, 58);
   if (isMinor) {
-    const guardian = [p.guardianName, p.guardianRelationship, p.guardianContact].filter(Boolean).join(" · ");
-    value(42, 773, 510, guardian, 6.4);
+    field("Responsável legal", p.guardianName, 28, 778, 220, { height: 30 });
+    field("Parentesco", p.guardianRelationship, 258, 778, 130, { height: 30 });
+    field("Contato do responsável", p.guardianContact, 398, 778, 169, { height: 30 });
   }
-  check(85, 270, String(p.admissionType).toLowerCase().includes("atual"));
-  doc.fillColor("#111111").font("Helvetica").fontSize(7).text(`Registro EcclesiaOS · ${new Intl.DateTimeFormat("pt-BR").format(new Date())} · ${generatedBy}`, 42, 814, { width: 510, align: "center" });
+  footer(2);
   doc.end();
   return done;
 }
