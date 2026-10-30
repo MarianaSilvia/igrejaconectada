@@ -144,9 +144,9 @@ export default function RegistrationManager(
               <div className="registration-local-note">
                 <Icon name="globe" size={19} />
                 <p>
-                  A publicação foi deixada para depois. O link gerado agora abre
-                  a ficha neste computador; ele ainda não é um endereço público
-                  para redes sociais.
+                  {config.publicationPending
+                    ? "O ambiente ainda está usando um endereço local. O link serve para conferência neste computador e não deve ser enviado pelas redes sociais."
+                    : "Este é um link público da igreja. Você pode copiá-lo e enviá-lo por WhatsApp, Instagram, Facebook ou outro canal."}
                 </p>
               </div>
               <div className="toolbar">
@@ -158,7 +158,7 @@ export default function RegistrationManager(
                   onClick={() => setLinkModal(true)}
                 >
                   <Icon name="plus" size={16} />
-                  Gerar link de prévia
+                  {config.publicationPending ? "Gerar link de prévia" : "Gerar link público"}
                 </button>
               </div>
               {links.map((l) => (
@@ -202,7 +202,7 @@ export default function RegistrationManager(
                       onClick={async () => {
                         try {
                           await navigator.clipboard.writeText(l.url);
-                          props.notify("Link local de prévia copiado.");
+                          props.notify(config.publicationPending ? "Link local de prévia copiado." : "Link público copiado.");
                         } catch {
                           props.notify(
                             "Selecione o endereço para copiar manualmente.",
@@ -260,8 +260,9 @@ export default function RegistrationManager(
               ))}
               {!links.length && (
                 <Empty>
-                  Gere uma prévia para conferir o formulário. A publicação
-                  pública será feita depois.
+                  {config.publicationPending
+                    ? "Gere uma prévia para conferir o formulário. A publicação pública será feita depois."
+                    : "Gere um link público para compartilhar a ficha e receber os cadastros online."}
                 </Empty>
               )}
             </>
@@ -445,7 +446,7 @@ export default function RegistrationManager(
               A pessoa informará sua congregação em um campo de texto. Esse
               texto não altera a igreja responsável por receber a ficha.
             </p>
-            <Submit busy={busy} label="Gerar prévia da ficha" />
+            <Submit busy={busy} label={config.publicationPending ? "Gerar prévia da ficha" : "Gerar link público"} />
           </form>
         </Modal>
       )}
