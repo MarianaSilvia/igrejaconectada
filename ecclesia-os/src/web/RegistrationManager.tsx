@@ -8,6 +8,8 @@ import { defaultAdministration } from "../shared/registration";
 export default function RegistrationManager(
   props: PageProps & { directory: RecordData | null; onChange: () => void },
 ) {
+  const registrationMessage = (url: string) =>
+    `A paz do Senhor, irmã!\n\nSegue o link para você realizar seu cadastro completo, incluindo sua foto:\n${url}\n\nEstamos atualizando o cadastro da igreja para manter seus dados corretos e integrados às demais funções da comunidade. As informações ficarão armazenadas com segurança no banco de dados da igreja e serão utilizadas pela Secretaria para conferência e organização.\n\nQuando puder, preencha a ficha com atenção. Muito obrigado!`;
   const [config, setConfig] = useState<RecordData | null>(null),
     [links, setLinks] = useState<RecordData[]>([]),
     [submissions, setSubmissions] = useState<RecordData[]>([]),
@@ -216,10 +218,11 @@ export default function RegistrationManager(
                       className="text-button"
                       onClick={async () => {
                         try {
+                          const message = registrationMessage(l.url);
                           if (navigator.share) {
                             await navigator.share({
                               title: l.title,
-                              text: "Preencha sua ficha de cadastro da igreja.",
+                              text: message,
                               url: l.url,
                             });
                             props.notify("Menu de compartilhamento aberto.");
@@ -236,6 +239,19 @@ export default function RegistrationManager(
                       }}
                     >
                       Compartilhar
+                    </button>
+                    <button
+                      className="text-button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(registrationMessage(l.url));
+                          props.notify("Mensagem pronta para colar no WhatsApp.");
+                        } catch {
+                          props.notify("Não foi possível copiar a mensagem.");
+                        }
+                      }}
+                    >
+                      Copiar mensagem WhatsApp
                     </button>
                     <button
                       className="text-button"
