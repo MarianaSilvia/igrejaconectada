@@ -13,7 +13,7 @@ const route =
 const uuid = z.uuid();
 const filterSchema = z.object({
   status: z
-    .enum(["all", "visitor", "member", "worker", "inactive"])
+    .enum(["all", "visitor", "congregado", "member", "worker", "inactive"])
     .default("all"),
   campusId: uuid.nullable().default(null),
   cellId: uuid.nullable().default(null),

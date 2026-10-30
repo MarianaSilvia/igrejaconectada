@@ -97,7 +97,7 @@ const personSchema = z.object({
   phone: z.string().max(30).optional(),
   birthDate: z.union([date, z.literal("")]).optional(),
   gender: z.enum(["male", "female", "other", ""]).optional(),
-  status: z.enum(["visitor", "member", "worker", "inactive"]).default("member"),
+  status: z.enum(["visitor", "congregado", "member", "worker", "inactive"]).default("member"),
   householdId: uuid.optional(),
   campusId: uuid.optional(),
 });
@@ -903,7 +903,7 @@ app.get(
       const search = String(r.query.q ?? "").trim();
       const status = String(r.query.status ?? "all");
       requireThat(
-        ["all", "visitor", "member", "worker", "inactive"].includes(status),
+        ["all", "visitor", "congregado", "member", "worker", "inactive"].includes(status),
         400,
         "Filtro de vínculo inválido.",
       );

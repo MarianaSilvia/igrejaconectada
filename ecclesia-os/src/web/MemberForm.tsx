@@ -672,6 +672,7 @@ export default function MemberForm({
                 }
               >
                 <option value="member">Membro</option>
+                <option value="congregado">Congregado</option>
                 <option value="visitor">Visitante</option>
                 <option value="worker">Obreiro</option>
                 <option value="inactive">Inativo</option>

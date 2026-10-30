@@ -1038,6 +1038,7 @@ export function People(
         >
           <option value="all">Todos os vínculos</option>
           <option value="member">Membros</option>
+          <option value="congregado">Congregados</option>
           <option value="visitor">Visitantes</option>
           <option value="worker">Obreiros</option>
           <option value="inactive">Inativos</option>
@@ -1407,6 +1408,7 @@ export function People(
                           (
                             {
                               member: "Membro",
+                              congregado: "Congregado",
                               visitor: "Visitante",
                               worker: "Obreiro",
                               inactive: "Inativo",
@@ -1801,7 +1803,7 @@ export function People(
             <>
               <p>
                 Use as colunas <code>name,email,phone,status,birthDate,gender</code>. birthDate e gender são opcionais. Vínculos:
-                member, visitor, worker ou inactive. Até 1.000 linhas.
+                member, congregado, visitor, worker ou inactive. Até 1.000 linhas.
               </p>
               <Field label="Arquivo CSV">
                 <input

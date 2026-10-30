@@ -161,7 +161,7 @@ export type MemberProfile = z.infer<typeof memberProfileSchema>;
 export const administrativeSchema = z
   .object({
     status: z
-      .enum(["visitor", "member", "worker", "inactive"])
+      .enum(["visitor", "congregado", "member", "worker", "inactive"])
       .default("member"),
     categories: z.array(z.string().trim().min(1).max(80)).max(20).default([]),
     positions: z.array(z.string().trim().min(1).max(100)).max(20).default([]),

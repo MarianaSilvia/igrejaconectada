@@ -211,6 +211,7 @@ export default function CommunicationPage(props: Props) {
           <select name="status">
             <option value="all">Toda a igreja autorizada</option>
             <option value="visitor">Visitantes</option>
+            <option value="congregado">Congregados</option>
             <option value="member">Membros</option>
             <option value="worker">Obreiros</option>
           </select>
