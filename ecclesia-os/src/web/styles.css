@@ -589,6 +589,15 @@ svg {
 .button.secondary:hover {
   border-color: var(--subtle);
 }
+.button.danger {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+.button.danger:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+}
 .text-button {
   background: none;
   border: 0;

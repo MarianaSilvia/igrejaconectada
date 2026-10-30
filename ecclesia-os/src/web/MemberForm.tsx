@@ -64,9 +64,12 @@ export default function MemberForm({
     [accepted, setAccepted] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const [cepLoading, setCepLoading] = useState(false),
+    [cepMessage, setCepMessage] = useState("");
   const [website, setWebsite] = useState("");
   const fileRef = useRef<HTMLInputElement>(null),
-    photoSequence = useRef(0);
+    photoSequence = useRef(0),
+    cepSequence = useRef(0);
   const shownPhoto = photo === undefined ? initial?.photoDataUrl : photo;
   const change = <K extends keyof MemberProfile>(
     key: K,
@@ -77,6 +80,38 @@ export default function MemberForm({
       ...old,
       address: { ...old.address, [key]: value },
     }));
+  async function lookupCep(raw: string) {
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    const sequence = ++cepSequence.current;
+    setCepLoading(true);
+    setCepMessage("");
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${digits}/json/`, { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error("Não foi possível consultar o CEP.");
+      const result = await response.json() as { erro?: boolean; logradouro?: string; bairro?: string; localidade?: string; uf?: string };
+      if (sequence !== cepSequence.current) return;
+      if (result.erro) {
+        setCepMessage("CEP não encontrado. Confira os números.");
+        return;
+      }
+      setProfile((old) => ({
+        ...old,
+        address: {
+          ...old.address,
+          street: old.address.street || result.logradouro || "",
+          neighborhood: old.address.neighborhood || result.bairro || "",
+          city: old.address.city || result.localidade || "",
+          state: old.address.state || result.uf || "",
+        },
+      }));
+      setCepMessage("Endereço localizado. Confira e informe o número da casa.");
+    } catch {
+      if (sequence === cepSequence.current) setCepMessage("Não foi possível consultar o CEP agora. Você pode preencher o endereço manualmente.");
+    } finally {
+      if (sequence === cepSequence.current) setCepLoading(false);
+    }
+  }
   const minor = (ageOn(profile.birthDate) ?? 18) < 18;
   async function pickPhoto(file?: File) {
     if (!file) return;
@@ -447,8 +482,14 @@ export default function MemberForm({
               maxLength={9}
               placeholder="00000-000"
               value={profile.address.postalCode}
-              onChange={(e) => address("postalCode", e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9-]/g, "").slice(0, 9);
+                address("postalCode", value);
+                if (value.replace(/\D/g, "").length === 8) void lookupCep(value);
+              }}
+              onBlur={(e) => void lookupCep(e.target.value)}
             />
+            <small className="muted" aria-live="polite">{cepLoading ? "Consultando CEP…" : cepMessage || "Digite o CEP para preencher rua, bairro e cidade."}</small>
           </Field>
           <Field label="Cidade">
             <input

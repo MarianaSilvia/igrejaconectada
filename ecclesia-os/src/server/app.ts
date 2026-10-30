@@ -1007,6 +1007,77 @@ app.get(
       );
     }),
   );
+  app.delete(
+    "/api/people/:id",
+    asyncRoute(async (r: AuthRequest, s) => {
+      const id = uuid.parse(r.params.id);
+      const authorizedPerson = await scoped(r, async (q) => {
+        await permit(q, "people", true);
+        const [person] = await q(
+          "SELECT id,user_id,household_id,name FROM people WHERE id=$1 AND church_id=$2",
+          [id, r.church],
+        );
+        requireThat(person, 404, "Pessoa não encontrada nesta igreja.");
+        requireThat(person.user_id !== r.actor.id, 400, "Não é permitido excluir o próprio usuário por este fluxo.");
+        return person;
+      });
+      // A remoção percorre tabelas protegidas que não concedem DELETE ao papel
+      // de requisições. A autorização acima é feita com RLS; a transação abaixo
+      // usa apenas o papel de serviço, mantendo igreja e pessoa parametrizadas.
+      const result = await db.transaction(async (q) => {
+        const [person] = await q("SELECT id,user_id,household_id,name FROM people WHERE id=$1 AND church_id=$2 FOR UPDATE", [id, r.church]);
+        requireThat(person, 404, "Pessoa não encontrada nesta igreja.");
+        requireThat(person.user_id !== r.actor.id, 400, "Não é permitido excluir o próprio usuário por este fluxo.");
+        await audit(q, r.actor.id, r.church, "person.deleted", id);
+        const args = [r.church, id];
+        await q("DELETE FROM registration_submissions WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM member_access_credentials WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM member_photos WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM member_profiles WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM communication_deliveries WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM communication_preferences WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM education_attendance WHERE church_id=$1 AND enrollment_id IN (SELECT id FROM education_enrollments WHERE church_id=$1 AND person_id=$2)", args);
+        await q("DELETE FROM education_certificates WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM education_enrollments WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM workflow_instance_events WHERE church_id=$1 AND instance_id IN (SELECT id FROM workflow_instances WHERE church_id=$1 AND person_id=$2)", args);
+        await q("DELETE FROM workflow_instances WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM event_registrations WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM cell_members WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM attendance WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM kids_checkins WHERE church_id=$1 AND (child_id IN (SELECT id FROM kids_children WHERE church_id=$1 AND person_id=$2) OR guardian_id IN (SELECT id FROM kids_guardians WHERE church_id=$1 AND guardian_person_id=$2))", args);
+        await q("DELETE FROM kids_exceptions WHERE church_id=$1 AND child_id IN (SELECT id FROM kids_children WHERE church_id=$1 AND person_id=$2)", args);
+        await q("DELETE FROM kids_guardians WHERE church_id=$1 AND (child_id IN (SELECT id FROM kids_children WHERE church_id=$1 AND person_id=$2) OR guardian_person_id=$2)", args);
+        await q("DELETE FROM kids_children WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM leadership_terms WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM credentials WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM transfers WHERE person_id=$2 AND (source_church_id=$1 OR target_church_id=$1)", args);
+        await q("DELETE FROM workflow_cards WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM pastoral_notes WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM workflow_trigger_jobs WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM operational_tasks WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM ministerial_affiliations WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM ministerial_credentials WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM assembly_delegates WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM event_certificates WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM church_assets WHERE church_id=$1 AND responsible_person_id=$2", args);
+        await q("DELETE FROM library_loans WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM document_shares WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM assistance_actions WHERE church_id=$1 AND case_id IN (SELECT id FROM assistance_cases WHERE church_id=$1 AND person_id=$2)", args);
+        await q("DELETE FROM assistance_cases WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM member_change_log WHERE church_id=$1 AND person_id=$2", args);
+        await q("DELETE FROM historical_events WHERE church_id=$1 AND subject_type='person' AND subject_id=$2", args);
+        await q("UPDATE users SET person_id=NULL WHERE person_id=$2", args);
+        const [deleted] = await q("DELETE FROM people WHERE id=$2 AND church_id=$1 RETURNING id,name", args);
+        requireThat(deleted, 404, "Pessoa não encontrada nesta igreja.");
+        if (person.household_id) {
+          await q("DELETE FROM households h WHERE h.id=$1 AND h.church_id=$2 AND NOT EXISTS (SELECT 1 FROM people p WHERE p.household_id=h.id)", [person.household_id, r.church]);
+        }
+        return deleted;
+      });
+      requireThat(authorizedPerson.id === result.id, 409, "A ficha mudou durante a exclusão. Tente novamente.");
+      s.json({ ok: true, id: result.id, name: result.name });
+    }),
+  );
   app.get(
     "/api/directory",
     asyncRoute(async (r: AuthRequest, s) => {

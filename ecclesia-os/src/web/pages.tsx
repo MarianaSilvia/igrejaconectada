@@ -1616,6 +1616,24 @@ export function People(
               >
                 {pdfBusy ? "Gerando ficha…" : "Baixar ficha completa em PDF"}
               </button>
+              <button
+                className="button danger"
+                type="button"
+                onClick={async () => {
+                  const name = memberEditor.initial?.name ?? "este membro";
+                  if (!window.confirm(`Excluir definitivamente ${name}? Esta ação removerá a ficha, foto, vínculos, histórico e registros relacionados da igreja.`)) return;
+                  try {
+                    await api(`/people/${memberEditor.initial!.id}`, "DELETE");
+                    setMemberEditor(null);
+                    props.refresh();
+                    props.notify("Membro excluído definitivamente da igreja.");
+                  } catch (e) {
+                    props.notify((e as Error).message);
+                  }
+                }}
+              >
+                Excluir perfil definitivamente
+              </button>
             </div>
           )}
           {memberEditor.initial && (
