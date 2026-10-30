@@ -333,11 +333,37 @@ export default function MemberForm({
               onChange={(e) => change("rg", e.target.value)}
             />
           </Field>
+          <Field label="Nacionalidade">
+            <input value={profile.nationality} maxLength={80} onChange={(e) => change("nationality", e.target.value)} />
+          </Field>
+          <Field label="Profissão">
+            <input value={profile.profession} maxLength={120} onChange={(e) => change("profession", e.target.value)} />
+          </Field>
+          <Field label="Local de nascimento">
+            <input value={profile.birthPlace} maxLength={120} onChange={(e) => change("birthPlace", e.target.value)} />
+          </Field>
+          <Field label="Título de eleitor">
+            <input value={profile.voterTitle} maxLength={40} onChange={(e) => change("voterTitle", e.target.value)} />
+          </Field>
         </div>
       </section>
       <section className="member-section">
         <div className="member-section-title">
           <span>02</span>
+          <div><h3>Filiação e família</h3><p>Informações familiares usadas na ficha cadastral.</p></div>
+        </div>
+        <div className="member-fields">
+          <Field label="Nome do pai"><input value={profile.fatherName} maxLength={150} onChange={(e) => change("fatherName", e.target.value)} /></Field>
+          <Field label="Nome da mãe"><input value={profile.motherName} maxLength={150} onChange={(e) => change("motherName", e.target.value)} /></Field>
+          <Field label="Nome do cônjuge"><input value={profile.spouseName} maxLength={150} onChange={(e) => change("spouseName", e.target.value)} /></Field>
+          <Field label="Data do casamento"><input type="date" max={todayInBrazil()} value={profile.marriageDate} onChange={(e) => change("marriageDate", e.target.value)} /></Field>
+          <Field label="ID/registro do casamento"><input value={profile.marriageId} maxLength={60} onChange={(e) => change("marriageId", e.target.value)} /></Field>
+          <Field label="Quantidade de filhos"><input type="number" min="0" max="50" value={profile.childrenCount} onChange={(e) => change("childrenCount", e.target.value)} /></Field>
+        </div>
+      </section>
+      <section className="member-section">
+        <div className="member-section-title">
+          <span>03</span>
           <div>
             <h3>Contatos</h3>
             <p>
@@ -381,7 +407,7 @@ export default function MemberForm({
       </section>
       <section className="member-section">
         <div className="member-section-title">
-          <span>03</span>
+          <span>04</span>
           <div>
             <h3>Endereço</h3>
             <p>Onde você mora atualmente.</p>
@@ -456,7 +482,7 @@ export default function MemberForm({
       </section>
       <section className="member-section">
         <div className="member-section-title">
-          <span>04</span>
+          <span>05</span>
           <div>
             <h3>Igreja e vida cristã</h3>
             <p>A comunidade da qual você faz parte.</p>
@@ -495,6 +521,24 @@ export default function MemberForm({
               <option value="no">Não</option>
             </select>
           </Field>
+          <Field label="Tipo de admissão">
+            <input value={profile.admissionType} maxLength={80} placeholder="Ex.: batismo, transferência" onChange={(e) => change("admissionType", e.target.value)} />
+          </Field>
+          <Field label="Setor">
+            <input value={profile.sector} maxLength={120} onChange={(e) => change("sector", e.target.value)} />
+          </Field>
+        </div>
+      </section>
+      <section className="member-section">
+        <div className="member-section-title"><span>06</span><div><h3>Batismo e recebimento</h3><p>Detalhes complementares da trajetória de membresia.</p></div></div>
+        <div className="member-fields">
+          <Field label="Origem"><input value={profile.origin} maxLength={300} onChange={(e) => change("origin", e.target.value)} /></Field>
+          <Field label="Local de batismo"><input value={profile.baptismLocation} maxLength={150} onChange={(e) => change("baptismLocation", e.target.value)} /></Field>
+          <Field label="Data de batismo"><input type="date" max={todayInBrazil()} value={profile.baptismDate} onChange={(e) => change("baptismDate", e.target.value)} /></Field>
+          <Field label="Batismo no Espírito Santo"><select value={profile.holySpiritBaptism} onChange={(e) => change("holySpiritBaptism", e.target.value as MemberProfile["holySpiritBaptism"])}><option value="not_informed">Não informado</option><option value="yes">Sim</option><option value="no">Não</option></select></Field>
+          <Field label="Data do batismo no Espírito Santo"><input type="date" max={todayInBrazil()} value={profile.holySpiritBaptismDate} onChange={(e) => change("holySpiritBaptismDate", e.target.value)} /></Field>
+          <Field label="Forma de recebimento"><input value={profile.receptionType} maxLength={100} onChange={(e) => change("receptionType", e.target.value)} /></Field>
+          <Field label="Data de recebimento"><input type="date" max={todayInBrazil()} value={profile.receptionDate} onChange={(e) => change("receptionDate", e.target.value)} /></Field>
         </div>
       </section>
       {minor && (
@@ -527,6 +571,14 @@ export default function MemberForm({
                 onChange={(e) => change("guardianContact", e.target.value)}
               />
             </Field>
+            <Field label="Parentesco do responsável">
+              <input
+                name="guardianRelationship"
+                maxLength={80}
+                value={profile.guardianRelationship}
+                onChange={(e) => change("guardianRelationship", e.target.value)}
+              />
+            </Field>
           </div>
           {publicForm && (
             <label className="member-checkbox">
@@ -546,6 +598,13 @@ export default function MemberForm({
           )}
         </section>
       )}
+      <section className="member-section">
+        <div className="member-section-title"><span>07</span><div><h3>Autorizações</h3><p>Consentimentos separados do cadastro e da imagem.</p></div></div>
+        <label className="member-checkbox">
+          <input type="checkbox" checked={profile.imageAuthorization} onChange={(e) => change("imageAuthorization", e.target.checked)} />
+          <span>Autorizo o uso da minha imagem em documentos e comunicações institucionais da igreja.</span>
+        </label>
+      </section>
       {!publicForm && (
         <section className="member-section member-internal">
           <div className="member-section-title">
