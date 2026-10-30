@@ -64,9 +64,12 @@ async function loadPerson(q: Query, church: string, personId: string, key: Buffe
   const [profileRow] = await q("SELECT encrypted_profile FROM member_profiles WHERE person_id=$1 AND church_id=$2", [personId, church]);
   const profilePayload = profileRow ? JSON.parse(decrypt(profileRow.encrypted_profile, key)) : { profile: {}, administration: {} };
   const [photo] = await q("SELECT encrypted_data FROM member_photos WHERE person_id=$1 AND church_id=$2", [personId, church]);
-  const groups: Row[] = profilePayload.administration?.groups
-    ? [{ name: profilePayload.administration.groups }]
-    : [];
+  const relatedGroups = await q("SELECT c.name FROM cells c JOIN cell_members cm ON cm.cell_id=c.id WHERE cm.person_id=$1 AND c.church_id=$2 ORDER BY c.name", [personId, church]);
+  const groups: Row[] = relatedGroups.length
+    ? relatedGroups
+    : profilePayload.administration?.groups
+      ? [{ name: profilePayload.administration.groups }]
+      : [];
   const courses = await q("SELECT c.name AS course_name,c.track,cl.name AS class_name,ee.status,ee.enrolled_at FROM education_enrollments ee JOIN education_classes cl ON cl.id=ee.class_id JOIN education_courses c ON c.id=cl.course_id WHERE ee.person_id=$1 AND ee.church_id=$2 ORDER BY ee.enrolled_at DESC", [personId, church]);
   const history = await q("SELECT event_date,event_type,title,description FROM historical_events WHERE subject_type='person' AND subject_id=$1 AND church_id=$2 AND visibility='administrative' ORDER BY event_date ASC,created_at ASC LIMIT 100", [personId, church]);
   return { person, profile: profilePayload.profile ?? {}, administration: profilePayload.administration ?? {}, photo: photo ? Buffer.from(decrypt(photo.encrypted_data, key), "base64") : null, groups, courses, history };
