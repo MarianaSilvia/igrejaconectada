@@ -9,7 +9,7 @@ export default function RegistrationManager(
   props: PageProps & { directory: RecordData | null; onChange: () => void },
 ) {
   const registrationMessage = (url: string) =>
-    `A paz do Senhor, irmã!\n\nSegue o link para você realizar seu cadastro completo, incluindo sua foto:\n${url}\n\nEstamos atualizando o cadastro da igreja para manter seus dados corretos e integrados às demais funções da comunidade. As informações ficarão armazenadas com segurança no banco de dados da igreja e serão utilizadas pela Secretaria para conferência e organização.\n\nQuando puder, preencha a ficha com atenção. Muito obrigado!`;
+    `A paz do Senhor, irmã! 🙏✨\n\nEstamos atualizando o cadastro da nossa igreja e contamos com a sua ajuda. 💙\n\nPor favor, acesse o link abaixo e preencha sua ficha com atenção, incluindo uma foto atualizada 📋📸:\n\n${url}\n\nAssim, seus dados ficarão completos e organizados para as demais funções da igreja. 🔗\nAs informações serão encaminhadas com segurança para a Secretaria, que fará a conferência do cadastro. 🔒\n\nQuando puder, faça seu cadastro. Se precisar de ajuda, estamos à disposição! 😊\n\nDeus abençoe! 🙌`;
   const [config, setConfig] = useState<RecordData | null>(null),
     [links, setLinks] = useState<RecordData[]>([]),
     [submissions, setSubmissions] = useState<RecordData[]>([]),
