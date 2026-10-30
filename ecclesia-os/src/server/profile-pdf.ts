@@ -129,7 +129,8 @@ export async function buildPdf(data: Awaited<ReturnType<typeof loadPerson>>, gen
   };
 
   drawHeader("Ficha cadastral de membro", isMinor ? "Cadastro de menor de idade - responsável legal identificado na ficha" : "Cadastro e acompanhamento administrativo da membresia");
-  const photoX = 455, photoY = 92, photoW = 112, photoH = 132;
+  // Mantém a foto abaixo da faixa institucional azul e sem encostar na faixa da seção.
+  const photoX = 455, photoY = 118, photoW = 112, photoH = 132;
   doc.roundedRect(photoX, photoY, photoW, photoH, 4).lineWidth(1).stroke(colors.blue);
   if (photo) { try { doc.image(photo, photoX + 5, photoY + 5, { fit: [photoW - 10, photoH - 10], align: "center", valign: "center" }); } catch { /* foto inválida não interrompe a ficha */ } }
   else doc.fillColor(colors.muted).font("Helvetica").fontSize(8).text("FOTO", photoX, photoY + 61, { width: photoW, align: "center" });
