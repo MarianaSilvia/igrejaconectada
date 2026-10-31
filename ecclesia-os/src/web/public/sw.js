@@ -3,7 +3,7 @@ self.addEventListener("install", (e) =>
   e.waitUntil(
     caches
       .open(CACHE)
-      .then((c) => c.addAll(["/icon.svg", "/manifest.webmanifest"])),
+      .then((c) => c.addAll(["/icon.svg", "/brand/logo-ecclesiaos.png", "/manifest.webmanifest"])),
   ),
 );
 self.addEventListener("activate", (e) =>
@@ -22,7 +22,7 @@ self.addEventListener("fetch", (e) => {
   const u = new URL(e.request.url);
   if (
     u.origin === self.location.origin &&
-    ["/icon.svg", "/manifest.webmanifest"].includes(u.pathname)
+    ["/icon.svg", "/brand/logo-ecclesiaos.png", "/manifest.webmanifest"].includes(u.pathname)
   )
     e.respondWith(caches.match(e.request).then((r) => r || fetch(e.request)));
 });

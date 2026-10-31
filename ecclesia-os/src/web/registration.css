@@ -399,6 +399,13 @@ dialog:has(.member-editor) > .modal-heading h2 {
   font-weight: 500;
   color: #7056ba;
 }
+.registration-logo {
+  width: 156px;
+  height: 58px;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 7px 22px #00111d33;
+}
 .registration-top > span {
   display: flex;
   align-items: center;

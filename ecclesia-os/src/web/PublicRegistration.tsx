@@ -29,12 +29,7 @@ export default function PublicRegistration({
     <div className="registration-page">
       <header className="registration-top">
         <a href="/" className="registration-brand">
-          <span className="brand-mark">
-            <Icon name="home" size={25} />
-          </span>
-          <span>
-            ecclesia<span>OS</span>
-          </span>
+          <img className="registration-logo" src="/brand/logo-ecclesiaos.png" alt="EcclesiaOS" />
         </a>
         <span>
           <Icon name="shield" size={15} /> Cadastro de membros

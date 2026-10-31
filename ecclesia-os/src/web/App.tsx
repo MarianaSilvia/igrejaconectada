@@ -348,9 +348,7 @@ export default function App() {
       </a>
       <aside className="sidebar">
         <a className="brand" href="#" onClick={(e) => e.preventDefault()}>
-          <span className="brand-mark">
-            <Icon name="home" size={25} />
-          </span>
+          <img className="brand-logo" src="/brand/logo-ecclesiaos.png" alt="EcclesiaOS" />
           <span>
             ecclesia<span className="brand-os">OS</span>
             <small>GESTÃO QUE APROXIMA</small>
@@ -1030,8 +1028,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
     <div className="login-layout">
       <section className="login-story">
         <div className="brand">
-          <span className="brand-mark"><Icon name="home" size={30} /></span>
-          ecclesiaOS
+          <img className="login-brand-logo" src="/brand/logo-ecclesiaos.png" alt="EcclesiaOS" />
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px" }}>
           <Badge tone="purple">UMA REDE. MUITAS COMUNIDADES.</Badge>

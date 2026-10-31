@@ -193,6 +193,21 @@ svg {
   color: white;
   box-shadow: 0 5px 18px #7661d933;
 }
+.brand-logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  object-fit: cover;
+  object-position: center;
+  box-shadow: 0 5px 18px #0b879533;
+}
+.login-brand-logo {
+  display: block;
+  width: min(290px, 72%);
+  height: auto;
+  border-radius: 18px;
+  box-shadow: 0 18px 50px #00111d88;
+}
 .brand-os {
   font-weight: 500;
   color: #c2b5ff;
@@ -2194,7 +2209,8 @@ dialog p {
   }
 }
 /* Public marketing site */
-.landing{min-height:100vh;background:radial-gradient(circle at 80% 0%,#27345c 0,#101726 42%,#0b1020 100%);color:#f6f7fb;font-family:inherit}.landing a{color:inherit;text-decoration:none}.landing-nav{max-width:1180px;margin:auto;padding:24px 28px;display:flex;align-items:center;gap:28px}.landing-nav strong{font-size:1.25rem;margin-right:auto}.landing-nav>a:not(.button){opacity:.78}.landing-hero{max-width:1180px;margin:auto;padding:80px 28px 110px;display:grid;grid-template-columns:1.1fr .9fr;gap:70px;align-items:center}.eyebrow{display:block;text-transform:uppercase;letter-spacing:.14em;font-size:.74rem;color:#b7a8ff;font-weight:700;margin-bottom:16px}.landing h1{font-size:clamp(2.6rem,6vw,5.1rem);line-height:1.02;letter-spacing:-.045em;margin:0 0 24px}.landing h2{font-size:clamp(2rem,4vw,3.2rem);line-height:1.08;letter-spacing:-.03em;margin:0 0 18px}.landing p{color:#c4cadb;line-height:1.7;font-size:1.05rem}.landing-actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:30px}.landing-preview{border:1px solid #ffffff22;background:#ffffff0d;box-shadow:0 30px 80px #0005;border-radius:24px;padding:18px;transform:rotate(1deg)}.preview-top{display:flex;justify-content:space-between;color:#dfe4f1;padding:8px 8px 18px}.preview-top span{color:#aaa4dc}.preview-mural{border-radius:16px;background:linear-gradient(135deg,#4a417e,#263a64);padding:28px 24px;margin-bottom:15px}.preview-mural small{color:#d8d2ff;letter-spacing:.12em}.preview-mural h3{font-size:1.5rem;margin:18px 0 8px}.preview-mural p{font-size:.9rem;margin:0;color:#e2e4ee}.preview-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.preview-cards span{background:#ffffff0b;padding:16px;border-radius:12px}.preview-cards b,.preview-cards small{display:block}.preview-cards b{font-size:1.35rem}.preview-cards small{color:#aeb5cb;margin-top:5px}.landing-section,.landing-trust,.landing-cta{max-width:1180px;margin:auto;padding:90px 28px}.landing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:36px}.landing-grid article{background:#ffffff0b;border:1px solid #ffffff14;border-radius:16px;padding:24px}.landing-grid h3{margin:0 0 8px}.landing-grid p{font-size:.95rem;margin:0}.landing-trust{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center}.trust-list{display:grid;gap:14px}.trust-list span{padding:17px 20px;border-radius:12px;background:#ffffff0b;color:#dfe4f1}.landing-cta{text-align:center;padding-top:50px;padding-bottom:100px}.landing-cta p{margin-bottom:26px}.landing footer{border-top:1px solid #ffffff14;padding:28px;text-align:center;color:#9fa8bf}.landing footer a{color:#c4baff}@media(max-width:800px){.landing-nav{gap:14px;padding:18px}.landing-nav>a:not(.button){display:none}.landing-hero,.landing-trust{grid-template-columns:1fr;padding-top:55px}.landing-hero{gap:40px}.landing-grid{grid-template-columns:1fr}.landing-section,.landing-trust,.landing-cta{padding-left:20px;padding-right:20px}.landing-preview{transform:none}}
+.landing-brand { display: inline-flex; align-items: center; margin-right: auto; }
+.landing-brand img { width: 156px; height: 58px; object-fit: cover; border-radius: 12px; box-shadow: 0 8px 24px #00111d66; }
 
 .media-event-list{display:grid;gap:12px;padding:14px 0}.media-event-item{border:1px solid var(--border,#2b344a);border-radius:10px;padding:12px}.media-event-item p{margin:6px 0;font-size:.9rem}.media-event-item iframe{display:block;width:min(100%,520px);aspect-ratio:16/9;border:0;border-radius:8px;margin-top:10px}.media-event-item img{display:block;max-width:100%;max-height:280px;border-radius:8px;margin-top:10px}
 .media-file{display:inline-flex;align-items:center;gap:8px;margin:8px 8px 0 0;padding:6px 9px;border-radius:8px;background:var(--surface-soft,#ffffff0b);font-size:.88rem}
