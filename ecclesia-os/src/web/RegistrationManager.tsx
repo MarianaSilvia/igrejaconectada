@@ -413,7 +413,9 @@ export default function RegistrationManager(
                 setView("links");
                 reload();
                 props.notify(
-                  "Prévia da ficha criada. A publicação será configurada depois.",
+                  config.publicationPending
+                    ? "Prévia da ficha criada."
+                    : "Link público da ficha criado e pronto para compartilhar.",
                 );
               } catch (e) {
                 props.notify((e as Error).message);

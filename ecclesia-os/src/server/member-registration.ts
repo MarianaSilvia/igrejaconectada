@@ -402,8 +402,11 @@ export function registrationPublicRoutes(
       `SELECT l.*,c.modules,c.name AS church_name FROM registration_links l JOIN churches c ON c.id=l.church_id WHERE l.token_hash=$1 AND l.active AND l.expires_at>now() ${lock ? "FOR UPDATE OF l" : ""}`,
       [hash(raw)],
     );
+    // O link publicado é a autorização explícita da Secretaria. A configuração
+    // de módulos pode mudar depois da criação, mas não deve invalidar um link
+    // ativo antes da sua expiração ou desativação manual.
     requireThat(
-      l && l.modules.includes("people"),
+      l,
       404,
       "Esta ficha está indisponível ou o link expirou. Peça um novo link à secretaria.",
     );
