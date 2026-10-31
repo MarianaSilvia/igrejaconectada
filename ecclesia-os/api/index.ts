@@ -29,11 +29,12 @@ async function bootstrap() {
     );
   }
 
-  const databaseUrl = process.env.ECCLESIA_DATABASE_URL ?? process.env.DATABASE_URL;
+  const databaseUrl = process.env.DATABASE_URL ?? process.env.ECCLESIA_DATABASE_URL;
   const serviceDatabaseUrl =
-    process.env.ECCLESIA_SERVICE_DATABASE_URL ?? process.env.SERVICE_DATABASE_URL;
-  required("ECCLESIA_DATABASE_URL");
-  required("ECCLESIA_SERVICE_DATABASE_URL");
+    process.env.SERVICE_DATABASE_URL ?? process.env.ECCLESIA_SERVICE_DATABASE_URL;
+  if (!databaseUrl) throw new Error("Variável obrigatória ausente: DATABASE_URL");
+  if (!serviceDatabaseUrl)
+    throw new Error("Variável obrigatória ausente: SERVICE_DATABASE_URL");
   required("MIGRATION_DATABASE_URL");
   required("DATA_KEY_HEX");
   required("MFA_KEY_HEX");
